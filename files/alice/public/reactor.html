@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>REACTOR · Hygge</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hanken Grotesk','Helvetica Neue',Arial,sans-serif;background:#F9F9F9;color:#373737;}
+@keyframes bolt-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}}
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes group-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes result-reveal{0%{opacity:0;transform:translateY(18px) scale(.98)}100%{opacity:1;transform:none}}
+.fade-up{animation:fade-up .5s cubic-bezier(.2,.8,.3,1) both}
+.result-reveal{animation:result-reveal .55s cubic-bezier(.2,.8,.3,1) both}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#D0CECC;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useRef,useEffect,useCallback}=React;
+
+const C={
+  ink:"#373737",paper:"#F9F9F9",stone:"#E3E1DE",
+  stoneSoft:"#EDEBE8",orange:"#F7643B",
+  mute:"rgba(55,55,55,0.5)",line:"rgba(55,55,55,0.12)",
+  lineSoft:"rgba(55,55,55,0.07)",
+};
+const sans="'Hanken Grotesk','Helvetica Neue',Arial,sans-serif";
+const mono="'JetBrains Mono','SF Mono',Menlo,monospace";
+
+// ── API key ──
+const getKey=()=>localStorage.getItem("alice:anthropic-key")||"";
+
+// ── icons ──
+const Bolt=({size=24,color=C.orange,spin=false})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    style={{display:"block",animation:spin?"bolt-pulse 1.2s ease-in-out infinite":"none"}}>
+    <path d="M14 2 L4 13 L11 13 L9 22 L20 9 L13 9 L14 2 Z" fill={color}/>
+  </svg>
+);
+const IconUpload=({size=22,color=C.mute})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{display:"block",margin:"0 auto 12px"}}>
+    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+  </svg>
+);
+const IconX=({size=12})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+const IconCheck=({size=14})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);
+const IconAlert=({size=18,color=C.orange})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,marginTop:2}}>
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+);
+
+// ── utils ──
+const toB64=f=>new Promise((res,rej)=>{
+  const r=new FileReader();
+  r.onload=()=>res(r.result.split(",")[1]);
+  r.onerror=rej;
+  r.readAsDataURL(f);
+});
+
+const compressImg=async f=>{
+  const b64=await toB64(f);
+  if(b64.length<700000)return{b64,mt:f.type||"image/jpeg"};
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const MAX=1200,ratio=Math.min(1,MAX/Math.max(img.width,img.height));
+        const cv=document.createElement("canvas");
+        cv.width=Math.round(img.width*ratio);cv.height=Math.round(img.height*ratio);
+        cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+        res({b64:cv.toDataURL("image/jpeg",0.72).split(",")[1],mt:"image/jpeg"});
+      }catch(e){rej(e);}
+    };
+    img.onerror=rej;
+    img.src=`data:${f.type||"image/jpeg"};base64,${b64}`;
+  });
+};
+
+const safeJSON=txt=>{
+  const c=txt.replace(/```json|```/g,"").trim();
+  try{return JSON.parse(c);}catch(e1){
+    const m=c.match(/\{[\s\S]*\}/);
+    if(!m)return null;
+    try{return JSON.parse(m[0]);}catch(e2){return null;}
+  }
+};
+
+const parseDate=s=>{
+  if(!s)return null;
+  const p=String(s).split(/[-\/]/);
+  if(p.length<3)return null;
+  const d=p[0].length===4?new Date(+p[0],+p[1]-1,+p[2]):new Date(+p[2],+p[1]-1,+p[0]);
+  return isNaN(d)?null:d;
+};
+const dayDiff=(a,b)=>{const da=parseDate(a),db=parseDate(b);if(!da||!db)return Infinity;return Math.abs(da-db)/86400000;};
+
+// ── pdf.js ──
+const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
+const loadPdf=()=>new Promise((res,rej)=>{
+  if(window.pdfjsLib?._ok)return res(window.pdfjsLib);
+  const s=document.createElement("script");
+  s.src=`${PDFJS}/pdf.min.js`;
+  s.onload=()=>{window.pdfjsLib._ok=true;res(window.pdfjsLib);};
+  s.onerror=rej;
+  document.head.appendChild(s);
+});
+const pdfToImgs=async(file,pw)=>{
+  const lib=await loadPdf();
+  lib.GlobalWorkerOptions.workerSrc=`${PDFJS}/pdf.worker.min.js`;
+  const buf=await file.arrayBuffer();
+  let pdf;
+  try{pdf=await lib.getDocument({data:buf,password:pw||""}).promise;}
+  catch(e){
+    if(e?.name==="PasswordException"||e?.code===1||e?.code===2)throw new Error("Contraseña incorrecta.");
+    throw e;
+  }
+  const imgs=[];
+  for(let p=1;p<=Math.min(pdf.numPages,12);p++){
+    const page=await pdf.getPage(p);
+    const vp=page.getViewport({scale:0.8});
+    const cv=document.createElement("canvas");
+    cv.width=vp.width;cv.height=vp.height;
+    await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    imgs.push(cv.toDataURL("image/jpeg",0.65).split(",")[1]);
+  }
+  return imgs;
+};
+
+// ── API ──
+const call=async(messages,maxTokens=4000)=>{
+  const key=getKey();
+  if(!key)throw new Error("API Key no configurada. Guardala en localStorage con clave 'alice:anthropic-key'.");
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-use":"true",
+    },
+    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:maxTokens,messages}),
+  });
+  if(!res.ok)throw new Error(`API ${res.status}: ${(await res.text()).slice(0,200)}`);
+  const d=await res.json();
+  return d.content.filter(b=>b.type==="text").map(b=>b.text).join("\n");
+};
+
+// ── pipeline ──
+const PROMPT=`Extrae TODOS los movimientos bancarios. Responde SOLO JSON sin markdown:\n{"movimientos":[{"fecha":"DD/MM/YYYY","descripcion":"string","cargo":null,"abono":null,"saldo":null}]}`;
+
+const extractStatement=async(file,pw)=>{
+  const ext=file.name.split(".").pop().toLowerCase();
+  let content;
+  if(["xlsx","xls","csv"].includes(ext)){
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf);
+    const text=wb.SheetNames.map(n=>{
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:""});
+      return rows.map(r=>r.map(c=>String(c??"")).join(" | ")).join("\n");
+    }).join("\n\n");
+    content=[{type:"text",text:`${PROMPT}\n\nESTADO:\n${text.slice(0,60000)}`}];
+  }else if(ext==="pdf"){
+    const imgs=await pdfToImgs(file,pw);
+    content=[...imgs.map(b64=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}})),{type:"text",text:PROMPT}];
+  }else{
+    const ci=await compressImg(file);
+    content=[{type:"image",source:{type:"base64",media_type:ci.mt,data:ci.b64}},{type:"text",text:PROMPT}];
+  }
+  const raw=await call([{role:"user",content}],16000);
+  const parsed=safeJSON(raw);
+  if(!parsed?.movimientos)throw new Error(`Sin movimientos. Inicio respuesta: ${raw?.slice(0,120)}`);
+  return parsed.movimientos;
+};
+
+const extractShot=async file=>{
+  const{b64,mt}=await compressImg(file);
+  const raw=await call([{role:"user",content:[
+    {type:"image",source:{type:"base64",media_type:mt,data:b64}},
+    {type:"text",text:'Extrae datos de esta transferencia. SOLO JSON sin markdown:\n{"monto":null,"fecha":null,"beneficiario":null,"concepto":null,"numero_operacion":null,"banco_contraparte":null}'},
+  ]}],600);
+  return{_file:file.name,...(safeJSON(raw)||{})};
+};
+
+const runBatches=async(items,fn,size,onProg)=>{
+  const out=[];
+  for(let i=0;i<items.length;i+=size){
+    const r=await Promise.all(items.slice(i,i+size).map(fn));
+    out.push(...r);onProg(out.length,items.length);
+    if(i+size<items.length)await new Promise(r=>setTimeout(r,800));
+  }
+  return out;
+};
+
+const matchAll=(txs,shots)=>{
+  const used=new Set();
+  const movimientos=txs.map(tx=>{
+    const amt=tx.cargo||tx.abono;
+    let best=null,top=-1;
+    shots.forEach((s,i)=>{
+      if(used.has(i))return;
+      let sc=0;
+      if(s.monto&&amt&&Math.abs(s.monto-amt)<0.02)sc+=10;
+      if(!sc)return;
+      const dd=dayDiff(tx.fecha,s.fecha);
+      if(dd===0)sc+=4;else if(dd<=1)sc+=2;else if(dd<=2)sc+=1;
+      if(sc>top){top=sc;best={s,i};}
+    });
+    if(best){
+      used.add(best.i);
+      const s=best.s;
+      const parts=[s.beneficiario,s.concepto,s.numero_operacion?`Op. ${s.numero_operacion}`:null].filter(Boolean);
+      return{fecha:tx.fecha,descripcion_original:tx.descripcion,cargo:tx.cargo,abono:tx.abono,saldo:tx.saldo,
+        concepto_detallado:parts.join(" · ")||tx.descripcion,
+        beneficiario:s.beneficiario||null,banco_contraparte:s.banco_contraparte||null,
+        numero_operacion:s.numero_operacion||null,tiene_pantallazo:true};
+    }
+    return{fecha:tx.fecha,descripcion_original:tx.descripcion,cargo:tx.cargo,abono:tx.abono,saldo:tx.saldo,
+      concepto_detallado:tx.descripcion,beneficiario:null,banco_contraparte:null,numero_operacion:null,tiene_pantallazo:false};
+  });
+  const pantallazos_sin_match=shots.filter((_,i)=>!used.has(i))
+    .map(s=>({nombre_archivo:s._file,monto:s.monto,fecha:s.fecha,info:[s.beneficiario,s.concepto].filter(Boolean).join(" · ")}));
+  return{movimientos,pantallazos_sin_match};
+};
+
+// ── Excel export ──
+const downloadExcel=async result=>{
+  const movs=result.movimientos||[];
+  const ws_data=[
+    ["Fecha","Descripcion Original","Cargo (S/)","Abono (S/)","Saldo (S/)","Concepto Detallado","Beneficiario","Banco Contraparte","N Operacion","Pantallazo"],
+    ...movs.map(m=>[m.fecha,m.descripcion_original,m.cargo,m.abono,m.saldo,m.concepto_detallado,m.beneficiario,m.banco_contraparte,m.numero_operacion,m.tiene_pantallazo?"SI":"NO"])
+  ];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb,"Movimientos",ws);
+  XLSX.writeFile(wb,`reactor_${new Date().toISOString().split("T")[0]}.xlsx`);
+};
+
+// ── Components ──
+function ResultReport({result,setError}){
+  const d=new Date();
+  const dt=`${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+  const rs=result.resumen||{};
+  const sinMatch=result.pantallazos_sin_match||[];
+  const conPan=rs.movimientos_con_pantallazo||0;
+  const sinPan=rs.movimientos_sin_pantallazo||0;
+  const total=rs.total_movimientos??result.movimientos.length;
+
+  const opNums=result.movimientos.filter(m=>m.tiene_pantallazo&&m.numero_operacion).map(m=>m.numero_operacion);
+  const dupOps=new Set(opNums.filter((op,i)=>opNums.indexOf(op)!==i));
+  const getBadge=m=>{
+    if(!m.tiene_pantallazo)return{label:"Sin pantallazo",c:C.mute,bg:C.stoneSoft};
+    if(m.numero_operacion&&dupOps.has(m.numero_operacion))return{label:"Duplicado",c:C.orange,bg:"rgba(247,100,59,0.1)"};
+    if(m.beneficiario?.includes("*"))return{label:"Censurado",c:"#777",bg:C.stoneSoft};
+    return{label:"OK",c:"#2A6A2A",bg:"rgba(42,106,42,0.08)"};
+  };
+
+  const obs=[];
+  const dupCount=[...dupOps].length;
+  const cenCount=result.movimientos.filter(m=>m.tiene_pantallazo&&m.beneficiario?.includes("*")).length;
+  if(conPan>0)obs.push({t:`${conPan} movimiento(s) verificado(s) con pantallazo.`,w:false});
+  if(sinPan>0)obs.push({t:`${sinPan} movimiento(s) sin pantallazo. Se conserva la descripción original.`,w:false});
+  if(dupCount>0)obs.push({t:`${dupCount} N° de operación duplicado(s).`,w:true});
+  if(cenCount>0)obs.push({t:`${cenCount} pantallazo(s) con nombre censurado por el banco.`,w:false});
+  if(sinMatch.length>0)obs.push({t:`${sinMatch.length} pantallazo(s) sin movimiento coincidente.`,w:true});
+
+  return(
+    <div className="result-reveal" style={{border:`1px solid ${C.line}`,overflow:"hidden"}}>
+      <div style={{background:C.ink,padding:"28px 32px",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+        <div>
+          <div style={{fontFamily:mono,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(249,249,249,0.4)",marginBottom:10}}>
+            reactor<span style={{color:C.orange}}>.</span> · reporte · {dt}
+          </div>
+          <div style={{fontSize:24,fontWeight:500,letterSpacing:"-0.025em",color:"#F9F9F9",lineHeight:1.1}}>
+            {total} movimientos<span style={{color:C.orange}}>.</span>
+          </div>
+          <div style={{fontFamily:mono,fontSize:10,color:"rgba(249,249,249,0.35)",marginTop:6}}>{conPan} verificados con pantallazo</div>
+        </div>
+        <button onClick={async()=>{try{await downloadExcel(result);}catch(e){setError(e.message);}}}
+          style={{background:C.orange,color:"#FFF",border:"none",padding:"16px 26px",cursor:"pointer",fontFamily:sans,fontSize:14,fontWeight:600,display:"flex",alignItems:"center",gap:10,letterSpacing:"-0.01em"}}>
+          Descargar .xlsx <span style={{fontSize:18,lineHeight:0.5}}>↓</span>
+        </button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"1px",background:C.line,borderBottom:`1px solid ${C.line}`}}>
+        {[{l:"Total",v:total,a:false},{l:"Con pantallazo",v:conPan,a:false},{l:"Sin pantallazo",v:sinPan,a:false},{l:"Sin match",v:sinMatch.length,a:sinMatch.length>0}].map((c,i)=>(
+          <div key={i} style={{background:"#FFF",padding:"20px 18px"}}>
+            <div style={{fontFamily:mono,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",color:c.a?C.orange:C.mute,marginBottom:8}}>{c.l}</div>
+            <div style={{fontSize:26,fontWeight:500,letterSpacing:"-0.03em",color:c.a?C.orange:C.ink}}>{String(c.v).padStart(2,"0")}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{padding:"16px 20px 0",display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontFamily:mono,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.mute,flexShrink:0}}>Datos extraídos</span>
+        <div style={{flex:1,height:1,background:C.line}}/>
+      </div>
+      <div style={{overflow:"auto",maxHeight:440}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead>
+            <tr style={{background:C.stoneSoft,position:"sticky",top:0}}>
+              {[["#",false],["fecha",false],["descripcion",false],["cargo",true],["abono",true],["concepto detallado",false],["estado",false]].map(([h,r])=>(
+                <th key={h} style={{textAlign:r?"right":"left",padding:"12px 14px",fontFamily:mono,fontSize:8,letterSpacing:"0.1em",textTransform:"uppercase",color:C.mute,fontWeight:500,borderBottom:`1px solid ${C.line}`,whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {result.movimientos.map((m,i)=>{
+              const bg=getBadge(m);
+              return(
+                <tr key={i} style={{background:i%2===1?C.stoneSoft:"#FFF",borderBottom:`1px solid ${C.lineSoft}`}}>
+                  <td style={{padding:"11px 14px",fontFamily:mono,fontSize:10,color:C.mute,verticalAlign:"top"}}>{String(i+1).padStart(2,"0")}</td>
+                  <td style={{padding:"11px 14px",fontFamily:mono,fontSize:10,color:C.ink,whiteSpace:"nowrap",verticalAlign:"top"}}>{m.fecha}</td>
+                  <td style={{padding:"11px 14px",fontSize:11,color:C.mute,verticalAlign:"top",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.descripcion_original}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontFamily:mono,fontSize:10,color:C.ink,whiteSpace:"nowrap",verticalAlign:"top"}}>{m.cargo?m.cargo.toLocaleString("es-PE",{minimumFractionDigits:2}):""}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontFamily:mono,fontSize:10,color:C.ink,whiteSpace:"nowrap",verticalAlign:"top"}}>{m.abono?m.abono.toLocaleString("es-PE",{minimumFractionDigits:2}):""}</td>
+                  <td style={{padding:"11px 14px",fontSize:11,color:C.ink,verticalAlign:"top"}}>
+                    <div style={{display:"flex",gap:6,alignItems:"flex-start"}}>
+                      {m.tiene_pantallazo&&<span style={{marginTop:5,width:5,height:5,background:C.orange,borderRadius:"50%",flexShrink:0}}/>}
+                      <span>{m.concepto_detallado}</span>
+                    </div>
+                  </td>
+                  <td style={{padding:"11px 14px",verticalAlign:"top",whiteSpace:"nowrap"}}>
+                    <span style={{display:"inline-block",padding:"3px 8px",background:bg.bg,color:bg.c,fontFamily:mono,fontSize:8,letterSpacing:"0.06em",textTransform:"uppercase",fontWeight:500}}>{bg.label}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {obs.length>0&&(
+        <div style={{borderTop:`1px solid ${C.line}`,padding:"20px 20px 12px"}}>
+          <div style={{fontFamily:mono,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.mute,marginBottom:12}}>Observaciones</div>
+          {obs.map((o,i)=>(
+            <div key={i} style={{borderLeft:`3px solid ${o.w?C.orange:C.stone}`,padding:"10px 14px",marginBottom:8,fontSize:12,color:C.ink,lineHeight:1.6,background:o.w?"rgba(247,100,59,0.04)":"#FFF"}}>{o.t}</div>
+          ))}
+        </div>
+      )}
+      {sinMatch.length>0&&(
+        <div style={{borderTop:`1px solid ${C.line}`,padding:"16px 20px",background:"rgba(247,100,59,0.03)"}}>
+          <div style={{fontFamily:mono,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",color:C.orange,marginBottom:10}}>Pantallazos sin match ({sinMatch.length})</div>
+          {sinMatch.map((p,i)=>(
+            <div key={i} style={{fontSize:11,color:C.ink,padding:"5px 0",borderBottom:i<sinMatch.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+              <span style={{fontFamily:mono,fontSize:10,color:C.mute}}>{p.nombre_archivo}</span>
+              <span style={{margin:"0 8px",color:C.line}}>·</span>{p.info}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Loading({active,progress,sub}){
+  const[phase,setPhase]=useState("hidden");
+  const timers=useRef([]);
+  useEffect(()=>{
+    timers.current.forEach(clearTimeout);timers.current=[];
+    if(active){setPhase("c");timers.current.push(setTimeout(()=>setPhase("a"),80));timers.current.push(setTimeout(()=>setPhase("s"),650));}
+    else if(phase!=="hidden"){setPhase("out");timers.current.push(setTimeout(()=>setPhase("hidden"),700));}
+    return()=>timers.current.forEach(clearTimeout);
+  },[active]);
+  if(phase==="hidden")return null;
+  const BOLTS=[{ox:0,oy:-52,rot:0},{ox:52,oy:0,rot:90},{ox:0,oy:52,rot:180},{ox:-52,oy:0,rot:270}];
+  const bs=({ox,oy,rot},i)=>{
+    const dl=`${i*55}ms`;
+    if(phase==="c")return{position:"absolute",top:"50%",left:"50%",transition:"none",transform:`translate(-50%,-50%) rotate(${rot}deg) scale(0)`,opacity:0};
+    if(phase==="a"||phase==="s")return{position:"absolute",top:"50%",left:"50%",transition:`transform .52s cubic-bezier(.2,.8,.3,1) ${dl},opacity .38s ease ${dl}`,transform:`translate(calc(-50% + ${ox}px),calc(-50% + ${oy}px)) rotate(${rot}deg) scale(1)`,opacity:1};
+    return{position:"absolute",top:"50%",left:"50%",transition:`transform .48s cubic-bezier(.7,0,1,.9) ${i*35}ms,opacity .35s ease ${i*35}ms`,transform:`translate(calc(-50% + ${ox*5}px),calc(-50% + ${oy*5}px)) rotate(${rot}deg) scale(.2)`,opacity:0};
+  };
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:52,background:"rgba(249,249,249,0.93)",backdropFilter:"blur(16px)"}}>
+      <div style={{position:"relative",width:140,height:140,animation:phase==="s"?"group-spin 1.5s linear infinite":"none"}}>
+        {BOLTS.map((b,i)=><div key={i} style={bs(b,i)}><Bolt size={32} spin={false}/></div>)}
+      </div>
+      <div style={{opacity:phase==="s"?1:0,transition:"opacity .4s ease .3s",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+        <p style={{fontFamily:mono,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:C.ink}}>{progress||"Procesando"}</p>
+        {sub&&<p style={{fontFamily:mono,fontSize:9,letterSpacing:"0.08em",color:C.orange}}>{sub}</p>}
+        <div style={{display:"flex",gap:5,marginTop:4}}>
+          {[0,1,2,3,4].map(j=><div key={j} style={{width:4,height:4,background:j%2===0?C.orange:C.stone,borderRadius:"50%",animation:`bolt-pulse ${.8+j*.1}s ease-in-out ${j*120}ms infinite`}}/>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepHeader({number,label,right}){
+  return(
+    <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:16,paddingBottom:12,borderBottom:`1px solid ${C.line}`}}>
+      <div style={{display:"flex",alignItems:"baseline",gap:16}}>
+        <span style={{fontFamily:mono,fontSize:11,letterSpacing:"0.1em",color:C.orange,fontWeight:500}}>{number}</span>
+        <span style={{fontFamily:mono,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",color:C.ink,fontWeight:500}}>{label}</span>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function Drop({inputRef,id,accept,multiple,onChange,hint,small}){
+  const[hover,setHover]=useState(false);
+  return(
+    <label htmlFor={id} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
+      style={{display:"block",cursor:"pointer",border:`1.5px dashed ${hover?C.orange:C.line}`,background:hover?"#FFF":"transparent",padding:small?"24px 20px":"40px 24px",textAlign:"center",transition:"all .2s"}}>
+      <IconUpload size={small?18:22} color={hover?C.orange:C.mute}/>
+      <p style={{fontSize:small?13:14,color:C.ink,fontWeight:500,marginBottom:4}}>Click para subir</p>
+      <p style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute}}>{hint}</p>
+      <input ref={inputRef} id={id} type="file" accept={accept} multiple={multiple} onChange={onChange} style={{display:"none"}}/>
+    </label>
+  );
+}
+
+function Chip({file}){
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:16,padding:"18px 20px",background:"#FFF",border:`1px solid ${C.line}`}}>
+      <div style={{width:36,height:36,background:C.ink,color:C.paper,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <span style={{fontFamily:mono,fontSize:9,fontWeight:500}}>{file.name.split(".").pop().toUpperCase()}</span>
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <p style={{fontSize:14,fontWeight:500,color:C.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginBottom:2}}>{file.name}</p>
+        <p style={{fontFamily:mono,fontSize:10,color:C.mute}}>{(file.size/1024).toFixed(1)} KB · cargado</p>
+      </div>
+      <div style={{width:28,height:28,background:C.orange,color:"#FFF",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <IconCheck size={14}/>
+      </div>
+    </div>
+  );
+}
+
+// ── API Key banner ──
+function KeyBanner(){
+  const[key,setKey]=useState(getKey());
+  const[editing,setEditing]=useState(!getKey());
+  const[val,setVal]=useState("");
+  if(key&&!editing)return(
+    <div style={{background:"rgba(42,106,42,0.06)",borderBottom:"1px solid rgba(42,106,42,0.15)",padding:"8px 40px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <span style={{fontFamily:mono,fontSize:10,color:"#2A6A2A",letterSpacing:".06em"}}>✓ API Key configurada</span>
+      <button onClick={()=>setEditing(true)} style={{fontFamily:mono,fontSize:9,color:C.mute,background:"none",border:"none",cursor:"pointer",letterSpacing:".06em",textTransform:"uppercase"}}>cambiar</button>
+    </div>
+  );
+  return(
+    <div style={{background:"rgba(247,100,59,0.06)",borderBottom:"1px solid rgba(247,100,59,0.2)",padding:"10px 40px",display:"flex",alignItems:"center",gap:12}}>
+      <span style={{fontFamily:mono,fontSize:10,color:C.orange,flexShrink:0,letterSpacing:".06em"}}>API KEY</span>
+      <input value={val} onChange={e=>setVal(e.target.value)} placeholder="sk-ant-..." type="password"
+        style={{flex:1,fontFamily:mono,fontSize:11,background:"transparent",border:"none",outline:"none",color:C.ink}}/>
+      <button onClick={()=>{if(val.trim()){localStorage.setItem("alice:anthropic-key",val.trim());setKey(val.trim());setEditing(false);}}}
+        style={{fontFamily:mono,fontSize:10,background:C.orange,color:"#fff",border:"none",padding:"5px 12px",cursor:"pointer",letterSpacing:".06em"}}>GUARDAR</button>
+    </div>
+  );
+}
+
+// ── App ──
+function App(){
+  const[stmt,setStmt]=useState(null);
+  const[pw,setPw]=useState("");
+  const[showPw,setShowPw]=useState(false);
+  const[shots,setShots]=useState([]);
+  const[busy,setBusy]=useState(false);
+  const[result,setResult]=useState(null);
+  const[error,setError]=useState(null);
+  const[prog,setProg]=useState("");
+  const[sub,setSub]=useState("");
+  const stmtRef=useRef(null),shotsRef=useRef(null);
+
+  const clear=()=>{setStmt(null);setPw("");setShowPw(false);setShots([]);setResult(null);setError(null);setProg("");setSub("");if(stmtRef.current)stmtRef.current.value="";if(shotsRef.current)shotsRef.current.value="";};
+
+  const run=async()=>{
+    if(!stmt){setError("Sube primero el estado de cuenta.");return;}
+    if(!getKey()){setError("Configurá la API Key arriba.");return;}
+    setBusy(true);setError(null);setResult(null);
+    try{
+      setProg("Extrayendo movimientos");setSub("");
+      const txs=await extractStatement(stmt,pw);
+      setSub(`${txs.length} movimientos encontrados`);
+      let shotInfos=[];
+      if(shots.length>0){
+        setProg("Analizando pantallazos");setSub(`0 / ${shots.length}`);
+        shotInfos=await runBatches(shots,extractShot,2,(done,total)=>setSub(`${done} / ${total} listos`));
+      }
+      setProg("Haciendo match");setSub("");
+      const{movimientos,pantallazos_sin_match}=matchAll(txs,shotInfos);
+      const resumen={total_movimientos:movimientos.length,movimientos_con_pantallazo:movimientos.filter(m=>m.tiene_pantallazo).length,movimientos_sin_pantallazo:movimientos.filter(m=>!m.tiene_pantallazo).length,pantallazos_sin_match:pantallazos_sin_match.length};
+      setResult({movimientos,pantallazos_sin_match,resumen});
+      setProg("");setSub("");
+    }catch(e){console.error(e);setError(e.message||"Error inesperado.");setProg("");setSub("");}
+    finally{setBusy(false);}
+  };
+
+  const canRun=stmt&&!busy;
+
+  return(
+    <div style={{minHeight:"100vh",background:C.paper,color:C.ink,fontFamily:sans,letterSpacing:"-0.005em"}}>
+      <KeyBanner/>
+      <nav style={{position:"sticky",top:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 40px",background:"rgba(249,249,249,0.85)",backdropFilter:"blur(14px)",borderBottom:`1px solid ${C.lineSoft}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Bolt size={22}/><span style={{fontFamily:sans,fontWeight:700,fontSize:22,letterSpacing:"-0.04em",lineHeight:1}}>reactor<span style={{color:C.orange}}>.</span></span>
+        </div>
+        <span style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute}}>conciliacion bancaria · <span style={{color:C.ink,fontWeight:500}}>hygge<span style={{color:C.orange}}>.</span></span></span>
+      </nav>
+
+      <main style={{maxWidth:1080,margin:"0 auto",padding:"72px 40px 120px"}}>
+        <header style={{marginBottom:72}} className="fade-up">
+          <div style={{fontFamily:mono,fontSize:11,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute,marginBottom:24,display:"flex",alignItems:"center",gap:10}}>
+            <span>v 3.0</span><span style={{width:16,height:1,background:C.line}}/><span style={{color:C.orange}}>contabilidad</span>
+          </div>
+          <h1 style={{fontSize:"clamp(40px,6vw,64px)",fontWeight:500,letterSpacing:"-0.035em",lineHeight:1.02,marginBottom:24,maxWidth:820}}>
+            Estado de cuenta + pantallazos<span style={{color:C.orange}}>.</span><br/><span style={{color:C.mute,fontWeight:400}}>Reporte listo en segundos.</span>
+          </h1>
+          <p style={{fontSize:16,lineHeight:1.55,color:C.ink,maxWidth:540}}>Carga los archivos. Extrae movimientos, analiza pantallazos en paralelo, hace el match y presenta el reporte con badges de estado. Luego descarga el Excel.</p>
+        </header>
+
+        <section style={{marginBottom:48}}>
+          <StepHeader number="01" label="Estado de cuenta"
+            right={stmt&&<button onClick={()=>{setStmt(null);if(stmtRef.current)stmtRef.current.value="";}} style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute,background:"none",border:"none",cursor:"pointer",padding:0}}>cambiar →</button>}/>
+          {!stmt
+            ?<Drop inputRef={stmtRef} id="stmt" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp" onChange={e=>{if(e.target.files[0]){setStmt(e.target.files[0]);setResult(null);setError(null);}}} hint="PDF · Excel · CSV · Imagen"/>
+            :<>
+              <Chip file={stmt}/>
+              <div style={{marginTop:12,padding:"16px 20px",background:"#FFF",border:`1px solid ${C.line}`,display:"flex",alignItems:"center",gap:14}}>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:mono,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",color:C.mute,marginBottom:8}}>Contraseña del archivo · <span style={{color:C.orange}}>opcional</span></div>
+                  <div style={{display:"flex",gap:10}}>
+                    <input type={showPw?"text":"password"} value={pw} onChange={e=>setPw(e.target.value)} placeholder="Dejar vacío si no tiene contraseña"
+                      style={{flex:1,background:C.stoneSoft,border:`1px solid ${pw?C.orange:C.line}`,color:C.ink,fontFamily:mono,fontSize:13,padding:"10px 14px",outline:"none"}}/>
+                    <button onClick={()=>setShowPw(p=>!p)} style={{background:"none",border:`1px solid ${C.line}`,padding:"10px 14px",cursor:"pointer",color:showPw?C.orange:C.mute,display:"flex",alignItems:"center"}}>
+                      {showPw?"🙈":"👁"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          }
+        </section>
+
+        <section style={{marginBottom:56}}>
+          <StepHeader number="02" label="Pantallazos de transferencias"
+            right={<span style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute}}>{String(shots.length).padStart(2,"0")} archivos</span>}/>
+          <Drop inputRef={shotsRef} id="shots" accept="image/*" multiple={true} onChange={e=>{setShots(p=>[...p,...Array.from(e.target.files)]);setResult(null);setError(null);}} hint="PNG · JPG · WEBP · Varios" small={true}/>
+          {shots.length>0&&(
+            <div style={{marginTop:16,display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:8}}>
+              {shots.map((f,i)=>(
+                <div key={i} style={{position:"relative",aspectRatio:"1/1",background:C.stone,overflow:"hidden",border:`1px solid ${C.line}`}}>
+                  <img src={URL.createObjectURL(f)} alt={f.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <button onClick={()=>setShots(p=>p.filter((_,j)=>j!==i))} style={{position:"absolute",top:6,right:6,width:22,height:22,background:C.ink,color:C.paper,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IconX size={12}/></button>
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top,rgba(0,0,0,.7),transparent)",padding:"12px 6px 4px"}}>
+                    <p style={{fontFamily:mono,fontSize:9,color:C.paper,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <div style={{display:"flex",alignItems:"center",gap:20,paddingTop:32,marginBottom:32,borderTop:`1px solid ${C.line}`}}>
+          <button onClick={run} disabled={!canRun}
+            style={{background:canRun?C.ink:C.stone,color:canRun?C.paper:C.mute,border:"none",padding:"16px 28px",cursor:canRun?"pointer":"not-allowed",fontFamily:sans,fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:12,transition:"all .2s"}}>
+            <Bolt size={16} spin={busy}/>{busy?<>Procesando<span style={{color:C.orange}}>.</span></>:<>Reaccionar<span style={{color:C.orange}}>.</span></>}
+          </button>
+          {(stmt||shots.length>0)&&!busy&&(
+            <button onClick={clear} style={{background:"none",border:"none",fontFamily:mono,fontSize:11,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute,cursor:"pointer",padding:0}}>limpiar todo</button>
+          )}
+        </div>
+
+        <Loading active={busy} progress={prog} sub={sub}/>
+
+        {error&&(
+          <div className="fade-up" style={{marginBottom:24,padding:"16px 20px",border:`1px solid ${C.orange}`,background:"rgba(247,100,59,0.06)",display:"flex",gap:12,alignItems:"flex-start"}}>
+            <IconAlert size={18} color={C.orange}/>
+            <div>
+              <p style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.orange,marginBottom:4}}>no se pudo procesar</p>
+              <p style={{fontSize:13,color:C.ink,fontFamily:mono,wordBreak:"break-word"}}>{error}</p>
+            </div>
+          </div>
+        )}
+
+        {result&&<ResultReport result={result} setError={setError}/>}
+      </main>
+
+      <footer style={{maxWidth:1080,margin:"0 auto",padding:"40px 40px 60px",borderTop:`1px solid ${C.line}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Bolt size={14}/><span style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute}}>reactor<span style={{color:C.orange}}>.</span> · v3</span>
+        </div>
+        <span style={{fontFamily:mono,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.mute}}>hygge<span style={{color:C.orange}}>.</span> · 2026</span>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

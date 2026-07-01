@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0A0A0C" />
+<title>JUEGOS · ALICE</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; width: 100%;
+    background: #0A0A0C;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── HUB ── */
+  #hub {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 44px 52px 36px;
+    overflow-y: auto;
+    transition: opacity 0.28s, transform 0.28s;
+  }
+  #hub.out { opacity: 0; transform: scale(0.97) translateY(6px); pointer-events: none; }
+
+  .eyebrow {
+    font-size: 10px; letter-spacing: 0.18em; color: #444;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .hub-title {
+    font-size: clamp(40px, 6.5vw, 80px);
+    font-weight: 400; letter-spacing: -0.01em; line-height: 1;
+    margin-bottom: 6px;
+  }
+  .hub-title span { color: #A855F7; }
+  .hub-sub {
+    font-size: 11px; color: #383838; letter-spacing: 0.12em;
+    margin-bottom: 52px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    position: relative;
+    border: 1px solid #181820;
+    border-radius: 3px;
+    padding: 26px 22px 20px;
+    cursor: pointer;
+    background: #0D0D12;
+    transition: border-color 0.16s, background 0.16s, transform 0.14s;
+    overflow: hidden;
+  }
+  .card:hover { border-color: #A855F7; background: #10101A; transform: translateY(-2px); }
+  .card:active { transform: translateY(0); }
+
+  .card-dot { width: 7px; height: 7px; border-radius: 50%; margin-bottom: 18px; }
+  .card-badge { position: absolute; top: 14px; right: 14px; font-size: 9px; letter-spacing: 0.14em; color: #2a2a2a; text-transform: uppercase; }
+
+  .card-name { font-size: 18px; font-weight: 400; letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 4px; }
+  .card-name small { font-size: 0.45em; opacity: 0.38; letter-spacing: 0.14em; vertical-align: middle; margin-left: 10px; }
+  .card-desc { font-size: 11px; color: #383838; letter-spacing: 0.06em; line-height: 1.65; margin: 10px 0 18px; }
+
+  .card-score { font-size: 10px; letter-spacing: 0.14em; color: #2a2a2a; text-transform: uppercase; }
+  .card-score em { color: #A855F7; font-style: normal; }
+
+  .card-cta {
+    position: absolute; bottom: 18px; right: 18px;
+    font-size: 10px; letter-spacing: 0.14em; color: #1e1e26;
+    text-transform: uppercase; transition: color 0.15s;
+  }
+  .card:hover .card-cta { color: #A855F7; }
+
+  /* ── GAME LAYER ── */
+  #game-layer {
+    position: fixed; inset: 0;
+    background: #000;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.26s;
+  }
+  #game-layer.in { opacity: 1; pointer-events: all; }
+
+  #game-layer iframe {
+    width: 100%; height: 100%;
+    border: none; display: block;
+  }
+
+  /* ── BACK BTN ── */
+  #back {
+    position: fixed; top: 18px; left: 18px; z-index: 200;
+    background: rgba(0,0,0,0.7); border: 1px solid #1c1c24;
+    color: #555; font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 7px 14px; cursor: pointer; border-radius: 3px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.22s, color 0.14s, border-color 0.14s;
+  }
+  #back.visible { opacity: 1; pointer-events: all; }
+  #back:hover { color: #fff; border-color: #444; }
+
+  /* scrollbar */
+  #hub::-webkit-scrollbar { width: 3px; }
+  #hub::-webkit-scrollbar-thumb { background: #1e1e26; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="hub">
+  <div class="eyebrow">Alice · Workspace</div>
+  <h1 class="hub-title">JUEGOS<span>.</span></h1>
+  <p class="hub-sub">SELECCIONÁ UN JUEGO PARA EMPEZAR</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<button id="back" onclick="closeGame()">← Volver</button>
+
+<div id="game-layer">
+  <iframe id="game-iframe" src="" allowfullscreen></iframe>
+</div>
+
+<script>
+const GAMES = [
+  {
+    id: 'heli',
+    name: 'HELICOPTER',
+    sub: 'BAM EDITION',
+    dot: '#A855F7',
+    badge: 'v1.0',
+    desc: 'Esquivá las paredes · agarrá BAM para modo salvo · evitá los obstáculos flotantes',
+    scoreKey: 'heli_bam_hiscores_v2',
+    scoreLabel: 'mejor distancia',
+    url: '/heli.html',
+  },
+  {
+    id: 'asteroids',
+    name: 'ASTEROIDS',
+    sub: 'BAM EDITION',
+    dot: '#A855F7',
+    badge: 'v1.0',
+    desc: 'Rotá · empujá · dispará · agarrá BAM para 60s de invencibilidad y triple disparo',
+    scoreKey: 'asteroids_bam_hiscores_v1',
+    scoreLabel: 'mejor puntaje',
+    url: '/asteroids.html',
+  },
+  {
+    id: 'invaders',
+    name: 'SPACE INVADERS',
+    sub: 'BAM EDITION',
+    dot: '#A855F7',
+    badge: 'v1.0',
+    desc: 'Eliminá las oleadas · agarrá BAM para triple disparo · no dejes que aterricen',
+    scoreKey: 'invaders_bam_hiscores_v1',
+    scoreLabel: 'mejor puntaje',
+    url: '/invaders.html',
+  },
+  {
+    id: 'lander',
+    name: 'LUNAR LANDER',
+    sub: 'BAM EDITION',
+    dot: '#A855F7',
+    badge: 'v1.0',
+    desc: 'Aterrizá suave y derecho en los rooftops · BAM en el cielo para recargar combustible',
+    scoreKey: null,
+    scoreLabel: null,
+    url: '/lander.html',
+  },
+];
+
+const hub       = document.getElementById('hub');
+const gameLayer = document.getElementById('game-layer');
+const gameIframe= document.getElementById('game-iframe');
+const backBtn   = document.getElementById('back');
+
+function getBest(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) { const a = JSON.parse(raw); if (a && a.length) return a[0].score; }
+  } catch(e) {}
+  return null;
+}
+
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  GAMES.forEach(g => {
+    const best = getBest(g.scoreKey);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-dot" style="background:${g.dot}"></div>
+      <div class="card-badge">${g.badge}</div>
+      <div class="card-name">${g.name}<small>${g.sub}</small></div>
+      <div class="card-desc">${g.desc}</div>
+      <div class="card-score">${g.scoreLabel}: <em>${best !== null ? String(best).padStart(5,'0') : '—'}</em></div>
+      <div class="card-cta">JUGAR →</div>
+    `;
+    card.addEventListener('click', () => openGame(g.url));
+    grid.appendChild(card);
+  });
+}
+
+function openGame(url) {
+  gameIframe.src = url;
+  hub.classList.add('out');
+  gameLayer.classList.add('in');
+  backBtn.classList.add('visible');
+}
+
+function closeGame() {
+  gameIframe.src = '';
+  hub.classList.remove('out');
+  gameLayer.classList.remove('in');
+  backBtn.classList.remove('visible');
+  buildGrid(); // refresh scores
+}
+
+buildGrid();
+</script>
+</body>
+</html>

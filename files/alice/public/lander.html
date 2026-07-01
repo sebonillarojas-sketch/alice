@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-store" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0E0E10" />
+<title>LUNAR LANDER / BAM</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #000;
+    overflow: hidden;
+    height: 100%; width: 100%;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+  #game { display: block; background: #000; width: 100vw; height: 100vh; }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none;
+    letter-spacing: 4px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  #overlay h1 {
+    font-size: clamp(44px, 9vw, 110px);
+    margin: 0 0 20px;
+    letter-spacing: 10px;
+    font-weight: 400;
+  }
+  #overlay p {
+    font-size: clamp(12px, 1.8vw, 17px);
+    margin: 4px 0;
+    opacity: 0.9;
+    max-width: 720px;
+  }
+  #overlay .blink {
+    margin-top: 32px;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink { to { visibility: hidden; } }
+  .hidden { display: none !important; }
+  .purple { color: #A855F7; }
+
+  /* On-screen controls for touch devices */
+  #mobileControls {
+    position: fixed;
+    left: calc(16px + env(safe-area-inset-left, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .mc-pad {
+    display: flex;
+    gap: 10px;
+    pointer-events: none;
+  }
+  .mc-actions {
+    display: flex;
+    pointer-events: none;
+  }
+  .mc-btn {
+    pointer-events: auto;
+    width: 58px; height: 58px;
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: inherit;
+    font-size: 22px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    transition: background 0.08s ease, transform 0.08s ease;
+    cursor: pointer;
+  }
+  .mc-btn.thrust {
+    width: 82px; height: 82px;
+    font-size: 13px;
+    letter-spacing: 3px;
+  }
+  .mc-btn.active {
+    background: rgba(168, 85, 247, 0.28);
+    border-color: #A855F7;
+    transform: scale(0.94);
+  }
+
+  #back-btn {
+    position: fixed; top: 18px; left: 18px; z-index: 100;
+    background: rgba(0,0,0,0.7); border: 1px solid #222;
+    color: #666; font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 7px 13px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #back-btn:hover { color: #fff; border-color: #555; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<button id="back-btn" onclick="history.back()">← Juegos</button>
+
+<div id="mobileControls" class="hidden">
+  <div class="mc-pad">
+    <button class="mc-btn" data-key="ArrowLeft" aria-label="Rotate left">◀</button>
+    <button class="mc-btn" data-key="ArrowRight" aria-label="Rotate right">▶</button>
+  </div>
+  <div class="mc-actions">
+    <button class="mc-btn thrust" data-key="ArrowUp" aria-label="Thrust">THRUST</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <h1 id="title">LUNAR LANDER<span class="purple">.</span><small style="font-size:0.35em;letter-spacing:8px;vertical-align:middle;margin-left:16px;opacity:0.85;">BAM EDITION</small></h1>
+  <p id="sub1">ROTATE: &larr; &rarr; &nbsp;&nbsp; THRUST: &uarr;</p>
+  <p id="sub2">LAND SLOWLY &amp; UPRIGHT ON A ROOFTOP &mdash; NARROWER PADS SCORE HIGHER</p>
+  <p id="sub3">GRAB <span class="purple">BAM</span> MARKS IN THE SKY TO REFUEL</p>
+  <p class="blink" id="prompt">PRESS SPACE OR TAP TO START</p>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('title');
+  const sub1 = document.getElementById('sub1');
+  const sub2 = document.getElementById('sub2');
+  const sub3 = document.getElementById('sub3');
+  const prompt = document.getElementById('prompt');
+  const mobileControls = document.getElementById('mobileControls');
+
+  const BAM = '#A855F7';
+  const PROJECTS = [
+    'LARCO 1036', 'EL OLIVAR', 'PEZET', 'MAGDALENA',
+    'SA-01', 'LEGENDRE', 'SOL LA MOLINA', 'HYGGE 01',
+  ];
+
+  // Physics tuning
+  const GRAVITY = 0.035;
+  const THRUST = 0.11;
+  const FUEL_USE = 0.35;
+  const ROT_SPEED = 0.055;
+  const LAND_MAX_VY = 1.6;
+  const LAND_MAX_VX = 1.1;
+  const LAND_MAX_ANGLE = 0.20; // radians (~11.5°)
+
+  let W = 0, H = 0, DPR = Math.max(1, window.devicePixelRatio || 1);
+  function resize() {
+    W = document.documentElement.clientWidth;
+    H = document.documentElement.clientHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+  resize();
+
+  // --- Audio (Web Audio synthesis) ---
+  let AC = null;
+  function audio() {
+    if (!AC) {
+      try { AC = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { AC = null; }
+    }
+    return AC;
+  }
+  function beep(freq, dur, type = 'square', vol = 0.08, slide = 0) {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, a.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), a.currentTime + dur);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g).connect(a.destination);
+    o.start();
+    o.stop(a.currentTime + dur);
+  }
+  function noise(dur, vol = 0.15) {
+    const a = audio(); if (!a) return;
+    const buf = a.createBuffer(1, Math.max(1, Math.floor(a.sampleRate * dur)), a.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = a.createBufferSource();
+    const g = a.createGain(); g.gain.value = vol;
+    src.buffer = buf;
+    src.connect(g).connect(a.destination);
+    src.start();
+  }
+  const SND = {
+    thrust: () => beep(60 + Math.random() * 20, 0.06, 'sawtooth', 0.03),
+    land: () => { beep(520, 0.1, 'sine', 0.09); setTimeout(() => beep(780, 0.14, 'sine', 0.09), 90); setTimeout(() => beep(1040, 0.18, 'sine', 0.09), 200); },
+    crash: () => { noise(0.5, 0.22); beep(120, 0.3, 'triangle', 0.1, -80); },
+    fuelLow: () => beep(880, 0.05, 'square', 0.04, -200),
+    bam: () => { beep(523, 0.08, 'square', 0.08); setTimeout(() => beep(659, 0.08, 'square', 0.08), 70); setTimeout(() => beep(784, 0.14, 'square', 0.09), 140); },
+    bonus: (n) => { const notes = [392, 523, 659, 784, 988]; for (let i = 0; i < Math.min(5, n); i++) setTimeout(() => beep(notes[i], 0.1, 'square', 0.08), i * 80); },
+  };
+
+  // --- State ---
+  const state = {
+    mode: 'title',
+    lander: null,
+    terrain: [],     // array of {x, y}
+    pads: [],        // array of {x1, x2, y, multiplier, name, bam}
+    particles: [],
+    stars: [],
+    bamMark: null,
+    bamTimer: 0,
+    score: 0,
+    fuel: 100,
+    lives: 3,
+    level: 1,
+    resultTimer: 0,
+    lastResult: null, // {kind:'landed'|'crashed', bonus?, pad?}
+    fuelLowBeepTimer: 0,
+  };
+
+  const keys = {};
+
+  // --- Setup helpers ---
+  function makeStars() {
+    const count = Math.max(40, Math.floor((W * H) / 18000));
+    const stars = [];
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.7, // stars only in the upper sky
+        brightness: 0.2 + Math.random() * 0.6,
+        layer: Math.random() < 0.3 ? 1 : 0,
+      });
+    }
+    return stars;
+  }
+
+  function makeLander() {
+    return {
+      x: W * (0.25 + Math.random() * 0.5),
+      y: 80,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: 0.1,
+      angle: 0,
+      thrusting: false,
+      alive: true,
+      landed: false,
+      w: 16, h: 18,
+    };
+  }
+
+  // Generate a jagged skyline with 2-4 landing pads
+  function generateTerrain(level) {
+    const baseline = H * 0.78;
+    const minY = H * 0.35;
+    const maxY = H * 0.92;
+    const terrain = [];
+    const pads = [];
+
+    // How many pads this level? 3 on level 1, gradually fewer/narrower on higher levels.
+    const padCount = Math.max(2, 4 - Math.floor((level - 1) / 2));
+    // Pick x positions for pads, spaced across the width
+    const slots = [];
+    const margin = 80;
+    for (let i = 0; i < padCount; i++) {
+      const t = (i + 0.5) / padCount;
+      slots.push(margin + t * (W - margin * 2) + (Math.random() - 0.5) * 60);
+    }
+
+    // Assign projects + widths + multipliers
+    const projects = [...PROJECTS].sort(() => Math.random() - 0.5);
+    const padInfo = slots.map((cx, i) => {
+      const widthTiers = [
+        [130, 1], [100, 2], [80, 3], [60, 5], [48, 8],
+      ];
+      const tierIdx = Math.min(widthTiers.length - 1, i + Math.floor((level - 1) / 2));
+      const [baseW, mult] = widthTiers[tierIdx];
+      const padW = baseW - Math.min(20, (level - 1) * 3);
+      return {
+        cx,
+        w: Math.max(40, padW),
+        multiplier: mult,
+        name: projects[i % projects.length],
+        bam: false,
+      };
+    });
+    let maxMult = -1, maxIdx = 0;
+    padInfo.forEach((p, i) => { if (p.multiplier > maxMult) { maxMult = p.multiplier; maxIdx = i; } });
+    padInfo[maxIdx].bam = true;
+
+    let x = 0;
+    let y = baseline + (Math.random() - 0.5) * 60;
+    terrain.push({ x: 0, y });
+
+    for (let i = 0; i < padInfo.length; i++) {
+      const p = padInfo[i];
+      const x1 = Math.max(x + 20, p.cx - p.w / 2);
+      const x2 = x1 + p.w;
+      while (x < x1 - 30) {
+        const step = 20 + Math.random() * 40;
+        const nx = Math.min(x1, x + step);
+        const delta = (Math.random() - 0.5) * 90;
+        y = Math.max(minY, Math.min(maxY, y + delta));
+        terrain.push({ x: nx, y });
+        x = nx;
+      }
+      const padY = Math.max(minY + 20, Math.min(maxY - 40, y - 10 - Math.random() * 30));
+      terrain.push({ x: x1, y: padY });
+      terrain.push({ x: x2, y: padY });
+      pads.push({ x1, x2, y: padY, multiplier: p.multiplier, name: p.name, bam: p.bam });
+      x = x2;
+      y = padY;
+    }
+
+    while (x < W) {
+      const step = 20 + Math.random() * 40;
+      const nx = Math.min(W, x + step);
+      const delta = (Math.random() - 0.5) * 90;
+      y = Math.max(minY, Math.min(maxY, y + delta));
+      terrain.push({ x: nx, y });
+      x = nx;
+    }
+    terrain.push({ x: W, y });
+
+    return { terrain, pads };
+  }
+
+  function surfaceYAt(x) {
+    const t = state.terrain;
+    if (!t.length) return H;
+    if (x <= t[0].x) return t[0].y;
+    if (x >= t[t.length - 1].x) return t[t.length - 1].y;
+    let lo = 0, hi = t.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (t[mid].x <= x) lo = mid; else hi = mid;
+    }
+    const a = t[lo], b = t[hi];
+    const f = (x - a.x) / (b.x - a.x);
+    return a.y + (b.y - a.y) * f;
+  }
+
+  function padAt(x) {
+    for (const p of state.pads) {
+      if (x >= p.x1 && x <= p.x2) return p;
+    }
+    return null;
+  }
+
+  // --- Game flow ---
+  function startGame() {
+    state.mode = 'play';
+    state.score = 0;
+    state.level = 1;
+    state.lives = 3;
+    state.fuel = 100;
+    state.particles = [];
+    state.bamMark = null;
+    state.bamTimer = 900 + Math.random() * 600;
+    state.resultTimer = 0;
+    state.lastResult = null;
+    state.stars = makeStars();
+    const t = generateTerrain(state.level);
+    state.terrain = t.terrain;
+    state.pads = t.pads;
+    state.lander = makeLander();
+    overlay.classList.add('hidden');
+    setMobileControlsVisible(true);
+    audio();
+  }
+
+  function nextLevel() {
+    state.level += 1;
+    state.fuel = Math.min(100, state.fuel + 30);
+    state.particles = [];
+    state.bamMark = null;
+    state.bamTimer = 900 + Math.random() * 600;
+    state.resultTimer = 0;
+    state.lastResult = null;
+    const t = generateTerrain(state.level);
+    state.terrain = t.terrain;
+    state.pads = t.pads;
+    state.lander = makeLander();
+  }
+
+  function respawn() {
+    state.particles = [];
+    state.fuel = Math.max(40, state.fuel);
+    state.resultTimer = 0;
+    state.lastResult = null;
+    state.lander = makeLander();
+  }
+
+  function gameOver() {
+    state.mode = 'gameover';
+    title.textContent = 'GAME OVER';
+    sub1.innerHTML = `FINAL SCORE <span class="purple">${String(state.score).padStart(6, '0')}</span>`;
+    sub2.innerHTML = `REACHED LEVEL ${state.level}`;
+    sub3.innerHTML = '&nbsp;';
+    prompt.textContent = 'PRESS SPACE OR TAP TO PLAY AGAIN';
+    overlay.classList.remove('hidden');
+    setMobileControlsVisible(false);
+  }
+
+  function addParticle(x, y, vx, vy, life, color) {
+    state.particles.push({ x, y, vx, vy, life, maxLife: life, color });
+  }
+  function emitExhaust(L) {
+    const nx = Math.sin(L.angle), ny = -Math.cos(L.angle);
+    const ex = -nx, ey = -ny;
+    const baseX = L.x + ex * 9;
+    const baseY = L.y + ey * 9;
+    for (let i = 0; i < 3; i++) {
+      const spread = (Math.random() - 0.5) * 0.7;
+      const cs = Math.cos(spread), sn = Math.sin(spread);
+      const vxE = (ex * cs - ey * sn) * (2 + Math.random() * 1.5);
+      const vyE = (ex * sn + ey * cs) * (2 + Math.random() * 1.5);
+      addParticle(
+        baseX + (Math.random() - 0.5) * 3,
+        baseY + (Math.random() - 0.5) * 3,
+        L.vx * 0.3 + vxE,
+        L.vy * 0.3 + vyE,
+        18 + Math.random() * 14,
+        i === 0 ? BAM : '#fff',
+      );
+    }
+  }
+  function emitExplosion(x, y) {
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = Math.random() * 4 + 1;
+      addParticle(x, y, Math.cos(a) * v, Math.sin(a) * v, 40 + Math.random() * 30, Math.random() < 0.5 ? '#fff' : BAM);
+    }
+  }
+  function emitLandingDust(x, y) {
+    for (let i = 0; i < 18; i++) {
+      const a = (-Math.PI / 2) + (Math.random() - 0.5) * Math.PI;
+      const v = Math.random() * 1.6 + 0.4;
+      addParticle(x + (Math.random() - 0.5) * 12, y, Math.cos(a) * v, Math.sin(a) * v * 0.4, 30 + Math.random() * 20, 'rgba(200,200,200,0.9)');
+    }
+  }
+
+  function spawnBamMark() {
+    const fromLeft = Math.random() < 0.5;
+    return {
+      x: fromLeft ? -30 : W + 30,
+      y: 60 + Math.random() * (H * 0.45),
+      vx: (fromLeft ? 1 : -1) * 0.8,
+      vy: 0,
+      a: 0,
+      rot: (Math.random() < 0.5 ? -1 : 1) * 0.004,
+      w: 88, h: 40,
+      pulse: 0,
+      spawnAnim: 0,
+    };
+  }
+
+  // --- Landing check ---
+  function checkLanding() {
+    const L = state.lander;
+    if (!L.alive || L.landed) return;
+    const surfY = surfaceYAt(L.x);
+    const bottomY = L.y + L.h / 2;
+    if (bottomY < surfY) return;
+
+    const pad = padAt(L.x);
+    const isOnPad = pad && Math.abs(L.y + L.h / 2 - pad.y) < 10;
+
+    let ang = ((L.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (ang < -Math.PI) ang += Math.PI * 2;
+
+    const softEnough = Math.abs(L.vy) <= LAND_MAX_VY && Math.abs(L.vx) <= LAND_MAX_VX;
+    const uprightEnough = Math.abs(ang) <= LAND_MAX_ANGLE;
+
+    if (isOnPad && softEnough && uprightEnough) {
+      L.landed = true;
+      L.vx = 0; L.vy = 0;
+      L.y = pad.y - L.h / 2;
+      L.angle = 0;
+
+      const fuelBonus = Math.floor(state.fuel * 2);
+      const padBonus = pad.multiplier * 100;
+      const preciseBonus = Math.floor(150 * (1 - (Math.abs(L.vx) / LAND_MAX_VX + Math.abs(L.vy) / LAND_MAX_VY) / 2));
+      const total = padBonus * pad.multiplier + fuelBonus + Math.max(0, preciseBonus);
+
+      state.score += total;
+      state.lastResult = {
+        kind: 'landed',
+        pad,
+        breakdown: {
+          padBonus: padBonus * pad.multiplier,
+          fuelBonus,
+          preciseBonus: Math.max(0, preciseBonus),
+          total,
+        },
+      };
+      state.resultTimer = 180;
+      emitLandingDust(L.x, pad.y);
+      SND.land();
+      setTimeout(() => SND.bonus(pad.multiplier), 400);
+    } else {
+      L.alive = false;
+      emitExplosion(L.x, L.y);
+      SND.crash();
+      state.lives -= 1;
+      state.lastResult = {
+        kind: 'crashed',
+        reason: !isOnPad ? 'MISSED THE PAD' : (!softEnough ? 'TOO FAST' : 'BAD ANGLE'),
+      };
+      state.resultTimer = 180;
+    }
+  }
+
+  // --- Update ---
+  function update() {
+    if (state.mode !== 'play') return;
+    const L = state.lander;
+
+    if (state.resultTimer > 0) {
+      state.resultTimer -= 1;
+      if (state.resultTimer === 0) {
+        if (state.lastResult && state.lastResult.kind === 'landed') {
+          nextLevel();
+        } else {
+          if (state.lives < 0) gameOver();
+          else respawn();
+        }
+      }
+    }
+
+    if (L && L.alive && !L.landed) {
+      if (keys['ArrowLeft'] || keys['KeyA']) L.angle -= ROT_SPEED;
+      if (keys['ArrowRight'] || keys['KeyD']) L.angle += ROT_SPEED;
+
+      L.thrusting = false;
+      if ((keys['ArrowUp'] || keys['KeyW']) && state.fuel > 0) {
+        const tx = Math.sin(L.angle) * THRUST;
+        const ty = -Math.cos(L.angle) * THRUST;
+        L.vx += tx;
+        L.vy += ty;
+        state.fuel = Math.max(0, state.fuel - FUEL_USE);
+        L.thrusting = true;
+        emitExhaust(L);
+        if (Math.random() < 0.4) SND.thrust();
+      }
+
+      L.vy += GRAVITY;
+
+      L.x += L.vx;
+      L.y += L.vy;
+
+      if (L.x < -10) L.x = W + 10;
+      if (L.x > W + 10) L.x = -10;
+
+      if (state.fuel < 15 && state.fuel > 0) {
+        state.fuelLowBeepTimer -= 1;
+        if (state.fuelLowBeepTimer <= 0) {
+          SND.fuelLow();
+          state.fuelLowBeepTimer = 30;
+        }
+      }
+
+      checkLanding();
+    }
+
+    if (state.bamMark) {
+      const M = state.bamMark;
+      M.x += M.vx; M.y += M.vy;
+      M.a += M.rot;
+      M.pulse += 0.08;
+      if (M.spawnAnim < 1) M.spawnAnim = Math.min(1, M.spawnAnim + 0.03);
+      if (L && L.alive && !L.landed) {
+        if (Math.hypot(M.x - L.x, M.y - L.y) < 32) {
+          state.fuel = Math.min(100, state.fuel + 45);
+          state.score += 250;
+          state.bamMark = null;
+          state.bamTimer = 1800 + Math.random() * 900;
+          SND.bam();
+          for (let i = 0; i < 20; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const v = Math.random() * 2.5 + 0.5;
+            addParticle(L.x, L.y, Math.cos(a) * v, Math.sin(a) * v, 40 + Math.random() * 20, BAM);
+          }
+        }
+      }
+      if (M.x < -60 || M.x > W + 60) state.bamMark = null;
+    } else {
+      state.bamTimer -= 1;
+      if (state.bamTimer <= 0 && L && L.alive && !L.landed) {
+        state.bamMark = spawnBamMark();
+      }
+    }
+
+    for (const p of state.particles) {
+      p.x += p.vx; p.y += p.vy; p.life -= 1;
+    }
+    state.particles = state.particles.filter(p => p.life > 0);
+  }
+
+  // --- Render ---
+  function drawStars() {
+    for (const s of state.stars) {
+      ctx.globalAlpha = s.brightness;
+      ctx.fillStyle = '#fff';
+      const sz = s.layer === 1 ? 2 : 1;
+      ctx.fillRect(s.x, s.y, sz, sz);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTerrain() {
+    ctx.strokeStyle = '#fff';
+    ctx.fillStyle = '#0A0A0A';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    ctx.lineTo(state.terrain[0].x, state.terrain[0].y);
+    for (let i = 1; i < state.terrain.length; i++) {
+      ctx.lineTo(state.terrain[i].x, state.terrain[i].y);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    for (const p of state.pads) {
+      ctx.strokeStyle = p.bam ? BAM : '#fff';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x1, p.y);
+      ctx.lineTo(p.x2, p.y);
+      ctx.stroke();
+
+      ctx.fillStyle = p.bam ? BAM : 'rgba(255,255,255,0.75)';
+      ctx.font = '600 10px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${p.name}  ×${p.multiplier}`, (p.x1 + p.x2) / 2, p.y + 7);
+    }
+  }
+
+  function drawLander(L) {
+    if (!L) return;
+    ctx.save();
+    ctx.translate(L.x, L.y);
+    ctx.rotate(L.angle);
+    ctx.strokeStyle = '#fff';
+    ctx.fillStyle = '#000';
+    ctx.lineWidth = 1.6;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-5, -9);
+    ctx.lineTo(5, -9);
+    ctx.lineTo(8, -3);
+    ctx.lineTo(8, 4);
+    ctx.lineTo(-8, 4);
+    ctx.lineTo(-8, -3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, -9, 3, Math.PI, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-7, 4); ctx.lineTo(-11, 11); ctx.lineTo(-13, 11);
+    ctx.moveTo(7, 4); ctx.lineTo(11, 11); ctx.lineTo(13, 11);
+    ctx.stroke();
+    if (L.thrusting) {
+      const flicker = 8 + Math.random() * 10;
+      ctx.fillStyle = BAM;
+      ctx.strokeStyle = BAM;
+      ctx.beginPath();
+      ctx.moveTo(-3, 4);
+      ctx.lineTo(0, 4 + flicker);
+      ctx.lineTo(3, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(-1.5, 4);
+      ctx.lineTo(0, 4 + flicker * 0.6);
+      ctx.lineTo(1.5, 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawBamMark(M) {
+    ctx.save();
+    ctx.translate(M.x, M.y);
+    ctx.rotate(M.a);
+    const spawn = M.spawnAnim;
+    const pulse = (1 + Math.sin(M.pulse) * 0.05) * (0.5 + 0.5 * spawn);
+    ctx.scale(pulse, pulse);
+    const w = M.w / 2, h = M.h / 2;
+    ctx.strokeStyle = BAM;
+    ctx.globalAlpha = 0.25 * spawn;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-w - 5, -h - 5, M.w + 10, M.h + 10);
+    ctx.globalAlpha = spawn;
+    ctx.lineWidth = 2.2;
+    ctx.strokeRect(-w, -h, M.w, M.h);
+    ctx.fillStyle = BAM;
+    ctx.fillRect(-w, -h, M.w, 3);
+    ctx.font = '700 22px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('BAM', 0, 3);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (const p of state.particles) {
+      const alpha = Math.min(1, p.life / (p.maxLife * 0.5));
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color || '#fff';
+      ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHUD() {
+    const L = state.lander;
+    ctx.save();
+    ctx.font = '600 13px "Courier New", monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#fff';
+    ctx.fillText('SCORE  ' + String(state.score).padStart(6, '0'), 18, 18);
+    ctx.globalAlpha = 0.7;
+    ctx.fillText('LEVEL ' + state.level, 18, 38);
+    ctx.globalAlpha = 1;
+
+    for (let i = 0; i < state.lives; i++) {
+      ctx.save();
+      ctx.translate(22 + i * 18, 62);
+      ctx.scale(0.55, 0.55);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-5, -9); ctx.lineTo(5, -9); ctx.lineTo(8, -3);
+      ctx.lineTo(8, 4); ctx.lineTo(-8, 4); ctx.lineTo(-8, -3); ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-7, 4); ctx.lineTo(-11, 10);
+      ctx.moveTo(7, 4); ctx.lineTo(11, 10);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.textAlign = 'right';
+    const rightX = W - 18;
+
+    const fuelColor = state.fuel > 30 ? '#fff' : state.fuel > 10 ? '#E5C044' : '#FF5557';
+    ctx.fillStyle = fuelColor;
+    ctx.fillText('FUEL ' + String(Math.floor(state.fuel)).padStart(3, '0'), rightX, 18);
+    const barW = 140, barH = 6;
+    const barX = rightX - barW, barY = 36;
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+    ctx.fillStyle = fuelColor;
+    ctx.fillRect(barX, barY, barW * (state.fuel / 100), barH);
+
+    if (L) {
+      const vx = L.vx, vy = L.vy;
+      const vxOk = Math.abs(vx) <= LAND_MAX_VX;
+      const vyOk = Math.abs(vy) <= LAND_MAX_VY;
+      ctx.font = '600 12px "Courier New", monospace';
+      ctx.fillStyle = vxOk ? '#7FE68B' : '#FF5557';
+      ctx.fillText('H-VEL ' + (vx >= 0 ? '+' : '') + vx.toFixed(2), rightX, 52);
+      ctx.fillStyle = vyOk ? '#7FE68B' : '#FF5557';
+      ctx.fillText('V-VEL ' + (vy >= 0 ? '+' : '') + vy.toFixed(2), rightX, 68);
+
+      const alt = Math.max(0, Math.floor(surfaceYAt(L.x) - (L.y + L.h / 2)));
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText('ALT   ' + String(alt).padStart(4, '0'), rightX, 84);
+    }
+
+    ctx.restore();
+
+    if (state.resultTimer > 0 && state.lastResult) {
+      const r = state.lastResult;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (r.kind === 'landed') {
+        ctx.fillStyle = BAM;
+        ctx.font = '700 42px "Courier New", monospace';
+        ctx.fillText('SAFE LANDING', W / 2, H / 2 - 30);
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 14px "Courier New", monospace';
+        const bd = r.breakdown;
+        ctx.fillText(`${r.pad.name} ×${r.pad.multiplier}  →  ${bd.padBonus}`, W / 2, H / 2 + 6);
+        ctx.fillText(`FUEL BONUS ${bd.fuelBonus}   PRECISION ${bd.preciseBonus}`, W / 2, H / 2 + 26);
+        ctx.fillStyle = BAM;
+        ctx.font = '700 18px "Courier New", monospace';
+        ctx.fillText('+' + bd.total, W / 2, H / 2 + 54);
+      } else {
+        ctx.fillStyle = '#FF5557';
+        ctx.font = '700 42px "Courier New", monospace';
+        ctx.fillText('CRASHED', W / 2, H / 2 - 20);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = '600 14px "Courier New", monospace';
+        ctx.fillText(r.reason || '', W / 2, H / 2 + 14);
+      }
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    drawStars();
+    drawTerrain();
+    if (state.bamMark) drawBamMark(state.bamMark);
+    drawParticles();
+    drawLander(state.lander);
+    drawHUD();
+  }
+
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  window.addEventListener('keydown', e => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Space'].includes(e.key)) e.preventDefault();
+    keys[e.code] = true;
+    if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
+      if (state.mode === 'title' || state.mode === 'gameover') startGame();
+    }
+  }, { passive: false });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (state.mode !== 'play') startGame();
+  }, { passive: false });
+
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+  function setMobileControlsVisible(visible) {
+    if (!isTouchDevice) return;
+    mobileControls.classList.toggle('hidden', !visible);
+  }
+  if (isTouchDevice) {
+    setMobileControlsVisible(true);
+
+    const releaseAll = () => {
+      mobileControls.querySelectorAll('[data-key]').forEach(b => {
+        keys[b.dataset.key] = false;
+        b.classList.remove('active');
+      });
+    };
+
+    mobileControls.querySelectorAll('[data-key]').forEach(btn => {
+      const code = btn.dataset.key;
+      const down = (e) => {
+        e.preventDefault();
+        if (state.mode !== 'play') { startGame(); return; }
+        keys[code] = true;
+        btn.classList.add('active');
+      };
+      const up = (e) => {
+        if (e) e.preventDefault();
+        keys[code] = false;
+        btn.classList.remove('active');
+      };
+      btn.addEventListener('touchstart', down, { passive: false });
+      btn.addEventListener('touchend', up, { passive: false });
+      btn.addEventListener('touchcancel', up, { passive: false });
+      btn.addEventListener('mousedown', down);
+      btn.addEventListener('mouseup', up);
+      btn.addEventListener('mouseleave', up);
+    });
+    window.addEventListener('blur', releaseAll);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+  }
+
+  state.stars = makeStars();
+  const t0 = generateTerrain(1);
+  state.terrain = t0.terrain;
+  state.pads = t0.pads;
+})();
+</script>
+</body>
+</html>

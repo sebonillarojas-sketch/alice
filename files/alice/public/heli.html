@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-store" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0E0E10" />
+<title>HELICOPTER / BAM</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #000;
+    overflow: hidden;
+    height: 100%; width: 100%;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+  #game {
+    display: block;
+    background: #000;
+    width: 100vw;
+    height: 100vh;
+    cursor: pointer;
+  }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none;
+    letter-spacing: 4px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  #overlay h1 {
+    font-size: clamp(44px, 9vw, 110px);
+    margin: 0 0 16px;
+    letter-spacing: 10px;
+    font-weight: 400;
+  }
+  #overlay p {
+    font-size: clamp(12px, 1.7vw, 17px);
+    margin: 4px 0;
+    opacity: 0.9;
+    max-width: 720px;
+  }
+  #overlay .blink {
+    margin-top: 28px;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink { to { visibility: hidden; } }
+  .hidden { display: none !important; }
+  .purple { color: #A855F7; }
+
+  #hiScoreTable {
+    margin-top: 22px;
+    font-size: clamp(12px, 1.5vw, 15px);
+    letter-spacing: 3px;
+  }
+  #hiScoreTable .hs-head {
+    opacity: 0.55;
+    margin-bottom: 8px;
+    letter-spacing: 6px;
+  }
+  .hs-row {
+    display: grid;
+    grid-template-columns: 40px 100px;
+    gap: 14px;
+    padding: 1px 0;
+    justify-content: center;
+  }
+  .hs-row .rank { opacity: 0.5; text-align: right; }
+  .hs-row .score { text-align: left; }
+  .hs-row.hs-new { animation: blink 0.6s steps(2, start) infinite; color: #A855F7; }
+
+  #back-btn {
+    position: fixed; top: 18px; left: 18px; z-index: 10;
+    background: rgba(0,0,0,0.65);
+    border: 1px solid #222;
+    color: #666;
+    font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 7px 13px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #back-btn:hover { color: #fff; border-color: #555; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<button id="back-btn" onclick="history.back()">← Juegos</button>
+
+<div id="overlay">
+  <h1 id="title">HELICOPTER<span class="purple">.</span><small style="font-size:0.3em;letter-spacing:8px;vertical-align:middle;margin-left:14px;opacity:0.85;">BAM EDITION</small></h1>
+  <p id="sub1">HOLD SPACE / TAP / CLICK TO RISE &mdash; RELEASE TO FALL</p>
+  <p id="sub2">AVOID THE WALLS AND THE FLOATING OBSTACLES</p>
+  <p id="sub3">GRAB <span class="purple">BAM</span> MARKS FOR SALVO MODE</p>
+  <div id="hiScoreTable">
+    <div class="hs-head">BEST DISTANCE</div>
+    <div id="hsList"></div>
+  </div>
+  <p class="blink" id="prompt">PRESS SPACE OR TAP TO START</p>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('title');
+  const sub1 = document.getElementById('sub1');
+  const sub2 = document.getElementById('sub2');
+  const sub3 = document.getElementById('sub3');
+  const prompt = document.getElementById('prompt');
+  const hsList = document.getElementById('hsList');
+
+  const BAM = '#A855F7';
+  const RED = '#FF5557';
+  const WALL_FILL = '#0E0E10';
+
+  const HS_KEY = 'heli_bam_hiscores_v2';
+  const HS_MAX = 5;
+  function defaultScores() {
+    return [
+      { score: 5000 }, { score: 3000 }, { score: 1500 }, { score: 750 }, { score: 200 },
+    ];
+  }
+  function loadHS() {
+    try {
+      const raw = localStorage.getItem(HS_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.every(x => typeof x.score === 'number')) return arr.slice(0, HS_MAX);
+      }
+    } catch (e) {}
+    return defaultScores();
+  }
+  function saveHS(scores) {
+    try { localStorage.setItem(HS_KEY, JSON.stringify(scores)); } catch (e) {}
+  }
+
+  let W = 0, H = 0, DPR = Math.max(1, window.devicePixelRatio || 1);
+  function resize() {
+    W = document.documentElement.clientWidth;
+    H = document.documentElement.clientHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+  resize();
+
+  let AC = null;
+  function audio() {
+    if (!AC) {
+      try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; }
+    }
+    return AC;
+  }
+  function beep(freq, dur, type = 'square', vol = 0.08, slide = 0) {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, a.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), a.currentTime + dur);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g).connect(a.destination);
+    o.start();
+    o.stop(a.currentTime + dur);
+  }
+  function noise(dur, vol = 0.15) {
+    const a = audio(); if (!a) return;
+    const buf = a.createBuffer(1, Math.max(1, Math.floor(a.sampleRate * dur)), a.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = a.createBufferSource();
+    const g = a.createGain(); g.gain.value = vol;
+    src.buffer = buf;
+    src.connect(g).connect(a.destination);
+    src.start();
+  }
+  const SND = {
+    rotor: () => beep(100 + Math.random() * 20, 0.04, 'square', 0.02),
+    crash: () => { noise(0.5, 0.22); beep(120, 0.3, 'triangle', 0.1, -80); },
+    bam: () => {
+      beep(523, 0.08, 'square', 0.08);
+      setTimeout(() => beep(659, 0.08, 'square', 0.08), 70);
+      setTimeout(() => beep(784, 0.12, 'square', 0.08), 140);
+      setTimeout(() => beep(1047, 0.18, 'square', 0.09), 210);
+    },
+    salvoEnd: () => { beep(440, 0.1, 'sine', 0.07, -200); setTimeout(() => beep(330, 0.15, 'sine', 0.06, -150), 80); },
+    milestone: () => { beep(880, 0.06, 'square', 0.06); setTimeout(() => beep(1320, 0.1, 'square', 0.07), 70); },
+  };
+
+  const GRAVITY = 0.28;
+  const THRUST = -0.55;
+  const MAX_VY = 9;
+  const HELI_X_RATIO = 0.30;
+  const SCROLL_SPEED_BASE = 3.8;
+  const SCROLL_ACCEL = 0.00012;
+  const SCROLL_MAX = 8.2;
+  const WALL_COL_STEP = 6;
+  const INITIAL_GAP_RATIO = 0.72;
+  const MIN_GAP = 140;
+  const OBSTACLE_MIN_SPACING = 420;
+  const OBSTACLE_MAX_SPACING = 780;
+  const OBSTACLE_START_DIST = 900;
+  const BAM_MIN_SPACING = 2400;
+  const BAM_MAX_SPACING = 3400;
+  const BAM_START_DIST = 1600;
+  const SALVO_DURATION = 60 * 25;
+
+  const state = {
+    mode: 'title',
+    heli: null,
+    walls: [],
+    obstacles: [],
+    bamMarks: [],
+    particles: [],
+    scrollX: 0,
+    score: 0,
+    wallsFrontX: 0,
+    obstacleNextX: 0,
+    bamNextX: 0,
+    milestoneNext: 500,
+    highScores: loadHS(),
+    shake: 0,
+    dead: false,
+    deathTimer: 0,
+    lastResult: null,
+    salvoTimer: 0,
+  };
+
+  let thrusting = false;
+  function setThrust(v) { thrusting = v; }
+
+  function makeHeli() {
+    return { x: W * HELI_X_RATIO, y: H / 2, vy: 0, alive: true, rotorSpin: 0, tailSpin: 0, tilt: 0 };
+  }
+
+  let wallGen = null;
+  function seedWalls() {
+    const startGap = H * INITIAL_GAP_RATIO;
+    const centerY = H / 2;
+    wallGen = {
+      topY: centerY - startGap / 2, bottomY: centerY + startGap / 2,
+      topVel: 0, bottomVel: 0,
+      topPhase: Math.random() * Math.PI * 2, bottomPhase: Math.random() * Math.PI * 2,
+      topFreq: 0.010, bottomFreq: 0.011, lastFreqChange: 0,
+    };
+    state.walls = []; state.wallsFrontX = 0;
+  }
+
+  function generateWallsTo(targetX) {
+    while (state.wallsFrontX < targetX) {
+      state.wallsFrontX += WALL_COL_STEP;
+      const dist = state.wallsFrontX;
+      const diff = Math.min(1, dist / 15000);
+      wallGen.lastFreqChange += 1;
+      if (wallGen.lastFreqChange > 400 && Math.random() < 0.02) {
+        wallGen.topFreq = 0.007 + Math.random() * 0.012;
+        wallGen.bottomFreq = 0.007 + Math.random() * 0.012;
+        wallGen.lastFreqChange = 0;
+      }
+      wallGen.topPhase += wallGen.topFreq;
+      wallGen.bottomPhase += wallGen.bottomFreq;
+      const topAmp = H * (0.15 + diff * 0.18);
+      const bottomAmp = H * (0.15 + diff * 0.18);
+      const topTarget = 10 + H * 0.15 + Math.sin(wallGen.topPhase) * topAmp;
+      const bottomTarget = H * 0.85 + Math.sin(wallGen.bottomPhase) * bottomAmp - 10;
+      wallGen.topVel += (topTarget - wallGen.topY) * 0.0022; wallGen.topVel *= 0.985; wallGen.topY += wallGen.topVel;
+      wallGen.bottomVel += (bottomTarget - wallGen.bottomY) * 0.0022; wallGen.bottomVel *= 0.985; wallGen.bottomY += wallGen.bottomVel;
+      if (wallGen.topY < 10) wallGen.topY = 10;
+      if (wallGen.bottomY > H - 10) wallGen.bottomY = H - 10;
+      const gap = wallGen.bottomY - wallGen.topY;
+      if (gap < MIN_GAP) { const mid = (wallGen.topY + wallGen.bottomY) / 2; wallGen.topY = mid - MIN_GAP / 2; wallGen.bottomY = mid + MIN_GAP / 2; }
+      state.walls.push({ x: state.wallsFrontX, topY: wallGen.topY, bottomY: wallGen.bottomY });
+    }
+  }
+
+  function wallAt(worldX) {
+    const arr = state.walls;
+    if (!arr.length) return { topY: 0, bottomY: H };
+    if (worldX <= arr[0].x) return arr[0];
+    if (worldX >= arr[arr.length - 1].x) return arr[arr.length - 1];
+    let lo = 0, hi = arr.length - 1;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (arr[mid].x <= worldX) lo = mid; else hi = mid; }
+    const a = arr[lo], b = arr[hi], f = (worldX - a.x) / (b.x - a.x);
+    return { topY: a.topY + (b.topY - a.topY) * f, bottomY: a.bottomY + (b.bottomY - a.bottomY) * f };
+  }
+
+  function scheduleNextObstacle(fromX) { state.obstacleNextX = fromX + OBSTACLE_MIN_SPACING + Math.random() * (OBSTACLE_MAX_SPACING - OBSTACLE_MIN_SPACING); }
+  function maybeSpawnObstacle() {
+    if (state.wallsFrontX < state.obstacleNextX) return;
+    const x = state.obstacleNextX;
+    if (x < OBSTACLE_START_DIST) { scheduleNextObstacle(x); return; }
+    const wall = wallAt(x), gap = wall.bottomY - wall.topY;
+    const bh = Math.min(120, gap * (0.35 + Math.random() * 0.2)), bw = 40 + Math.random() * 45;
+    const aT = wall.topY + 70, aB = wall.bottomY - 70 - bh;
+    const y = aB <= aT ? (wall.topY + wall.bottomY - bh) / 2 : aT + Math.random() * (aB - aT);
+    state.obstacles.push({ x, y, w: bw, h: bh }); scheduleNextObstacle(x);
+  }
+  function scheduleNextBam(fromX) { state.bamNextX = fromX + BAM_MIN_SPACING + Math.random() * (BAM_MAX_SPACING - BAM_MIN_SPACING); }
+  function maybeSpawnBam() {
+    if (state.wallsFrontX < state.bamNextX) return;
+    const x = state.bamNextX;
+    if (x < BAM_START_DIST) { scheduleNextBam(x); return; }
+    const wall = wallAt(x), gap = wall.bottomY - wall.topY;
+    state.bamMarks.push({ x, y: wall.topY + gap * (0.25 + Math.random() * 0.5), w: 64, h: 30, pulse: 0, spawnAnim: 0 });
+    scheduleNextBam(x);
+  }
+
+  function startGame() {
+    state.mode = 'play'; state.scrollX = 0; state.score = 0;
+    state.walls = []; state.obstacles = []; state.bamMarks = []; state.particles = [];
+    state.wallsFrontX = 0; state.obstacleNextX = OBSTACLE_START_DIST; state.bamNextX = BAM_START_DIST;
+    state.milestoneNext = 500; state.shake = 0; state.dead = false; state.deathTimer = 0;
+    state.lastResult = null; state.salvoTimer = 0;
+    seedWalls(); generateWallsTo(W + 200); state.heli = makeHeli();
+    overlay.classList.add('hidden'); audio();
+  }
+
+  function gameOver() {
+    if (state.dead) return;
+    state.dead = true; SND.crash(); state.shake = 28;
+    const H_ = state.heli;
+    for (let i = 0; i < 38; i++) {
+      const a = Math.random() * Math.PI * 2, v = Math.random() * 5 + 1;
+      state.particles.push({ x: H_.x, y: H_.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 40 + Math.random() * 40, color: Math.random() < 0.5 ? '#fff' : RED });
+    }
+    state.deathTimer = 90;
+    const finalScore = state.score;
+    let rank = -1;
+    for (let i = 0; i < state.highScores.length; i++) { if (finalScore > state.highScores[i].score) { rank = i; break; } }
+    if (rank === -1 && state.highScores.length < HS_MAX) rank = state.highScores.length;
+    if (rank >= 0) {
+      const entry = { score: finalScore };
+      state.highScores.push(entry);
+      state.highScores.sort((a, b) => b.score - a.score);
+      if (state.highScores.length > HS_MAX) state.highScores.length = HS_MAX;
+      saveHS(state.highScores);
+      state.lastResult = { score: finalScore, rank: rank + 1, entry };
+    } else { state.lastResult = { score: finalScore, rank: -1 }; }
+  }
+
+  function showGameOverScreen() {
+    state.mode = 'gameover';
+    title.textContent = state.lastResult && state.lastResult.rank === 1 ? 'NEW BEST' : 'CRASHED';
+    sub1.innerHTML = `DISTANCE <span class="purple">${String(state.score).padStart(5, '0')}</span>`;
+    sub2.innerHTML = (state.lastResult && state.lastResult.rank >= 1) ? `RANK #${state.lastResult.rank} OF ${HS_MAX}` : '&nbsp;';
+    sub3.innerHTML = '&nbsp;';
+    renderHS(state.lastResult && state.lastResult.entry);
+    prompt.textContent = 'PRESS SPACE OR TAP TO TRY AGAIN';
+    overlay.classList.remove('hidden');
+  }
+
+  function renderHS(newEntry) {
+    hsList.innerHTML = state.highScores.map((s, i) => {
+      const isNew = newEntry && s === newEntry;
+      return `<div class="hs-row${isNew ? ' hs-new' : ''}"><span class="rank">${String(i + 1).padStart(2, '0')}</span><span class="score">${String(s.score).padStart(5, '0')}</span></div>`;
+    }).join('');
+  }
+
+  function update() {
+    if (state.mode !== 'play') return;
+    if (state.shake > 0) state.shake -= 1;
+    if (state.dead) {
+      state.deathTimer -= 1;
+      for (const p of state.particles) { p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 1; }
+      state.particles = state.particles.filter(p => p.life > 0);
+      if (state.deathTimer <= 0) showGameOverScreen();
+      return;
+    }
+    const speed = Math.min(SCROLL_MAX, SCROLL_SPEED_BASE + state.score * SCROLL_ACCEL);
+    state.scrollX += speed; state.score = Math.floor(state.scrollX / 3);
+    if (state.score >= state.milestoneNext) { SND.milestone(); state.milestoneNext += 500; }
+    generateWallsTo(state.scrollX + W + 200); maybeSpawnObstacle(); maybeSpawnBam();
+    const behind = state.scrollX - 200;
+    while (state.walls.length > 2 && state.walls[0].x < behind) state.walls.shift();
+    state.obstacles = state.obstacles.filter(o => o.x + o.w > behind);
+    state.bamMarks = state.bamMarks.filter(m => m.x + m.w > behind);
+    if (state.salvoTimer > 0) { state.salvoTimer -= 1; if (state.salvoTimer === 0) SND.salvoEnd(); }
+    const H_ = state.heli;
+    if (thrusting) { H_.vy += THRUST; if (Math.random() < 0.5) SND.rotor(); }
+    H_.vy += GRAVITY;
+    if (H_.vy > MAX_VY) H_.vy = MAX_VY; if (H_.vy < -MAX_VY) H_.vy = -MAX_VY;
+    H_.y += H_.vy;
+    const targetTilt = Math.max(-0.28, Math.min(0.28, H_.vy * 0.05));
+    H_.tilt += (targetTilt - H_.tilt) * 0.18; H_.rotorSpin += 1.1; H_.tailSpin += 2.2;
+    const hw = 36, hh = 14, hx = H_.x, hy = H_.y;
+    const wall = wallAt(state.scrollX + hx);
+    const hitCeiling = hy - hh / 2 < wall.topY, hitFloor = hy + hh / 2 > wall.bottomY;
+    if (hitCeiling || hitFloor) {
+      if (state.salvoTimer > 0) {
+        state.salvoTimer = 0; state.shake = 12;
+        H_.y = hitCeiling ? wall.topY + hh / 2 + 2 : wall.bottomY - hh / 2 - 2;
+        H_.vy = hitCeiling ? 3 : -3; SND.salvoEnd();
+        for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, v = Math.random() * 2 + 0.5; state.particles.push({ x: H_.x, y: H_.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 30 + Math.random() * 20, color: BAM }); }
+      } else { gameOver(); return; }
+    }
+    if (!state.dead) {
+      const hL = hx - hw / 2, hR = hx + hw / 2, hT = hy - hh / 2, hB = hy + hh / 2;
+      for (const o of state.obstacles) {
+        const ox = o.x - state.scrollX;
+        if (ox + o.w < 0) continue; if (ox > W) break;
+        if (hR > ox && hL < ox + o.w && hB > o.y && hT < o.y + o.h) {
+          if (state.salvoTimer > 0) {
+            state.obstacles = state.obstacles.filter(x => x !== o); state.score += 100; state.shake = 6;
+            for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, v = Math.random() * 2.2 + 0.4; state.particles.push({ x: ox + o.w / 2, y: o.y + o.h / 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 30 + Math.random() * 25, color: BAM }); }
+          } else { gameOver(); return; }
+          break;
+        }
+      }
+    }
+    if (!state.dead) {
+      const hw2 = hw / 2, hh2 = hh / 2;
+      for (let i = state.bamMarks.length - 1; i >= 0; i--) {
+        const m = state.bamMarks[i];
+        if (m.spawnAnim < 1) m.spawnAnim = Math.min(1, m.spawnAnim + 0.04);
+        m.pulse += 0.08;
+        const mx = m.x - state.scrollX;
+        if (mx + m.w < 0) { state.bamMarks.splice(i, 1); continue; } if (mx > W) continue;
+        if (hx + hw2 > mx - m.w / 2 && hx - hw2 < mx + m.w / 2 && hy + hh2 > m.y - m.h / 2 && hy - hh2 < m.y + m.h / 2) {
+          state.bamMarks.splice(i, 1); state.salvoTimer = SALVO_DURATION; state.score += 200; SND.bam();
+          for (let k = 0; k < 22; k++) { const a = Math.random() * Math.PI * 2, v = Math.random() * 2.5 + 0.5; state.particles.push({ x: state.heli.x, y: state.heli.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 40 + Math.random() * 20, color: BAM }); }
+        }
+      }
+    }
+    if (thrusting && Math.random() < 0.55) {
+      state.particles.push({ x: H_.x - 18, y: H_.y + 5 + (Math.random() - 0.5) * 3, vx: -2.5 - Math.random() * 1.5, vy: (Math.random() - 0.5) * 0.8, life: 22 + Math.random() * 12, color: 'rgba(200,200,200,0.55)' });
+    }
+    for (const p of state.particles) { p.x += p.vx; p.y += p.vy; p.life -= 1; }
+    state.particles = state.particles.filter(p => p.life > 0);
+  }
+
+  function drawCave() {
+    const arr = state.walls; if (arr.length < 2) return;
+    ctx.fillStyle = WALL_FILL;
+    ctx.beginPath(); ctx.moveTo(-10, -20); let first = true;
+    for (const w of arr) { const sx = w.x - state.scrollX; if (sx < -20) continue; if (first) { ctx.lineTo(sx, w.topY); first = false; } else ctx.lineTo(sx, w.topY); if (sx > W + 20) break; }
+    ctx.lineTo(W + 20, -20); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-10, H + 20); first = true;
+    for (const w of arr) { const sx = w.x - state.scrollX; if (sx < -20) continue; if (first) { ctx.lineTo(sx, w.bottomY); first = false; } else ctx.lineTo(sx, w.bottomY); if (sx > W + 20) break; }
+    ctx.lineTo(W + 20, H + 20); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); let started = false;
+    for (const w of arr) { const sx = w.x - state.scrollX; if (sx < -20) continue; if (sx > W + 20) break; if (!started) { ctx.moveTo(sx, w.topY); started = true; } else ctx.lineTo(sx, w.topY); } ctx.stroke();
+    ctx.beginPath(); started = false;
+    for (const w of arr) { const sx = w.x - state.scrollX; if (sx < -20) continue; if (sx > W + 20) break; if (!started) { ctx.moveTo(sx, w.bottomY); started = true; } else ctx.lineTo(sx, w.bottomY); } ctx.stroke();
+  }
+
+  function drawObstacles() {
+    ctx.fillStyle = '#fff';
+    for (const o of state.obstacles) { const sx = o.x - state.scrollX; if (sx + o.w < -5 || sx > W + 5) continue; ctx.fillRect(sx, o.y, o.w, o.h); }
+  }
+
+  function drawBamMarks() {
+    for (const m of state.bamMarks) {
+      const sx = m.x - state.scrollX; if (sx + m.w < 0 || sx - m.w > W) continue;
+      ctx.save(); ctx.translate(sx, m.y);
+      const pulse = (1 + Math.sin(m.pulse) * 0.05) * (0.5 + 0.5 * m.spawnAnim); ctx.scale(pulse, pulse);
+      const w = m.w / 2, h = m.h / 2;
+      ctx.strokeStyle = BAM; ctx.globalAlpha = 0.25 * m.spawnAnim; ctx.lineWidth = 1; ctx.strokeRect(-w - 5, -h - 5, m.w + 10, m.h + 10);
+      ctx.globalAlpha = m.spawnAnim; ctx.lineWidth = 2; ctx.strokeRect(-w, -h, m.w, m.h);
+      ctx.fillStyle = BAM; ctx.fillRect(-w, -h, m.w, 3);
+      ctx.font = '700 16px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAM', 0, 2);
+      ctx.globalAlpha = 1; ctx.restore();
+    }
+  }
+
+  function drawHeli() {
+    const H_ = state.heli; if (!H_) return;
+    const salvo = state.salvoTimer > 0;
+    ctx.save(); ctx.translate(H_.x, H_.y); ctx.rotate(H_.tilt);
+    if (salvo) {
+      ctx.strokeStyle = BAM; ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.008) * 0.2; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    const bodyColor = salvo ? BAM : '#fff';
+    ctx.strokeStyle = bodyColor; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-2, -8); ctx.lineTo(-2, -13); ctx.lineTo(2, -13); ctx.lineTo(2, -8); ctx.stroke();
+    const rs = H_.rotorSpin * 0.5;
+    ctx.save(); ctx.translate(0, -14); ctx.rotate(rs);
+    ctx.fillStyle = bodyColor; ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.ellipse(0, 0, 28, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.ellipse(0, 0, 28, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.ellipse(0, 0, 28, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; ctx.restore();
+    ctx.fillStyle = bodyColor; ctx.strokeStyle = bodyColor; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(12, -8); ctx.quadraticCurveTo(20, -4, 20, 0); ctx.quadraticCurveTo(20, 5, 12, 8); ctx.lineTo(-4, 8); ctx.lineTo(-14, 4); ctx.lineTo(-14, -4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.moveTo(4, -6); ctx.lineTo(14, -5); ctx.quadraticCurveTo(17, -3, 17, 0); ctx.lineTo(14, 5); ctx.lineTo(4, 5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(6, -4); ctx.lineTo(14, -3); ctx.stroke();
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath(); ctx.moveTo(-14, -2); ctx.lineTo(-34, -1); ctx.lineTo(-34, 1); ctx.lineTo(-14, 2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(-36, -8); ctx.lineTo(-29, -2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-28, -2); ctx.lineTo(-32, -5); ctx.lineTo(-25, -2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = bodyColor; ctx.lineWidth = 1.2;
+    const ts = Math.sin(H_.tailSpin) * 5;
+    ctx.beginPath(); ctx.moveTo(-36, -ts); ctx.lineTo(-36, ts); ctx.stroke();
+    ctx.fillStyle = bodyColor; ctx.fillRect(-37, -1, 2, 2);
+    ctx.strokeStyle = bodyColor; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(-10, 14); ctx.lineTo(14, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7, 8); ctx.lineTo(-7, 14); ctx.moveTo(10, 8); ctx.lineTo(10, 14); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (const p of state.particles) { ctx.globalAlpha = Math.min(1, p.life / 30); ctx.fillStyle = p.color || '#fff'; ctx.fillRect(p.x - 1, p.y - 1, 2, 2); }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHUD() {
+    ctx.save(); ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.font = '600 24px "Courier New", monospace'; ctx.fillStyle = '#fff';
+    ctx.fillText(String(state.score).padStart(5, '0'), 20, 18);
+    ctx.textAlign = 'right'; ctx.font = '600 12px "Courier New", monospace'; ctx.globalAlpha = 0.6;
+    const best = state.highScores[0] ? state.highScores[0].score : 0;
+    ctx.fillText('BEST ' + String(Math.max(best, state.score)).padStart(5, '0'), W - 20, 24);
+    ctx.globalAlpha = 1;
+    if (state.salvoTimer > 0) {
+      ctx.textAlign = 'center';
+      const pct = state.salvoTimer / SALVO_DURATION, secs = Math.ceil(state.salvoTimer / 60);
+      ctx.fillStyle = BAM; ctx.font = '700 15px "Courier New", monospace';
+      ctx.fillText(`SALVO  ${String(secs).padStart(2, '0')}s`, W / 2, 20);
+      const barW = Math.min(260, W * 0.34), barX = (W - barW) / 2, barY = 40;
+      ctx.strokeStyle = BAM; ctx.lineWidth = 1; ctx.globalAlpha = 0.35;
+      ctx.strokeRect(barX, barY, barW, 5); ctx.globalAlpha = 1;
+      ctx.fillRect(barX, barY, barW * pct, 5);
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.save();
+    if (state.shake > 0) { const mag = Math.min(6, state.shake * 0.35); ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag); }
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    drawCave(); drawObstacles(); drawBamMarks(); drawParticles(); drawHeli();
+    ctx.restore(); drawHUD();
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (state.mode === 'title' || state.mode === 'gameover') { startGame(); setThrust(true); return; }
+      if (!e.repeat) setThrust(true);
+    } else if (e.key === 'Enter') {
+      if (state.mode === 'title' || state.mode === 'gameover') startGame();
+    }
+  }, { passive: false });
+  window.addEventListener('keyup', (e) => { if (e.code === 'Space') { e.preventDefault(); setThrust(false); } }, { passive: false });
+  canvas.addEventListener('mousedown', (e) => { e.preventDefault(); if (state.mode === 'title' || state.mode === 'gameover') { startGame(); setThrust(true); return; } setThrust(true); });
+  canvas.addEventListener('mouseup', (e) => { e.preventDefault(); setThrust(false); });
+  canvas.addEventListener('mouseleave', () => setThrust(false));
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (state.mode === 'title' || state.mode === 'gameover') { startGame(); setThrust(true); return; } setThrust(true); }, { passive: false });
+  canvas.addEventListener('touchend', (e) => { e.preventDefault(); setThrust(false); }, { passive: false });
+  canvas.addEventListener('touchcancel', (e) => { e.preventDefault(); setThrust(false); }, { passive: false });
+  window.addEventListener('blur', () => setThrust(false));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) setThrust(false); });
+
+  function loop() { update(); render(); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+
+  (function titleDemo() {
+    seedWalls(); generateWallsTo(W + 200);
+    setInterval(() => {
+      if (state.mode === 'play') return;
+      state.scrollX += 1.0; generateWallsTo(state.scrollX + W + 200);
+      while (state.walls.length > 2 && state.walls[0].x < state.scrollX - 200) state.walls.shift();
+    }, 16);
+  })();
+
+  renderHS(null);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HYGGE RADAR</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#E9EAED;--ink:#0E0F12;--muted:#9096A0;--line:#E0E2E6;
+  --paper:#fff;--surface:#F4F5F7;
+  --indigo:#4A5BD6;--green:#3E6B4F;--amber:#C2A45A;--red:#A85B5B;
+  --up:#3E6B4F;--down:#A85B5B;--warn:#C2A45A;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── LOADER ── */
+#loader{position:fixed;inset:0;z-index:9999;background:#0E0F12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s;}
+#loader.hidden{opacity:0;pointer-events:none;}
+.spin{width:28px;height:28px;border:2px solid rgba(74,91,214,.2);border-top-color:#4A5BD6;border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader-txt{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.08em;}
+
+/* ── HEADER ── */
+#header{height:40px;background:#0E0F12;display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:1000;}
+.brand{font-size:11px;font-weight:500;color:rgba(255,255,255,.45);white-space:nowrap;flex-shrink:0;letter-spacing:.1em;text-transform:uppercase;}
+.brand strong{color:#fff;font-weight:600;}
+.vsep{width:1px;height:12px;background:rgba(255,255,255,.1);flex-shrink:0;}
+/* Tabs in header */
+.htabs{display:flex;gap:1px;flex-shrink:0;}
+.htab{height:40px;padding:0 12px;background:transparent;border:none;color:rgba(255,255,255,.35);font-size:9px;font-weight:500;cursor:pointer;font-family:inherit;letter-spacing:.08em;text-transform:uppercase;border-bottom:2px solid transparent;transition:all .15s;}
+.htab.on{color:#fff;border-bottom-color:#4A5BD6;}
+.htab:hover:not(.on){color:rgba(255,255,255,.65);}
+/* Right controls */
+.hspace{flex:1;}
+.hctrl{display:flex;gap:5px;align-items:center;flex-shrink:0;}
+.hbtn{height:24px;padding:0 9px;border-radius:3px;border:1px solid rgba(255,255,255,.12);background:transparent;font-size:9px;font-weight:500;cursor:pointer;font-family:inherit;color:rgba(255,255,255,.45);transition:all .12s;letter-spacing:.03em;}
+.hbtn:hover{background:rgba(255,255,255,.08);color:#fff;}
+.hbtn.primary{background:#4A5BD6;color:#fff;border-color:#4A5BD6;}
+.hbtn.primary:hover{opacity:.85;}
+
+/* ── MACRO STRIP ── */
+#macro{height:26px;background:#0A0B0E;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+#macro::-webkit-scrollbar{display:none;}
+.mi{font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;}
+.mi strong{color:rgba(255,255,255,.65);font-weight:500;}
+.mdot{color:rgba(255,255,255,.1);font-size:9px;flex-shrink:0;}
+
+/* ── FILTERS ── */
+#filters{height:36px;background:var(--paper);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0;}
+.fsel{height:24px;padding:0 8px;border:1px solid var(--line);border-radius:3px;font-size:10px;font-family:inherit;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;}
+.fsel:focus{border-color:var(--indigo);}
+#finfo{font-size:9px;color:var(--muted);margin-left:auto;letter-spacing:.02em;}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;overflow-x:hidden;}
+#map-wrap{flex:1;position:relative;display:flex;flex-direction:column;}
+
+/* ── MAP TAB ── */
+#map{flex:1;width:100%;min-height:0;}
+.map-outer{display:flex;flex-direction:column;height:100%;}
+
+/* ── DASHBOARD / TABLES ── */
+.pad{padding:20px;}
+.section-title{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px;font-weight:500;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:20px;}
+.kpi{background:var(--paper);border-radius:4px;padding:14px 16px;}
+.kl{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;font-weight:500;}
+.kv{font-size:22px;font-weight:600;letter-spacing:-.03em;line-height:1;}
+.ks{font-size:10px;color:var(--muted);margin-top:4px;}
+.ks.up{color:var(--up);}
+.ks.dn{color:var(--down);}
+.ks.wn{color:var(--warn);}
+
+/* Zone table */
+.ztable{background:var(--paper);border-radius:4px;overflow:hidden;margin-bottom:20px;}
+.ztable table{width:100%;border-collapse:collapse;}
+.ztable th{padding:8px 12px;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);font-weight:500;}
+.ztable td{padding:8px 12px;font-size:11px;border-bottom:1px solid #F5F6F8;}
+.ztable tr:last-child td{border-bottom:none;}
+.ztable tr:hover td{background:var(--surface);}
+
+/* ── PROYECTOS TABLE ── */
+.ptable{background:var(--paper);border-radius:4px;overflow:hidden;}
+.ptable table{width:100%;border-collapse:collapse;}
+.ptable th{padding:8px 12px;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);font-weight:500;white-space:nowrap;}
+.ptable td{padding:7px 12px;font-size:11px;border-bottom:1px solid #F5F6F8;white-space:nowrap;}
+.ptable tr:hover td{background:var(--surface);cursor:pointer;}
+.ptable tr:last-child td{border-bottom:none;}
+.seg{font-size:9px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+.ia-btn{padding:2px 7px;background:rgba(74,91,214,.08);border:1px solid rgba(74,91,214,.2);border-radius:3px;font-size:8px;color:var(--indigo);cursor:pointer;font-family:inherit;white-space:nowrap;}
+.ia-btn:hover{background:rgba(74,91,214,.15);}
+
+/* ── PODER / DEFICIT ── */
+.patable{background:var(--paper);border-radius:4px;overflow:hidden;margin-bottom:20px;}
+.patable table{width:100%;border-collapse:collapse;}
+.patable th{padding:8px 12px;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);font-weight:500;}
+.patable td{padding:8px 12px;font-size:11px;border-bottom:1px solid #F5F6F8;}
+.patable tr:hover td{background:var(--surface);}
+.patable tr:last-child td{border-bottom:none;}
+.rates-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-bottom:20px;}
+.rate-card{background:var(--paper);border-radius:4px;padding:12px 14px;}
+.rbank{font-size:11px;font-weight:500;margin-bottom:4px;}
+.rrate{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--indigo);}
+.rsub{font-size:9px;color:var(--muted);margin-top:2px;}
+.deficit-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:20px;}
+.dkpi{background:var(--paper);border-radius:4px;padding:14px 16px;}
+.zone-bars{background:var(--paper);border-radius:4px;padding:16px;margin-bottom:20px;}
+.zbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.zbar:last-child{margin-bottom:0;}
+.zbar-label{width:110px;font-size:11px;color:var(--ink);}
+.zbar-track{flex:1;height:5px;background:var(--surface);border-radius:3px;overflow:hidden;}
+.zbar-fill{height:100%;border-radius:3px;}
+.zbar-val{width:48px;font-size:10px;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--muted);}
+.pred-table{background:var(--paper);border-radius:4px;overflow:hidden;margin-bottom:20px;}
+.pred-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #F5F6F8;font-size:11px;}
+.pred-row:last-child{border-bottom:none;}
+.pred-val{font-size:12px;font-weight:500;font-family:'IBM Plex Mono',monospace;}
+
+/* ── PROJECT MODAL ── */
+.overlay{position:fixed;inset:0;z-index:8000;background:rgba(14,15,18,.5);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal{background:var(--paper);border-radius:6px;width:min(660px,96vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15);}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;}
+.modal-name{font-size:16px;font-weight:600;letter-spacing:-.02em;}
+.modal-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.modal-close{background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:2px;}
+.modal-close:hover{color:var(--ink);}
+.mtabs{display:flex;border-bottom:1px solid var(--line);padding:0 20px;flex-shrink:0;}
+.mtab{background:none;border:none;padding:10px 12px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;font-weight:500;}
+.mtab.on{color:var(--ink);border-bottom-color:var(--indigo);}
+.modal-body{flex:1;overflow-y:auto;padding:20px;}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.dc{background:var(--surface);border-radius:4px;padding:10px 12px;}
+.dcl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;font-weight:500;}
+.dcv{font-size:15px;font-weight:600;letter-spacing:-.01em;}
+.comp-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;align-items:center;padding:10px 12px;background:var(--surface);border-radius:4px;margin-bottom:6px;}
+.afford-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.afford-card{background:var(--surface);border-radius:4px;padding:10px 12px;}
+.acl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;}
+.acv{font-size:18px;font-weight:600;letter-spacing:-.02em;}
+.acs{font-size:9px;color:var(--muted);margin-top:2px;}
+.cap-bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;position:relative;margin:6px 0 3px;}
+.cap-fill{height:100%;border-radius:4px;transition:width .4s;}
+.cap-line{position:absolute;top:0;width:2px;height:100%;background:var(--ink);opacity:.3;}
+
+/* ── TYCOON PANEL ── */
+#tycoon-btn{position:fixed;bottom:20px;right:20px;z-index:7000;display:flex;align-items:center;gap:5px;padding:0 14px;height:32px;background:#4A5BD6;color:#fff;border:none;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 4px 16px rgba(74,91,214,.35);transition:opacity .12s;}
+#tycoon-btn:hover{opacity:.85;}
+#tycoon{position:fixed;bottom:0;right:0;width:340px;height:100vh;background:var(--paper);border-left:1px solid var(--line);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .2s cubic-bezier(.4,0,.2,1);z-index:7500;}
+#tycoon.open{transform:translateX(0);}
+.th{height:52px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0;}
+.tat{font-size:12px;font-weight:500;flex:1;}
+.tasub{font-size:9px;color:var(--muted);margin-top:1px;}
+.tcl{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;}
+.tcl:hover{color:var(--ink);}
+#api-setup{padding:12px 16px;background:#FAFAFA;border-bottom:1px solid var(--line);font-size:11px;display:none;}
+#api-setup.show{display:block;}
+#api-setup p{margin-bottom:6px;color:var(--muted);line-height:1.4;}
+#api-key-in{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:3px;font-size:11px;font-family:'IBM Plex Mono',monospace;margin:4px 0 7px;outline:none;}
+#api-key-in:focus{border-color:var(--indigo);}
+.skey{padding:5px 12px;background:var(--indigo);color:#fff;border:none;border-radius:3px;font-size:10px;cursor:pointer;font-family:inherit;}
+#t-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:7px;}
+.tmsg{max-width:88%;line-height:1.55;font-size:11px;}
+.tmsg.user{align-self:flex-end;background:#0E0F12;color:#fff;border-radius:6px 6px 1px 6px;padding:8px 12px;}
+.tmsg.bot{align-self:flex-start;background:var(--surface);border-radius:6px 6px 6px 1px;padding:8px 12px;color:var(--ink);white-space:pre-wrap;}
+.tmsg.bot.load{color:var(--muted);}
+#t-in{border-top:1px solid var(--line);padding:10px 12px;flex-shrink:0;}
+#t-ta{width:100%;height:56px;border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-size:11px;font-family:inherit;resize:none;outline:none;background:#FAFAFA;color:var(--ink);transition:border-color .12s;}
+#t-ta:focus{border-color:var(--indigo);background:#fff;}
+.trow{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+.thint{font-size:9px;color:var(--muted);}
+.tsnd{padding:4px 12px;background:var(--indigo);color:#fff;border:none;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;font-family:inherit;transition:opacity .12s;letter-spacing:.03em;}
+.tsnd:hover{opacity:.8;}
+.tsnd:disabled{opacity:.3;cursor:not-allowed;}
+
+/* ── MAP CLUSTERS / MARKERS ── */
+.ccluster{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:400;font-size:9px;font-family:'DM Sans',sans-serif;border:none;box-shadow:none;}
+.cmark{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer;transition:transform .12s;}
+.cmark:hover{transform:scale(1.8);}
+
+/* ── MAP LEGEND ── */
+#map-legend{position:absolute;bottom:14px;left:14px;z-index:400;display:flex;gap:8px;align-items:center;background:rgba(14,15,18,.5);padding:5px 10px;border-radius:3px;backdrop-filter:blur(6px);}
+.leg{display:flex;align-items:center;gap:4px;font-size:9px;color:rgba(255,255,255,.55);}
+.legdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* Misc */
+.mono{font-family:'IBM Plex Mono',monospace;}
+.up-c{color:var(--up);}
+.dn-c{color:var(--down);}
+.wn-c{color:var(--warn);}
+.in-c{color:var(--indigo);}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div style="font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#fff;">HYGGE <span style="color:#4A5BD6">RADAR</span></div>
+  <div class="spin"></div>
+  <div id="loader-txt">Cargando proyectos...</div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="brand"><strong>HYGGE</strong> · RADAR</div>
+  <div class="vsep"></div>
+  <div class="htabs">
+    <button class="htab on" data-tab="dashboard">Dashboard</button>
+    <button class="htab" data-tab="mapa">Mapa</button>
+    <button class="htab" data-tab="proyectos">Proyectos</button>
+    <button class="htab" data-tab="poder">Poder Adquisitivo</button>
+    <button class="htab" data-tab="deficit">Déficit</button>
+  </div>
+  <div class="hspace"></div>
+  <div class="hctrl">
+    <button class="hbtn" onclick="openAddModal()">★ Mi proyecto</button>
+    <button class="hbtn" id="rfbtn" onclick="refreshData()">↻ Refresh</button>
+    <button class="hbtn primary" onclick="toggleTycoon()">⚡ Tycoon</button>
+  </div>
+</div>
+
+<!-- MACRO STRIP -->
+<div id="macro">
+  <span class="mi">USD/PEN <strong>3.78</strong></span><span class="mdot">·</span>
+  <span class="mi">Tasa hip. <strong>7.8%</strong></span><span class="mdot">·</span>
+  <span class="mi">Inflación <strong>2.1%</strong></span><span class="mdot">·</span>
+  <span class="mi">PBI Const. <strong>+4.8%</strong></span><span class="mdot">·</span>
+  <span class="mi">Déficit Lima <strong>612K u.</strong></span><span class="mdot">·</span>
+  <span class="mi" id="macro-mkt">Lima Moderna · cargando...</span>
+</div>
+
+<!-- FILTERS -->
+<div id="filters">
+  <select class="fsel" id="f-dist"><option value="">Todos los distritos</option></select>
+  <select class="fsel" id="f-seg"><option value="">Todos los segmentos</option><option>A</option><option>B</option><option>C</option></select>
+  <select class="fsel" id="f-stage">
+    <option value="">Todas las etapas</option>
+    <option value="plano">En planos</option>
+    <option value="construcci">En construcción</option>
+    <option value="entrega">Entrega inmediata</option>
+  </select>
+  <span id="finfo">—</span>
+</div>
+
+<!-- CONTENT -->
+<div id="content"></div>
+
+<!-- TYCOON BTN -->
+<button id="tycoon-btn" onclick="toggleTycoon()">⚡ Tycoon</button>
+
+<!-- TYCOON PANEL -->
+<div id="tycoon">
+  <div class="th">
+    <div>
+      <div class="tat">Tycoon · Analista RE Lima</div>
+      <div class="tasub">25 años operando Lima Moderna</div>
+    </div>
+    <button class="tcl" onclick="toggleTycoon()">✕</button>
+  </div>
+  <div id="api-setup">
+    <p><strong>API Key de Anthropic</strong> para activar el Tycoon.</p>
+    <input type="password" id="api-key-in" placeholder="sk-ant-api03-..."/>
+    <button class="skey" onclick="saveKey()">Guardar</button>
+  </div>
+  <div id="t-msgs"></div>
+  <div id="t-in">
+    <textarea id="t-ta" placeholder="Preguntá sobre un proyecto, distrito, o el mercado…" onkeydown="handleTKey(event)"></textarea>
+    <div class="trow">
+      <span class="thint">Enter envía · Shift+Enter nueva línea</span>
+      <button class="tsnd" id="tsnd" onclick="sendT()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+(function(){
+
+// ── CONSTANTS ────────────────────────────────────────────────
+const TC = 3.78;
+const BANKS = [
+  {bank:'BCP',     rate:7.8, currency:'PEN', plazo:20},
+  {bank:'Scotiabank',rate:7.9,currency:'PEN', plazo:20},
+  {bank:'Interbank',rate:8.1,currency:'PEN', plazo:20},
+  {bank:'BBVA',    rate:8.3, currency:'PEN', plazo:20},
+  {bank:'BCP',     rate:6.5, currency:'USD', plazo:20},
+  {bank:'BBVA',    rate:6.8, currency:'USD', plazo:20},
+];
+const SALARY = {
+  'Miraflores': {junior:3800,mid:6500,senior:11000,exec:22000,pm:1.65},
+  'San Isidro': {junior:4200,mid:7500,senior:14000,exec:28000,pm:1.65},
+  'Surco':      {junior:3200,mid:5500,senior:9000, exec:17000,pm:1.65},
+  'Barranco':   {junior:3500,mid:5800,senior:9500, exec:18000,pm:1.65},
+  'San Borja':  {junior:3300,mid:5800,senior:9500, exec:18000,pm:1.65},
+  'La Molina':  {junior:3000,mid:5200,senior:8500, exec:16000,pm:1.65},
+  'Jesús María':{junior:2800,mid:4800,senior:7800, exec:14000,pm:1.65},
+  'Pueblo Libre':{junior:2600,mid:4400,senior:7000,exec:12500,pm:1.65},
+  'Magdalena':  {junior:2700,mid:4500,senior:7200, exec:13000,pm:1.65},
+  'Lince':      {junior:2500,mid:4200,senior:6800, exec:12000,pm:1.65},
+  'Surquillo':  {junior:2400,mid:4000,senior:6500, exec:11000,pm:1.65},
+  'San Miguel': {junior:2700,mid:4600,senior:7400, exec:13500,pm:1.65},
+};
+const PERSONAS = {
+  'A':{label:'Exec / Inversionista',icon:'◆',color:'#C2A45A',
+    desc:'Profesional 40-55 años, ingreso S/14k+. Motivación: plusvalía y renta. Busca exclusividad, metraje grande, ubicación premium.',
+    profiles:['exec','senior'],finPct:.75,cuotaMax:.28},
+  'B':{label:'Mid / Upgrade familiar',icon:'●',color:'#4A5BD6',
+    desc:'Profesional 30-45 años, ingreso S/5-12k. Primer upgrade o segundo departamento. Valora relación precio-área y financiamiento.',
+    profiles:['mid','senior'],finPct:.8,cuotaMax:.30},
+  'C':{label:'Junior / Primer hogar',icon:'○',color:'#3E6B4F',
+    desc:'Adulto 25-35 años, ingreso S/3-6k. Primer departamento. Sensible al precio. MiVivienda / Techo Propio relevante.',
+    profiles:['junior','mid'],finPct:.85,cuotaMax:.35},
+};
+const DIST_COORDS = {
+  'San Isidro':[-12.0931,-77.0465],'Miraflores':[-12.1219,-77.0291],
+  'Barranco':[-12.1478,-77.0228],'Surco':[-12.15,-76.99],
+  'San Borja':[-12.1056,-77.0031],'La Molina':[-12.0856,-76.9424],
+  'Jesús María':[-12.0731,-77.0531],'Magdalena':[-12.0894,-77.0681],
+  'Magdalena del Mar':[-12.0894,-77.0681],
+  'Lince':[-12.0831,-77.0361],'Pueblo Libre':[-12.0731,-77.0731],
+  'San Miguel':[-12.0769,-77.0928],'Surquillo':[-12.1206,-77.0131],
+  'Los Olivos':[-11.9781,-77.0681],'Ate':[-12.0281,-76.9281],
+  'Cercado':[-12.0553,-77.0311],'Chorrillos':[-12.17,-77.02],
+  'La Victoria':[-12.0681,-77.0181],'San Luis':[-12.0831,-77.0031],
+};
+const STAGE_COLORS = {
+  'planos':'#C2A45A','preventa':'#4A5BD6',
+  'construcción':'#3E6B4F','entrega inmediata':'#444',
+};
+function stageColor(s){
+  const l=(s||'').toLowerCase();
+  if(l.includes('plano'))return STAGE_COLORS['planos'];
+  if(l.includes('preventa'))return STAGE_COLORS['preventa'];
+  if(l.includes('construcci'))return STAGE_COLORS['construcción'];
+  return STAGE_COLORS['entrega inmediata'];
+}
+const TYCOON_SYS=`Sos un Real Estate Tycoon con 25 años operando en Lima Metropolitana. Especialidad: Lima Moderna (Miraflores, San Isidro, Surco, Barranco, San Borja, La Molina, Jesús María, Pueblo Libre, Magdalena, Lince, Surquillo, San Miguel). 2,000+ unidades operadas. Pensás en capital, ciclos, spread, IRR, cap rate.
+
+Framework de análisis: 1) Precio relativo vs mediana distrito. 2) Ciclo de mercado. 3) Estructura del deal. 4) Buyer persona. 5) Escenarios de exit. 6) Riesgos.
+
+Reglas: Directo. Sin floritura. Siempre mostrás el cálculo. Recomendaciones en forma: COMPRAR / PASAR / NEGOCIAR A $X / ESPERAR HASTA Y. Pensás en soles y dólares (TC 3.78 referencial).
+
+Contexto de mercado: Lista Lima Moderna $2,117/m², cierre real $2,006/m² (-5% gap promedio), tasa BCP 7.8% PEN 20 años, Scotiabank 7.9%, déficit habitacional Lima 612K unidades.`;
+
+// ── STATE ────────────────────────────────────────────────────
+let ALL = [], FILTERED = [], OWN = [], SCRAPE_DATE = '';
+window.getPrj = i => FILTERED[i];
+let TAB = 'dashboard';
+let MAP_INST = null, MAP_MARKERS = [];
+let SELECTED = null;
+let tOpen = false, tHist = [], tLoading = false;
+let afModality = 'solo';
+
+// ── HELPERS ──────────────────────────────────────────────────
+const fmt = n => n ? Number(n).toLocaleString('es-PE') : '—';
+const fUSD = n => n ? '$'+Number(n).toLocaleString('en-US') : '—';
+function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function segColor(s){ return s==='A'?'#C2A45A':s==='B'?'#4A5BD6':'#3E6B4F'; }
+
+// ── DATA LOAD ────────────────────────────────────────────────
+async function loadData(){
+  try{
+    document.getElementById('loader-txt').textContent='Conectando con Nexo Inmobiliario...';
+    const urls=['./projects.json','./data/projects.json'];
+    let json=null;
+    for(const u of urls){
+      try{ const r=await fetch(u); if(r.ok){json=await r.json();break;} }catch(e){}
+    }
+    if(!json) throw new Error('No data');
+    const raw=json.projects||[];
+    ALL=raw.filter(p=>p.list_price_m2_usd&&p.list_price_m2_usd>500&&p.list_price_m2_usd<15000);
+    SCRAPE_DATE=json.date||'';
+    document.getElementById('loader-txt').textContent=`${ALL.length} proyectos cargados`;
+    // Restore own
+    try{ const s=localStorage.getItem('hygge_own'); if(s) OWN=JSON.parse(s); }catch(e){}
+    // Populate district filter
+    const dists=[...new Set(ALL.map(p=>p.district).filter(Boolean))].sort();
+    const fd=document.getElementById('f-dist');
+    dists.forEach(d=>{const o=document.createElement('option');o.value=d;o.text=d;fd.appendChild(o);});
+    await new Promise(r=>setTimeout(r,300));
+    document.getElementById('loader').classList.add('hidden');
+    applyFilters();
+  }catch(e){
+    document.getElementById('loader-txt').textContent='Error cargando datos.';
+  }
+}
+
+async function refreshData(){
+  const btn=document.getElementById('rfbtn');
+  btn.textContent='↻ ...';btn.disabled=true;
+  try{
+    const urls=['./projects.json?t='+Date.now(),'./data/projects.json?t='+Date.now()];
+    let json=null;
+    for(const u of urls){
+      try{ const r=await fetch(u); if(r.ok){json=await r.json();break;} }catch(e){}
+    }
+    if(!json) throw new Error();
+    ALL=(json.projects||[]).filter(p=>p.list_price_m2_usd&&p.list_price_m2_usd>500&&p.list_price_m2_usd<15000);
+    SCRAPE_DATE=json.date||'';
+    applyFilters();
+    btn.textContent='✓ OK';
+    setTimeout(()=>{btn.textContent='↻ Refresh';btn.disabled=false;},2000);
+  }catch(e){
+    btn.textContent='✗ Error';
+    setTimeout(()=>{btn.textContent='↻ Refresh';btn.disabled=false;},2000);
+  }
+}
+
+function applyFilters(){
+  const dist=document.getElementById('f-dist').value;
+  const seg=document.getElementById('f-seg').value;
+  const stage=document.getElementById('f-stage').value;
+  const all=[...ALL,...OWN];
+  FILTERED=all.filter(p=>{
+    if(dist&&p.district!==dist)return false;
+    if(seg&&p.segment!==seg)return false;
+    if(stage&&p.stage&&!p.stage.toLowerCase().includes(stage))return false;
+    return true;
+  });
+  const own=FILTERED.filter(p=>p.isOwn);
+  document.getElementById('finfo').textContent=
+    `${FILTERED.length} proyectos${own.length?' ('+own.length+' propios)':''}${SCRAPE_DATE?' · '+SCRAPE_DATE:''}`;
+  // Update macro
+  const lm=ALL.filter(p=>p.zone==='Lima Moderna');
+  if(lm.length){
+    const aL=Math.round(avg(lm.map(p=>p.list_price_m2_usd||0).filter(Boolean)));
+    const aC=Math.round(avg(lm.map(p=>p.close_price_m2_usd||0).filter(Boolean)));
+    const aG=Math.round(avg(lm.map(p=>p.discount_pct||0)));
+    document.getElementById('macro-mkt').innerHTML=
+      `Lima Moderna <strong>${lm.length} proy.</strong> · <strong>${fUSD(aL)}</strong> lista · <strong>${fUSD(aC)}</strong> cierre · <strong>−${aG}%</strong> gap`;
+  }
+  renderTab();
+}
+
+['f-dist','f-seg','f-stage'].forEach(id=>document.getElementById(id).addEventListener('change',applyFilters));
+
+// ── TABS ─────────────────────────────────────────────────────
+document.querySelectorAll('.htab').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
+    b.classList.add('on');
+    TAB=b.dataset.tab;
+    renderTab();
+  });
+});
+
+function renderTab(){
+  const c=document.getElementById('content');
+  if(TAB==='mapa'){renderMapa(c);return;}
+  c.innerHTML='<div class="pad" id="pad"></div>';
+  const p=document.getElementById('pad');
+  if(TAB==='dashboard')renderDashboard(p);
+  else if(TAB==='proyectos')renderProyectos(p);
+  else if(TAB==='poder')renderPoder(p);
+  else if(TAB==='deficit')renderDeficit(p);
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────
+function renderDashboard(c){
+  const mkt=FILTERED.filter(p=>!p.isOwn);
+  const own=FILTERED.filter(p=>p.isOwn);
+  const prices=mkt.map(p=>p.list_price_m2_usd).filter(Boolean);
+  const closes=mkt.map(p=>p.close_price_m2_usd).filter(Boolean);
+  const avgL=Math.round(avg(prices));
+  const avgC=Math.round(avg(closes));
+  const avgG=Math.round(avg(mkt.map(p=>p.discount_pct||0)));
+  const hists=mkt.filter(p=>p.price_history&&p.price_history.length>=2);
+
+  // KPIs
+  const krow=document.createElement('div');krow.className='kpi-row';
+  [
+    {l:'Lista /m²',v:fUSD(avgL),s:'precio publicado',sc:''},
+    {l:'Cierre /m²',v:fUSD(avgC),s:'precio negociado real',sc:'up'},
+    {l:'Gap lista→cierre',v:`−${avgG}%`,s:'descuento promedio',sc:'dn'},
+    {l:'Proyectos activos',v:fmt(mkt.length),s:`${FILTERED.length} con filtros`,sc:''},
+    {l:'Con historial',v:fmt(hists.length),s:`${mkt.length?Math.round(hists.length/mkt.length*100):0}% del total`,sc:''},
+    {l:'Mis proyectos',v:fmt(own.length),s:own.length?'en mapa':'agrega con ★',sc:''},
+  ].forEach(k=>{
+    krow.innerHTML+=`<div class="kpi"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks ${k.sc}">${k.s}</div></div>`;
+  });
+  c.appendChild(krow);
+
+  // Zone breakdown
+  c.innerHTML+=`<div class="section-title">Por zona</div>`;
+  const zt=document.createElement('div');zt.className='ztable';
+  const zones=['Lima Moderna','Lima Norte','Lima Este','Lima Sur','Callao','Lima Centro'];
+  let rows='';
+  zones.forEach(z=>{
+    const ps=mkt.filter(p=>p.zone===z);
+    if(!ps.length)return;
+    const aL=Math.round(avg(ps.map(p=>p.list_price_m2_usd||0).filter(Boolean)));
+    const aC=Math.round(avg(ps.map(p=>p.close_price_m2_usd||0).filter(Boolean)));
+    const aG=Math.round(avg(ps.map(p=>p.discount_pct||0)));
+    const pl=ps.filter(p=>(p.stage||'').toLowerCase().includes('plano')).length;
+    const co=ps.filter(p=>(p.stage||'').toLowerCase().includes('construcci')).length;
+    const en=ps.filter(p=>(p.stage||'').toLowerCase().includes('entrega')).length;
+    rows+=`<tr>
+      <td style="font-weight:500">${z}</td>
+      <td style="color:var(--muted)">${ps.length}</td>
+      <td class="mono in-c" style="font-weight:600">${fUSD(aL)}</td>
+      <td class="mono up-c" style="font-weight:600">${fUSD(aC)}</td>
+      <td class="mono dn-c">−${aG}%</td>
+      <td style="font-size:10px;color:var(--muted)">${pl}p/${co}c/${en}e</td>
+    </tr>`;
+  });
+  zt.innerHTML=`<table><thead><tr><th>Zona</th><th>Proyectos</th><th>Lista/m²</th><th>Cierre/m²</th><th>Gap</th><th>Etapas p/c/e</th></tr></thead><tbody>${rows}</tbody></table>`;
+  c.appendChild(zt);
+
+  // Own projects
+  if(own.length){
+    c.innerHTML+=`<div class="section-title" style="margin-top:20px">Mis proyectos</div>`;
+    own.forEach(p=>{
+      const comps=mkt.filter(m=>m.district===p.district&&m.segment===p.segment);
+      const avgComp=Math.round(avg(comps.map(m=>m.list_price_m2_usd||0).filter(Boolean)));
+      const diff=(p.list_price_m2_usd||0)-avgComp;
+      const ownDiv=document.createElement('div');
+      ownDiv.style.cssText='background:var(--paper);border-radius:4px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:16px;';
+      ownDiv.innerHTML=`<div style="flex:1"><div style="font-size:13px;font-weight:600">★ ${p.name}</div><div style="font-size:10px;color:var(--muted)">${p.developer} · ${p.district}</div></div>
+        <div style="text-align:right"><div style="font-size:9px;color:var(--muted)">VS MERCADO</div><div style="font-size:14px;font-weight:600;color:${diff>0?'var(--down)':'var(--up)'}">${diff>0?'+':''}${fUSD(diff)}/m²</div></div>
+        <button onclick="goToMapProject('${p.district}',${p.lat||'null'},${p.lng||'null'})" class="ia-btn">Ver en mapa</button>`;
+      c.appendChild(ownDiv);
+    });
+  }
+}
+
+// ── MAPA ─────────────────────────────────────────────────────
+function renderMapa(c){
+  c.innerHTML='';
+  c.style.display='flex';c.style.flexDirection='column';c.style.height='100%';
+  const mapDiv=document.createElement('div');
+  mapDiv.id='map';mapDiv.style.cssText='flex:1;min-height:0;';
+  c.appendChild(mapDiv);
+
+  // Legend
+  const leg=document.createElement('div');leg.id='map-legend';
+  leg.innerHTML=`
+    <div class="leg"><div class="legdot" style="background:#C2A45A"></div>Planos</div>
+    <div class="leg"><div class="legdot" style="background:#4A5BD6"></div>Preventa</div>
+    <div class="leg"><div class="legdot" style="background:#3E6B4F"></div>Construcción</div>
+    <div class="leg"><div class="legdot" style="background:#444"></div>Entrega</div>
+    <div class="leg"><div class="legdot" style="background:#7C3AED"></div>★ BAM</div>`;
+  c.style.position='relative';
+  c.appendChild(leg);
+
+  setTimeout(()=>{
+    if(MAP_INST){MAP_INST.remove();MAP_INST=null;}
+    const map=L.map('map',{center:[-12.08,-77.04],zoom:12,zoomControl:true});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {attribution:'©OpenStreetMap ©CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+    MAP_INST=map;
+    MAP_MARKERS=[];
+
+    const cg=L.markerClusterGroup({
+      maxClusterRadius:50,showCoverageOnHover:false,zoomToBoundsOnClick:true,
+      iconCreateFunction:function(cl){
+        const n=cl.getChildCount();
+        const sz=n<10?30:n<50?36:42;
+        return L.divIcon({
+          html:`<div class="ccluster" style="width:${sz}px;height:${sz}px;background:#3A3A3A;">${n}</div>`,
+          className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
+        });
+      }
+    });
+
+    FILTERED.forEach(p=>{
+      if(!p.lat||!p.lng){
+        const dc=DIST_COORDS[p.district];
+        if(!dc)return;
+        // deterministic scatter
+        const seed=p.nexo_id||Math.abs(p.name.split('').reduce((a,c)=>a+c.charCodeAt(0),0));
+        const rng=s=>{const x=Math.sin(s)*10000;return x-Math.floor(x);};
+        p.lat=dc[0]+(rng(seed)-.5)*.018;
+        p.lng=dc[1]+(rng(seed+7)-.5)*.018;
+      }
+      const icon=p.isOwn
+        ? L.divIcon({
+            html:`<div style="width:36px;height:44px;position:relative;display:flex;flex-direction:column;align-items:center;">
+              <div style="width:36px;height:36px;background:#4A5BD6;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 12px rgba(74,91,214,.5);display:flex;align-items:center;justify-content:center;">
+                <span style="transform:rotate(45deg);color:#fff;font-weight:700;font-size:11px;font-family:'DM Sans',sans-serif;line-height:1;letter-spacing:-.5px;">HY</span>
+              </div>
+            </div>`,
+            className:'',iconSize:[36,44],iconAnchor:[18,44]
+          })
+        : L.divIcon({
+            html:`<div class="cmark" style="background:${stageColor(p.stage)};"></div>`,
+            className:'',iconSize:[10,10],iconAnchor:[5,5]
+          });
+      const mk=L.marker([p.lat,p.lng],{icon});
+      mk.on('click',()=>openProject(p));
+      cg.addLayer(mk);
+      MAP_MARKERS.push(mk);
+    });
+    map.addLayer(cg);
+    map.on('click',()=>{});
+  },50);
+}
+
+// ── PROYECTOS TABLE ──────────────────────────────────────────
+function renderProyectos(c){
+  const tbl=document.createElement('div');tbl.className='ptable';
+  const headers=['Proyecto','Distrito','Seg','Etapa','Lista/m²','Cierre/m²','Gap','Ticket','Área','Hist.',''];
+  let rows='';
+  FILTERED.forEach((p,i)=>{
+    const stageShort=(p.stage||'?').replace('En construcción','Const.').replace('Entrega inmediata','Entrega').replace('En planos','Planos').replace('Preventa','Preventa');
+    rows+=`<tr onclick="openProject(getPrj(${i}))">
+      <td style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis">${p.isOwn?'★ ':''}${p.name}</td>
+      <td style="color:var(--muted);font-size:10px">${p.district||'?'}</td>
+      <td><span class="seg" style="color:${segColor(p.segment)}">${p.segment||'?'}</span></td>
+      <td style="font-size:10px;color:var(--muted)">${stageShort}</td>
+      <td class="mono in-c" style="font-weight:600">${fUSD(p.list_price_m2_usd)}</td>
+      <td class="mono up-c" style="font-weight:600">${fUSD(p.close_price_m2_usd)}</td>
+      <td class="mono dn-c">−${p.discount_pct||0}%</td>
+      <td class="mono" style="font-size:10px">${p.list_ticket_usd?'$'+(p.list_ticket_usd/1000).toFixed(0)+'K':'—'}</td>
+      <td class="mono" style="font-size:10px;color:var(--muted)">${p.min_area_m2||'?'}–${p.max_area_m2||'?'}m²</td>
+      <td style="font-size:10px;color:var(--muted)">${(p.price_history||[]).length}</td>
+      <td><button class="ia-btn" onclick="event.stopPropagation();analyzePrj(getPrj(${i}))">IA →</button></td>
+    </tr>`;
+  });
+  tbl.innerHTML=`<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  c.appendChild(tbl);
+}
+
+// ── PODER ADQUISITIVO ────────────────────────────────────────
+function renderPoder(c){
+  c.innerHTML+=`<div class="section-title">Ingreso mínimo mensual (S/) para calificar por distrito</div>`;
+  const tbl=document.createElement('div');tbl.className='patable';
+  const dists=Object.keys(SALARY).sort();
+  let rows=dists.map(d=>{
+    const s=SALARY[d];
+    return `<tr>
+      <td style="font-weight:500">${d}</td>
+      <td class="mono" style="color:var(--muted)">S/${fmt(s.junior)}</td>
+      <td class="mono">S/${fmt(s.mid)}</td>
+      <td class="mono in-c">S/${fmt(s.senior)}</td>
+      <td class="mono wn-c" style="font-weight:600">S/${fmt(s.exec)}</td>
+      <td class="mono up-c">S/${fmt(Math.round(s.senior*s.pm))}</td>
+    </tr>`;
+  }).join('');
+  tbl.innerHTML=`<table><thead><tr><th>Distrito</th><th>Junior</th><th>Mid</th><th>Senior</th><th>Exec</th><th>Pareja Senior</th></tr></thead><tbody>${rows}</tbody></table>`;
+  c.appendChild(tbl);
+
+  c.innerHTML+=`<div class="section-title" style="margin-top:20px">Tasas hipotecarias — Jun 2026</div>`;
+  const rg=document.createElement('div');rg.className='rates-grid';
+  BANKS.forEach(b=>{
+    rg.innerHTML+=`<div class="rate-card"><div class="rbank">${b.bank}</div><div class="rrate">${b.rate}%</div><div class="rsub">${b.currency} · ${b.plazo} años</div></div>`;
+  });
+  c.appendChild(rg);
+
+  c.innerHTML+=`<div class="section-title">Simulador — clic en cualquier proyecto para análisis de capacidad de pago</div>`;
+  const sim=document.createElement('div');sim.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
+  FILTERED.slice(0,8).forEach((p,i)=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;';
+    btn.innerHTML=`<div style="font-size:11px;font-weight:500">${p.name}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${p.district} · ${fUSD(p.close_price_m2_usd)}/m²</div>`;
+    btn.onclick=()=>openProject(p,'afford');
+    sim.appendChild(btn);
+  });
+  c.appendChild(sim);
+}
+
+// ── DEFICIT ──────────────────────────────────────────────────
+function renderDeficit(c){
+  c.innerHTML+=`<div class="section-title">Indicadores de mercado</div>`;
+  const kg=document.createElement('div');kg.className='kpi-row';
+  [
+    {l:'Déficit total Lima',v:'612,000',s:'unidades',sc:'dn'},
+    {l:'Oferta formal/año',v:'~35,000',s:'nuevas unidades',sc:'up'},
+    {l:'Años para cerrar',v:'17.5',s:'a ritmo actual',sc:'wn'},
+    {l:'VIS del mercado',v:'~42%',s:'vivienda interés social',sc:''},
+  ].forEach(k=>{kg.innerHTML+=`<div class="kpi"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks ${k.sc}">${k.s}</div></div>`;});
+  c.appendChild(kg);
+
+  c.innerHTML+=`<div class="section-title">Déficit por zona</div>`;
+  const zb=document.createElement('div');zb.className='zone-bars';
+  const zones=[
+    {z:'Lima Norte',d:180000,c:'#A85B5B'},
+    {z:'Lima Este',d:160000,c:'#C2A45A'},
+    {z:'Lima Sur',d:120000,c:'#8B7355'},
+    {z:'Lima Moderna',d:85000,c:'#4A5BD6'},
+    {z:'Callao',d:67000,c:'#3E6B4F'},
+  ];
+  zb.innerHTML=zones.map(z=>`<div class="zbar">
+    <div class="zbar-label">${z.z}</div>
+    <div class="zbar-track"><div class="zbar-fill" style="width:${(z.d/180000*100).toFixed(0)}%;background:${z.c}"></div></div>
+    <div class="zbar-val" style="color:${z.c}">${(z.d/1000).toFixed(0)}K</div>
+  </div>`).join('');
+  c.appendChild(zb);
+
+  c.innerHTML+=`<div class="section-title">Predicción 12 meses</div>`;
+  const pr=document.createElement('div');pr.className='pred-table';
+  [
+    {l:'Precio m² Lima Moderna',v:'+2.5–4%',c:'in-c'},
+    {l:'Absorción mercado',v:'4.5%→5.2%',c:'up-c'},
+    {l:'Stock disponible',v:'−15%',c:'dn-c'},
+    {l:'Gap lista→cierre Seg A',v:'−3 a −6%',c:'wn-c'},
+    {l:'Tasa hipotecaria',v:'7.8–8.0%',c:'in-c'},
+  ].forEach(r=>{pr.innerHTML+=`<div class="pred-row"><div>${r.l}</div><div class="pred-val ${r.c}">${r.v}</div></div>`;});
+  c.appendChild(pr);
+
+  const cta=document.createElement('button');
+  cta.style.cssText='width:100%;padding:10px;background:var(--paper);border:1px solid var(--line);border-radius:4px;font-family:inherit;font-size:10px;cursor:pointer;color:var(--indigo);font-weight:500;margin-top:4px;';
+  cta.textContent='⚡ Análisis detallado con Tycoon →';
+  cta.onclick=()=>{toggleTycoon();setTimeout(()=>{document.getElementById('t-ta').value='Analizá el déficit habitacional de Lima Moderna y las oportunidades de inversión para los próximos 12 meses.';sendT();},400);};
+  c.appendChild(cta);
+}
+
+// ── PROJECT MODAL ────────────────────────────────────────────
+function openProject(p, defaultTab='overview'){
+  SELECTED=p;
+  const overlay=document.createElement('div');
+  overlay.className='overlay';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+
+  overlay.innerHTML=`
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-name">${p.isOwn?'★ ':''}${p.name}</div>
+        <div class="modal-sub">${p.developer||'—'} · ${p.district} · Seg ${p.segment||'?'}</div>
+      </div>
+      <button class="modal-close" onclick="this.closest('.overlay').remove()">✕</button>
+    </div>
+    <div class="mtabs">
+      <button class="mtab ${defaultTab==='overview'?'on':''}" data-mt="overview">Resumen</button>
+      <button class="mtab ${defaultTab==='precios'?'on':''}" data-mt="precios">Precios</button>
+      <button class="mtab ${defaultTab==='afford'?'on':''}" data-mt="afford">Capacidad de pago</button>
+      <button class="mtab ${defaultTab==='comps'?'on':''}" data-mt="comps">Comparables</button>
+    </div>
+    <div class="modal-body" id="mbody"></div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('.mtab').forEach(b=>{
+    b.addEventListener('click',()=>{
+      overlay.querySelectorAll('.mtab').forEach(t=>t.classList.remove('on'));
+      b.classList.add('on');
+      renderModalTab(p, b.dataset.mt, overlay);
+    });
+  });
+  renderModalTab(p, defaultTab, overlay);
+}
+
+function renderModalTab(p, tab, overlay){
+  const body=overlay.querySelector('#mbody');
+  if(tab==='overview') body.innerHTML=renderOverview(p);
+  else if(tab==='precios') body.innerHTML=renderPrecios(p);
+  else if(tab==='afford') renderAfford(p, body);
+  else if(tab==='comps') body.innerHTML=renderComps(p);
+}
+
+function renderOverview(p){
+  const items=[
+    {l:'Lista /m²',v:fUSD(p.list_price_m2_usd),c:'in-c'},
+    {l:'Cierre est. /m²',v:fUSD(p.close_price_m2_usd),c:'up-c'},
+    {l:'Gap',v:`−${p.discount_pct||0}%`,c:'dn-c'},
+    {l:'Ticket lista',v:p.list_ticket_usd?'$'+(p.list_ticket_usd/1000).toFixed(0)+'K':'—',c:''},
+    {l:'Ticket cierre',v:p.close_ticket_usd?'$'+(p.close_ticket_usd/1000).toFixed(0)+'K':'—',c:'up-c'},
+    {l:'Área mín',v:`${p.min_area_m2||'?'} m²`,c:''},
+    {l:'Área máx',v:`${p.max_area_m2||'?'} m²`,c:''},
+    {l:'Dormitorios',v:p.dorms_min?`${p.dorms_min}–${p.dorms_max}D`:'—',c:''},
+    {l:'Etapa',v:p.stage||'?',c:''},
+    {l:'Entrega',v:p.delivery||'?',c:''},
+    {l:'Historial',v:`${(p.price_history||[]).length} registros`,c:'in-c'},
+    {l:'Segmento',v:`Seg ${p.segment||'?'}`,c:''},
+  ];
+  return `<div class="detail-grid">${items.map(i=>`<div class="dc"><div class="dcl">${i.l}</div><div class="dcv ${i.c}">${i.v}</div></div>`).join('')}</div>
+    <div style="margin-top:14px">
+      <button onclick="analyzePrj(SELECTED)" style="display:inline-flex;align-items:center;gap:5px;padding:8px 14px;background:#4A5BD6;color:#fff;border:none;border-radius:3px;font-size:10px;font-weight:500;cursor:pointer;font-family:inherit;">
+        ⚡ Analizar con Tycoon
+      </button>
+      ${p.url?`<a href="${p.url}" target="_blank" style="margin-left:8px;font-size:10px;color:var(--indigo);">Ver en Nexo →</a>`:''}
+    </div>`;
+}
+
+function renderPrecios(p){
+  const hist=p.price_history||[];
+  const rows=hist.map(h=>`<tr>
+    <td style="font-size:10px">${h.fecha}</td>
+    <td style="font-size:10px;color:var(--muted)">${h.estado}</td>
+    <td class="mono in-c">${h.currency==='USD'?'$'+fmt(h.precio):'S/'+fmt(h.precio)}</td>
+    <td class="mono up-c">${fUSD(h.precio_usd)}</td>
+  </tr>`).join('');
+  return `<p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+    Descuento de cierre estimado: <strong style="color:var(--down)">−${p.discount_pct||0}%</strong> calibrado por etapa y segmento.
+  </p>
+  ${hist.length?`<div class="ztable"><table>
+    <thead><tr><th>Fecha</th><th>Estado</th><th>Precio</th><th>USD equiv.</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`:'<p style="font-size:11px;color:var(--muted)">Sin historial disponible aún. Se acumula con el tiempo.</p>'}`;
+}
+
+function renderAfford(p, container){
+  const persona=PERSONAS[p.segment||'B'];
+  const sal=SALARY[p.district]||SALARY['Surco'];
+  container.innerHTML=`
+    <div style="background:var(--surface);border-radius:4px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;color:${persona.color};margin-bottom:4px">${persona.icon} Buyer Persona — Seg ${p.segment}</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5">${persona.desc}</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <select id="af-bank" style="height:28px;padding:0 8px;border:1px solid var(--line);border-radius:3px;font-size:10px;font-family:inherit;background:var(--surface);">
+        ${BANKS.map((b,i)=>`<option value="${i}">${b.bank} ${b.rate}% ${b.currency} ${b.plazo}a</option>`).join('')}
+      </select>
+      <button id="af-solo" style="height:28px;padding:0 10px;border-radius:3px;font-size:9px;font-family:inherit;cursor:pointer;border:1px solid var(--indigo);background:var(--indigo);color:#fff;">Solo</button>
+      <button id="af-pareja" style="height:28px;padding:0 10px;border-radius:3px;font-size:9px;font-family:inherit;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--muted);">En pareja</button>
+    </div>
+    <div id="af-res"></div>`;
+
+  afModality='solo';
+  const upd=()=>updateAfford(p, persona, sal);
+  document.getElementById('af-bank').onchange=upd;
+  document.getElementById('af-solo').onclick=()=>{
+    afModality='solo';
+    document.getElementById('af-solo').style.cssText+='background:var(--indigo);color:#fff;border-color:var(--indigo);';
+    document.getElementById('af-pareja').style.cssText='height:28px;padding:0 10px;border-radius:3px;font-size:9px;font-family:inherit;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--muted);';
+    upd();
+  };
+  document.getElementById('af-pareja').onclick=()=>{
+    afModality='pareja';
+    document.getElementById('af-pareja').style.cssText+='background:var(--indigo);color:#fff;border-color:var(--indigo);';
+    document.getElementById('af-solo').style.cssText='height:28px;padding:0 10px;border-radius:3px;font-size:9px;font-family:inherit;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--muted);';
+    upd();
+  };
+  upd();
+}
+
+function updateAfford(p, persona, sal){
+  const bIdx=+(document.getElementById('af-bank').value);
+  const bank=BANKS[bIdx];
+  const salBase=sal[persona.profiles[0]]||sal.mid||5000;
+  const salNet=afModality==='pareja'?Math.round(salBase*sal.pm):salBase;
+  const precio=p.close_ticket_usd||p.list_ticket_usd||0;
+  const loan=precio*persona.finPct;
+  const r=bank.rate/100/12;
+  const n=bank.plazo*12;
+  const cuota=loan*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
+  const cuotaPEN=bank.currency==='USD'?Math.round(cuota*TC):Math.round(cuota);
+  const maxCuota=salNet*persona.cuotaMax;
+  const pct=Math.round(cuotaPEN/maxCuota*100);
+  const ok=pct<=100;
+  const enganche=Math.round(precio*(1-persona.finPct));
+  const col=pct<70?'var(--up)':pct<100?'var(--warn)':'var(--down)';
+  document.getElementById('af-res').innerHTML=`
+    <div class="afford-grid">
+      <div class="afford-card"><div class="acl">Ingreso ${afModality==='pareja'?'pareja':'individual'}</div><div class="acv">S/${fmt(salNet)}</div><div class="acs">${afModality}</div></div>
+      <div class="afford-card"><div class="acl">Enganche (${Math.round((1-persona.finPct)*100)}%)</div><div class="acv" style="color:var(--warn)">$${fmt(enganche)}</div><div class="acs">S/${fmt(Math.round(enganche*TC))}</div></div>
+      <div class="afford-card"><div class="acl">Cuota mensual</div><div class="acv" style="color:var(--indigo)">${bank.currency==='USD'?'$':'S/'}${fmt(Math.round(bank.currency==='USD'?cuota:cuotaPEN))}</div><div class="acs">S/${fmt(cuotaPEN)}</div></div>
+      <div class="afford-card"><div class="acl">% ingreso</div><div class="acv" style="color:${col}">${pct}%</div><div class="acs">máx ${Math.round(persona.cuotaMax*100)}%</div></div>
+      <div class="afford-card"><div class="acl">Banco</div><div class="acv" style="font-size:14px">${bank.bank}</div><div class="acs">${bank.rate}% ${bank.currency}</div></div>
+      <div class="afford-card"><div class="acl">Veredicto</div><div class="acv" style="color:${ok?'var(--up)':'var(--down)'}">${ok?'✓ Viable':'✗ Difícil'}</div><div class="acs">${ok?'dentro del umbral':'sobrepasa capacidad'}</div></div>
+    </div>
+    <div style="background:var(--surface);border-radius:4px;padding:10px 12px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px"><span style="color:var(--muted)">Capacidad de pago</span><span style="color:${col}">${pct}% usado</span></div>
+      <div class="cap-bar"><div class="cap-fill" style="width:${Math.min(pct,100)}%;background:${col}"></div><div class="cap-line" style="left:${Math.round(persona.cuotaMax*100)}%"></div></div>
+      <div style="font-size:9px;color:var(--muted)">línea = límite ${Math.round(persona.cuotaMax*100)}% del ingreso</div>
+    </div>`;
+}
+
+function renderComps(p){
+  const comps=FILTERED.filter(m=>m.id!==p.id&&m.district===p.district&&m.segment===p.segment).slice(0,5);
+  if(!comps.length)return '<p style="font-size:11px;color:var(--muted);padding:8px 0">Sin comparables en el mismo distrito y segmento.</p>';
+  return comps.map(s=>`<div class="comp-row">
+    <div><div style="font-size:11px;font-weight:500">${s.name}</div><div style="font-size:9px;color:var(--muted)">${s.developer}</div></div>
+    <div><div style="font-size:8px;color:var(--muted)">LISTA</div><div class="mono in-c" style="font-size:12px;font-weight:600">${fUSD(s.list_price_m2_usd)}</div></div>
+    <div><div style="font-size:8px;color:var(--muted)">CIERRE</div><div class="mono up-c" style="font-size:12px;font-weight:600">${fUSD(s.close_price_m2_usd)}</div></div>
+    <div><div style="font-size:8px;color:var(--muted)">GAP</div><div class="mono dn-c" style="font-size:12px;font-weight:600">−${s.discount_pct||0}%</div></div>
+  </div>`).join('');
+}
+
+// ── ADD OWN PROJECT ──────────────────────────────────────────
+function openAddModal(){
+  const overlay=document.createElement('div');
+  overlay.className='overlay';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  const dists=Object.keys(SALARY);
+  overlay.innerHTML=`<div class="modal" style="max-width:520px">
+    <div class="modal-hdr"><div class="modal-name">★ Agregar mi proyecto</div><button class="modal-close" onclick="this.closest('.overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        ${[
+          {id:'op-name',l:'Nombre',t:'text',ph:'Proyecto XYZ',span:2},
+          {id:'op-dev',l:'Desarrollador',t:'text',ph:'Hygge Inmobiliaria',span:2},
+          {id:'op-price',l:'Lista /m² USD',t:'number',ph:'2500'},
+          {id:'op-close',l:'Cierre /m² est.',t:'number',ph:'2425'},
+          {id:'op-ticket',l:'Ticket lista USD',t:'number',ph:'180000'},
+          {id:'op-amin',l:'Área mín m²',t:'number',ph:'60'},
+          {id:'op-amax',l:'Área máx m²',t:'number',ph:'120'},
+          {id:'op-delivery',l:'Entrega',t:'text',ph:'Q3 2026'},
+        ].map(f=>`<div style="grid-column:span ${f.span||1}"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">${f.l}</div>
+          <input id="${f.id}" type="${f.t}" placeholder="${f.ph}" style="width:100%;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:3px;font-size:11px;font-family:inherit;outline:none;"></div>`).join('')}
+        <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Distrito</div>
+          <select id="op-dist" style="width:100%;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:3px;font-size:11px;font-family:inherit;">
+            ${dists.map(d=>`<option>${d}</option>`).join('')}
+          </select></div>
+        <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Segmento</div>
+          <select id="op-seg" style="width:100%;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:3px;font-size:11px;font-family:inherit;">
+            <option>A</option><option selected>B</option><option>C</option>
+          </select></div>
+      </div>
+      <!-- Dirección -->
+      <div style="margin-top:10px;position:relative;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Dirección (para ubicar en el mapa)</div>
+        <input id="op-addr" type="text" placeholder="Av. Larco 1036, Miraflores…" autocomplete="off"
+          style="width:100%;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:3px;font-size:11px;font-family:inherit;outline:none;"
+          oninput="addrInput(this.value)" onkeydown="addrKey(event)">
+        <div id="op-geo-status" style="font-size:10px;color:var(--muted);margin-top:4px;min-height:14px;"></div>
+        <div id="addr-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:3px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:10000;max-height:200px;overflow-y:auto;margin-top:2px;"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button onclick="this.closest('.overlay').remove()" style="padding:7px 14px;border:1px solid var(--line);border-radius:3px;background:transparent;font-family:inherit;font-size:10px;cursor:pointer;">Cancelar</button>
+        <button id="op-save-btn" onclick="saveOwnProject(this.closest('.overlay'))" style="padding:7px 14px;border:none;border-radius:3px;background:#4A5BD6;color:#fff;font-family:inherit;font-size:10px;cursor:pointer;font-weight:500;">Agregar proyecto</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+let _pendingLat=null, _pendingLng=null, _addrTimer=null, _addrIdx=-1, _addrResults=[];
+
+window.addrInput=async function(val){
+  clearTimeout(_addrTimer);
+  const dd=document.getElementById('addr-dd');
+  const st=document.getElementById('op-geo-status');
+  if(val.length<3){dd.style.display='none';return;}
+  _addrTimer=setTimeout(async()=>{
+    st.textContent='Buscando…';
+    try{
+      // Photon: OSM geocoder with autocomplete, bbox = Lima metro
+      const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val+', Lima, Peru')}&format=geojson&limit=6&countrycodes=pe&addressdetails=1`;
+      const r=await fetch(url,{headers:{'Accept-Language':'es'}});
+      const data=await r.json();
+      _addrResults=data.features||[];
+      _addrIdx=-1;
+      if(!_addrResults.length){
+        dd.style.display='none';
+        st.textContent='Sin resultados — intentá con más detalle';
+        return;
+      }
+      st.textContent='';
+      dd.innerHTML=_addrResults.map((f,i)=>{
+        const label=f.properties.display_name.split(',').slice(0,4).join(',');
+        return `<div data-i="${i}" onmousedown="addrSelect(${i})"
+          style="padding:8px 12px;font-size:11px;cursor:pointer;border-bottom:1px solid #F5F6F8;line-height:1.4;"
+          onmouseover="this.style.background='#F4F5F7'" onmouseout="this.style.background=''">${label}</div>`;
+      }).join('');
+      dd.style.display='block';
+    }catch(e){st.textContent='Error de red';}
+  },300);
+};
+
+window.addrKey=function(e){
+  const items=document.querySelectorAll('#addr-dd [data-i]');
+  if(e.key==='ArrowDown'){e.preventDefault();_addrIdx=Math.min(_addrIdx+1,items.length-1);items.forEach((el,i)=>el.style.background=i===_addrIdx?'#F4F5F7':'');}
+  else if(e.key==='ArrowUp'){e.preventDefault();_addrIdx=Math.max(_addrIdx-1,0);items.forEach((el,i)=>el.style.background=i===_addrIdx?'#F4F5F7':'');}
+  else if(e.key==='Enter'&&_addrIdx>=0){e.preventDefault();addrSelect(_addrIdx);}
+  else if(e.key==='Escape'){document.getElementById('addr-dd').style.display='none';}
+};
+
+window.addrSelect=function(i){
+  const f=_addrResults[i];
+  if(!f)return;
+  // Nominatim GeoJSON: coordinates = [lng, lat]
+  _pendingLng=f.geometry.coordinates[0];
+  _pendingLat=f.geometry.coordinates[1];
+  const label=f.properties.display_name.split(',').slice(0,4).join(',');
+  document.getElementById('op-addr').value=label;
+  document.getElementById('addr-dd').style.display='none';
+  document.getElementById('op-geo-status').innerHTML=`<span style="color:var(--up)">✓ Ubicado correctamente</span>`;
+};
+
+function saveOwnProject(overlay){
+  const g=id=>document.getElementById(id)?.value||'';
+  const p={
+    id:'own_'+Date.now(),
+    name:g('op-name')||'Mi Proyecto',
+    developer:g('op-dev'),
+    district:g('op-dist'),
+    segment:g('op-seg'),
+    zone:'Lima Moderna',
+    list_price_m2_usd:+g('op-price')||0,
+    close_price_m2_usd:+g('op-close')||0,
+    discount_pct:g('op-price')&&g('op-close')?Math.round((1-+g('op-close')/+g('op-price'))*100):3,
+    list_ticket_usd:+g('op-ticket')||0,
+    min_area_m2:+g('op-amin')||0,
+    max_area_m2:+g('op-amax')||0,
+    delivery:g('op-delivery'),
+    stage:'En construcción',
+    isOwn:true,
+    price_history:[],
+    lat:_pendingLat||null,
+    lng:_pendingLng||null,
+    address:g('op-addr'),
+  };
+  _pendingLat=null;_pendingLng=null;
+  OWN.push(p);
+  localStorage.setItem('hygge_own',JSON.stringify(OWN));
+  overlay.remove();
+  // Switch to map tab and zoom to new project
+  document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('.htab[data-tab="mapa"]').classList.add('on');
+  TAB='mapa';
+  applyFilters();
+  // Zoom to project after map renders
+  setTimeout(()=>{
+    if(MAP_INST&&p.lat&&p.lng){
+      MAP_INST.setView([p.lat,p.lng],16);
+    } else if(MAP_INST&&DIST_COORDS[p.district]){
+      MAP_INST.setView(DIST_COORDS[p.district],15);
+    }
+  },400);
+}
+
+// ── TYCOON AGENT ────────────────────────────────────────────
+function toggleTycoon(){
+  tOpen=!tOpen;
+  document.getElementById('tycoon').classList.toggle('open',tOpen);
+  document.getElementById('tycoon-btn').textContent=tOpen?'✕ Cerrar':'⚡ Tycoon';
+  checkKey();
+  if(tOpen&&tHist.length===0){
+    const lm=ALL.filter(p=>p.zone==='Lima Moderna');
+    const avgL=Math.round(avg(lm.map(p=>p.list_price_m2_usd||0).filter(Boolean)));
+    const avgC=Math.round(avg(lm.map(p=>p.close_price_m2_usd||0).filter(Boolean)));
+    addTMsg('bot',`Mercado activo. ${lm.length} proyectos Lima Moderna cargados.\nLista ${fUSD(avgL)}/m² · cierre ${fUSD(avgC)}/m² · −${Math.round(avg(lm.map(p=>p.discount_pct||0)))}% gap · tasa BCP 7.8%.\n¿Qué analizamos?`);
+  }
+}
+
+function checkKey(){
+  document.getElementById('api-setup').classList.toggle('show',!localStorage.getItem('alice:anthropic-key'));
+}
+window.saveKey=function(){
+  const v=document.getElementById('api-key-in').value.trim();
+  if(!v)return;
+  localStorage.setItem('alice:anthropic-key',v);
+  document.getElementById('api-setup').classList.remove('show');
+};
+
+function addTMsg(cls,txt){
+  const el=document.getElementById('t-msgs');
+  const d=document.createElement('div');
+  d.className='tmsg '+cls;d.textContent=txt;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+  return d;
+}
+
+function analyzePrj(p){
+  if(!p)return;
+  if(!tOpen)toggleTycoon();
+  const txt=`Analizá este proyecto:\n• ${p.name} · ${p.district} · Seg ${p.segment||'?'}\n• Dev: ${p.developer||'—'}\n• Lista: ${fUSD(p.list_price_m2_usd)}/m² · Cierre: ${fUSD(p.close_price_m2_usd)}/m² (−${p.discount_pct||0}%)\n• Ticket cierre: ${p.close_ticket_usd?'$'+(p.close_ticket_usd/1000).toFixed(0)+'K':'—'}\n• Área: ${p.min_area_m2||'?'}–${p.max_area_m2||'?'} m²\n• Etapa: ${p.stage||'?'} · Entrega: ${p.delivery||'?'}\n\nDame veredicto completo.`;
+  document.getElementById('t-ta').value=txt;
+  document.querySelectorAll('.overlay').forEach(o=>o.remove());
+  sendT();
+}
+window.analyzePrj=analyzePrj;
+
+window.handleTKey=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendT();}};
+
+window.sendT=async function(){
+  const ta=document.getElementById('t-ta');
+  const txt=ta.value.trim();
+  if(!txt||tLoading)return;
+  const key=localStorage.getItem('alice:anthropic-key');
+  if(!key){checkKey();return;}
+  ta.value='';
+  addTMsg('user',txt);
+  tHist.push({role:'user',content:txt});
+  tLoading=true;
+  document.getElementById('tsnd').disabled=true;
+  const ld=addTMsg('bot load','Analizando...');
+  const lm=FILTERED.filter(p=>!p.isOwn);
+  const avgL=Math.round(avg(lm.map(p=>p.list_price_m2_usd||0).filter(Boolean)));
+  const sys=TYCOON_SYS+`\n\nCONTEXTO ACTUAL — ${FILTERED.length} proyectos visibles, rango lista ${fUSD(Math.min(...lm.map(p=>p.list_price_m2_usd||0).filter(Boolean)))}–${fUSD(Math.max(...lm.map(p=>p.list_price_m2_usd||0).filter(Boolean)))}/m², media ${fUSD(avgL)}/m². Fecha: ${new Date().toLocaleDateString('es-PE')}.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1024,system:sys,messages:tHist.slice(-12)})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+    const data=await r.json();
+    const reply=data.content[0].text;
+    tHist.push({role:'assistant',content:reply});
+    ld.className='tmsg bot';ld.textContent=reply;
+  }catch(e){
+    ld.className='tmsg bot';ld.textContent=`Error: ${e.message}`;
+  }finally{
+    tLoading=false;
+    document.getElementById('tsnd').disabled=false;
+    document.getElementById('t-msgs').scrollTop=9999;
+  }
+};
+
+window.goToMapProject=function(district,lat,lng){
+  document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('.htab[data-tab="mapa"]').classList.add('on');
+  TAB='mapa';
+  applyFilters();
+  setTimeout(()=>{
+    if(MAP_INST&&lat&&lng) MAP_INST.setView([lat,lng],16);
+    else if(MAP_INST&&DIST_COORDS[district]) MAP_INST.setView(DIST_COORDS[district],15);
+  },400);
+};
+window.openProject=openProject;
+window.openAddModal=openAddModal;
+window.saveOwnProject=saveOwnProject;
+window.toggleTycoon=toggleTycoon;
+window.refreshData=refreshData;
+window.FILTERED=FILTERED;
+window.SELECTED=null;
+
+// ── BOOT ─────────────────────────────────────────────────────
+loadData();
+
+})();
+</script>
+</body>
+</html>
