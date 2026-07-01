@@ -1,0 +1,19 @@
+{
+  "name": "alicia-brain",
+  "version": "2.0.0",
+  "description": "Alicia · agente ejecutivo · Hygge Holding",
+  "main": "alicia-brain/src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node alicia-brain/src/server.js",
+    "build": "cd alicia-brain && npm install"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.0",
+    "node-cron": "^3.0.3",
+    "pg": "^8.12.0"
+  }
+}
