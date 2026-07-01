@@ -3,6 +3,7 @@ import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
 import { useTimer } from "./modules/timer/useTimer";
 import { TimerButton } from "./modules/timer/TimerButton";
+import { useERPSync } from "./api/useERPSync.js";
 import { TimerView } from "./modules/timer/TimerView";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -12149,6 +12150,8 @@ export default function HyggeOS({ authUser } = {}) {
   const [customSpaces, setCustomSpaces] = useState([]);
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  // ERP sync — se activa después de que loaded=true
+  const { pushNewTask, pushTaskUpdate, pushNewEvent } = useERPSync({ tasks, setTasks, currentUser: null, loaded });
   const [activity, setActivity] = useState([]);
   const [ceoProjects, setCeoProjects] = useState(INITIAL_CEO_PROJECTS);
   const [ceoNps, setCeoNps] = useState(72);
@@ -12550,9 +12553,12 @@ export default function HyggeOS({ authUser } = {}) {
       newTask = next[next.length - 1];
       return [newTask, ...next.slice(0, -1)];
     });
-    if (newTask) recordActivity(`creó "${newTask.title}"`, { taskId: newTask.id, space: newTask.space });
+    if (newTask) {
+      recordActivity(`creó "${newTask.title}"`, { taskId: newTask.id, space: newTask.space });
+      pushNewTask(newTask);
+    }
     return newTask;
-  }, [recordActivity]);
+  }, [recordActivity, pushNewTask]);
 
   // Duplicate task — preserves fields, generates new ID, resets subtasks/comments/attachments
   const duplicateTask = useCallback((id) => {

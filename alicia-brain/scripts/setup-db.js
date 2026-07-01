@@ -1,15 +1,15 @@
-// ── Alicia Brain · Setup SQLite (node:sqlite built-in) ───────────────────────
-// node scripts/setup-db.js
 import { DatabaseSync } from "node:sqlite";
 import dotenv from "dotenv";
 dotenv.config();
 
 const path = process.env.SQLITE_PATH || "./alicia.db";
 const db = new DatabaseSync(path);
+db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
 
-console.log("🧠 Configurando cerebro de Alicia (SQLite)...\n");
+console.log("🧠 Configurando cerebro de Alicia...\n");
 
 db.exec(`
+  -- ── Perfiles del equipo ──────────────────────────────────────────────────────
   CREATE TABLE IF NOT EXISTS profiles (
     user_id            TEXT PRIMARY KEY,
     name               TEXT NOT NULL,
@@ -29,6 +29,7 @@ db.exec(`
     updated_at         TEXT DEFAULT (datetime('now'))
   );
 
+  -- ── Historial de conversaciones ──────────────────────────────────────────────
   CREATE TABLE IF NOT EXISTS messages (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id    TEXT NOT NULL,
@@ -41,6 +42,7 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, created_at DESC);
 
+  -- ── Memorias extraídas de conversaciones ─────────────────────────────────────
   CREATE TABLE IF NOT EXISTS memories (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id       TEXT NOT NULL,
@@ -53,6 +55,39 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id, importance DESC, created_at DESC);
 
+  -- ── Knowledge base de la empresa ─────────────────────────────────────────────
+  -- Alicia construye y actualiza este mapa de Hygge con el tiempo
+  CREATE TABLE IF NOT EXISTS knowledge (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic      TEXT NOT NULL,
+    category   TEXT NOT NULL CHECK (category IN ('proyecto','empresa','mercado','persona','decision','riesgo','financiero','otro')),
+    content    TEXT NOT NULL,
+    source     TEXT,
+    confidence INTEGER DEFAULT 3 CHECK (confidence BETWEEN 1 AND 5),
+    created_by TEXT DEFAULT 'alicia',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_knowledge_topic ON knowledge(topic, category);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_knowledge_unique ON knowledge(topic, category);
+
+  -- ── Notas de reuniones procesadas ────────────────────────────────────────────
+  CREATE TABLE IF NOT EXISTS meeting_notes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    title         TEXT,
+    date          TEXT,
+    source        TEXT DEFAULT 'upload' CHECK (source IN ('upload','zoom','whatsapp')),
+    transcript    TEXT,
+    summary       TEXT,
+    decisions     TEXT DEFAULT '[]',
+    tasks_created TEXT DEFAULT '[]',
+    attendees     TEXT DEFAULT '[]',
+    zoom_id       TEXT,
+    duration_min  INTEGER,
+    created_at    TEXT DEFAULT (datetime('now'))
+  );
+
+  -- ── Eventos legacy (mantener para no romper nada) ────────────────────────────
   CREATE TABLE IF NOT EXISTS events (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     title      TEXT NOT NULL,
@@ -62,9 +97,11 @@ db.exec(`
     purpose    TEXT,
     brief      TEXT,
     created_by TEXT,
+    gcal_id    TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
+  -- ── Tasks log legacy ─────────────────────────────────────────────────────────
   CREATE TABLE IF NOT EXISTS tasks_log (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     title      TEXT NOT NULL,
@@ -77,7 +114,16 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
-console.log("✅ Tablas creadas");
+
+console.log("✅ Schema actualizado");
+
+// ── Seed: Perfiles del equipo ─────────────────────────────────────────────────
+const insert = db.prepare(`
+  INSERT OR REPLACE INTO profiles
+  (user_id, name, role, projects, skills_current, skills_developing, skills_explore,
+   growth_short, growth_long, work_style, strengths, opportunities)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+`);
 
 const team = [
   { id: "sb",  name: "Sebastián Bonilla", role: "CEO · Hygge Holding",   projects: ["DC01","PU01","TG01","L36","Legendre"], skills_current: ["Visión estratégica","Liderazgo ejecutivo","Desarrollo inmobiliario","Negociación"], skills_developing: ["Gestión financiera avanzada","Producto digital"], skills_explore: ["VC / Fundraising","Expansión regional"], growth_short: "Escalar Hygge a 3 proyectos simultáneos", growth_long: "Posicionar Hygge como developer premium de referencia en Lima", work_style: "Decisivo, pivota rápido, valora la honestidad. Mobile-first.", strengths: ["Visión de largo plazo","Cierre de deals complejos"], opportunities: ["Delegar más operativo","Documentar decisiones clave"] },
@@ -89,26 +135,10 @@ const team = [
   { id: "jmg", name: "J.M. Galup",        role: "Legal",                 projects: ["DC01","PU01","TG01","L36","Legendre"], skills_current: ["Derecho inmobiliario","Contratos","Due diligence","Regulación municipal Lima"], skills_developing: ["Derecho tributario","Contratos con inversores"], skills_explore: ["Legal tech","Arbitraje comercial"], growth_short: "Cerrar expedientes Legendre formalmente", growth_long: "Referente legal de estructuración de proyectos complejos en Lima", work_style: "Preciso, minucioso, conservador ante el riesgo.", strengths: ["Rigor jurídico","Confiabilidad"], opportunities: ["Comunicar legal de forma accesible","Agilizar revisiones rutinarias"] },
 ];
 
-const insert = db.prepare(`
-  INSERT OR REPLACE INTO profiles
-  (user_id, name, role, projects, skills_current, skills_developing, skills_explore,
-   growth_short, growth_long, work_style, strengths, opportunities)
-  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-`);
-
 for (const p of team) {
-  insert.run(
-    p.id, p.name, p.role,
-    JSON.stringify(p.projects),
-    JSON.stringify(p.skills_current),
-    JSON.stringify(p.skills_developing),
-    JSON.stringify(p.skills_explore),
-    p.growth_short, p.growth_long, p.work_style,
-    JSON.stringify(p.strengths),
-    JSON.stringify(p.opportunities)
-  );
+  insert.run(p.id, p.name, p.role, JSON.stringify(p.projects), JSON.stringify(p.skills_current), JSON.stringify(p.skills_developing), JSON.stringify(p.skills_explore), p.growth_short, p.growth_long, p.work_style, JSON.stringify(p.strengths), JSON.stringify(p.opportunities));
 }
-console.log("✅ Perfiles del equipo cargados (7 colaboradores)");
 
+console.log("✅ Perfiles cargados (7 colaboradores)");
 db.close();
-console.log(`\n🧠 Cerebro de Alicia listo → ${path}\n`);
+console.log(`\n🧠 Cerebro listo → ${path}\n`);

@@ -1,70 +1,36 @@
-// ── Capa de datos · node:sqlite (local) o PostgreSQL (Hackintosh) ─────────────
+import { DatabaseSync } from "node:sqlite";
 import dotenv from "dotenv";
 dotenv.config();
 
 const MODE = process.env.DB_MODE || "sqlite";
+const path = process.env.SQLITE_PATH || "./alicia.db";
 
-// ── SQLite via node:sqlite (built-in en Node 22+) ─────────────────────────────
-let _sqlite = null;
+let _db = null;
 
-async function getSQLite() {
-  if (_sqlite) return _sqlite;
-  const { DatabaseSync } = await import("node:sqlite");
-  const path = process.env.SQLITE_PATH || "./alicia.db";
-  _sqlite = new DatabaseSync(path);
-  return _sqlite;
+function getDB() {
+  if (_db) return _db;
+  _db = new DatabaseSync(path);
+  _db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
+  return _db;
 }
 
-async function querySQL(sql, params = []) {
-  const db = await getSQLite();
-  // Convertir arrays a JSON string
-  const p = params.map(v => Array.isArray(v) ? JSON.stringify(v) : v == null ? null : v);
+export function query(sql, params = []) {
+  if (MODE === "postgres") throw new Error("PostgreSQL no soportado en esta versión — usar sqlite");
+  const db = getDB();
+  const p = params.map(v => v == null ? null : Array.isArray(v) || (typeof v === "object") ? JSON.stringify(v) : v);
   const upper = sql.trim().toUpperCase();
   const isSelect = upper.startsWith("SELECT") || upper.startsWith("WITH");
   try {
     if (isSelect) {
-      const stmt = db.prepare(sql);
-      const rows = stmt.all(...p);
-      return { rows };
+      return { rows: db.prepare(sql).all(...p) };
     }
-    const stmt = db.prepare(sql);
-    const info = stmt.run(...p);
+    const info = db.prepare(sql).run(...p);
     return { rows: [], lastID: info.lastInsertRowid, changes: info.changes };
   } catch (e) {
-    console.error("SQLite error:", e.message, "\nSQL:", sql, "\nParams:", p);
+    console.error("SQLite error:", e.message, "\nSQL:", sql.slice(0, 100));
     throw e;
   }
 }
-
-// ── PostgreSQL ────────────────────────────────────────────────────────────────
-let pgPool = null;
-async function getPG() {
-  if (pgPool) return pgPool;
-  const { default: pg } = await import("pg");
-  pgPool = new pg.Pool({
-    host: process.env.PG_HOST || "localhost",
-    port: process.env.PG_PORT || 5432,
-    database: process.env.PG_DATABASE || "alicia",
-    user: process.env.PG_USER || "alicia",
-    password: process.env.PG_PASSWORD,
-  });
-  return pgPool;
-}
-
-async function queryPG(sql, params = []) {
-  const pool = await getPG();
-  return pool.query(sql, params);
-}
-
-// ── Interfaz unificada ────────────────────────────────────────────────────────
-export async function query(rawSQL, params = []) {
-  if (MODE === "postgres") return queryPG(rawSQL, params);
-  // PG usa $1 $2 → SQLite usa ?
-  const sql = rawSQL.replace(/\$(\d+)/g, "?");
-  return querySQL(sql, params);
-}
-
-export const isPostgres = MODE === "postgres";
 
 export function parseArr(val) {
   if (!val) return [];
