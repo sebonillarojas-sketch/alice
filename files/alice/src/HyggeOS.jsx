@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } from "react";
+import ObraTrackerModule from "./modules/obra/ObraTracker";
+import AliciaView from "./modules/alicia/AliciaView";
+import { useTimer } from "./modules/timer/useTimer";
+import { TimerButton } from "./modules/timer/TimerButton";
+import { useERPSync } from "./api/useERPSync.js";
+import { TimerView } from "./modules/timer/TimerView";
 
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
 const anthropicHeaders = () => ({
@@ -7,12 +13,6 @@ const anthropicHeaders = () => ({
   "anthropic-version": "2023-06-01",
   "anthropic-dangerous-direct-browser-access": "true",
 });
-import ObraTrackerModule from "./modules/obra/ObraTracker";
-import AliciaView from "./modules/alicia/AliciaView";
-import { useTimer } from "./modules/timer/useTimer";
-import { TimerButton } from "./modules/timer/TimerButton";
-import { useERPSync } from "./api/useERPSync.js";
-import { TimerView } from "./modules/timer/TimerView";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip, Cell,
