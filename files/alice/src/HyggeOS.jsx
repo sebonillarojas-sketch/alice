@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } from "react";
+
+const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
+const anthropicHeaders = () => ({
+  "Content-Type": "application/json",
+  "x-api-key": ANTHROPIC_KEY,
+  "anthropic-version": "2023-06-01",
+  "anthropic-dangerous-direct-browser-access": "true",
+});
 import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
 import { useTimer } from "./modules/timer/useTimer";
@@ -94,10 +102,10 @@ const UsersContext = React.createContext([]);
 const lookupUser = (id, users) => users?.find(u => u.id === id) || null;
 
 async function loadStored(key, fallback) {
-  try { const r = await window.storage.get(key); if (r?.value) return JSON.parse(r.value); } catch (e) {}
+  try { const raw = localStorage.getItem(key); if (raw) return JSON.parse(raw); } catch (e) {}
   return fallback;
 }
-async function saveStored(key, value) { try { await window.storage.set(key, JSON.stringify(value)); } catch (e) {} }
+async function saveStored(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
 
 // ═══ DEFAULT SPACES ══════════════════════════════════════════════════════
 // ═══ PURE DATA HELPERS · safe ops compartidos entre handlers UI y tests ═══
@@ -622,7 +630,7 @@ async function parseSmartCapture(text, context) {
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 400,
@@ -6173,248 +6181,6 @@ const CEO_AUDIENCE_PRESETS = {
   buyers: { label: "Compradores", sections: { kpis: false, projects: true, projectDetails: false, revenue: false, tasks: false, units: true, pipeline: false }, color: C.green },
 };
 
-// ─── PENCIL · canvas drawing con presión Apple Pencil, herramientas y colores ───
-// PointerEvent.pressure (0-1) en Apple Pencil reporta la presión real
-// Tilt: tiltX/tiltY (no usado hoy, base para futuro)
-// Storage: cada space guarda su canvas como base64 PNG en localStorage["hygge:pencil:<spaceId>"]
-const PENCIL_TOOLS = [
-  { id: "pencil", label: "Lápiz", baseSize: 1.5, pressureMultiplier: 2.5, opacity: 0.95 },
-  { id: "marker", label: "Plumón", baseSize: 6, pressureMultiplier: 4, opacity: 0.6 },
-  { id: "fine-pen", label: "Fine pen", baseSize: 0.8, pressureMultiplier: 1.2, opacity: 1 },
-  { id: "highlighter", label: "Resaltador", baseSize: 14, pressureMultiplier: 2, opacity: 0.3 },
-  { id: "eraser", label: "Borrador", baseSize: 18, pressureMultiplier: 0, opacity: 1 },
-];
-const PENCIL_COLORS = ["#0A0B0F", "#1E2A4A", "#3D52D5", "#A89BD9", "#C2A45A", "#A85B5B", "#5F8A6A", "#FFFFFF"];
-
-function PencilView({ spaceId }) {
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
-  const [tool, setTool] = useState("pencil");
-  const [color, setColor] = useState("#0A0B0F");
-  const [thickness, setThickness] = useState(1);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const lastPointRef = useRef(null);
-  const [historyLen, setHistoryLen] = useState(0);
-  const [dirty, setDirty] = useState(false);
-
-  const toolConfig = PENCIL_TOOLS.find(t => t.id === tool) || PENCIL_TOOLS[0];
-  const storageKey = `hygge:pencil:${spaceId}`;
-
-  // Load saved canvas on mount + resize handling
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const resize = () => {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const w = rect.width;
-      const h = rect.height;
-      // Capture current image before resize
-      let prevImage = null;
-      if (canvas.width > 0 && canvas.height > 0) {
-        try { prevImage = canvas.toDataURL(); } catch {}
-      }
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      const ctx = canvas.getContext("2d");
-      ctx.scale(dpr, dpr);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      // Restore from prevImage or from storage
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, w, h);
-      };
-      if (prevImage) {
-        img.src = prevImage;
-      } else {
-        try {
-          const saved = localStorage.getItem(storageKey);
-          if (saved) img.src = saved;
-        } catch {}
-      }
-    };
-
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [spaceId, storageKey]);
-
-  // Auto-save debounced when dirty
-  useEffect(() => {
-    if (!dirty) return;
-    const handle = setTimeout(() => {
-      try {
-        const canvas = canvasRef.current;
-        if (canvas) localStorage.setItem(storageKey, canvas.toDataURL("image/png"));
-      } catch (e) { console.warn("pencil save failed", e); }
-      setDirty(false);
-    }, 1500);
-    return () => clearTimeout(handle);
-  }, [dirty, storageKey, historyLen]);
-
-  const getPos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-
-  const onPointerDown = (e) => {
-    if (e.pointerType === "touch" && e.buttons === 0) return; // ignore stray touches
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    setIsDrawing(true);
-    const pos = getPos(e);
-    lastPointRef.current = { ...pos, pressure: e.pressure || 0.5 };
-    // Single tap dot
-    const ctx = canvasRef.current.getContext("2d");
-    const effectivePressure = e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5;
-    const size = (toolConfig.baseSize + effectivePressure * toolConfig.pressureMultiplier) * thickness;
-    if (tool === "eraser") {
-      ctx.save();
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, size / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } else {
-      ctx.save();
-      ctx.globalAlpha = toolConfig.opacity;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, size / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-  };
-
-  const onPointerMove = (e) => {
-    if (!isDrawing) return;
-    const pos = getPos(e);
-    const ctx = canvasRef.current.getContext("2d");
-    const last = lastPointRef.current;
-    const effectivePressure = e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5;
-    const size = (toolConfig.baseSize + effectivePressure * toolConfig.pressureMultiplier) * thickness;
-
-    ctx.save();
-    if (tool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = "#000";
-    } else {
-      ctx.globalAlpha = toolConfig.opacity;
-      ctx.strokeStyle = color;
-    }
-    ctx.lineWidth = size;
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    ctx.restore();
-
-    lastPointRef.current = { ...pos, pressure: effectivePressure };
-  };
-
-  const onPointerUp = () => {
-    setIsDrawing(false);
-    lastPointRef.current = null;
-    setHistoryLen(h => h + 1);
-    setDirty(true);
-  };
-
-  const clearCanvas = () => {
-    if (!confirm("¿Borrar todo el lienzo de este space?")) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    try { localStorage.removeItem(storageKey); } catch {}
-    setHistoryLen(0);
-  };
-
-  const exportPNG = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = `hygge-lapiz-${spaceId}-${Date.now()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
-
-  return (
-    <div className="flex flex-col flex-1" style={{ backgroundColor: C.bg, height: "calc(100vh - 110px)" }}>
-      {/* Toolbar */}
-      <div className="px-3 py-2 flex items-center gap-2 flex-wrap" style={{ backgroundColor: C.paper, borderBottom: `1px solid ${C.lineSoft}` }}>
-
-        {/* Tools */}
-        <div className="flex items-center gap-0.5" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: 2, backgroundColor: C.bg }}>
-          {PENCIL_TOOLS.map(t => {
-            const isActive = tool === t.id;
-            return (
-              <button key={t.id} onClick={() => setTool(t.id)} className="px-2 py-1 text-[10px] hover:opacity-90"
-                style={{ backgroundColor: isActive ? C.ink : "transparent", color: isActive ? C.bg : C.muted, borderRadius: 2, fontWeight: isActive ? 600 : 500, letterSpacing: "0.04em" }}>
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Colors */}
-        <div className="flex items-center gap-1 px-1" style={{ borderLeft: `1px solid ${C.lineSoft}` }}>
-          {PENCIL_COLORS.map(c => (
-            <button key={c} onClick={() => setColor(c)} disabled={tool === "eraser"} className="hover:opacity-80 disabled:opacity-30"
-              title={c}
-              style={{ width: 22, height: 22, borderRadius: 999, backgroundColor: c, border: color === c ? `2px solid ${C.ink}` : `1px solid ${C.lineSoft}`, boxShadow: color === c ? `0 0 0 2px ${C.bg}` : "none" }} />
-          ))}
-        </div>
-
-        {/* Thickness slider */}
-        <div className="flex items-center gap-1.5 px-2" style={{ borderLeft: `1px solid ${C.lineSoft}` }}>
-          <span style={{ fontSize: 9, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600 }}>Grosor</span>
-          <input type="range" min="0.5" max="3" step="0.1" value={thickness} onChange={(e) => setThickness(parseFloat(e.target.value))} style={{ width: 80, accentColor: C.ink }} />
-          <span style={{ fontSize: 9, color: C.muted, fontFamily: "ui-monospace, monospace", minWidth: 24, textAlign: "right" }}>{thickness.toFixed(1)}x</span>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Actions */}
-        <button onClick={exportPNG} className="flex items-center gap-1 px-2 py-1 text-[10px] hover:opacity-80" style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-          <Download size={10} /> PNG
-        </button>
-        <button onClick={clearCanvas} className="flex items-center gap-1 px-2 py-1 text-[10px] hover:opacity-80" style={{ color: C.brick, border: `1px solid ${C.brick}40`, borderRadius: 2 }}>
-          <Trash2 size={10} /> Borrar todo
-        </button>
-      </div>
-
-      {/* Canvas */}
-      <div ref={containerRef} className="flex-1 relative" style={{ backgroundColor: "#FAF8F2", touchAction: "none" }}>
-        <canvas
-          ref={canvasRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerLeave={onPointerUp}
-          onPointerCancel={onPointerUp}
-          style={{ display: "block", cursor: tool === "eraser" ? "crosshair" : "crosshair", touchAction: "none" }}
-        />
-        {historyLen === 0 && !isDrawing && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center px-6" style={{ color: C.muted }}>
-              <Pencil size={28} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
-              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Lienzo en blanco</div>
-              <div style={{ fontSize: 10, fontStyle: "italic", lineHeight: 1.5 }}>
-                Empezá a dibujar con el Apple Pencil · presión sensible<br />
-                Lápiz / Plumón / Fine pen / Resaltador / Borrador
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── VIEWPORT EXTERNO · iframe a una URL externa por space ───
 // Use cases: Cash Flow sheet, Cap Table, Miro board, Bronca site, Notion page
 // La URL se guarda por space en `spaceViewports[spaceId] = { url, label }`
@@ -8301,7 +8067,7 @@ const DEFAULT_HQ_WIDGETS = [
 function HQWidgetsBlock({ tasks, terrenos, allSpaces, users, customSpaces, navigate, openDetail }) {
   const [widgets, setWidgets] = useState(() => {
     try {
-      const stored = window.storage ? null : null; // placeholder
+
       const local = localStorage.getItem("hygge:hqWidgets");
       return local ? JSON.parse(local) : DEFAULT_HQ_WIDGETS;
     } catch { return DEFAULT_HQ_WIDGETS; }
@@ -8374,7 +8140,7 @@ function HQWidgetsBlock({ tasks, terrenos, allSpaces, users, customSpaces, navig
   const tryGenerate = async (space, ctx) => {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 300,
@@ -9479,7 +9245,7 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: anthropicHeaders(),
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 600,
@@ -10086,7 +9852,7 @@ JSON estricto sin markdown:
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: anthropicHeaders(),
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 300, system: sys, messages: [...history, { role: "user", content: userMsg }] }),
       });
       const data = await resp.json();
@@ -10110,7 +9876,7 @@ Respondé EN PERSONAJE, breve (2-3 oraciones), desde tu lente específica. NO te
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: anthropicHeaders(),
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 250, system: sys, messages: [...history, { role: "user", content: userMsg }] }),
       });
       const data = await resp.json();
@@ -10126,7 +9892,7 @@ Respondé EN PERSONAJE, breve (2-3 oraciones), desde tu lente específica. NO te
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: anthropicHeaders(),
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200, system: sys, messages: [...history, { role: "user", content: userMsg }, { role: "assistant", content: `Los agentes:\n\n${ctx}` }, { role: "user", content: "Tu síntesis ejecutiva." }] }),
       });
       const data = await resp.json();
@@ -11466,7 +11232,7 @@ function JabberwockyPanel({ tasks, customViews, terrenos, customSpaces, allSpace
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: anthropicHeaders(),
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 2000,
@@ -12150,8 +11916,6 @@ export default function HyggeOS({ authUser } = {}) {
   const [customSpaces, setCustomSpaces] = useState([]);
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
-  // ERP sync — se activa después de que loaded=true
-  const { pushNewTask, pushTaskUpdate, pushNewEvent } = useERPSync({ tasks, setTasks, currentUser: null, loaded });
   const [activity, setActivity] = useState([]);
   const [ceoProjects, setCeoProjects] = useState(INITIAL_CEO_PROJECTS);
   const [ceoNps, setCeoNps] = useState(72);
@@ -12162,6 +11926,8 @@ export default function HyggeOS({ authUser } = {}) {
   const { sessions: timerSessions, active: timerActive, liveSeconds: timerLive, startTimer, stopTimer: stopTimerSession, deleteSession: deleteTimerSession, isRunning: isTimerRunning, getTaskTotal } = useTimer(currentUserId);
   const [detailTaskId, setDetailTaskId] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  // ERP sync — loaded debe estar declarado antes de este hook
+  const { pushNewTask, pushTaskUpdate, pushNewEvent } = useERPSync({ tasks, setTasks, currentUser, loaded });
 
   // ─── UNDO SYSTEM · last 10 destructive actions ───
   const [undoStack, setUndoStack] = useState([]); // [{ label, snapshot, ts }]
@@ -12802,7 +12568,7 @@ REGLAS:
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: anthropicHeaders(),
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1500,
