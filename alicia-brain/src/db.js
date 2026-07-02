@@ -11,7 +11,50 @@ function getDB() {
   if (_db) return _db;
   _db = new DatabaseSync(path);
   _db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
+  initSchema(_db);
   return _db;
+}
+
+function initSchema(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS profiles (
+      user_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT, phone TEXT,
+      projects TEXT DEFAULT '[]', skills_current TEXT DEFAULT '[]',
+      skills_developing TEXT DEFAULT '[]', skills_explore TEXT DEFAULT '[]',
+      growth_short TEXT, growth_long TEXT, growth_notes TEXT, work_style TEXT,
+      strengths TEXT DEFAULT '[]', opportunities TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+      content TEXT NOT NULL, channel TEXT DEFAULT 'app', wa_msg_id TEXT,
+      actions TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS memories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+      content TEXT NOT NULL, category TEXT DEFAULT 'general', importance INTEGER DEFAULT 3,
+      source_msg_id INTEGER, created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id, importance DESC, created_at DESC);
+    CREATE TABLE IF NOT EXISTS knowledge (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT NOT NULL,
+      category TEXT NOT NULL, content TEXT NOT NULL, source TEXT,
+      confidence INTEGER DEFAULT 3, created_by TEXT DEFAULT 'alicia',
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_knowledge_topic ON knowledge(topic, category);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_knowledge_unique ON knowledge(topic, category);
+    CREATE TABLE IF NOT EXISTS meeting_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, date TEXT,
+      source TEXT DEFAULT 'upload', transcript TEXT, summary TEXT,
+      decisions TEXT DEFAULT '[]', tasks_created TEXT DEFAULT '[]',
+      attendees TEXT DEFAULT '[]', zoom_id TEXT, duration_min INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
 }
 
 export function query(sql, params = []) {
