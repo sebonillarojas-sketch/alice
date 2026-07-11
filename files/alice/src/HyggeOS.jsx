@@ -48,6 +48,75 @@ const C = {
 const toneMap = { navy: C.navy, cobalt: C.cobalt, lavender: C.lavender, ochre: C.ochre, brick: C.brick, muted: C.muted, green: C.green };
 const SPACE_COLORS = [C.cobalt, C.lavender, C.ochre, C.green, C.brick, C.sky, C.navy];
 
+// ═══ ALICE BLOB · modal emotional states ════════════════════════════════
+const _BLOB_STYLE_ID = "hygge-blob-keyframes";
+const BLOB_CSS = `
+  @keyframes hb-morph      {0%,100%{border-radius:42% 58% 65% 35%/45% 45% 55% 55%}34%{border-radius:60% 40% 42% 58%/60% 45% 55% 40%}67%{border-radius:45% 55% 60% 40%/40% 62% 38% 60%}}
+  @keyframes hb-morph-slow {0%,100%{border-radius:42% 58% 65% 35%/45% 45% 55% 55%}50%{border-radius:50% 50% 55% 45%/50% 50% 50% 50%}}
+  @keyframes hb-float      {0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.01)}}
+  @keyframes hb-dim        {0%,100%{opacity:1}50%{opacity:.6}}
+  @keyframes hb-happy      {0%,100%{transform:translateY(0) scaleX(1) scaleY(1)}30%{transform:translateY(-18px) scaleX(.93) scaleY(1.1)}50%{transform:translateY(-20px) scaleX(1.06) scaleY(.92)}70%{transform:translateY(0) scaleX(1.1) scaleY(.86)}85%{transform:translateY(0) scaleX(.97) scaleY(1.04)}}
+  @keyframes hb-excited    {0%,100%{transform:translateY(0) scale(1)}40%{transform:translateY(-22px) scale(1.08)}70%{transform:translateY(0) scale(.93)}}
+  @keyframes hb-wobble     {0%,100%{transform:rotate(0) translateX(0)}20%{transform:rotate(-8deg) translateX(-4px)}40%{transform:rotate(6deg) translateX(3px)}60%{transform:rotate(-5deg) translateX(-2px)}80%{transform:rotate(4deg) translateX(2px)}}
+  @keyframes hb-shake      {0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}}
+  @keyframes hb-flop       {0%,100%{transform:rotate(9deg) translateY(5px) scaleX(1.1) scaleY(.88)}50%{transform:rotate(11deg) translateY(8px) scaleX(1.12) scaleY(.85)}}
+`;
+const BLOB_STATES_HG = {
+  idle:      { bg: "#8b5cf6", anim: "hb-morph 8s ease-in-out infinite, hb-float 5s ease-in-out infinite" },
+  listening: { bg: "#a78bfa", anim: "hb-morph 4.5s ease-in-out infinite, hb-float 5s ease-in-out infinite" },
+  thinking:  { bg: "#6d28d9", anim: "hb-morph 3.2s ease-in-out infinite, hb-float 5s ease-in-out infinite, hb-dim 1.6s ease-in-out infinite" },
+  happy:     { bg: "#c4b5fd", anim: "hb-morph 8s ease-in-out infinite, hb-happy 1s cubic-bezier(.36,1.4,.5,1) infinite" },
+  excited:   { bg: "#c084fc", anim: "hb-morph 8s ease-in-out infinite, hb-excited .5s cubic-bezier(.36,1.4,.5,1) infinite" },
+  confused:  { bg: "#9c93b8", anim: "hb-morph 5s ease-in-out infinite, hb-wobble 1.8s ease-in-out infinite" },
+  error:     { bg: "#c2607e", anim: "hb-morph 6s ease-in-out infinite, hb-shake .5s ease-in-out infinite" },
+  crashed:   { bg: "#7a7396", anim: "hb-morph-slow 10s ease-in-out infinite, hb-flop 3.5s ease-in-out infinite" },
+};
+
+function ModalBlob({ state = "idle", size = 34 }) {
+  if (!document.getElementById(_BLOB_STYLE_ID)) {
+    const s = document.createElement("style");
+    s.id = _BLOB_STYLE_ID;
+    s.textContent = BLOB_CSS;
+    document.head.appendChild(s);
+  }
+  const s = BLOB_STATES_HG[state] || BLOB_STATES_HG.idle;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "42% 58% 65% 35%/45% 45% 55% 55%",
+      background: s.bg, animation: s.anim,
+      transition: "background 0.5s ease", flexShrink: 0, position: "relative",
+    }}>
+      {state === "crashed" && (
+        <div style={{ position: "absolute", top: "38%", left: "50%", transform: "translate(-50%,-50%)", display: "flex", gap: 7 }}>
+          {[0,1].map(i => (
+            <div key={i} style={{ position: "relative", width: 7, height: 7 }}>
+              <div style={{ position: "absolute", top: "50%", left: 0, width: "100%", height: 1.5, background: "rgba(0,0,0,0.35)", borderRadius: 1, transform: "translateY(-50%) rotate(45deg)" }} />
+              <div style={{ position: "absolute", top: "50%", left: 0, width: "100%", height: 1.5, background: "rgba(0,0,0,0.35)", borderRadius: 1, transform: "translateY(-50%) rotate(-45deg)" }} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function useModalBlob() {
+  const [state, setState] = useState("idle");
+  const [errors, setErrors] = useState(0);
+  const onType = useCallback(() => setState(s => s === "crashed" ? "crashed" : "listening"), []);
+  const onValid = useCallback(() => setState("happy"), []);
+  const onError = useCallback(() => {
+    setErrors(n => {
+      const next = n + 1;
+      setState(next >= 3 ? "crashed" : "error");
+      return next;
+    });
+  }, []);
+  const onHappy = useCallback((cb) => { setState("happy"); setTimeout(cb, 650); }, []);
+  const reset = useCallback(() => { setState("idle"); setErrors(0); }, []);
+  return { state, onType, onValid, onError, onHappy, reset };
+}
+
 // ═══ PEOPLE (TEAM) ═══════════════════════════════════════════════════════
 const PEOPLE = [
   { id: "sb", name: "Sebastián Bonilla", initials: "SB", role: "CEO", color: "#0A0B0F" },
@@ -233,12 +302,22 @@ const APPS = [
   },
   {
     id: "app-diagramatic",
-    label: "Whiteboard",
+    label: "Diagramatic",
     icon: PenSquare,
     dot: "#3C5A78",
     url: null,
     description: "Canvas libre · stickies, shapes, flechas, iconos + lápiz Apple Pencil",
     badge: "v2.0",
+    native: true,
+  },
+  {
+    id: "app-commissioner",
+    label: "The Commissioner",
+    icon: BarChart3,
+    dot: "#C2A45A",
+    url: "/commissioner.html",
+    description: "Commissioner · análisis y reportes",
+    badge: "v1.0",
     native: true,
   },
   {
@@ -345,14 +424,20 @@ const SPACE_DROPBOX_PATHS = {
   "legendre":    "/Hygge/Proyectos/Legendre",
 };
 
-const SPVS = [
-  { code: "DC01", name: "Hygge Del Castillo", district: "San Isidro", totalUnits: 6, sold: 4, construction: 67, salesPEN: 4_200_000, targetPEN: 6_300_000, margin: 18.4, status: "En curso", statusTone: "navy", nextMilestone: "Casco terminado · 12 jun" },
-  { code: "PU01", name: "Hygge Paula Ugarriza", district: "Miraflores", totalUnits: 8, sold: 3, construction: 42, salesPEN: 3_100_000, targetPEN: 8_400_000, margin: 21.2, status: "Atención", statusTone: "ochre", nextMilestone: "Cierre 5to piso · 28 jun" },
-  { code: "TG01", name: "Hygge De la Torre Gonzales", district: "Barranco", totalUnits: 5, sold: 5, construction: 89, salesPEN: 5_800_000, targetPEN: 5_800_000, margin: 24.6, status: "Vendido", statusTone: "lavender", nextMilestone: "Entrega · 15 ago" },
-  { code: "L36", name: "Larco 1036", district: "Miraflores", totalUnits: 12, sold: 7, construction: 54, salesPEN: 6_400_000, targetPEN: 11_200_000, margin: 6.0, status: "Supervisión", statusTone: "muted", nextMilestone: "Fee Q3 · 30 sep" },
+const SPV_TIPOS = [
+  { id: "spv_propio",    label: "SPV propio",       hint: "Hygge como developer" },
+  { id: "administracion", label: "Administración",  hint: "Fee por gestión, no capital propio" },
+  { id: "studio",        label: "Studio",            hint: "BAM · diseño y fees de proyecto" },
+];
+const SPV_STATUSES = ["En desarrollo", "En venta", "Entrega", "Post-entrega", "Supervisión", "Adquisición", "Completado"];
+
+const DEFAULT_SPVS = [
+  { code: "DC01", name: "Hygge Del Castillo",   district: "San Isidro", tipo: "spv_propio",    rol: "Developer",            totalUnits: 0, sold: 0, construction: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "En desarrollo", statusTone: "navy",    nextMilestone: "—" },
+  { code: "PU01", name: "Hygge Paula Ugarriza", district: "Miraflores", tipo: "spv_propio",    rol: "Developer",            totalUnits: 0, sold: 0, construction: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "En desarrollo", statusTone: "ochre",   nextMilestone: "—" },
+  { code: "TG01", name: "Hygge De la Torre",    district: "Barranco",   tipo: "spv_propio",    rol: "Developer",            totalUnits: 0, sold: 0, construction: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "En desarrollo", statusTone: "lavender",nextMilestone: "—" },
+  { code: "L36",  name: "Larco 1036",           district: "Miraflores", tipo: "administracion", rol: "Administración + fee", totalUnits: 0, sold: 0, construction: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "Supervisión",  statusTone: "muted",   nextMilestone: "—" },
 ];
 
-const FC_12M = [{ m: "Ene", in: 1200, out: 800 }, { m: "Feb", in: 1450, out: 920 }, { m: "Mar", in: 1700, out: 1100 }, { m: "Abr", in: 2100, out: 1280 }, { m: "May", in: 2480, out: 1610 }, { m: "Jun", in: 2800, out: 1900 }, { m: "Jul", in: 3100, out: 2050 }, { m: "Ago", in: 3400, out: 2180 }, { m: "Sep", in: 3650, out: 2350 }, { m: "Oct", in: 3900, out: 2480 }, { m: "Nov", in: 4200, out: 2620 }, { m: "Dic", in: 4500, out: 2750 }];
 const OPS_BY_AREA = [{ area: "BAM", open: 14, overdue: 2 }, { area: "Finanzas", open: 9, overdue: 0 }, { area: "Comercial", open: 12, overdue: 3 }, { area: "Legal", open: 6, overdue: 1 }, { area: "Operaciones", open: 11, overdue: 0 }, { area: "Marketing", open: 7, overdue: 1 }];
 const LAND_PIPELINE = [{ stage: "Identificación", count: 14 }, { stage: "Análisis", count: 8 }, { stage: "Negociación", count: 4 }, { stage: "Due Diligence", count: 2 }, { stage: "Cierre", count: 1 }];
 
@@ -369,41 +454,12 @@ const terrenoStatus = (id) => TERRENO_STATUSES.find(s => s.id === id) || TERRENO
 // Lima bounding box (approximate, central districts)
 const MAP_BOUNDS = { north: -12.00, south: -12.20, west: -77.10, east: -76.90 };
 
-const INITIAL_TERRENOS = [
-  { id: "t1", name: "Av. Petit Thouars 4500", district: "Miraflores", address: "Av. Petit Thouars 4500", lat: -12.115, lng: -77.030, areaM2: 850, askedPrice: 4200000, status: "negociando", owner: "Familia Rodríguez", ownerContact: "+51 999 111 222", notes: "Esquina con buena visibilidad. Zonificación RDM-650, hasta 12 pisos.", documents: [], comments: [{ id: 1, who: "sb", text: "Visitar el sábado con Ariel", when: "10:24" }], photos: [], createdAt: Date.now() - 86400000 * 14, score: 87 },
-  { id: "t2", name: "Calle Schell 240", district: "Miraflores", address: "Calle Schell 240", lat: -12.121, lng: -77.029, areaM2: 620, askedPrice: 3100000, status: "scouting", owner: "—", ownerContact: "", notes: "A pasos del parque Kennedy. Verificar dueño en SUNARP.", documents: [], comments: [], photos: [], createdAt: Date.now() - 86400000 * 4, score: 72 },
-  { id: "t3", name: "Av. Javier Prado Este 1280", district: "San Isidro", address: "Av. Javier Prado Este 1280", lat: -12.092, lng: -77.020, areaM2: 1200, askedPrice: 7800000, status: "due-diligence", owner: "Inversiones Sur SAC", ownerContact: "contacto@invsur.pe", notes: "Densidad para 18 pisos. Hotel Country Club a 2 cuadras. Pedir factibilidad de servicios.", documents: [], comments: [{ id: 1, who: "jmg", text: "Revisé partida registral, hay servidumbre menor en el lindero norte.", when: "16:40" }], photos: [], createdAt: Date.now() - 86400000 * 21, score: 92 },
-  { id: "t4", name: "Calle Bolognesi 365", district: "Barranco", address: "Calle Bolognesi 365", lat: -12.142, lng: -77.020, areaM2: 480, askedPrice: 1900000, status: "scouting", owner: "Sucesión Vargas", ownerContact: "—", notes: "Casa antigua sucesión. Verificar zonificación residencial vs comercial.", documents: [], comments: [], photos: [], createdAt: Date.now() - 86400000 * 2, score: 65 },
-  { id: "t5", name: "Av. Pardo y Aliaga 750", district: "San Isidro", address: "Av. Pardo y Aliaga 750", lat: -12.098, lng: -77.040, areaM2: 950, askedPrice: 5500000, status: "descartado", owner: "—", ownerContact: "", notes: "Precio fuera de mercado. Volver a contactar en 6 meses.", documents: [], comments: [], photos: [], createdAt: Date.now() - 86400000 * 35, score: 58 },
-  { id: "t6", name: "Salaverry 2980", district: "Jesús María", address: "Av. Salaverry 2980", lat: -12.085, lng: -77.052, areaM2: 720, askedPrice: 3600000, status: "negociando", owner: "Carmen Espinoza", ownerContact: "+51 988 444 333", notes: "Score 92. Necesito FC proyectado y due diligence legal antes de jueves.", documents: [], comments: [], photos: [], createdAt: Date.now() - 86400000 * 7, score: 92 },
-];
-const HOT_DEALS = [{ name: "Av. Salaverry 2980", district: "Jesús María", stage: "Negociación", score: 92 }, { name: "Calle Berlín 380", district: "Miraflores", stage: "Due Diligence", score: 87 }, { name: "Av. La Encalada 1410", district: "Surco", stage: "Análisis", score: 79 }];
-const BAM_RFIS = [
-  { id: "RFI-DC-014", proj: "DC01", title: "Detalle de junta muro-losa nivel 5", days: 2, owner: "Mauricio (BAM)" },
-  { id: "RFI-DC-015", proj: "DC01", title: "Especificación grifería baños master", days: 4, owner: "Constructora" },
-  { id: "RFI-PU-022", proj: "PU01", title: "Aclaración acero columna C-12", days: 1, owner: "Constructora" },
-  { id: "RFI-PU-023", proj: "PU01", title: "Cambio piso departamento tipo B", days: 6, owner: "Mauricio (BAM)" },
-  { id: "RFI-TG-008", proj: "TG01", title: "Recubrimiento fachada lado este", days: 9, owner: "BAM" },
-];
-const LEGAL_PERMITS = [
-  { proj: "DC01", type: "Licencia de construcción", entity: "Munic. San Isidro", status: "Aprobada", days: 0, color: C.green },
-  { proj: "DC01", type: "Certificado de finalización", entity: "Munic. San Isidro", status: "En trámite", days: 42, color: C.ochre },
-  { proj: "PU01", type: "Anteproyecto aprobado", entity: "Munic. Miraflores", status: "En revisión", days: 18, color: C.ochre },
-  { proj: "PU01", type: "Licencia de construcción", entity: "Munic. Miraflores", status: "En espera", days: 7, color: C.muted },
-  { proj: "TG01", type: "Habitabilidad final", entity: "Munic. Barranco", status: "En trámite", days: 25, color: C.ochre },
-];
-const COMERCIAL_FUNNEL = [
-  { stage: "Lead", count: 142, color: C.muted }, { stage: "Calificado", count: 68, color: C.sky },
-  { stage: "Propuesta", count: 24, color: C.cobalt }, { stage: "Reservado", count: 11, color: C.lavender },
-  { stage: "Contrato", count: 7, color: C.navy }, { stage: "Entregado", count: 19, color: C.green },
-];
-const MARKETING_CHANNELS = [
-  { ch: "Instagram", leads: 142, cpl: 28, conv: 4.2, color: C.lavender },
-  { ch: "Meta Ads", leads: 89, cpl: 42, conv: 3.1, color: C.cobalt },
-  { ch: "Web orgánico", leads: 64, cpl: 0, conv: 6.4, color: C.green },
-  { ch: "Google Ads", leads: 41, cpl: 56, conv: 2.8, color: C.ochre },
-  { ch: "Referidos", leads: 28, cpl: 0, conv: 11.2, color: C.navy },
-];
+const INITIAL_TERRENOS = [];
+const HOT_DEALS = [];
+const BAM_RFIS = [];
+const LEGAL_PERMITS = [];
+const COMERCIAL_FUNNEL = [];
+const MARKETING_CHANNELS = [];
 
 // ═══ TASKS — Importadas desde ClickUp workspace 90171161839 (Hygge x BAM) ═══
 const _TD = (offset) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
@@ -419,72 +475,7 @@ const _ct = (id, title, space, checked, assignee, priority, parentId, cuId, due,
   comments: [], attachments: [], activity: [{ when: "importado", text: "Sincronizado desde ClickUp · Hygge x BAM" }],
 });
 
-const INITIAL_TASKS = [
-  // ═══ FINANZAS · Pagos pendientes ═══
-  _ct(100, "Pago contadores anteriores y pago César Vallejo", "finanzas", false, "vd", "media", null, "86e1d1u37", _TD(3)),
-  _ct(101, "Pagos constitución", "finanzas", true, "jmg", "media", null, "86e1chp6t", _TD(-3)),
-  _ct(102, "Pagos notariales", "finanzas", true, "jmg", "media", null, "86e1chngz", _TD(-3)),
-  _ct(103, "Pago Zapata", "finanzas", true, "ac", "media", null, "86e1chjaf", _TD(-5)),
-  _ct(104, "Pago Topógrafo", "finanzas", false, "aa", "alta", null, "86e1chm4w", _TD(2)),
-  _ct(105, "Pago JMG", "finanzas", true, "jmg", "media", null, "86e1chm3a", _TD(-3)),
-  _ct(106, "Adelanto Bronca entregables 2.0", "finanzas", false, "vd", "media", null, "86e1chkzk", _TD(4)),
-  _ct(107, "Pago Adelanto Cubo", "finanzas", false, "jt", "media", null, "86e1chkwp", _TD(2)),
-  _ct(108, "Detracción Daniel Yep", "finanzas", false, "aa", "media", null, "86e1cvw25", _TD(3)),
-  _ct(109, "Pago CPU FDC", "finanzas", true, "aa", "media", null, "86e1chya0", _TD(-3)),
-  _ct(110, "Pago corredoras", "finanzas", true, "jt", "media", null, "86e1chjbb", _TD(-5)),
-  _ct(111, "Pago Edgar", "finanzas", true, "ac", "media", null, "86e1chj4w", _TD(-3)),
-  _ct(112, "Pago CRM", "finanzas", false, "vd", "media", null, "86e1chj4a", _TD(5)),
-  _ct(113, "Pago José", "finanzas", false, "ac", "media", null, "86e1chj3a", _TD(2)),
-  _ct(114, "Pago Julio", "finanzas", true, "ac", "media", null, "86e1chj1j", _TD(-5)),
-  _ct(115, "Personal limpieza", "finanzas", true, "ac", "baja", null, "86e1ctad2", _TD(-7)),
-  // FCs
-  _ct(120, "Flujo de Caja HYGGE", "finanzas", false, "jm", "alta", null, "86e14w7p8", _TD(2), "FC consolidado del holding · responsable Joel Moy"),
-  _ct(121, "Flujo de Caja LEGENDRE", "finanzas", true, "jm", "media", null, "86e14w6et", _TD(-3), "FC del proyecto Legendre · entregado"),
-
-  // ═══ COMERCIAL ═══
-  _ct(130, "Status del Prospecto Sarah", "comercial", false, "jt", "media", null, "86e1a0t8h", _TD(0), "Prospecto activo · seguimiento JT/SB"),
-  _ct(131, "Status sobre los prospectos Legendre", "comercial", false, "vd", "media", 130, "86e1au7gn", _TD(0)),
-  _ct(132, "Cliente Google · cuenta en renovación", "comercial", true, "jt", "baja", null, "86e12xbu9", _TD(-10), "Sales Pipeline · Current Clients"),
-
-  // ═══ LEGAL ═══
-  _ct(200, "Procedimiento GG - Sebastián Bonilla INALCOR", "legal", false, "jmg", "alta", null, "86e111up9", _TD(3)),
-  _ct(201, "Modelo de Contrato de Separación", "legal", false, "jmg", "media", null, "86e177w60", _TD(4)),
-  _ct(202, "Garantía temporal de Parque Armendariz - Greg (Reunión)", "legal", true, "jmg", "media", null, "86e1120p6", _TD(-2)),
-  _ct(203, "Constitución HYGGE MIRAFLORES (SPV)", "legal", true, "jmg", "media", null, "86e13m7xn", _TD(-7)),
-  _ct(204, "Constitución de HYGGE INMOBILIARIA (Holding)", "legal", true, "jmg", "alta", null, "86e11uede", _TD(-14)),
-  _ct(205, "Registro de marca BAM", "legal", false, "jmg", "media", null, "86e115j6u", _TD(7)),
-  _ct(206, "Constitución de BAM", "legal", true, "jmg", "media", null, "86e112b8z", _TD(-14)),
-  _ct(207, "Listado de los contratos por realizar o pendientes", "legal", true, "vd", "baja", null, "86e11115c", _TD(-5)),
-  _ct(208, "Legalización de Libros Societarios - Hygge OLVR", "legal", true, "sb", "media", null, "86e177x67", _TD(-3)),
-
-  // ═══ LEGENDRE · entregables post-obra ═══
-  _ct(300, "Brindar contrato de Calidda y conexión del edificio Legendre", "legendre", false, "sb", "alta", null, "86e14a6na", _TD(2)),
-  _ct(301, "Solicitar a los Proveedores · Garantías para los clientes", "legendre", true, "vd", "media", null, "86e189x2x", _TD(-2)),
-  _ct(302, "Contrato Contratistas (Garantías)", "legendre", true, "vd", "media", null, "86e189x8p", _TD(-3)),
-  _ct(303, "Revisar tema de monóxido en techo con José · ¿por qué están tapados?", "legendre", false, "vd", "alta", null, "86e1a0aht", _TD(1)),
-  _ct(304, "Habilitación de gas GLP", "legendre", false, "ac", "alta", null, "86e13dh3f", _TD(7), "Calidda dice que no tienen troncal aún en la zona — no estarían conectando el edificio en el corto plazo. Buscar alternativas."),
-  _ct(305, "Obtener 2 alternativas y pedir reunión", "legendre", false, "ac", "alta", 304, "86e1a09c7", _TD(3)),
-  _ct(306, "Solicitar reunión", "legendre", false, "ac", "media", 304, "86e1a090q", _TD(2)),
-  _ct(307, "Conformidad de Obra · Virginia", "legendre", false, "vd", "alta", null, "86e14jm9d", _TD(5)),
-  _ct(308, "Habilitación del ascensor de manera definitiva", "legendre", false, "ac", "alta", null, "86e13dhby", _TD(4)),
-  _ct(309, "Gantt de la Obra", "legendre", false, "ac", "media", null, "86e10d6dd", _TD(3)),
-  _ct(310, "Pago a Eliot por culminar trabajos pendientes de piedra sinterizada", "legendre", true, "ac", "media", null, "86e13dj9p", _TD(-3)),
-  _ct(311, "Ver opción alternativa de Solgas del tanque", "legendre", false, "ac", "media", null, "86e14a8rk", _TD(5)),
-  _ct(312, "Ordenar 103", "legendre", false, "jt", "media", null, "86e1a0w09", _TD(2), "Departamento 103 · ordenar y preparar"),
-  _ct(313, "Contratar personal de limpieza", "legendre", true, "vd", "baja", 312, "86e1a0x9h", _TD(-2)),
-  _ct(314, "Recoger y llevar Starlink a Legendre", "legendre", true, "sb", "baja", null, "86e155pdy", _TD(-7)),
-  _ct(315, "Conformidad de Obra · Virginia (admin)", "legendre", false, "vd", "media", null, "86e15q2vh", _TD(5)),
-
-  // ═══ DC01 · Del Castillo (BAM > Francisco del Castillo) ═══
-  _ct(400, "Levantamiento topográfico del terreno y colindantes", "dc01", false, "aa", "alta", null, "86e11yv6h", _TD(1), "EN RIESGO · documentación previa pendiente"),
-  _ct(401, "FDC · Agregar a una tramitadora (contacto de Daniel)", "dc01", true, "aa", "media", null, "86e19egqp", _TD(-2)),
-
-  // ═══ BAM · Administración y workshops ═══
-  _ct(500, "Flujo creativo en AutoCAD", "bam", false, "aa", "baja", null, "86e18kmwa", _TD(14), "EN PAUSA · revisar luego"),
-  _ct(501, "Hacer Miro por cada proyecto y poner visor en ClickUp", "bam", true, "aa", "media", null, "86e18kg6m", _TD(-5), "Resuelto por Hygge OS · Whiteboard view + custom views Miro por proyecto"),
-  _ct(502, "Miro_Collage por área", "bam", true, "aa", "media", null, "86e150auw", _TD(-7)),
-  _ct(503, "Workshop BAMCY", "bam", true, "aa", "media", null, "86e14na4h", _TD(-10)),
-];
+const INITIAL_TASKS = [];
 
 // ═══ DRIVE EMBEDS + MIRO VIEWERS — pre-poblados por space ═══
 // Drive URLs: folders use embeddedfolderview, Google Sheets use /preview, other files use /preview
@@ -493,63 +484,7 @@ const _drvSheet = (id) => `https://docs.google.com/spreadsheets/d/${id}/preview`
 const _drvFile = (id) => `https://drive.google.com/file/d/${id}/preview`;
 const _miroPh = "https://miro.com/welcome/"; // placeholder · editar en CustomViewConfigModal
 
-const INITIAL_CUSTOM_VIEWS = {
-  hq: [
-    { id: "hq_drv_root", type: "iframe", title: "Drive · Hygge Gruppe", config: { url: _drvFolder("15ZcobnMQ7NTf_u6UmFMiJsb4c8liQquy") } },
-    { id: "hq_cap", type: "iframe", title: "Cap Table · Investors", config: { url: _drvSheet("1eR98gF1wpxTlGNBY6qeovxSsykrkauogaYOv07cIQkY") } },
-  ],
-  finanzas: [
-    { id: "fin_cf", type: "iframe", title: "Cash flow Hygge 2026", config: { url: _drvSheet("1KUp7z4OtuQ24EXZvTdsLf0JQP8dQk1Jn4v3Md3a63Bo") } },
-    { id: "fin_eecc", type: "iframe", title: "Drive · EECC HYGGE", config: { url: _drvFolder("18UWqbv-rNpJlsY5Ur_YdeqzFBnuM40pk") } },
-  ],
-  legal: [
-    { id: "lg_dc", type: "iframe", title: "Drive · Del Castillo Legal", config: { url: _drvFolder("1h1vReIPdPnDh9gMNP_sz7p3lrAPpXRl4") } },
-    { id: "lg_pu", type: "iframe", title: "Drive · Paula Ugarriza Legal", config: { url: _drvFolder("18u4E-uvgN2HvKw5JGL6VClrRIbD1-4DO") } },
-    { id: "lg_tg", type: "iframe", title: "Drive · De la Torre Legal", config: { url: _drvFolder("1bJ5KFb27Y-ZzkuOnYQcCHXJxNNwaLUrg") } },
-    { id: "lg_acuerdo", type: "iframe", title: "Acuerdo Privado · Libre 5", config: { url: _drvFile("1fToxXb332tY23TGHweCJuMtjZiE9t8iJ") } },
-  ],
-  marketing: [
-    { id: "mk_brand", type: "iframe", title: "Drive · Brand Hygge Bronca", config: { url: _drvFolder("1TZvxsncwDME0qFP3jJZq3mMpAGjG_ZvA") } },
-    { id: "mk_dc_cmp", type: "iframe", title: "Drive · DC Campaña", config: { url: _drvFolder("1YFBsv5WeDt_95FRG0vr47sWGbgsOn00w") } },
-    { id: "mk_pu_cmp", type: "iframe", title: "Drive · PU Campaña", config: { url: _drvFolder("15knR6opRpM5VYVBY46ZNcQ4iTFzEaQ-k") } },
-    { id: "mk_tg_cmp", type: "iframe", title: "Drive · TG Campaña", config: { url: _drvFolder("1nVKWqu8rEPXpDaryb89UXlWSHPZCp3YN") } },
-  ],
-  bam: [
-    { id: "bam_root", type: "iframe", title: "Drive · BAM", config: { url: _drvFolder("1ZV54PfOLzrGRpw4nz8nIkA6oESdtTHIj") } },
-    { id: "bam_studio", type: "iframe", title: "Drive · Estudio BAM", config: { url: _drvFolder("1-FWqI1EaKtX6zViJsGzcApuHOXDZVP-8") } },
-    { id: "bam_02", type: "iframe", title: "Drive · 02 BAM", config: { url: _drvFolder("1O_Kqjd3Ihav_Ax9RnDwipRaG_PARviQe") } },
-  ],
-  dc01: [
-    { id: "dc01_diseno", type: "iframe", title: "Drive · Diseño Del Castillo", config: { url: _drvFolder("1FZ52l9N69NM6TJ5FlPD08HLogdWlo3m5") } },
-    { id: "dc01_hygge", type: "iframe", title: "Drive · Hygge Del Castillo", config: { url: _drvFolder("1H9OIY6qSZYjk9pYKdS7fWt4AeLzxMRA2") } },
-    { id: "dc01_fc", type: "iframe", title: "Drive · FC Del Castillo", config: { url: _drvFolder("1jeSZJLyUfsrsxeOImlDV8kxqHeds6F3w") } },
-    { id: "dc01_legal", type: "iframe", title: "Drive · Del Castillo Legal", config: { url: _drvFolder("1h1vReIPdPnDh9gMNP_sz7p3lrAPpXRl4") } },
-    { id: "dc01_miro", type: "iframe", title: "Miro · Del Castillo (configurar URL)", config: { url: _miroPh } },
-  ],
-  pu01: [
-    { id: "pu01_diseno", type: "iframe", title: "Drive · Diseño Paula Ugarriza", config: { url: _drvFolder("1qrt9odgJ9BUOQ5kdNJQ0pE3JE8ou-fRL") } },
-    { id: "pu01_hygge", type: "iframe", title: "Drive · Hygge Paula Ugarriza", config: { url: _drvFolder("1nj-IW-zk7LpgN6BqwTJ0B5ncBwBAiEEr") } },
-    { id: "pu01_fc", type: "iframe", title: "Drive · FC Paula Ugarriza", config: { url: _drvFolder("1v1cDIR0FMXZu15YBXOuggKiTibtmrgxr") } },
-    { id: "pu01_legal", type: "iframe", title: "Drive · Paula Ugarriza Legal", config: { url: _drvFolder("18u4E-uvgN2HvKw5JGL6VClrRIbD1-4DO") } },
-    { id: "pu01_miro", type: "iframe", title: "Miro · Paula Ugarriza (configurar URL)", config: { url: _miroPh } },
-  ],
-  tg01: [
-    { id: "tg01_diseno", type: "iframe", title: "Drive · Diseño De la Torre", config: { url: _drvFolder("1dGlGY6vWpD5ODS12d6GFjnhyP7lei79o") } },
-    { id: "tg01_hygge", type: "iframe", title: "Drive · Hygge De la Torre", config: { url: _drvFolder("1QDbsSGIekQb3eKuYOuwma7-nQ0SSK3tt") } },
-    { id: "tg01_fc", type: "iframe", title: "Drive · FC De la Torre", config: { url: _drvFolder("1zho6xqpXHac2p4VAmVJF8iSH4eOOtVXJ") } },
-    { id: "tg01_legal", type: "iframe", title: "Drive · De la Torre Legal", config: { url: _drvFolder("1bJ5KFb27Y-ZzkuOnYQcCHXJxNNwaLUrg") } },
-    { id: "tg01_miro", type: "iframe", title: "Miro · De la Torre (configurar URL)", config: { url: _miroPh } },
-  ],
-  l36: [
-    { id: "l36_super", type: "iframe", title: "Drive · Larco 1036 Supervisión", config: { url: _drvFolder("1NLCOo1bfaeKHJyNWfJaluMK0YGYzrOMY") } },
-    { id: "l36_audit", type: "iframe", title: "Auditoría 2025 Larco", config: { url: _drvFile("18_WhM_RZfjwKcIn39mdydD7qumiJ2wke") } },
-    { id: "l36_miro", type: "iframe", title: "Miro · Larco 1036 (configurar URL)", config: { url: _miroPh } },
-  ],
-  legendre: [
-    { id: "leg_fc", type: "iframe", title: "Edificio Legendre · FC completo", config: { url: _drvFile("12cSCNNGz6QuREEuIVAk6NcVrvNb4eomM") } },
-    { id: "leg_miro", type: "iframe", title: "Miro · Legendre (configurar URL)", config: { url: _miroPh } },
-  ],
-};
+const INITIAL_CUSTOM_VIEWS = {};
 
 const INITIAL_MESSAGES = [];
 
@@ -575,42 +510,13 @@ function timeAgo(ts) {
 
 // Each whiteboard is an array of elements. Each element has: id, type, plus type-specific fields.
 // Types: "sticky", "text", "rect", "ellipse", "arrow", "path"
-const INITIAL_WHITEBOARDS = {
-  hq: [
-    { id: 1, type: "sticky", x: 80, y: 60, w: 200, h: 110, text: "Cambio de fachada DC01 — pendiente decisión", color: C.ochre },
-    { id: 2, type: "sticky", x: 340, y: 80, w: 200, h: 110, text: "Ideas para Larco 1036 fase 2", color: C.lavender },
-    { id: 3, type: "sticky", x: 600, y: 60, w: 200, h: 110, text: "Brief Bronca · campaña TG01", color: C.sky },
-    { id: 4, type: "text", x: 80, y: 220, text: "Estrategia Q3", fontSize: 28, color: C.ink },
-    { id: 5, type: "rect", x: 80, y: 280, w: 240, h: 90, fill: "transparent", stroke: C.cobalt, strokeWidth: 2 },
-    { id: 6, type: "text", x: 95, y: 305, text: "Lanzamiento PU01", fontSize: 14, color: C.ink },
-    { id: 7, type: "rect", x: 380, y: 280, w: 240, h: 90, fill: "transparent", stroke: C.cobalt, strokeWidth: 2 },
-    { id: 8, type: "text", x: 395, y: 305, text: "Cierre TG01", fontSize: 14, color: C.ink },
-    { id: 9, type: "arrow", x1: 320, y1: 325, x2: 380, y2: 325, color: C.muted, strokeWidth: 2 },
-  ],
-  bam: [
-    { id: 1, type: "text", x: 80, y: 60, text: "Pipeline diseño · semana 21", fontSize: 22, color: C.ink },
-    { id: 2, type: "sticky", x: 80, y: 130, w: 180, h: 90, text: "DC01 revisión fachada", color: C.lavender },
-    { id: 3, type: "sticky", x: 290, y: 130, w: 180, h: 90, text: "PU01 anteproyecto", color: C.cobalt },
-  ],
-  finanzas: [
-    { id: 1, type: "text", x: 80, y: 60, text: "FC MACRO Q3", fontSize: 22, color: C.ink },
-    { id: 2, type: "sticky", x: 80, y: 130, w: 220, h: 100, text: "Revisar fee Fit Capital · julio", color: C.ochre },
-  ],
-};
+const INITIAL_WHITEBOARDS = {};
 
 const PROJECT_CONFIGS = {
-  dc01: { code: "DC01", name: "Hygge Del Castillo", district: "San Isidro", address: "Calle Del Castillo 234", architect: "BAM Studio", timeline: "2025 · 2026", construction: 67, sold: 4, totalUnits: 6, salesPEN: 4_200_000, targetPEN: 6_300_000, margin: 18.4, status: "En curso", statusTone: "navy", nextMilestone: "Casco terminado · 12 jun",
-    units: [{ num: "101", floor: 1, status: "vendida", price: 850 }, { num: "102", floor: 1, status: "vendida", price: 920 }, { num: "201", floor: 2, status: "vendida", price: 980 }, { num: "202", floor: 2, status: "reservada", price: 980 }, { num: "301", floor: 3, status: "vendida", price: 1050 }, { num: "302", floor: 3, status: "disponible", price: 1100 }],
-    milestones: [{ date: "15 abr", title: "Excavación", status: "done" }, { date: "12 jun", title: "Casco terminado", status: "in-progress" }, { date: "20 dic", title: "Entrega", status: "future" }] },
-  pu01: { code: "PU01", name: "Hygge Paula Ugarriza", district: "Miraflores", address: "Calle Paula Ugarriza 488", architect: "BAM Studio", timeline: "2025 · 2027", construction: 42, sold: 3, totalUnits: 8, salesPEN: 3_100_000, targetPEN: 8_400_000, margin: 21.2, status: "Atención", statusTone: "ochre", nextMilestone: "Cierre 5to piso · 28 jun",
-    units: [{ num: "101", floor: 1, status: "vendida", price: 780 }, { num: "201", floor: 2, status: "vendida", price: 840 }, { num: "202", floor: 2, status: "disponible", price: 860 }, { num: "301", floor: 3, status: "disponible", price: 880 }, { num: "302", floor: 3, status: "vendida", price: 880 }, { num: "401", floor: 4, status: "reservada", price: 920 }, { num: "501", floor: 5, status: "disponible", price: 1050 }],
-    milestones: [{ date: "8 feb", title: "Excavación", status: "done" }, { date: "28 jun", title: "5to piso", status: "in-progress" }, { date: "20 mar 27", title: "Entrega", status: "future" }] },
-  tg01: { code: "TG01", name: "Hygge De la Torre Gonzales", district: "Barranco", address: "Av. De la Torre Gonzales 102", architect: "BAM Studio", timeline: "2024 · 2026", construction: 89, sold: 5, totalUnits: 5, salesPEN: 5_800_000, targetPEN: 5_800_000, margin: 24.6, status: "Vendido", statusTone: "lavender", nextMilestone: "Entrega · 15 ago",
-    units: [{ num: "101", floor: 1, status: "vendida", price: 1100 }, { num: "201", floor: 2, status: "vendida", price: 1180 }, { num: "301", floor: 3, status: "vendida", price: 1180 }, { num: "401", floor: 4, status: "vendida", price: 1200 }, { num: "501", floor: 5, status: "vendida", price: 1340 }],
-    milestones: [{ date: "10 mar 24", title: "Inicio obra", status: "done" }, { date: "30 may", title: "Acabados", status: "in-progress" }, { date: "15 ago", title: "Entrega", status: "future" }] },
-  l36: { code: "L36", name: "Larco 1036", district: "Miraflores", address: "Av. Larco 1036", architect: "Externo · supervisión Hygge", timeline: "2025 · 2027", construction: 54, sold: 7, totalUnits: 12, salesPEN: 6_400_000, targetPEN: 11_200_000, margin: 6.0, status: "Supervisión", statusTone: "muted", nextMilestone: "Fee Q3 · 30 sep",
-    units: Array.from({ length: 12 }, (_, i) => ({ num: String(101 + Math.floor(i/2)*100 + (i%2)), floor: Math.floor(i/2)+1, status: i < 7 ? "vendida" : i === 8 ? "reservada" : "disponible", price: 480 + i*30 })),
-    milestones: [{ date: "31 mar", title: "Fee Q1", status: "done" }, { date: "30 jun", title: "Fee Q2", status: "in-progress" }, { date: "30 sep", title: "Fee Q3", status: "future" }] },
+  dc01: { code: "DC01", name: "Hygge Del Castillo", district: "San Isidro", address: "Calle Del Castillo 234", architect: "BAM Studio", timeline: "2025 · 2026", construction: 0, sold: 0, totalUnits: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "—", statusTone: "muted", nextMilestone: "—", units: [], milestones: [] },
+  pu01: { code: "PU01", name: "Hygge Paula Ugarriza", district: "Miraflores", address: "Calle Paula Ugarriza 488", architect: "BAM Studio", timeline: "2025 · 2027", construction: 0, sold: 0, totalUnits: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "—", statusTone: "muted", nextMilestone: "—", units: [], milestones: [] },
+  tg01: { code: "TG01", name: "Hygge De la Torre", district: "Barranco", address: "Av. De la Torre Gonzales 102", architect: "BAM Studio", timeline: "2024 · 2026", construction: 0, sold: 0, totalUnits: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "—", statusTone: "muted", nextMilestone: "—", units: [], milestones: [] },
+  l36: { code: "L36", name: "Larco 1036", district: "Miraflores", address: "Av. Larco 1036", architect: "Externo · supervisión Hygge", timeline: "2025 · 2027", construction: 0, sold: 0, totalUnits: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "—", statusTone: "muted", nextMilestone: "—", units: [], milestones: [] },
 };
 
 // ═══ SMART CAPTURE & PATTERN DETECTOR ═══════════════════════════════════
@@ -756,7 +662,7 @@ const Avatar = ({ personId, size = 24 }) => {
 };
 
 // ═══ TASK DETAIL PANEL ═══════════════════════════════════════════════════
-function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, onToggle, onAddComment, onAddAttachment, onRemoveAttachment, onAddSubtask, onDuplicate, setTaskStatus }) {
+function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, onToggle, onAddComment, onAddAttachment, onRemoveAttachment, onAddSubtask, onDuplicate, setTaskStatus, onDelete }) {
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
   const [comment, setComment] = useState("");
@@ -860,6 +766,11 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
             {onDuplicate && (
               <button onClick={() => onDuplicate(task.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }} title="Duplicar tarea">
                 <Copy size={11} /> <span className="hidden sm:inline">Duplicar</span>
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={() => { onDelete(task.id); onClose(); }} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.brick, border: `1px solid ${C.brick}33`, borderRadius: 2, fontWeight: 500 }} title="Eliminar tarea">
+                <Trash2 size={11} /> <span className="hidden sm:inline">Eliminar</span>
               </button>
             )}
             <button onClick={async () => {
@@ -1087,7 +998,15 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
 }
 
 // ═══ SIDEBAR ═════════════════════════════════════════════════════════════
-function Sidebar({ allSpaces, currentSpace, setSpace, expandedSpaces, toggleSpaceExpansion, onCreateSpace, onCreateSubSpace, onDeleteSpace, onEditSpace, smartViews, activeSmartViewId, onSelectSmartView, onClearSmartView, onDeleteSmartView, mobileOpen, onMobileClose, currentUser, onOpenSettings, onClickUser, users, inboxCount, notifCount, messagesCount }) {
+function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, toggleSpaceExpansion, onCreateSpace, onCreateSubSpace, onDeleteSpace, onEditSpace, smartViews, activeSmartViewId, onSelectSmartView, onClearSmartView, onDeleteSmartView, mobileOpen, onMobileClose, currentUser, onOpenSettings, onClickUser, users, inboxCount, notifCount, messagesCount, tasks }) {
+  const taskCountBySpace = useMemo(() => {
+    const counts = {};
+    (tasks || []).filter(t => !t.checked && !t.parentId).forEach(t => {
+      if (t.space) counts[t.space] = (counts[t.space] || 0) + 1;
+    });
+    return counts;
+  }, [tasks]);
+  const sidebarTools = tools || TOOLS;
   const [labExpanded, setLabExpanded] = useState(() => {
     try { return JSON.parse(localStorage.getItem("hygge:labExpanded")) ?? false; }
     catch { return false; }
@@ -1107,7 +1026,7 @@ function Sidebar({ allSpaces, currentSpace, setSpace, expandedSpaces, toggleSpac
       <div className="px-5 pt-5 flex-1 overflow-y-auto">
         <div className="mb-3"><Eyebrow>Tools</Eyebrow></div>
         <nav className="space-y-0.5 mb-6">
-          {TOOLS.map(t => {
+          {sidebarTools.map(t => {
             const Icon = t.icon;
             const isActive = t.id === currentSpace;
             const badge = t.id === "inbox" ? inboxCount : t.id === "messages" ? messagesCount : t.id === "notifications" ? notifCount : 0;
@@ -1174,9 +1093,9 @@ function Sidebar({ allSpaces, currentSpace, setSpace, expandedSpaces, toggleSpac
                   <span className="flex items-center gap-0.5">
                     <button onClick={(e) => { e.stopPropagation(); onCreateSubSpace(s); }} title="Crear sub-space" className="p-1 hover:opacity-70"><Plus size={11} style={{ color: C.muted }} /></button>
                     {s.custom && currentUser?.isAdmin && <button onClick={(e) => { e.stopPropagation(); onEditSpace && onEditSpace(s.id); }} title="Editar space (admin)" className="p-1 hover:opacity-70"><PenSquare size={10} style={{ color: C.muted }} /></button>}
-                    {s.custom && currentUser?.isAdmin && <button onClick={(e) => { e.stopPropagation(); onDeleteSpace(s.id); }} title="Eliminar space (admin)" className="p-1 hover:opacity-70"><Trash2 size={11} style={{ color: C.brick, opacity: 0.7 }} /></button>}
+                    {currentUser?.isAdmin && <button onClick={(e) => { e.stopPropagation(); onDeleteSpace(s.id); }} title="Eliminar space (admin)" className="p-1 hover:opacity-70"><Trash2 size={11} style={{ color: C.brick, opacity: 0.7 }} /></button>}
                   </span>
-                  <span className="text-[10px]" style={{ color: C.muted, fontWeight: 500 }}>{s.count}</span>
+                  {taskCountBySpace[s.id] > 0 && <span className="text-[10px]" style={{ color: C.muted, fontWeight: 500 }}>{taskCountBySpace[s.id]}</span>}
                   {hasChildren && <span onClick={(e) => { e.stopPropagation(); toggleSpaceExpansion(s.id); }}><ChevronRight size={11} style={{ color: C.muted, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} /></span>}
                 </button>
                 {hasChildren && isExpanded && (
@@ -1189,7 +1108,7 @@ function Sidebar({ allSpaces, currentSpace, setSpace, expandedSpaces, toggleSpac
                             style={{ backgroundColor: childActive ? C.surface : "transparent", border: `1px solid ${childActive ? C.lineSoft : "transparent"}`, borderRadius: 2 }}>
                             {c.code && <span className="text-[10px]" style={{ color: childActive ? C.ink : C.muted, fontWeight: childActive ? 700 : 500, minWidth: 32 }}>{c.code}</span>}
                             <span className="text-[11px] flex-1 truncate" style={{ color: childActive ? C.ink : C.inkSoft, fontWeight: childActive ? 600 : 400 }}>{c.name}</span>
-                            {c.custom && currentUser?.isAdmin && <button onClick={(e) => { e.stopPropagation(); onDeleteSpace(c.id); }} className="p-1 hover:opacity-70" title="Eliminar space (admin)"><Trash2 size={10} style={{ color: C.brick, opacity: 0.7 }} /></button>}
+                            {currentUser?.isAdmin && <button onClick={(e) => { e.stopPropagation(); onDeleteSpace(c.id); }} className="p-1 hover:opacity-70" title="Eliminar space (admin)"><Trash2 size={10} style={{ color: C.brick, opacity: 0.7 }} /></button>}
                           </button>
                         </div>
                       );
@@ -1259,17 +1178,19 @@ function Sidebar({ allSpaces, currentSpace, setSpace, expandedSpaces, toggleSpac
 
         <div className="mt-7 mb-3"><Eyebrow>Equipo</Eyebrow></div>
         <div className="space-y-1">
-          {(users || []).slice(0, 8).map(u => (
-            <button key={u.id} onClick={() => onClickUser && onClickUser(u.id)} className="w-full flex items-center gap-2 px-2 py-1 hover:opacity-80 text-left" style={{ borderRadius: 2 }}>
-              <div className="relative">
-                <Avatar personId={u.id} size={20} />
-                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full" title={u.online ? "conectado" : "desconectado"}
-                  style={{ backgroundColor: u.online ? C.green : C.muted, border: `1.5px solid ${C.bg}` }} />
-              </div>
-              <span className="text-[11px] flex-1 truncate" style={{ color: C.inkSoft, fontWeight: 500 }}>{u.firstName}</span>
-              {u.online && <span className="text-[8px] tracking-[0.1em] uppercase" style={{ color: C.green, fontWeight: 600 }}>online</span>}
-            </button>
-          ))}
+          {(users || []).slice(0, 8).map(u => {
+            const isMe = u.id === currentUser?.id;
+            return (
+              <button key={u.id} onClick={() => onClickUser && onClickUser(u.id)} className="w-full flex items-center gap-2 px-2 py-1 hover:opacity-80 text-left" style={{ borderRadius: 2 }}>
+                <div className="relative">
+                  <Avatar personId={u.id} size={20} />
+                  {isMe && <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full" title="conectado" style={{ backgroundColor: C.green, border: `1.5px solid ${C.bg}` }} />}
+                </div>
+                <span className="text-[11px] flex-1 truncate" style={{ color: C.inkSoft, fontWeight: 500 }}>{u.firstName}</span>
+                {isMe && <span className="text-[8px] tracking-[0.1em] uppercase" style={{ color: C.green, fontWeight: 600 }}>online</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div className="flex" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
@@ -3559,45 +3480,295 @@ ${bodyHTML}
   }
 }
 
-function HQDashboard({ totalSales, totalTarget, totalSold, totalUnits, onOpenSpace, tasks = [], terrenos = [], allSpaces = [], users = [], customSpaces = [], navigate, openDetail }) {
-  const spvCount = Object.keys(PROJECT_CONFIGS).length;
-  const spvLabel = spvCount === 0 ? "Sin SPVs activos" : spvCount === 1 ? "Un SPV activo" : `${spvCount} SPVs activos`;
+function SPVEditModal({ spv, onSave, onClose }) {
+  const [form, setForm] = React.useState({ ...spv });
+  const blob = useModalBlob();
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); blob.onType(); };
+  const tipoObj = SPV_TIPOS.find(t => t.id === form.tipo) || SPV_TIPOS[0];
+  const handleSave = () => blob.onHappy(() => { onSave(form); onClose(); });
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: "rgba(10,11,15,0.55)" }} onClick={onClose}>
+      <div className="w-full max-w-lg mx-4 rounded-sm overflow-auto max-h-[90vh]" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}` }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.14em]" style={{ color: C.muted }}>Editar proyecto</div>
+            <div className="text-[20px] mt-0.5" style={{ color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{form.code} · {form.name}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose} className="p-1.5 rounded" style={{ color: C.muted }}><X size={16} /></button>
+          </div>
+        </div>
+        <div className="px-6 py-5 grid grid-cols-2 gap-4">
+          {[["Código", "code"], ["Nombre", "name"], ["Distrito", "district"], ["Rol", "rol"]].map(([label, key]) => (
+            <div key={key} className={key === "name" || key === "rol" ? "col-span-2" : ""}>
+              <div className="text-[10px] uppercase tracking-[0.12em] mb-1.5" style={{ color: C.muted }}>{label}</div>
+              <input value={form[key] || ""} onChange={e => set(key, e.target.value)} className="w-full px-3 py-2 text-[13px] outline-none" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 2, color: C.ink }} />
+            </div>
+          ))}
+          <div className="col-span-2">
+            <div className="text-[10px] uppercase tracking-[0.12em] mb-1.5" style={{ color: C.muted }}>Tipo</div>
+            <div className="flex gap-2 flex-wrap">
+              {SPV_TIPOS.map(t => (
+                <button key={t.id} onClick={() => set("tipo", t.id)} className="px-3 py-1.5 text-[11px] transition-colors" style={{ borderRadius: 2, border: `1px solid ${form.tipo === t.id ? C.cobalt : C.line}`, backgroundColor: form.tipo === t.id ? C.cobalt : C.bg, color: form.tipo === t.id ? "#fff" : C.inkSoft, fontWeight: form.tipo === t.id ? 600 : 400 }} title={t.hint}>{t.label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="col-span-2">
+            <div className="text-[10px] uppercase tracking-[0.12em] mb-1.5" style={{ color: C.muted }}>Estado</div>
+            <div className="flex gap-2 flex-wrap">
+              {SPV_STATUSES.map(s => (
+                <button key={s} onClick={() => set("status", s)} className="px-2.5 py-1 text-[11px] transition-colors" style={{ borderRadius: 2, border: `1px solid ${form.status === s ? C.ink : C.line}`, backgroundColor: form.status === s ? C.ink : C.bg, color: form.status === s ? "#fff" : C.muted }}>{s}</button>
+              ))}
+            </div>
+          </div>
+          {[["Unidades totales", "totalUnits", "number"], ["Unidades vendidas", "sold", "number"], ["Avance obra %", "construction", "number"], ["Margen %", "margin", "number"]].map(([label, key, type]) => (
+            <div key={key}>
+              <div className="text-[10px] uppercase tracking-[0.12em] mb-1.5" style={{ color: C.muted }}>{label}</div>
+              <input type={type} value={form[key] ?? ""} onChange={e => set(key, type === "number" ? parseFloat(e.target.value) || 0 : e.target.value)} className="w-full px-3 py-2 text-[13px] outline-none" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 2, color: C.ink }} />
+            </div>
+          ))}
+          <div className="col-span-2">
+            <div className="text-[10px] uppercase tracking-[0.12em] mb-1.5" style={{ color: C.muted }}>Próximo hito</div>
+            <input value={form.nextMilestone || ""} onChange={e => set("nextMilestone", e.target.value)} className="w-full px-3 py-2 text-[13px] outline-none" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 2, color: C.ink }} />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+          <button onClick={onClose} className="px-4 py-2 text-[12px]" style={{ color: C.muted }}>Cancelar</button>
+          <button onClick={handleSave} className="px-4 py-2 text-[12px] font-semibold" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2 }}>Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DEFAULT_HQ_CIFRAS = [
+  { id: "c1", label: "Ventas SPVs",      valueType: "computed", computedKey: "totalSales",  sub: "suma de SPVs activos", delta: "", positive: null },
+  { id: "c2", label: "Objetivo total",   valueType: "computed", computedKey: "totalTarget", sub: "suma de SPVs activos", delta: "", positive: null },
+  { id: "c3", label: "Unidades",         valueType: "computed", computedKey: "units",       sub: "",                    delta: "", positive: null },
+  { id: "c4", label: "Pipeline terrenos",valueType: "computed", computedKey: "terrenos",    sub: "",                    delta: "", positive: null },
+];
+
+const COMPUTED_OPTIONS = [
+  { key: "totalSales",    label: "Ventas SPVs (S/)" },
+  { key: "totalTarget",   label: "Objetivo SPVs (S/)" },
+  { key: "units",         label: "Unidades (vendidas/total)" },
+  { key: "terrenos",      label: "Terrenos en pipeline" },
+  { key: "tasksPending",  label: "Tareas pendientes" },
+  { key: "tasksDone",     label: "Tareas completadas" },
+  { key: "tasksTotal",    label: "Tareas totales" },
+];
+
+function resolveKpiValue(item, ctx) {
+  const fmtPEN = (n) => n >= 1_000_000 ? `S/ ${(n/1_000_000).toFixed(1)}M` : n >= 1_000 ? `S/ ${(n/1_000).toFixed(0)}K` : `S/ ${n}`;
+  if (item.valueType === "manual") return item.manualValue || "—";
+  switch (item.computedKey) {
+    case "totalSales":   return fmtPEN(ctx.totalSales);
+    case "totalTarget":  return fmtPEN(ctx.totalTarget);
+    case "units":        return `${ctx.totalSold}/${ctx.totalUnits}`;
+    case "terrenos":     return String(ctx.terrenosCount);
+    case "tasksPending": return String(ctx.tasksPending);
+    case "tasksDone":    return String(ctx.tasksDone);
+    case "tasksTotal":   return String(ctx.tasksTotal);
+    default: return "—";
+  }
+}
+
+function resolveKpiSub(item, ctx) {
+  if (item.sub) return item.sub;
+  switch (item.computedKey) {
+    case "totalSales":   return ctx.totalTarget > 0 ? `${((ctx.totalSales/ctx.totalTarget)*100).toFixed(0)}% del objetivo` : "sin objetivo";
+    case "units":        return ctx.totalUnits > 0 ? `${((ctx.totalSold/ctx.totalUnits)*100).toFixed(0)}% del stock` : "sin stock";
+    case "terrenos":     return ctx.terrenosCount === 0 ? "sin terrenos cargados" : "terrenos en radar";
+    case "tasksPending": return "sin completar";
+    case "tasksDone":    return "completadas";
+    default: return "";
+  }
+}
+
+function EditKpiModal({ item, onSave, onClose }) {
+  const isNew = !item.id;
+  const [form, setForm] = useState(item || { label: "", valueType: "manual", computedKey: "totalSales", manualValue: "", sub: "", delta: "", positive: null });
+  const blob = useModalBlob();
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); blob.onType(); };
+  const handleSave = () => blob.onHappy(() => { onSave({ ...form, id: form.id || ("c" + Date.now()) }); });
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 400, overflow: "hidden", boxShadow: "0 16px 48px rgba(10,11,15,0.2)" }}>
+        <div style={{ padding: "18px 24px 16px", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>En Cifras</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>{isNew ? "Nuevo marcador" : "Editar marcador"}</div>
+          </div>
+          <ModalBlob state={blob.state} />
+        </div>
+        <div style={{ padding: "18px 24px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Etiqueta</div>
+            <input value={form.label} onChange={e => set("label", e.target.value)} placeholder="Ej: Caja disponible" style={{ width: "100%", padding: "8px 10px", fontSize: 13, border: `1px solid ${C.line}`, borderRadius: 2, backgroundColor: C.paper, color: C.ink, outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Tipo de valor</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {["computed", "manual"].map(t => (
+                <button key={t} onClick={() => set("valueType", t)} style={{ flex: 1, padding: "7px 0", fontSize: 11, fontWeight: 600, borderRadius: 2, border: `1px solid ${form.valueType === t ? C.cobalt : C.line}`, backgroundColor: form.valueType === t ? `${C.cobalt}10` : C.paper, color: form.valueType === t ? C.cobalt : C.muted, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                  {t === "computed" ? "Auto-calculado" : "Manual"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.valueType === "computed" ? (
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Fuente</div>
+              <select value={form.computedKey} onChange={e => set("computedKey", e.target.value)} style={{ width: "100%", padding: "8px 10px", fontSize: 13, border: `1px solid ${C.line}`, borderRadius: 2, backgroundColor: C.paper, color: C.ink, outline: "none", fontFamily: "'DM Sans', sans-serif" }}>
+                {COMPUTED_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Valor</div>
+              <input value={form.manualValue} onChange={e => set("manualValue", e.target.value)} placeholder="Ej: S/ 3.84M" style={{ width: "100%", padding: "8px 10px", fontSize: 13, border: `1px solid ${C.line}`, borderRadius: 2, backgroundColor: C.paper, color: C.ink, outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }} />
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Sub-texto (opcional)</div>
+              <input value={form.sub} onChange={e => set("sub", e.target.value)} placeholder="Ej: vs Q1" style={{ width: "100%", padding: "8px 10px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2, backgroundColor: C.paper, color: C.ink, outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Delta (opcional)</div>
+              <input value={form.delta} onChange={e => set("delta", e.target.value)} placeholder="Ej: +12.4%" style={{ width: "100%", padding: "8px 10px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2, backgroundColor: C.paper, color: C.ink, outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }} />
+            </div>
+          </div>
+          {form.delta && (
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Dirección delta</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[[true, "↗ Positivo"], [false, "↘ Negativo"]].map(([val, lbl]) => (
+                  <button key={lbl} onClick={() => set("positive", val)} style={{ flex: 1, padding: "6px 0", fontSize: 11, fontWeight: 600, borderRadius: 2, border: `1px solid ${form.positive === val ? (val ? C.cobalt : C.brick) : C.line}`, backgroundColor: form.positive === val ? (val ? `${C.cobalt}10` : `${C.brick}10`) : C.paper, color: form.positive === val ? (val ? C.cobalt : C.brick) : C.muted, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button onClick={handleSave} style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 600, backgroundColor: C.ink, color: C.bg, border: "none", borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              {isNew ? "Agregar" : "Guardar"}
+            </button>
+            <button onClick={onClose} style={{ flex: 1, padding: "10px 0", fontSize: 13, backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HQDashboard({ totalSales, totalTarget, totalSold, totalUnits, onOpenSpace, tasks = [], terrenos = [], allSpaces = [], users = [], customSpaces = [], navigate, openDetail, spvs = DEFAULT_SPVS, setSpvs, cifras, setCifras, isAdmin }) {
+  const [editingSpv, setEditingSpv] = React.useState(null);
+  const [editingKpi, setEditingKpi] = React.useState(null); // null | {} (new) | {item}
+  const kpiCtx = {
+    totalSales, totalTarget, totalSold, totalUnits,
+    terrenosCount: (terrenos || []).length,
+    tasksPending: (tasks || []).filter(t => !t.checked).length,
+    tasksDone:    (tasks || []).filter(t => t.checked).length,
+    tasksTotal:   (tasks || []).length,
+  };
+  const ownCount = spvs.filter(p => p.tipo === "spv_propio").length;
+  const spvLabel = ownCount === 0 ? "Sin SPVs propios" : ownCount === 1 ? "Un SPV propio activo" : `${ownCount} SPVs propios activos`;
+  const handleSaveSpv = (updated) => {
+    if (setSpvs) setSpvs(prev => prev.map(p => p.code === updated.code ? updated : p));
+  };
   return (
     <div id="hq-printable" className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
+      {editingSpv && <SPVEditModal spv={editingSpv} onSave={handleSaveSpv} onClose={() => setEditingSpv(null)} />}
       <Hero eyebrow="Hygge Holding · issue" code="HQ.26.W21"
-        intro={<>Buenos días, Sebastián. {spvLabel}, <strong style={{ color: C.ink, fontWeight: 600 }}>{totalSold} de {totalUnits}</strong> unidades colocadas, y <strong style={{ color: C.ink, fontWeight: 600 }}>{((totalSales/totalTarget)*100).toFixed(0)}%</strong> del objetivo anual cubierto.</>} />
+        intro={<>Buenos días, Sebastián. {spvLabel} — <strong style={{ color: C.ink, fontWeight: 600 }}>{totalSold} de {totalUnits}</strong> unidades colocadas, y <strong style={{ color: C.ink, fontWeight: 600 }}>{totalTarget > 0 ? ((totalSales/totalTarget)*100).toFixed(0) : "0"}%</strong> del objetivo anual cubierto.</>} />
 
       {/* Editable widgets section · v42 */}
       <section className="mb-14">
         <HQWidgetsBlock tasks={tasks} terrenos={terrenos} allSpaces={allSpaces} users={users} customSpaces={customSpaces} navigate={navigate} openDetail={openDetail} />
       </section>
 
-      <section className="mb-14"><SectionHead title="En cifras" />
-        <KpiBar items={[{ label: "Ventas YTD", value: "S/ 19.5M", delta: "+12.4%", positive: true, sub: "vs Q1" }, { label: "Caja", value: "S/ 3.84M", delta: "+S/ 420K", positive: true, sub: "30d" }, { label: "Unidades", value: `${totalSold}/${totalUnits}`, sub: "55% del stock" }, { label: "Pipeline", value: "29", delta: "+6", positive: true, sub: "terrenos" }]} />
+      {editingKpi !== null && (
+        <EditKpiModal
+          item={editingKpi}
+          onSave={(saved) => {
+            setCifras(prev => {
+              const exists = prev.find(c => c.id === saved.id);
+              return exists ? prev.map(c => c.id === saved.id ? saved : c) : [...prev, saved];
+            });
+            setEditingKpi(null);
+          }}
+          onClose={() => setEditingKpi(null)}
+        />
+      )}
+      <section className="mb-14">
+        <div className="flex items-baseline justify-between mb-6">
+          <SectionHead title="En cifras" style={{ margin: 0 }} />
+          {isAdmin && (
+            <button onClick={() => setEditingKpi({})} className="flex items-center gap-1.5 hover:opacity-80" style={{ fontSize: 11, color: C.cobalt, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              <Plus size={11} /> Agregar marcador
+            </button>
+          )}
+        </div>
+        <div style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, display: "grid", gridTemplateColumns: `repeat(${Math.max(cifras.length, 1)}, 1fr)` }}>
+          {cifras.map((item, i) => (
+            <div key={item.id} className="relative group/kpi px-6 py-6" style={{ borderRight: i < cifras.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
+              {isAdmin && (
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/kpi:opacity-100 transition-opacity">
+                  <button onClick={() => setEditingKpi(item)} className="p-1 hover:opacity-70" title="Editar"><PenSquare size={10} style={{ color: C.muted }} /></button>
+                  <button onClick={() => setCifras(prev => prev.filter(c => c.id !== item.id))} className="p-1 hover:opacity-70" title="Eliminar"><X size={10} style={{ color: C.brick }} /></button>
+                </div>
+              )}
+              <Eyebrow>{item.label}</Eyebrow>
+              <div className="text-[28px] mt-3 mb-2" style={{ color: C.ink, fontWeight: 300, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                {resolveKpiValue(item, kpiCtx)}
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                {item.delta && <span style={{ color: item.positive ? C.cobalt : C.brick, fontWeight: 600 }}>{item.positive ? "↗" : "↘"} {item.delta}</span>}
+                <span style={{ color: C.muted }}>{resolveKpiSub(item, kpiCtx)}</span>
+              </div>
+            </div>
+          ))}
+          {cifras.length === 0 && (
+            <div className="px-6 py-8 text-center" style={{ color: C.muted, fontSize: 12, fontStyle: "italic" }}>
+              Sin marcadores. {isAdmin ? 'Usá "Agregar marcador" para empezar.' : ""}
+            </div>
+          )}
+        </div>
       </section>
-      <section className="mb-14"><SectionHead title="Proyectos en curso" blurb="Click para abrir su space." />
+      <section className="mb-14"><SectionHead title="Proyectos en curso" blurb="Click para abrir su space · lápiz para editar." />
         <div className="grid grid-cols-2 gap-4">
-          {SPVS.map((p) => {
-            const soldPct = (p.sold/p.totalUnits)*100;
+          {spvs.map((p) => {
+            const tipoObj = SPV_TIPOS.find(t => t.id === p.tipo) || SPV_TIPOS[0];
+            const soldPct = p.totalUnits > 0 ? (p.sold/p.totalUnits)*100 : 0;
             return (
-              <button key={p.code} onClick={() => onOpenSpace(p.code.toLowerCase())} className="p-6 flex flex-col gap-5 hover:translate-y-[-1px] transition-transform text-left" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <NavyRule width={20} /><div className="mt-3"><Eyebrow>SPV · {p.district}</Eyebrow></div>
-                    <div className="text-[40px] leading-none mt-2.5 mb-1.5" style={{ color: C.ink, fontWeight: 300, letterSpacing: "-0.035em" }}>{p.code}</div>
-                    <div className="text-[13px]" style={{ color: C.inkSoft, fontWeight: 500 }}>{p.name}</div>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase flex-shrink-0" style={{ color: toneMap[p.statusTone], backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 999, fontWeight: 500 }}><span className="w-1 h-1 rounded-full" style={{ backgroundColor: toneMap[p.statusTone] }} />{p.status}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  {[{ label: "Obra", value: p.construction + "%", bar: p.construction, color: C.cobalt }, { label: "Ventas", value: `${p.sold}/${p.totalUnits}`, bar: soldPct, color: C.lavender }, { label: "Margen", value: p.margin.toFixed(1) + "%" }].map((m) => (
-                    <div key={m.label}><Eyebrow>{m.label}</Eyebrow>
-                      <div className="text-[18px] mt-1.5 mb-2" style={{ color: C.ink, fontWeight: 400 }}>{m.value}</div>
-                      {m.bar !== undefined && <div className="h-[2px] w-full" style={{ backgroundColor: C.lineSoft }}><div className="h-full" style={{ width: m.bar + "%", backgroundColor: m.color }} /></div>}
+              <div key={p.code} className="relative group">
+                <button onClick={() => onOpenSpace(p.code.toLowerCase())} className="w-full p-6 flex flex-col gap-5 hover:translate-y-[-1px] transition-transform text-left" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <NavyRule width={20} /><div className="mt-3 flex items-center gap-2"><Eyebrow>{p.district}</Eyebrow><span className="text-[9px] uppercase tracking-[0.12em] px-1.5 py-0.5" style={{ backgroundColor: C.lineSoft, color: C.muted, borderRadius: 2 }}>{tipoObj.label}</span></div>
+                      <div className="text-[40px] leading-none mt-2.5 mb-1.5" style={{ color: C.ink, fontWeight: 300, letterSpacing: "-0.035em" }}>{p.code}</div>
+                      <div className="text-[13px]" style={{ color: C.inkSoft, fontWeight: 500 }}>{p.name}</div>
                     </div>
-                  ))}
-                </div>
-              </button>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase flex-shrink-0" style={{ color: toneMap[p.statusTone], backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 999, fontWeight: 500 }}><span className="w-1 h-1 rounded-full" style={{ backgroundColor: toneMap[p.statusTone] }} />{p.status}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    {[{ label: "Obra", value: p.construction + "%", bar: p.construction, color: C.cobalt }, { label: "Ventas", value: `${p.sold}/${p.totalUnits}`, bar: soldPct, color: C.lavender }, { label: "Margen", value: p.margin.toFixed(1) + "%" }].map((m) => (
+                      <div key={m.label}><Eyebrow>{m.label}</Eyebrow>
+                        <div className="text-[18px] mt-1.5 mb-2" style={{ color: C.ink, fontWeight: 400 }}>{m.value}</div>
+                        {m.bar !== undefined && <div className="h-[2px] w-full" style={{ backgroundColor: C.lineSoft }}><div className="h-full" style={{ width: m.bar + "%", backgroundColor: m.color }} /></div>}
+                      </div>
+                    ))}
+                  </div>
+                </button>
+                {setSpvs && (
+                  <button onClick={() => setEditingSpv(p)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, color: C.muted }} title="Editar proyecto"><Pencil size={12} /></button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -3618,28 +3789,294 @@ function HQDashboard({ totalSales, totalTarget, totalSold, totalUnits, onOpenSpa
   );
 }
 
+// ── CSV parser ────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { headers: [], rows: [] };
+  const sep = lines[0].includes("\t") ? "\t" : ",";
+  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, ""));
+  const rows = lines.slice(1).map(l =>
+    l.split(sep).reduce((obj, val, i) => {
+      obj[headers[i]] = val.trim().replace(/^"|"$/g, "");
+      return obj;
+    }, {})
+  );
+  return { headers, rows };
+}
+
+function isNumericCol(rows, col) {
+  return rows.every(r => r[col] === "" || !isNaN(parseFloat(r[col]?.replace(/[,S/%]/g, ""))));
+}
+
+// Detect if a column looks like a date/period label (Ene, Feb, 2024-01, Q1, etc.)
+function isLabelCol(col) {
+  return /fecha|mes|period|date|semana|week|quarter|año|year/i.test(col);
+}
+
+function autoWidgets(headers, rows) {
+  if (!headers.length || !rows.length) return [];
+  const labelCol = headers.find(h => isLabelCol(h)) || headers[0];
+  const numCols = headers.filter(h => h !== labelCol && isNumericCol(rows, h));
+  const widgets = [];
+  // KPI cards: last-row numeric values
+  const last = rows[rows.length - 1];
+  numCols.slice(0, 6).forEach(col => {
+    const prev = rows.length > 1 ? parseFloat(rows[rows.length - 2][col]?.replace(/[,S/%]/g, "") || 0) : null;
+    const cur = parseFloat(last[col]?.replace(/[,S/%]/g, "") || 0);
+    const delta = prev !== null ? cur - prev : null;
+    widgets.push({ type: "kpi", col, value: last[col] || "—", delta, label: col });
+  });
+  // Time-series chart if there are 3+ rows and at least 1 numeric col
+  if (rows.length >= 3 && numCols.length >= 1) {
+    widgets.push({ type: "chart", labelCol, numCols: numCols.slice(0, 4) });
+  }
+  return widgets;
+}
+
+const BACKEND = "https://aliceai.bam.pe";
+const FZ_SOURCE_KEY = "hygge:finanzas:source";
+
 function FinanzasDashboard() {
+  const [source, setSource] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(FZ_SOURCE_KEY) || "null"); } catch { return null; }
+  });
+  const [configOpen, setConfigOpen] = useState(false);
+  const [pathInput, setPathInput] = useState(source?.path || "");
+  const [labelInput, setLabelInput] = useState(source?.label || "");
+  const [data, setData] = useState(null); // { headers, rows }
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastFetched, setLastFetched] = useState(null);
+
+  const fetchCSV = useCallback(async (src) => {
+    if (!src?.path) return;
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`${BACKEND}/api/dropbox/download?path=${encodeURIComponent(src.path)}`);
+      if (!res.ok) throw new Error(await res.text());
+      const text = await res.text();
+      const parsed = parseCSV(text);
+      if (parsed.headers.length === 0) throw new Error("El archivo no tiene columnas reconocibles");
+      setData(parsed);
+      setLastFetched(new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (source) fetchCSV(source); }, [source, fetchCSV]);
+
+  const saveSource = () => {
+    if (!pathInput.trim()) return;
+    const src = { path: pathInput.trim(), label: labelInput.trim() || pathInput.trim().split("/").pop() };
+    localStorage.setItem(FZ_SOURCE_KEY, JSON.stringify(src));
+    setSource(src);
+    setConfigOpen(false);
+  };
+
+  const widgets = data ? autoWidgets(data.headers, data.rows) : [];
+  const kpis = widgets.filter(w => w.type === "kpi");
+  const chart = widgets.find(w => w.type === "chart");
+  const chartData = chart ? data.rows.map(r => {
+    const obj = { label: r[chart.labelCol] };
+    chart.numCols.forEach(c => { obj[c] = parseFloat(r[c]?.replace(/[,S/%]/g, "") || 0); });
+    return obj;
+  }) : [];
+  const CHART_COLORS = [C.cobalt, C.lavender, C.ochre, C.green];
+
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
-      <Hero eyebrow="Finanzas · Joel Moy" code="FZ.26.05" intro={<>Caja en <strong>S/ 3.84M</strong>. Runway 14.2 meses. 8 por conciliar.</>} />
-      <section className="mb-14"><SectionHead title="Posición consolidada" />
-        <KpiBar items={[{ label: "Caja", value: "S/ 3.84M", delta: "+S/ 420K", positive: true, sub: "vs abril" }, { label: "Deuda", value: "S/ 8.20M", delta: "-S/ 180K", positive: true, sub: "amort." }, { label: "Runway", value: "14.2m", sub: "actual" }, { label: "Por cobrar", value: "S/ 1.65M", sub: "4 sem" }]} />
-      </section>
-      <section className="mb-14"><SectionHead title="FC · 12 meses" />
-        <Panel>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={FC_12M}>
-                <defs><linearGradient id="fcIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.cobalt} stopOpacity={0.22} /><stop offset="100%" stopColor={C.cobalt} stopOpacity={0} /></linearGradient><linearGradient id="fcOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.lavender} stopOpacity={0.28} /><stop offset="100%" stopColor={C.lavender} stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="m" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} /><YAxis hide /><Tooltip />
-                <Area type="monotone" dataKey="in" stroke={C.cobalt} strokeWidth={1.5} fill="url(#fcIn)" name="Ingresos" />
-                <Area type="monotone" dataKey="out" stroke={C.lavender} strokeWidth={1.5} fill="url(#fcOut)" name="Egresos" />
-              </AreaChart>
-            </ResponsiveContainer>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-10 gap-4 flex-wrap">
+        <div>
+          <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Finanzas · Joel Moy</div>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: C.ink, letterSpacing: "-0.03em", lineHeight: 1 }}>
+            {source ? (source.label || "Finanzas") : "Finanzas"}
+          </h1>
+          {source && (
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: "monospace" }}>{source.path}</span>
+              {lastFetched && <span>· actualizado {lastFetched}</span>}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          {source && (
+            <button onClick={() => fetchCSV(source)} disabled={loading}
+              style={{ padding: "8px 14px", border: `1px solid ${C.line}`, borderRadius: 3, background: "none", fontSize: 12, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <RefreshCw size={11} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
+              {loading ? "Actualizando…" : "Actualizar"}
+            </button>
+          )}
+          <button onClick={() => { setPathInput(source?.path || ""); setLabelInput(source?.label || ""); setConfigOpen(true); }}
+            style={{ padding: "8px 14px", backgroundColor: C.navy, color: "white", border: "none", borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <ExternalLink size={11} />
+            {source ? "Cambiar fuente" : "Conectar fuente"}
+          </button>
+        </div>
+      </div>
+
+      {/* Config modal */}
+      {configOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 480, padding: 32 }}>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Finanzas · Fuente de datos</div>
+            <h3 style={{ fontSize: 20, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginBottom: 6 }}>Conectar CSV desde Dropbox</h3>
+            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 24 }}>
+              Exportá tu reporte desde tu software contable como CSV y guardalo en Dropbox. ALICE lo lee cada vez que entrás a Finanzas y genera widgets automáticamente.
+            </p>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Ruta en Dropbox</label>
+              <input value={pathInput} onChange={e => setPathInput(e.target.value)}
+                placeholder="/Hygge/Finanzas/reporte.csv"
+                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 3, fontSize: 13, color: C.ink, background: C.bg, fontFamily: "monospace", boxSizing: "border-box" }} />
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>Formato soportado: CSV o TSV exportado desde Excel, Google Sheets, Defontana, etc.</div>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Nombre del reporte (opcional)</label>
+              <input value={labelInput} onChange={e => setLabelInput(e.target.value)}
+                placeholder="Cashflow 2026"
+                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 3, fontSize: 13, color: C.ink, background: C.bg, boxSizing: "border-box" }} />
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={saveSource} disabled={!pathInput.trim()}
+                style={{ flex: 1, padding: "11px 0", backgroundColor: C.cobalt, color: "white", border: "none", borderRadius: 3, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Conectar y cargar
+              </button>
+              <button onClick={() => setConfigOpen(false)}
+                style={{ padding: "11px 18px", border: `1px solid ${C.line}`, borderRadius: 3, background: "none", fontSize: 13, color: C.muted, cursor: "pointer" }}>
+                Cancelar
+              </button>
+            </div>
           </div>
-        </Panel>
-      </section>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!source && (
+        <div style={{ textAlign: "center", padding: "80px 0" }}>
+          <div style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <BarChart3 size={22} style={{ color: C.muted }} />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginBottom: 8 }}>Sin fuente conectada</div>
+          <p style={{ fontSize: 13, color: C.muted, maxWidth: 340, margin: "0 auto 24px", lineHeight: 1.65 }}>
+            Exportá tu reporte desde tu software contable a Dropbox como CSV. ALICE lo lee y genera los widgets automáticamente.
+          </p>
+          <button onClick={() => setConfigOpen(true)}
+            style={{ padding: "10px 20px", backgroundColor: C.navy, color: "white", border: "none", borderRadius: 3, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            Conectar fuente CSV
+          </button>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: "14px 16px", backgroundColor: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 3, marginBottom: 24, fontSize: 12.5, color: "#B91C1C" }}>
+          Error al leer el archivo: {error}
+        </div>
+      )}
+
+      {/* Widgets */}
+      {data && !loading && (
+        <>
+          {/* KPI cards */}
+          {kpis.length > 0 && (
+            <section className="mb-10">
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Métricas · última fila</div>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(kpis.length, 4)}, 1fr)`, gap: 12 }}>
+                {kpis.map(w => {
+                  const isPos = w.delta === null ? null : w.delta >= 0;
+                  return (
+                    <div key={w.col} style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "18px 20px" }}>
+                      <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 8 }}>{w.label}</div>
+                      <div style={{ fontSize: 26, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", lineHeight: 1 }}>{w.value}</div>
+                      {w.delta !== null && (
+                        <div style={{ fontSize: 11, color: isPos ? C.green : C.brick, marginTop: 6, fontWeight: 500 }}>
+                          {isPos ? "▲" : "▼"} {Math.abs(w.delta).toLocaleString("es-PE")} vs anterior
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Chart */}
+          {chart && chartData.length > 0 && (
+            <section className="mb-10">
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Evolución temporal</div>
+              <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "20px 16px" }}>
+                <div style={{ height: 240 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        {chart.numCols.map((col, i) => (
+                          <linearGradient key={col} id={`fz_grad_${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={CHART_COLORS[i]} stopOpacity={0.2} />
+                            <stop offset="100%" stopColor={CHART_COLORS[i]} stopOpacity={0} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2 }} />
+                      {chart.numCols.map((col, i) => (
+                        <Area key={col} type="monotone" dataKey={col} stroke={CHART_COLORS[i]} strokeWidth={1.5} fill={`url(#fz_grad_${i})`} name={col} />
+                      ))}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
+                  {chart.numCols.map((col, i) => (
+                    <div key={col} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.muted }}>
+                      <div style={{ width: 10, height: 2, backgroundColor: CHART_COLORS[i], borderRadius: 1 }} />
+                      {col}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Raw table (collapsible) */}
+          <details style={{ marginTop: 8 }}>
+            <summary style={{ fontSize: 11, color: C.muted, cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase", userSelect: "none" }}>
+              Ver tabla completa ({data.rows.length} filas)
+            </summary>
+            <div style={{ overflowX: "auto", marginTop: 12, backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr>{data.headers.map(h => (
+                    <th key={h} style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${C.line}`, fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {data.rows.map((row, i) => (
+                    <tr key={i} style={{ borderBottom: i < data.rows.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
+                      {data.headers.map(h => (
+                        <td key={h} style={{ padding: "8px 12px", color: C.ink, whiteSpace: "nowrap" }}>{row[h]}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ height: 90, backgroundColor: C.surface, borderRadius: 3, opacity: 0.5, animation: "pulse 1.5s ease-in-out infinite" }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -4462,23 +4899,27 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
   );
 }
 
-function ProyectosDashboard({ onOpenSpace }) {
+function ProyectosDashboard({ onOpenSpace, spvs = DEFAULT_SPVS }) {
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
-      <Hero eyebrow="Proyectos · Andrea Castillo" code="PR.26.W21" intro={<>Vista cross-proyecto.</>} />
-      <section className="mb-14"><SectionHead title="Los cuatro SPVs" />
+      <Hero eyebrow="Proyectos · Andrea Castillo" code="PR.26.W21" intro={<>Vista cross-proyecto · {spvs.length} proyectos activos.</>} />
+      <section className="mb-14"><SectionHead title="Portfolio de proyectos" />
         <Panel>
           <table className="w-full">
-            <thead><tr className="text-[10px] tracking-[0.15em] uppercase" style={{ color: C.muted, fontWeight: 500 }}>{["Código", "Proyecto", "Obra", "Ventas", "Margen"].map(h => <th key={h} className="text-left pb-3 px-2" style={{ borderBottom: `1px solid ${C.line}` }}>{h}</th>)}</tr></thead>
-            <tbody>{SPVS.map((p, i) => (
-              <tr key={p.code} onClick={() => onOpenSpace(p.code.toLowerCase())} className="cursor-pointer hover:opacity-80" style={{ borderBottom: i < SPVS.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
-                <td className="py-4 px-2 text-[18px]" style={{ color: C.ink, fontWeight: 400 }}>{p.code}</td>
-                <td className="py-4 px-2 text-[13px]" style={{ color: C.inkSoft }}>{p.name}</td>
-                <td className="py-4 px-2 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{p.construction}%</td>
-                <td className="py-4 px-2 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{p.sold}/{p.totalUnits}</td>
-                <td className="py-4 px-2 text-[13px]" style={{ color: C.cobalt, fontWeight: 600 }}>{p.margin.toFixed(1)}%</td>
-              </tr>
-            ))}</tbody>
+            <thead><tr className="text-[10px] tracking-[0.15em] uppercase" style={{ color: C.muted, fontWeight: 500 }}>{["Código", "Proyecto", "Tipo", "Obra", "Ventas", "Margen"].map(h => <th key={h} className="text-left pb-3 px-2" style={{ borderBottom: `1px solid ${C.line}` }}>{h}</th>)}</tr></thead>
+            <tbody>{spvs.map((p, i) => {
+              const tipoObj = SPV_TIPOS.find(t => t.id === p.tipo) || SPV_TIPOS[0];
+              return (
+                <tr key={p.code} onClick={() => onOpenSpace(p.code.toLowerCase())} className="cursor-pointer hover:opacity-80" style={{ borderBottom: i < spvs.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
+                  <td className="py-4 px-2 text-[18px]" style={{ color: C.ink, fontWeight: 400 }}>{p.code}</td>
+                  <td className="py-4 px-2 text-[13px]" style={{ color: C.inkSoft }}>{p.name}</td>
+                  <td className="py-4 px-2 text-[11px]" style={{ color: C.muted }}>{tipoObj.label}</td>
+                  <td className="py-4 px-2 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{p.construction}%</td>
+                  <td className="py-4 px-2 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{p.sold}/{p.totalUnits}</td>
+                  <td className="py-4 px-2 text-[13px]" style={{ color: C.cobalt, fontWeight: 600 }}>{p.margin.toFixed(1)}%</td>
+                </tr>
+              );
+            })}</tbody>
           </table>
         </Panel>
       </section>
@@ -4491,7 +4932,7 @@ function ProjectDashboard({ projectId }) {
   if (!p) return null;
   const [tab, setTab] = React.useState("overview");
   const [obraProgress, setObraProgress] = React.useState(null);
-  const soldPct = (p.sold / p.totalUnits) * 100;
+  const soldPct = p.totalUnits > 0 ? (p.sold / p.totalUnits) * 100 : 0;
   const statusColors = { vendida: C.green, reservada: C.ochre, disponible: C.muted };
   const construccionPct = obraProgress !== null ? obraProgress : p.construction;
 
@@ -4590,6 +5031,7 @@ function GenericSpaceDashboard({ space, tasks }) {
 // ═══ MODALS ══════════════════════════════════════════════════════════════
 function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onStartTimer }) {
   const flatSpaces = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
+  const blob = useModalBlob();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [spaceId, setSpaceId] = useState(currentSpace || "hq");
@@ -4628,24 +5070,26 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
   const activeAssignee = users?.find(u => u.id === assignee);
 
   const submit = () => {
-    if (!title.trim()) return;
-    const finalSpace = subSpaceId || spaceId;
-    const projectCode = (flatSpaces.find(s => s.id === finalSpace)?.code) || (selectedSpace?.code) || finalSpace.toUpperCase().slice(0, 4);
-    const newTask = onCreate({
-      title: title.trim(),
-      description: description.trim(),
-      project: projectCode,
-      priority,
-      space: finalSpace,
-      assignee,
-      due: endDate || startDate || "",
-      startDate, endDate,
-      checked: false, parentId: null,
-      comments: [], attachments: [],
-      activity: [{ when: nowHHMM(), text: "Tarea creada" }],
+    if (!title.trim()) { blob.onError(); return; }
+    blob.onHappy(() => {
+      const finalSpace = subSpaceId || spaceId;
+      const projectCode = (flatSpaces.find(s => s.id === finalSpace)?.code) || (selectedSpace?.code) || finalSpace.toUpperCase().slice(0, 4);
+      const newTask = onCreate({
+        title: title.trim(),
+        description: description.trim(),
+        project: projectCode,
+        priority,
+        space: finalSpace,
+        assignee,
+        due: endDate || startDate || "",
+        startDate, endDate,
+        checked: false, parentId: null,
+        comments: [], attachments: [],
+        activity: [{ when: nowHHMM(), text: "Tarea creada" }],
+      });
+      if (withTimer && onStartTimer && newTask) onStartTimer(newTask);
+      onClose();
     });
-    if (withTimer && onStartTimer && newTask) onStartTimer(newTask);
-    onClose();
   };
 
   return (
@@ -4656,13 +5100,16 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
             <Eyebrow>Crear · tarea</Eyebrow>
             <div className="text-[16px] mt-1" style={{ color: C.ink, fontWeight: 600 }}>Nueva tarea</div>
           </div>
-          <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          </div>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
           <div>
             <Eyebrow>Título</Eyebrow>
-            <input ref={inputRef} value={title} onChange={e => setTitle(e.target.value)}
+            <input ref={inputRef} value={title} onChange={e => { setTitle(e.target.value); blob.onType(); }}
               onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
               placeholder="¿Qué hay que hacer?"
               className="w-full mt-2 px-3 py-2 outline-none text-[14px]"
@@ -5056,11 +5503,13 @@ function ConfirmProvider({ children }) {
 function DeleteUserModal({ open, onClose, user, affectedTasks, users, onConfirm }) {
   const [mode, setMode] = useState("reassign"); // "reassign" | "unassign"
   const [targetUserId, setTargetUserId] = useState("");
+  const [blobState, setBlobState] = useState("confused");
   useEffect(() => {
     if (open && users.length > 0) {
       const firstAvailable = users.find(u => u.id !== user?.id);
       setTargetUserId(firstAvailable?.id || "");
       setMode(affectedTasks.length === 0 ? "unassign" : "reassign");
+      setBlobState("confused");
     }
   }, [open, user, users, affectedTasks.length]);
   if (!open || !user) return null;
@@ -5069,10 +5518,13 @@ function DeleteUserModal({ open, onClose, user, affectedTasks, users, onConfirm 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
       <div className="w-full max-w-md" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-          <div className="text-[10px] mb-1" style={{ color: C.brick, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Eliminar usuario</div>
-          <div className="text-[15px]" style={{ color: C.ink, fontWeight: 600, letterSpacing: "-0.01em" }}>{user.firstName} {user.lastName}</div>
-          <div className="text-[10px] mt-0.5" style={{ color: C.muted }}>{user.email}</div>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div className="text-[10px] mb-1" style={{ color: C.brick, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Eliminar usuario</div>
+            <div className="text-[15px]" style={{ color: C.ink, fontWeight: 600, letterSpacing: "-0.01em" }}>{user.firstName} {user.lastName}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: C.muted }}>{user.email}</div>
+          </div>
+          <ModalBlob state={blobState} />
         </div>
         <div className="px-5 py-4 space-y-4">
           {affectedTasks.length === 0 ? (
@@ -5110,7 +5562,8 @@ function DeleteUserModal({ open, onClose, user, affectedTasks, users, onConfirm 
         </div>
         <div className="px-5 py-3 flex items-center gap-2 justify-end" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>Cancelar</button>
-          <button onClick={submit} disabled={mode === "reassign" && !targetUserId} className="px-3 py-1.5 text-[11px] hover:opacity-90 disabled:opacity-40" style={{ backgroundColor: C.brick, color: "white", borderRadius: 2, fontWeight: 600 }}>
+          <button onClick={submit} disabled={mode === "reassign" && !targetUserId} className="px-3 py-1.5 text-[11px] hover:opacity-90 disabled:opacity-40" style={{ backgroundColor: C.brick, color: "white", borderRadius: 2, fontWeight: 600 }}
+            onMouseEnter={() => setBlobState("error")} onMouseLeave={() => setBlobState("confused")}>
             {affectedTasks.length === 0 ? "Eliminar" : mode === "reassign" ? "Reasignar y eliminar" : "Dejar sin asignar y eliminar"}
           </button>
         </div>
@@ -5122,7 +5575,8 @@ function DeleteUserModal({ open, onClose, user, affectedTasks, users, onConfirm 
 function DeleteSpaceModal({ open, onClose, space, affectedTasks, customViewsCount, allSpaces, onConfirm }) {
   const [mode, setMode] = useState("move"); // "move" | "delete-all"
   const [targetSpaceId, setTargetSpaceId] = useState("hq");
-  useEffect(() => { if (open) { setMode("move"); setTargetSpaceId("hq"); } }, [open]);
+  const [blobState, setBlobState] = useState("confused");
+  useEffect(() => { if (open) { setMode("move"); setTargetSpaceId("hq"); setBlobState("confused"); } }, [open]);
   if (!open || !space) return null;
 
   // Flatten allSpaces minus the one being deleted
@@ -5138,9 +5592,12 @@ function DeleteSpaceModal({ open, onClose, space, affectedTasks, customViewsCoun
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
       <div className="w-full max-w-md" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-          <div className="text-[10px] mb-1" style={{ color: C.brick, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Eliminar space</div>
-          <div className="text-[15px]" style={{ color: C.ink, fontWeight: 600, letterSpacing: "-0.01em" }}>{space.name}</div>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div className="text-[10px] mb-1" style={{ color: C.brick, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Eliminar space</div>
+            <div className="text-[15px]" style={{ color: C.ink, fontWeight: 600, letterSpacing: "-0.01em" }}>{space.name}</div>
+          </div>
+          <ModalBlob state={blobState} />
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -5191,7 +5648,8 @@ function DeleteSpaceModal({ open, onClose, space, affectedTasks, customViewsCoun
 
         <div className="px-5 py-3 flex items-center gap-2 justify-end" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>Cancelar</button>
-          <button onClick={submit} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.brick, color: "white", borderRadius: 2, fontWeight: 600 }}>
+          <button onClick={submit} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.brick, color: "white", borderRadius: 2, fontWeight: 600 }}
+            onMouseEnter={() => setBlobState("error")} onMouseLeave={() => setBlobState("confused")}>
             {mode === "delete-all" ? `Eliminar todo` : `Mover y eliminar space`}
           </button>
         </div>
@@ -5203,15 +5661,19 @@ function DeleteSpaceModal({ open, onClose, space, affectedTasks, customViewsCoun
 // ─── DELETE TASK MODAL · cascade-aware (para tareas con subtasks) ───
 function DeleteTaskModal({ open, onClose, task, subtaskCount, onConfirm }) {
   const [mode, setMode] = useState("delete-all");
-  useEffect(() => { if (open) setMode("delete-all"); }, [open]);
+  const [blobState, setBlobState] = useState("confused");
+  useEffect(() => { if (open) { setMode("delete-all"); setBlobState("confused"); } }, [open]);
   if (!open || !task) return null;
   const submit = () => { onConfirm({ mode }); onClose(); };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
       <div className="w-full max-w-md" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-          <div className="text-[10px] mb-1" style={{ color: C.brick, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Eliminar tarea</div>
-          <div className="text-[14px]" style={{ color: C.ink, fontWeight: 600, lineHeight: 1.3 }}>{task.title}</div>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div className="text-[10px] mb-1" style={{ color: C.brick, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Eliminar tarea</div>
+            <div className="text-[14px]" style={{ color: C.ink, fontWeight: 600, lineHeight: 1.3 }}>{task.title}</div>
+          </div>
+          <ModalBlob state={blobState} />
         </div>
         <div className="px-5 py-4 space-y-3">
           {subtaskCount === 0 ? (
@@ -5238,7 +5700,8 @@ function DeleteTaskModal({ open, onClose, task, subtaskCount, onConfirm }) {
         </div>
         <div className="px-5 py-3 flex items-center gap-2 justify-end" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>Cancelar</button>
-          <button onClick={submit} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.brick, color: "white", borderRadius: 2, fontWeight: 600 }}>
+          <button onClick={submit} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.brick, color: "white", borderRadius: 2, fontWeight: 600 }}
+            onMouseEnter={() => setBlobState("error")} onMouseLeave={() => setBlobState("confused")}>
             {mode === "promote" ? "Promover y eliminar tarea" : "Eliminar"}
           </button>
         </div>
@@ -5252,16 +5715,17 @@ function EditSpaceModal({ open, onClose, space, customSpaces, defaultSpaces, onS
   const [name, setName] = useState("");
   const [color, setColor] = useState("");
   const [parentId, setParentId] = useState("");
+  const blob = useModalBlob();
   useEffect(() => {
     if (open && space) {
       setName(space.name || "");
       setColor(space.dot || SPACE_COLORS[0]);
       setParentId(space.parentId || "");
+      blob.reset();
     }
   }, [open, space]);
   if (!open || !space) return null;
 
-  // Candidates: default spaces + other customs (excluding self and self's descendants)
   const isDescendant = (sId, ancestorId) => {
     const s = customSpaces.find(x => x.id === sId);
     if (!s) return false;
@@ -5276,22 +5740,24 @@ function EditSpaceModal({ open, onClose, space, customSpaces, defaultSpaces, onS
   ];
 
   const submit = () => {
-    if (!name.trim()) return;
-    onSave(space.id, { name: name.trim(), dot: color, parentId: parentId || null });
-    onClose();
+    if (!name.trim()) { blob.onError(); return; }
+    blob.onHappy(() => { onSave(space.id, { name: name.trim(), dot: color, parentId: parentId || null }); onClose(); });
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
       <div className="w-full max-w-md" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-          <div className="text-[10px] mb-1" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Editar space</div>
-          <div className="text-[14px]" style={{ color: C.ink, fontWeight: 600 }}>{space.name}</div>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div className="text-[10px] mb-1" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Editar space</div>
+            <div className="text-[14px]" style={{ color: C.ink, fontWeight: 600 }}>{space.name}</div>
+          </div>
+          <ModalBlob state={blob.state} />
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>
             <Eyebrow>Nombre</Eyebrow>
-            <input autoFocus value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") submit(); }}
+            <input autoFocus value={name} onChange={e => { setName(e.target.value); blob.onType(); }} onKeyDown={e => { if (e.key === "Enter") submit(); }}
               className="w-full mt-2 px-2.5 py-1.5 text-[13px] outline-none" style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} />
           </div>
           <div>
@@ -5311,7 +5777,7 @@ function EditSpaceModal({ open, onClose, space, customSpaces, defaultSpaces, onS
         </div>
         <div className="px-5 py-3 flex items-center gap-2 justify-end" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>Cancelar</button>
-          <button onClick={submit} disabled={!name.trim()} className="px-3 py-1.5 text-[11px] hover:opacity-90 disabled:opacity-40" style={{ backgroundColor: C.ink, color: "white", borderRadius: 2, fontWeight: 600 }}>Guardar</button>
+          <button onClick={submit} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: "white", borderRadius: 2, fontWeight: 600 }}>Guardar</button>
         </div>
       </div>
     </div>
@@ -5320,10 +5786,14 @@ function EditSpaceModal({ open, onClose, space, customSpaces, defaultSpaces, onS
 
 function CreateSpaceModal({ open, onClose, onCreate, parentSpace }) {
   const [name, setName] = useState(""), [colorIdx, setColorIdx] = useState(0);
+  const blob = useModalBlob();
   const inputRef = useRef(null);
-  useEffect(() => { if (open) { setName(""); setColorIdx(0); setTimeout(() => inputRef.current?.focus(), 50); } }, [open]);
+  useEffect(() => { if (open) { setName(""); setColorIdx(0); blob.reset(); setTimeout(() => inputRef.current?.focus(), 50); } }, [open]);
   if (!open) return null;
-  const submit = () => { if (!name.trim()) return; onCreate(name.trim(), SPACE_COLORS[colorIdx]); onClose(); };
+  const submit = () => {
+    if (!name.trim()) { blob.onError(); return; }
+    blob.onHappy(() => { onCreate(name.trim(), SPACE_COLORS[colorIdx]); onClose(); });
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
       <div className="w-[440px]" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
@@ -5332,7 +5802,10 @@ function CreateSpaceModal({ open, onClose, onCreate, parentSpace }) {
             <Eyebrow>{parentSpace ? `Sub-space en ${parentSpace.name}` : "Crear · space"}</Eyebrow>
             <div className="text-[16px] mt-1" style={{ color: C.ink, fontWeight: 600 }}>{parentSpace ? "Nuevo sub-space" : "Nuevo space"}</div>
           </div>
-          <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          </div>
         </div>
         <div className="p-5 space-y-4">
           {parentSpace && (
@@ -5343,7 +5816,7 @@ function CreateSpaceModal({ open, onClose, onCreate, parentSpace }) {
               <span className="text-[12px]" style={{ color: C.ink, fontWeight: 500 }}>{parentSpace.name}</span>
             </div>
           )}
-          <div><Eyebrow>Nombre</Eyebrow><input ref={inputRef} value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} placeholder={parentSpace ? "Ej. Inversionistas, Sarah, Q3 Plan…" : "Ej. Inversionistas"} className="w-full mt-2 px-3 py-2 outline-none text-[14px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} /></div>
+          <div><Eyebrow>Nombre</Eyebrow><input ref={inputRef} value={name} onChange={e => { setName(e.target.value); blob.onType(); }} onKeyDown={e => e.key === "Enter" && submit()} placeholder={parentSpace ? "Ej. Inversionistas, Sarah, Q3 Plan…" : "Ej. Inversionistas"} className="w-full mt-2 px-3 py-2 outline-none text-[14px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} /></div>
           <div><Eyebrow>Color</Eyebrow>
             <div className="flex gap-2 mt-3">{SPACE_COLORS.map((c, i) => (
               <button key={c} onClick={() => setColorIdx(i)} className="w-7 h-7" style={{ backgroundColor: c, borderRadius: 999, border: colorIdx === i ? `2px solid ${C.ink}` : `2px solid transparent`, transform: colorIdx === i ? "scale(1.1)" : "scale(1)" }} />
@@ -5352,6 +5825,83 @@ function CreateSpaceModal({ open, onClose, onCreate, parentSpace }) {
         </div>
         <div className="px-5 py-4 flex items-center justify-end" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <button onClick={submit} className="px-4 py-2 text-[12px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 500 }}>{parentSpace ? "Crear sub-space" : "Crear space"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══ DROPBOX SYNC MODALS ════════════════════════════════════════════════
+function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9990, backgroundColor: "rgba(10,11,15,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 460, overflow: "hidden", boxShadow: "0 24px 64px rgba(10,11,15,0.24)" }}>
+        <div style={{ backgroundColor: C.navy, padding: "20px 24px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Dropbox · Sync</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>Carpetas nuevas en Dropbox</div>
+          </div>
+        </div>
+        <div style={{ padding: "20px 24px" }}>
+          <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 16 }}>
+            Se {items.length === 1 ? "detectó una carpeta" : `detectaron ${items.length} carpetas`} en Dropbox que no {items.length === 1 ? "tiene" : "tienen"} space en ALICE. ¿Querés crear {items.length === 1 ? "el space" : "los spaces"}?
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+            {items.map(item => (
+              <div key={item.path} style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.cobalt} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{item.name}</span>
+                  <span style={{ fontSize: 10.5, color: C.muted }}>{item.path}</span>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => onCreateSpace(item)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", backgroundColor: C.cobalt, color: "white", border: "none", borderRadius: 2, cursor: "pointer" }}>Crear space</button>
+                  <button onClick={() => onIgnore(item)} style={{ fontSize: 11, padding: "4px 10px", backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer" }}>Ignorar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={onClose} style={{ width: "100%", padding: "9px 0", fontSize: 12, color: C.muted, backgroundColor: "transparent", border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DropboxFolderPrompt({ prompt, onConfirm, onCancel }) {
+  if (!prompt) return null;
+  const isCreate = prompt.action === "create";
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9991, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 16px 48px rgba(10,11,15,0.2)" }}>
+        <div style={{ padding: "20px 24px 18px", borderBottom: `1px solid ${C.line}` }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Dropbox · {isCreate ? "Nueva carpeta" : "Eliminar carpeta"}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>
+            {isCreate ? `¿Crear carpeta en Dropbox?` : `¿Eliminar carpeta en Dropbox?`}
+          </div>
+        </div>
+        <div style={{ padding: "16px 24px 20px" }}>
+          <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 4 }}>
+            {isCreate
+              ? `Se creó el space "${prompt.spaceName}" en ALICE. ¿Querés crear también la carpeta correspondiente en Dropbox?`
+              : `Se eliminó el space "${prompt.spaceName}" de ALICE. ¿Querés eliminar también su carpeta en Dropbox?`
+            }
+          </p>
+          <div style={{ fontSize: 11, color: C.cobalt, fontFamily: "monospace", backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "5px 8px", marginBottom: 18 }}>
+            {prompt.folderPath || prompt.suggestedPath}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onConfirm} style={{ flex: 1, padding: "9px 0", fontSize: 12.5, fontWeight: 600, backgroundColor: isCreate ? C.cobalt : C.brick, color: "white", border: "none", borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              {isCreate ? "Sí, crear carpeta" : "Sí, eliminar carpeta"}
+            </button>
+            <button onClick={onCancel} style={{ flex: 1, padding: "9px 0", fontSize: 12.5, backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              No, solo en ALICE
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -5426,7 +5976,7 @@ function AIChatPanel({ open, onClose, conversation, sending, sendMessage }) {
 }
 
 // ═══ RIGHT PANEL ═════════════════════════════════════════════════════════
-function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRead, openTask, navigate, openAskHygge, mobileOpen, onMobileClose, collapsed, onToggleCollapsed, timerSessions, timerActive, timerLive, onTimerStop }) {
+function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRead, openTask, navigate, openAskHygge, mobileOpen, onMobileClose, collapsed, onToggleCollapsed, timerSessions, timerActive, timerLive, onTimerStop, authUser, tasks }) {
   const handleMessageClick = (m) => {
     markRead(m.id);
     if (m.relatedTaskId) openTask(m.relatedTaskId);
@@ -5439,6 +5989,38 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
     if (onMobileClose) onMobileClose();
   };
   const unreadCount = messages.filter(m => !m.read).length;
+
+  // Semáforo de mensajes sin leer
+  const msgLight = unreadCount === 0 ? C.green : unreadCount <= 3 ? C.ochre : C.brick;
+  const msgLightPulse = unreadCount >= 4;
+
+  // Relevancia de actividad: en los spaces del usuario o tarea asignada a él
+  const allowedSpaces = authUser?.allowedSpaces; // null = todos
+  const isRelevantActivity = (a) => {
+    if (!authUser) return false;
+    if (a.relatedSpace) {
+      if (!allowedSpaces) return true; // admin/CEO ve todo como relevante
+      return allowedSpaces.includes(a.relatedSpace);
+    }
+    if (a.relatedTaskId && tasks) {
+      const t = tasks.find(t => t.id === a.relatedTaskId);
+      if (t && t.assignee === authUser.id) return true;
+      if (t && allowedSpaces && allowedSpaces.includes(t.space)) return true;
+      if (t && !allowedSpaces) return true;
+    }
+    return false;
+  };
+
+  // Filtrar actividad de tareas que ya no existen
+  const taskIds = useMemo(() => new Set((tasks || []).map(t => t.id)), [tasks]);
+  const visibleActivity = useMemo(() => (activity || []).filter(a =>
+    !a.relatedTaskId || taskIds.has(a.relatedTaskId)
+  ), [activity, taskIds]);
+
+  // Timer tasks del usuario actual
+  const myTimerSessions = (timerSessions || []).filter(s =>
+    !authUser?.allowedSpaces || allowedSpaces.includes(s.space)
+  );
 
   // Collapsed rail (desktop only) — slim 40px column with expand button + badges
   if (collapsed) {
@@ -5474,6 +6056,8 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
         {/* Active timer — prominent card */}
         {timerActive && (() => {
           const activeSession = (timerSessions || []).find(s => s.id === timerActive.sessionId);
+          const activeTask = activeSession ? (tasks || []).find(t => t.id === activeSession.taskId) : null;
+          if (!activeTask || activeTask.checked) return null;
           return (
             <div className="mb-4 p-3" style={{ background: C.cobalt, borderRadius: 3 }}>
               <div className="flex items-center gap-2 mb-2">
@@ -5492,7 +6076,9 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
         })()}
         {/* Tasks with logged time */}
         {(() => {
-          const completed = (timerSessions || []).filter(s => s.duration != null);
+          const taskIds = new Set((tasks || []).map(t => t.id));
+          const checkedIds = new Set((tasks || []).filter(t => t.checked).map(t => t.id));
+          const completed = myTimerSessions.filter(s => s.duration != null && taskIds.has(s.taskId) && !checkedIds.has(s.taskId));
           if (completed.length === 0 && !timerActive) {
             return <p className="text-[12px]" style={{ color: C.muted, fontStyle: "italic" }}>Iniciá el timer desde una tarea en lista o al crear una.</p>;
           }
@@ -5501,24 +6087,60 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
             if (!byTask[s.taskId]) byTask[s.taskId] = { taskId: s.taskId, title: s.taskTitle, space: s.space, total: 0 };
             byTask[s.taskId].total += s.duration;
           });
+          const sorted = Object.values(byTask).sort((a, b) => b.total - a.total).slice(0, 5);
+          // Top task by time gets the pulsing treatment
           return (
             <div className="space-y-2">
-              {Object.values(byTask).sort((a, b) => b.total - a.total).slice(0, 5).map(t => (
-                <button key={t.taskId} onClick={() => openTask(t.taskId)} className="w-full flex items-center gap-2 hover:opacity-80 text-left group/tr">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: C.cobalt, opacity: 0.5 }} />
-                  <span className="flex-1 text-[12px] truncate" style={{ color: C.inkSoft, fontWeight: 500 }}>{t.title}</span>
-                  <span className="text-[11px] shrink-0 tabular-nums" style={{ color: C.cobalt, fontWeight: 600 }}>{fmtTime(t.total)}</span>
-                </button>
-              ))}
+              {sorted.map((t, idx) => {
+                const isTop = idx === 0;
+                return (
+                  <button key={t.taskId} onClick={() => openTask(t.taskId)}
+                    className="w-full flex items-center gap-2 text-left hover:opacity-80"
+                    style={{
+                      padding: isTop ? "8px 10px" : "3px 4px",
+                      borderRadius: isTop ? 3 : 2,
+                      backgroundColor: isTop ? `${C.cobalt}0D` : "transparent",
+                      border: isTop ? `1px solid ${C.cobalt}30` : "1px solid transparent",
+                      animation: isTop ? "timerPulse 2s ease-in-out infinite" : "none",
+                    }}>
+                    <span style={{
+                      width: isTop ? 8 : 6, height: isTop ? 8 : 6,
+                      borderRadius: "50%", flexShrink: 0,
+                      backgroundColor: C.cobalt, opacity: isTop ? 0.9 : 0.45,
+                      animation: isTop ? "pulse 1.5s infinite" : "none",
+                    }} />
+                    <span className="flex-1 truncate" style={{ color: isTop ? C.ink : C.inkSoft, fontWeight: isTop ? 600 : 500, fontSize: isTop ? 13 : 12 }}>{t.title}</span>
+                    <span className="shrink-0 tabular-nums" style={{ color: C.cobalt, fontWeight: 700, fontSize: isTop ? 13 : 11 }}>{fmtTime(t.total)}</span>
+                  </button>
+                );
+              })}
             </div>
           );
         })()}
-        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
       </div>
 
       <div className="px-6 py-6" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+        {/* Semáforo de mensajes */}
         <div className="flex items-center justify-between mb-4">
-          <Eyebrow>Mensajes · {messages.filter(m => !m.read).length} sin leer</Eyebrow>
+          <div className="flex items-center gap-2">
+            <Eyebrow>Mensajes</Eyebrow>
+            {/* Traffic light */}
+            <div className="flex items-center gap-1.5 ml-1">
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%",
+                backgroundColor: msgLight,
+                boxShadow: msgLightPulse ? `0 0 0 0 ${msgLight}` : "none",
+                animation: msgLightPulse ? "msgPulse 1.4s ease-out infinite" : "none",
+                display: "block", flexShrink: 0,
+              }} />
+              <span className="text-[10px]" style={{
+                color: unreadCount === 0 ? C.muted : msgLight,
+                fontWeight: unreadCount > 0 ? 700 : 400,
+              }}>
+                {unreadCount === 0 ? "al día" : `${unreadCount} sin leer`}
+              </span>
+            </div>
+          </div>
           <MessageSquare size={12} style={{ color: C.muted }} />
         </div>
         <div className="space-y-4">
@@ -5548,39 +6170,71 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
           <Eyebrow>Actividad</Eyebrow>
           <Activity size={12} style={{ color: C.muted }} />
         </div>
-        {(!Array.isArray(activity) || activity.length === 0) ? (
+        {(!Array.isArray(visibleActivity) || visibleActivity.length === 0) ? (
           <div className="text-[11px] italic leading-relaxed" style={{ color: C.muted }}>
             Sin actividad reciente.<br/>
             <span style={{ fontSize: 10, opacity: 0.8 }}>Cuando crees, cerres o edites tareas, aparece acá.</span>
           </div>
         ) : (
-          <div className="space-y-3.5">
-            {activity.map((a) => {
+          <div className="space-y-2">
+            {visibleActivity.map((a) => {
               const clickable = !!(a.relatedTaskId || a.relatedSpace);
+              const relevant = isRelevantActivity(a);
               return (
                 <button key={a.id} onClick={() => clickable && handleActivityClick(a)} disabled={!clickable}
-                  className="w-full flex gap-3 text-[11px] text-left hover:opacity-80 group/act"
-                  style={{ cursor: clickable ? "pointer" : "default" }}>
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: a.color }} />
+                  className="w-full text-left hover:opacity-80 group/act"
+                  style={{
+                    cursor: clickable ? "pointer" : "default",
+                    display: "flex", gap: relevant ? 10 : 8,
+                    alignItems: "flex-start",
+                    padding: relevant ? "8px 10px" : "3px 0",
+                    borderRadius: relevant ? 3 : 0,
+                    backgroundColor: relevant ? `${C.cobalt}09` : "transparent",
+                    border: relevant ? `1px solid ${C.cobalt}22` : "1px solid transparent",
+                    marginBottom: relevant ? 2 : 0,
+                    transition: "background 0.15s",
+                  }}>
+                  <span style={{
+                    width: relevant ? 8 : 6,
+                    height: relevant ? 8 : 6,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    marginTop: relevant ? 4 : 5,
+                    backgroundColor: relevant ? C.cobalt : a.color,
+                    boxShadow: relevant ? `0 0 0 2px ${C.cobalt}33` : "none",
+                  }} />
                   <div className="flex-1 min-w-0">
-                    <div style={{ color: C.inkSoft, lineHeight: 1.5 }}>
-                      <span style={{ color: C.ink, fontWeight: 600 }}>{a.who}</span> {a.what}
+                    <div style={{
+                      color: relevant ? C.ink : C.inkSoft,
+                      lineHeight: 1.5,
+                      fontSize: relevant ? 12.5 : 11,
+                      fontWeight: relevant ? 500 : 400,
+                    }}>
+                      <span style={{ fontWeight: 700, color: relevant ? C.cobalt : C.ink }}>{a.who}</span>{" "}{a.what}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-1.5" style={{ color: C.muted }}>
+                    <div className="mt-0.5 flex items-center gap-1.5" style={{ fontSize: 10, color: C.muted }}>
                       <span>{timeAgo(a.ts)}</span>
                       {clickable && (
-                        <span className="text-[9px] flex items-center gap-0.5 opacity-0 group-hover/act:opacity-100 transition-opacity" style={{ color: C.cobalt, fontWeight: 600 }}>
+                        <span className="flex items-center gap-0.5 opacity-0 group-hover/act:opacity-100 transition-opacity" style={{ color: C.cobalt, fontWeight: 600, fontSize: 9 }}>
                           <ArrowRight size={8} /> {a.relatedTaskId ? "tarea" : "space"}
                         </span>
                       )}
                     </div>
                   </div>
+                  {relevant && (
+                    <span style={{ width: 4, height: "100%", minHeight: 20, borderRadius: 2, backgroundColor: C.cobalt, flexShrink: 0, alignSelf: "stretch", opacity: 0.5 }} />
+                  )}
                 </button>
               );
             })}
           </div>
         )}
       </div>
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes msgPulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+        @keyframes timerPulse{0%,100%{box-shadow:0 0 0 0 rgba(61,82,213,0.4)}50%{box-shadow:0 0 0 5px rgba(61,82,213,0)}}
+      `}</style>
     </aside>
   );
 }
@@ -5600,10 +6254,6 @@ function WikiCreateMenu({ currentFolder, setActiveTab }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // URL para crear en la carpeta actual (si tiene driveId)
-  const driveCreateUrl = currentFolder?.driveId
-    ? `https://drive.google.com/drive/folders/${currentFolder.driveId}`
-    : "https://drive.google.com/drive/my-drive";
 
   return (
     <div className="relative" ref={ref}>
@@ -5616,18 +6266,6 @@ function WikiCreateMenu({ currentFolder, setActiveTab }) {
           <div className="px-3 py-2" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
             <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>Crear contenido</div>
           </div>
-
-          <a href={driveCreateUrl} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}
-            className="w-full flex items-start gap-2 px-3 py-2 hover:opacity-90 text-left" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-            <FileText size={12} style={{ color: C.green, marginTop: 2, flexShrink: 0 }} />
-            <div className="flex-1 min-w-0">
-              <div style={{ fontSize: 11, color: C.ink, fontWeight: 600 }}>Crear en Drive</div>
-              <div style={{ fontSize: 9, color: C.muted, marginTop: 1, lineHeight: 1.4 }}>
-                Abre la carpeta {currentFolder?.name || "actual"} en Drive · usá el botón "+ Nuevo" de Drive para crear doc/sheet/carpeta
-              </div>
-            </div>
-            <ExternalLink size={10} style={{ color: C.muted, flexShrink: 0, marginTop: 4 }} />
-          </a>
 
           <button onClick={() => { setActiveTab("viewports"); setOpen(false); }} className="w-full flex items-start gap-2 px-3 py-2 hover:opacity-90 text-left" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
             <Globe size={12} style={{ color: C.cobalt, marginTop: 2, flexShrink: 0 }} />
@@ -5894,37 +6532,46 @@ function WikiLinkEditModal({ initial, onSave, onClose }) {
   const [url, setUrl] = useState(initial?.url || "");
   const [description, setDescription] = useState(initial?.description || "");
   const [category, setCategory] = useState(initial?.category || "operations");
+  const blob = useModalBlob();
+  const onInput = () => blob.onType();
+  const handleSave = () => {
+    if (!title.trim() || !url.trim()) { blob.onError(); return; }
+    blob.onHappy(() => onSave({ title: title.trim(), url: url.trim(), description: description.trim(), category }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(10,11,15,0.5)" }} onClick={onClose}>
       <div className="w-full max-w-[480px]" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-          <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>{initial ? "Editar link" : "Nuevo link"}</div>
-          <div style={{ fontSize: 16, color: C.ink, fontWeight: 600, marginTop: 2 }}>{initial ? initial.title : "Agregar link externo"}</div>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>{initial ? "Editar link" : "Nuevo link"}</div>
+            <div style={{ fontSize: 16, color: C.ink, fontWeight: 600, marginTop: 2 }}>{initial ? initial.title : "Agregar link externo"}</div>
+          </div>
+          <ModalBlob state={blob.state} />
         </div>
         <div className="px-5 py-4 space-y-3">
           <label className="block">
             <span style={{ fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 4 }}>Título</span>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="ej. Bronca · Brand de proyectos" autoFocus className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }} />
+            <input value={title} onChange={e => { setTitle(e.target.value); onInput(); }} placeholder="ej. Bronca · Brand de proyectos" autoFocus className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }} />
           </label>
           <label className="block">
             <span style={{ fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 4 }}>URL</span>
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12, fontFamily: "ui-monospace, monospace" }} />
+            <input value={url} onChange={e => { setUrl(e.target.value); onInput(); }} placeholder="https://..." className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12, fontFamily: "ui-monospace, monospace" }} />
           </label>
           <label className="block">
             <span style={{ fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 4 }}>Descripción (opcional)</span>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Para qué sirve este link..." rows={2} className="w-full px-3 py-2 outline-none resize-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12, lineHeight: 1.5, fontFamily: "inherit" }} />
+            <textarea value={description} onChange={e => { setDescription(e.target.value); onInput(); }} placeholder="Para qué sirve este link..." rows={2} className="w-full px-3 py-2 outline-none resize-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12, lineHeight: 1.5, fontFamily: "inherit" }} />
           </label>
           <label className="block">
             <span style={{ fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 4 }}>Categoría</span>
-            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }}>
+            <select value={category} onChange={e => { setCategory(e.target.value); onInput(); }} className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }}>
               {KNOWLEDGE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </label>
         </div>
         <div className="px-5 py-3 flex justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted }}>Cancelar</button>
-          <button onClick={() => onSave({ title: title.trim(), url: url.trim(), description: description.trim(), category })} disabled={!title.trim() || !url.trim()} className="px-3 py-1.5 text-[11px] hover:opacity-90 disabled:opacity-40" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>{initial ? "Guardar" : "Agregar"}</button>
+          <button onClick={handleSave} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>{initial ? "Guardar" : "Agregar"}</button>
         </div>
       </div>
     </div>
@@ -6079,7 +6726,7 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
             Tools · hub de conocimiento
           </div>
           <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.08em" }}>
-            Drive · Viewports · Links externos
+            Dropbox · Viewports · Links externos
           </div>
         </div>
         <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em", color: C.ink, lineHeight: 1.1 }}>
@@ -6274,12 +6921,7 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
 // ─── CEO DASHBOARD · vista ejecutiva con audiencias compartibles ───
 // Seed inicial · el state real vive en App como `ceoProjects` y se edita desde el dashboard
 // driveId: link a la carpeta del proyecto en Drive (fuente operativa)
-const INITIAL_CEO_PROJECTS = [
-  { id: "dc01", driveId: "1H9OIY6qSZYjk9pYKdS7fWt4AeLzxMRA2", name: "Del Castillo · DC01", spvCode: "SPV-DC01", fase: "Construcción", progreso: 68, unidades: { total: 24, vendidas: 19, reservadas: 3, disponibles: 2 }, revenue: { proyectado: 4320000, captado: 3420000 }, fc: { estado: "positivo", saldo: 284000 }, vencimiento: "Dic 2026", color: "#A89BD9" },
-  { id: "pu01", driveId: "1nj-IW-zk7LpgN6BqwTJ0B5ncBwBAiEEr", name: "Paula Ugarriza · PU01", spvCode: "SPV-PU01", fase: "Pre-venta", progreso: 22, unidades: { total: 18, vendidas: 7, reservadas: 4, disponibles: 7 }, revenue: { proyectado: 3240000, captado: 1260000 }, fc: { estado: "neutro", saldo: 42000 }, vencimiento: "Jun 2027", color: "#C2A45A" },
-  { id: "tg01", driveId: "1QDbsSGIekQb3eKuYOuwma7-nQ0SSK3tt", name: "De la Torre · TG01", spvCode: "SPV-TG01", fase: "Permisos", progreso: 8, unidades: { total: 30, vendidas: 0, reservadas: 6, disponibles: 24 }, revenue: { proyectado: 5400000, captado: 0 }, fc: { estado: "negativo", saldo: -38000 }, vencimiento: "Mar 2028", color: "#A85B5B" },
-  { id: "l36", driveId: "1NLCOo1bfaeKHJyNWfJaluMK0YGYzrOMY", name: "Larco 1036 · L36", spvCode: "Supervisión", fase: "Fee mensual", progreso: 100, unidades: { total: 40, vendidas: 40, reservadas: 0, disponibles: 0 }, revenue: { proyectado: 48000, captado: 48000 }, fc: { estado: "positivo", saldo: 8000 }, vencimiento: "—", color: "#5F8A6A" },
-];
+const INITIAL_CEO_PROJECTS = [];
 
 const _fmtM = (n) => n >= 1000000 ? `$${(n/1000000).toFixed(1)}M` : n >= 1000 ? `$${(n/1000).toFixed(0)}K` : `$${n}`;
 const _pctOf = (a, b) => b > 0 ? Math.round((a/b)*100) : 0;
@@ -6294,12 +6936,7 @@ const CEO_AUDIENCE_PRESETS = {
 // ─── VIEWPORT EXTERNO · iframe a una URL externa por space ───
 // Use cases: Cash Flow sheet, Cap Table, Miro board, Bronca site, Notion page
 // La URL se guarda por space en `spaceViewports[spaceId] = { url, label }`
-const VIEWPORT_PRESETS = [
-  { id: "cashflow", label: "Cash Flow 2026", url: "https://docs.google.com/spreadsheets/d/1KUp7z4OtuQ24EXZvTdsLf0JQP8dQk1Jn4v3Md3a63Bo/preview" },
-  { id: "captable", label: "Cap Table", url: "https://docs.google.com/spreadsheets/d/1eR98gF1wpxTlGNBY6qeovxSsykrkauogaYOv07cIQkY/preview" },
-  { id: "legendre", label: "Edificio Legendre FC", url: "https://docs.google.com/spreadsheets/d/12cSCNNGz6QuREEuIVAk6NcVrvNb4eomM/preview" },
-  { id: "drive-root", label: "Drive · Hygge Gruppe", url: "https://drive.google.com/embeddedfolderview?id=15ZcobnMQ7NTf_u6UmFMiJsb4c8liQquy" },
-];
+const VIEWPORT_PRESETS = [];
 
 // ─── APP EMBED VIEW ────────────────────────────────────────────────────────
 // Renderiza una app externa (Radar, futuro Reactor, etc.) como iframe full-screen.
@@ -6771,10 +7408,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
   const visible = CEO_AUDIENCE_PRESETS[audience].sections;
 
   // Fuentes externas · Drive sheets que respaldan los KPIs
-  const SOURCES = {
-    cashflow: "https://docs.google.com/spreadsheets/d/1KUp7z4OtuQ24EXZvTdsLf0JQP8dQk1Jn4v3Md3a63Bo/edit",
-    capTable: "https://docs.google.com/spreadsheets/d/1eR98gF1wpxTlGNBY6qeovxSsykrkauogaYOv07cIQkY/edit",
-  };
+  const SOURCES = {};
 
   // KPIs reales · derivados de Hygge OS state + projects
   const kpis = useMemo(() => {
@@ -6876,9 +7510,9 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
       {visible.kpis && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-5">
           {[
-            { label: "Revenue Total", val: _fmtM(kpis.revenueTotal), sub: "Portafolio proyectado", dark: true, href: SOURCES.cashflow, sourceLabel: "Cash Flow 2026" },
-            { label: "Captado YTD", val: _fmtM(kpis.captadoTotal), sub: `${_pctOf(kpis.captadoTotal, kpis.revenueTotal)}% del portafolio`, href: SOURCES.cashflow, sourceLabel: "Cash Flow 2026" },
-            { label: "Unidades", val: `${kpis.unidadesVendidas}/${kpis.unidadesTotal}`, sub: `${_pctOf(kpis.unidadesVendidas, kpis.unidadesTotal)}% vendido`, href: SOURCES.capTable, sourceLabel: "Cap Table" },
+            { label: "Revenue Total", val: _fmtM(kpis.revenueTotal), sub: "Portafolio proyectado", dark: true },
+            { label: "Captado YTD", val: _fmtM(kpis.captadoTotal), sub: `${_pctOf(kpis.captadoTotal, kpis.revenueTotal)}% del portafolio` },
+            { label: "Unidades", val: `${kpis.unidadesVendidas}/${kpis.unidadesTotal}`, sub: `${_pctOf(kpis.unidadesVendidas, kpis.unidadesTotal)}% vendido` },
             { label: "Tareas Activas", val: kpis.tareasActivas, sub: `${kpis.tareasVencidas} vencidas`, hide: !visible.tasks, onClick: () => navigate && navigate("inbox"), sourceLabel: "Inbox" },
             { label: "NPS Compradores", val: kpis.nps, sub: "Promotores netos", editable: audience === "internal", onClick: () => setEditingNps(true) },
           ].filter(k => !k.hide).map((k, i) => {
@@ -6933,11 +7567,6 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
                           <div className="flex items-center gap-2">
                             <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 12, backgroundColor: fc.bg, color: fc.fg, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>{p.fase}</span>
                             <span style={{ fontSize: 10, color: C.muted }}>{p.vencimiento}</span>
-                            {p.driveId && (
-                              <a href={`https://drive.google.com/drive/folders/${p.driveId}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-1 hover:opacity-100 transition-opacity" title="Abrir carpeta en Drive" style={{ color: C.muted, opacity: 0.6 }}>
-                                <ArrowRight size={11} />
-                              </a>
-                            )}
                             {audience === "internal" && (
                               <button onClick={(e) => { e.stopPropagation(); setEditingProject(p); }} className="p-1 hover:opacity-100 transition-opacity" title="Editar proyecto" style={{ color: C.muted, opacity: 0.6 }}>
                                 <PenSquare size={11} />
@@ -7147,6 +7776,7 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
     fc: { ...project.fc },
   });
 
+  const blob = useModalBlob();
   const setField = (path, val) => {
     setForm(prev => {
       const next = { ...prev };
@@ -7158,6 +7788,7 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
       }
       return next;
     });
+    blob.onType();
   };
 
   const numericFields = (path) => ({ type: "number", value: form[path.split(".")[0]][path.split(".")[1]], onChange: (e) => setField(path, Number(e.target.value) || 0) });
@@ -7170,7 +7801,10 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
             <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Editar proyecto</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, marginTop: 2 }}>{project.name}</div>
           </div>
-          <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          </div>
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -7247,7 +7881,7 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
 
         <div className="px-5 py-3 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted }}>Cancelar</button>
-          <button onClick={() => onSave(form)} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>Guardar</button>
+          <button onClick={() => blob.onHappy(() => onSave(form))} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>Guardar</button>
         </div>
       </div>
     </div>
@@ -7256,23 +7890,27 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
 
 function CEONpsEditModal({ currentNps, onSave, onClose }) {
   const [val, setVal] = useState(currentNps);
+  const blob = useModalBlob();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(10,11,15,0.5)" }} onClick={onClose}>
       <div className="w-full max-w-[360px]" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-          <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Editar NPS</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, marginTop: 2 }}>Promotores netos</div>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Editar NPS</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, marginTop: 2 }}>Promotores netos</div>
+          </div>
+          <ModalBlob state={blob.state} />
         </div>
         <div className="px-5 py-4">
           <label className="block">
             <span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 4 }}>Valor NPS (-100 a 100)</span>
-            <input type="number" min="-100" max="100" value={val} onChange={(e) => setVal(Number(e.target.value) || 0)} autoFocus className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 18, fontWeight: 700, fontFamily: "ui-monospace, monospace" }} />
+            <input type="number" min="-100" max="100" value={val} onChange={(e) => { setVal(Number(e.target.value) || 0); blob.onType(); }} autoFocus className="w-full px-3 py-2 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 18, fontWeight: 700, fontFamily: "ui-monospace, monospace" }} />
           </label>
           <div style={{ fontSize: 10, color: C.muted, marginTop: 6, fontStyle: "italic" }}>NPS no tiene fuente automática · se edita manualmente. Cuando integremos encuesta a compradores, se conecta solo.</div>
         </div>
         <div className="px-5 py-3 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted }}>Cancelar</button>
-          <button onClick={() => onSave(val)} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>Guardar</button>
+          <button onClick={() => blob.onHappy(() => onSave(val))} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>Guardar</button>
         </div>
       </div>
     </div>
@@ -7772,7 +8410,7 @@ function CalendarToolView({ tasks, openDetail, onCreate }) {
 // ═══ NOTIFICATIONS TOOL · all messages with actions ══════════════════════
 // ─── NOTIFICACIONES · eventos del sistema (tarea creada / por vencer / cerrada) ───
 // Diferencia conceptual con Mensajes: notificaciones = eventos automáticos del sistema, no comunicación humana
-function NotificationsToolView({ activity, markNotifRead, markAllNotifsRead, openTask, navigate }) {
+function NotificationsToolView({ activity, markNotifRead, markAllNotifsRead, openTask, navigate, isCEO, onApproveDropboxDelete, onDenyDropboxDelete }) {
   const [filter, setFilter] = useState("all"); // all | unread
   const items = filter === "unread" ? activity.filter(a => !a.read) : activity;
   const unreadCount = activity.filter(a => !a.read).length;
@@ -7821,6 +8459,24 @@ function NotificationsToolView({ activity, markNotifRead, markAllNotifsRead, ope
                 <div style={{ fontSize: 12, color: C.ink, lineHeight: 1.5 }}>
                   <span style={{ fontWeight: 600 }}>{a.who}</span> {a.what}
                 </div>
+                {a.type === "dropbox_delete_approval" && a.pending && isCEO && (
+                  <div style={{ marginTop: 10, padding: "10px 12px", backgroundColor: `${C.brick}08`, border: `1px solid ${C.brick}30`, borderRadius: 3 }}>
+                    <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 8, fontFamily: "monospace" }}>{a.dropboxPath}</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => onApproveDropboxDelete && onApproveDropboxDelete(a)} style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", backgroundColor: C.brick, color: "white", border: "none", borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                        Aprobar eliminación
+                      </button>
+                      <button onClick={() => onDenyDropboxDelete && onDenyDropboxDelete(a)} style={{ fontSize: 11, padding: "5px 12px", backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                        Denegar
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {a.type === "dropbox_delete_approval" && !a.pending && (
+                  <div style={{ marginTop: 6, fontSize: 10.5, fontWeight: 600, color: a.approved ? C.brick : C.green }}>
+                    {a.approved ? "✓ Eliminación aprobada y ejecutada" : "✗ Eliminación denegada"}
+                  </div>
+                )}
                 <div className="mt-1 flex items-center gap-2 flex-wrap" style={{ fontSize: 10, color: C.muted }}>
                   <span>{timeAgo(a.ts)}</span>
                   {a.relatedTaskId && (
@@ -7835,7 +8491,7 @@ function NotificationsToolView({ activity, markNotifRead, markAllNotifsRead, ope
                   )}
                 </div>
               </div>
-              {!a.read && (
+              {!a.read && !(a.type === "dropbox_delete_approval" && a.pending && isCEO) && (
                 <button onClick={() => markNotifRead(a.id)} className="text-[9px] hover:opacity-80 flex-shrink-0" style={{ color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
                   Marcar leída
                 </button>
@@ -7969,34 +8625,41 @@ function ReplyForm({ to, onSend, onCancel }) {
 function ComposeMessageModal({ users, currentUserId, onClose, onSend }) {
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
+  const blob = useModalBlob();
   const recipients = users.filter(u => u.id !== currentUserId);
-  const submit = () => { if (!to || !text.trim()) return; onSend(to, text.trim()); };
+  const submit = () => {
+    if (!to || !text.trim()) { blob.onError(); return; }
+    blob.onHappy(() => onSend(to, text.trim()));
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] p-4" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
       <div className="w-full max-w-[520px]" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div><Eyebrow>Enviar mensaje</Eyebrow><div className="text-[15px] mt-1" style={{ color: C.ink, fontWeight: 600 }}>Nuevo mensaje</div></div>
-          <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          </div>
         </div>
         <div className="p-5 space-y-3">
           <div>
             <Eyebrow>Para</Eyebrow>
-            <select value={to} onChange={e => setTo(e.target.value)} className="w-full mt-2 px-3 py-2 outline-none text-[13px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }}>
+            <select value={to} onChange={e => { setTo(e.target.value); blob.onType(); }} className="w-full mt-2 px-3 py-2 outline-none text-[13px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }}>
               <option value="">— Elegí destinatario —</option>
               {recipients.map(u => <option key={u.id} value={`${u.firstName} ${u.lastName}`}>{u.firstName} {u.lastName} · {u.role}</option>)}
             </select>
           </div>
           <div>
             <Eyebrow>Mensaje</Eyebrow>
-            <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Escribí tu mensaje…" rows={5}
+            <textarea value={text} onChange={e => { setText(e.target.value); blob.onType(); }} placeholder="Escribí tu mensaje…" rows={5}
               className="w-full mt-2 px-3 py-2 outline-none text-[13px] resize-none"
               style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink, fontFamily: "inherit", lineHeight: 1.5 }} />
           </div>
         </div>
         <div className="px-5 py-4 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
           <button onClick={onClose} className="px-3 py-2 text-[12px] hover:opacity-90" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>Cancelar</button>
-          <button onClick={submit} disabled={!to || !text.trim()} className="flex items-center gap-1.5 px-4 py-2 text-[12px] hover:opacity-90"
-            style={{ backgroundColor: (to && text.trim()) ? C.ink : C.muted, color: C.bg, borderRadius: 2, fontWeight: 500, opacity: (to && text.trim()) ? 1 : 0.5 }}>
+          <button onClick={submit} className="flex items-center gap-1.5 px-4 py-2 text-[12px] hover:opacity-90"
+            style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 500 }}>
             <Send size={11} /> Enviar
           </button>
         </div>
@@ -12064,18 +12727,22 @@ function UsersAdminPanel({ users, createUser, updateUser, deleteUser, currentUse
 
 function UserFormModal({ user, onClose, onSave }) {
   const [data, setData] = useState(user || { firstName: "", lastName: "", email: "", role: "Colaborador", color: C.cobalt, isAdmin: false, password: "", preferences: { ...DEFAULT_PREFS } });
-  const update = (patch) => setData(d => ({ ...d, ...patch }));
+  const blob = useModalBlob();
+  const update = (patch) => { setData(d => ({ ...d, ...patch })); blob.onType(); };
   const submit = () => {
-    if (!data.firstName?.trim() || !data.email?.trim()) return;
+    if (!data.firstName?.trim() || !data.email?.trim()) { blob.onError(); return; }
     const initials = ((data.firstName[0] || "") + (data.lastName?.[0] || "")).toUpperCase();
-    onSave({ ...data, initials, firstName: data.firstName.trim(), lastName: (data.lastName || "").trim(), email: data.email.trim() });
+    blob.onHappy(() => onSave({ ...data, initials, firstName: data.firstName.trim(), lastName: (data.lastName || "").trim(), email: data.email.trim() }));
   };
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[10vh] p-4" style={{ backgroundColor: "rgba(10,11,15,0.5)" }} onClick={onClose}>
       <div className="w-full max-w-[520px]" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div><Eyebrow>{user ? "Editar usuario" : "Nuevo usuario"}</Eyebrow><div className="text-[15px] mt-1" style={{ color: C.ink, fontWeight: 600 }}>{user ? `${user.firstName} ${user.lastName}` : "Crear cuenta"}</div></div>
-          <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          </div>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -12176,6 +12843,9 @@ export default function HyggeOS({ authUser } = {}) {
   const [view, setView] = useState("dashboard");
   const [expandedSpaces, setExpandedSpaces] = useState({ proyectos: true });
   const [createSpaceParent, setCreateSpaceParent] = useState(null);
+  const [dropboxSyncItems, setDropboxSyncItems] = useState(null); // null = not checked yet, [] = checked no items
+  const [dropboxFolderPrompt, setDropboxFolderPrompt] = useState(null);
+  const dropboxSyncCheckedRef = useRef(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
@@ -12197,16 +12867,20 @@ export default function HyggeOS({ authUser } = {}) {
   const [customViewEditInitial, setCustomViewEditInitial] = useState(null);
 
   const currentUser = users.find(u => u.id === currentUserId) || users[0];
+
   const [addOpen, setAddOpen] = useState(false);
   const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSending, setChatSending] = useState(false);
   const [conversation, setConversation] = useState([]);
   const [customSpaces, setCustomSpaces] = useState([]);
+  const [deletedDefaultSpaceIds, setDeletedDefaultSpaceIds] = useState([]);
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [activity, setActivity] = useState([]);
   const [ceoProjects, setCeoProjects] = useState(INITIAL_CEO_PROJECTS);
+  const [spvs, setSpvs] = useState(DEFAULT_SPVS);
+  const [hqCifras, setHqCifras] = useState(DEFAULT_HQ_CIFRAS);
   const [ceoNps, setCeoNps] = useState(72);
   const [whiteboards, setWhiteboards] = useState(INITIAL_WHITEBOARDS);
   const [smartViews, setSmartViews] = useState(INITIAL_SMART_VIEWS);
@@ -12308,11 +12982,14 @@ export default function HyggeOS({ authUser } = {}) {
   }, [undoLast]);
 
   const allSpaces = useMemo(() => {
-    // Default spaces get any custom children attached.
-    const withChildren = DEFAULT_SPACES.map(s => {
-      const customChildren = customSpaces.filter(c => c.parentId === s.id);
-      if (customChildren.length === 0) return s;
-      return { ...s, children: [...(s.children || []), ...customChildren] };
+    const deletedSet = new Set(deletedDefaultSpaceIds);
+    // Default spaces get any custom children attached, excluding deleted ones.
+    const withChildren = DEFAULT_SPACES.filter(s => !deletedSet.has(s.id)).map(s => {
+      const customChildren = customSpaces.filter(c => c.parentId === s.id && !deletedSet.has(c.id));
+      const filteredChildren = (s.children || []).filter(c => !deletedSet.has(c.id));
+      const allChildren = [...filteredChildren, ...customChildren];
+      if (allChildren.length === 0 && (s.children || []).length === 0) return s;
+      return { ...s, children: allChildren };
     });
     // Custom top-level spaces (no parent) — also let them have custom children.
     const topCustoms = customSpaces.filter(c => !c.parentId).map(s => {
@@ -12321,7 +12998,60 @@ export default function HyggeOS({ authUser } = {}) {
       return { ...s, children: customChildren };
     });
     return [...withChildren, ...topCustoms];
-  }, [customSpaces]);
+  }, [customSpaces, deletedDefaultSpaceIds]);
+
+  // ─── Access control ────────────────────────────────────────────────────────
+  // authUser viene de AuthContext (fuente canónica con allowedSpaces e isCEO)
+  // NO usar currentUser del state que se carga de localStorage sin esos campos
+  const visibleSpaces = useMemo(() => {
+    const allowed = authUser?.allowedSpaces;
+    if (!allowed) return allSpaces;
+    return allSpaces.filter(s => allowed.includes(s.id));
+  }, [allSpaces, authUser]);
+
+  const visibleTools = useMemo(() => {
+    if (!authUser?.allowedSpaces) return TOOLS;
+    // CEO Dashboard solo para Sebastian · el resto accede a todo lo demás
+    return TOOLS.filter(t => t.id !== "ceo-dashboard");
+  }, [authUser]);
+
+  // Redirigir si el usuario no tiene acceso al space actual
+  useEffect(() => {
+    if (!loaded || !authUser?.allowedSpaces) return;
+    const allowed = authUser.allowedSpaces;
+    const toolIds = TOOLS.map(t => t.id);
+    if (toolIds.includes(currentSpace) || currentSpace?.startsWith("lab-")) return;
+    const parentId = allSpaces.find(s => s.children?.some(c => c.id === currentSpace))?.id;
+    const isAllowed = allowed.includes(currentSpace) || (parentId && allowed.includes(parentId));
+    if (!isAllowed) setCurrentSpace(allowed[0] || "alicia");
+  }, [loaded, authUser, currentSpace, allSpaces]);
+
+  // Dropbox ↔ ALICE sync check — only for admins, once per session
+  useEffect(() => {
+    if (!loaded || !authUser?.isAdmin || dropboxSyncCheckedRef.current) return;
+    dropboxSyncCheckedRef.current = true;
+    (async () => {
+      try {
+        const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:ignored") || "[]");
+        const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=/Hygge`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const folders = (data.entries || []).filter(e => e.type === "folder");
+        const knownNames = new Set(
+          Object.values(SPACE_DROPBOX_PATHS)
+            .filter(p => p.split("/").length === 3)
+            .map(p => p.split("/")[2].toLowerCase())
+        );
+        knownNames.add(".alice");
+        const newFolders = folders.filter(f =>
+          !knownNames.has(f.name.toLowerCase()) && !ignored.includes(f.path)
+        );
+        if (newFolders.length > 0) {
+          setDropboxSyncItems(newFolders.map(f => ({ name: f.name, path: f.path })));
+        }
+      } catch (_) { /* silent */ }
+    })();
+  }, [loaded, authUser]);
 
   const toggleSpaceExpansion = useCallback((id) => {
     setExpandedSpaces(prev => ({ ...prev, [id]: !prev[id] }));
@@ -12329,7 +13059,7 @@ export default function HyggeOS({ authUser } = {}) {
 
   useEffect(() => {
     (async () => {
-      const [t, m, wb, tm, sp, vw, cs, sv, us, sa, tr, cv, rpc, act, cp, cn, ft, vp, kl] = await Promise.all([
+      const [t, m, wb, tm, sp, vw, cs, sv, us, sa, tr, cv, rpc, act, cp, cn, ft, vp, kl, spv, hqcf, dds] = await Promise.all([
         loadStored("hygge:tasks", INITIAL_TASKS), loadStored("hygge:messages", INITIAL_MESSAGES),
         loadStored("hygge:whiteboards", INITIAL_WHITEBOARDS), loadStored("hygge:timer", timer),
         loadStored("hygge:space", "hq"), loadStored("hygge:view", "dashboard"),
@@ -12346,8 +13076,11 @@ export default function HyggeOS({ authUser } = {}) {
         loadStored("hygge:features", { whiteboards: false, customViews: false, viewport: false }),
         loadStored("hygge:spaceViewports", {}),
         loadStored("hygge:knowledgeLinks", []),
+        loadStored("hygge:spvs", DEFAULT_SPVS),
+        loadStored("hygge:hq:cifras", DEFAULT_HQ_CIFRAS),
+        loadStored("hygge:deletedDefaultSpaces", []),
       ]);
-      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length === 4 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 72); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport } : { whiteboards: false, customViews: false, viewport: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setLoaded(true);
+      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length === 4 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 72); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport } : { whiteboards: false, customViews: false, viewport: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
     })();
   }, []);
 
@@ -12359,11 +13092,14 @@ export default function HyggeOS({ authUser } = {}) {
   useEffect(() => { if (loaded) saveStored("hygge:features", features); }, [features, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:spaceViewports", spaceViewports); }, [spaceViewports, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:knowledgeLinks", knowledgeLinks); }, [knowledgeLinks, loaded]);
+  useEffect(() => { if (loaded) saveStored("hygge:spvs", spvs); }, [spvs, loaded]);
+  useEffect(() => { if (loaded) saveStored("hygge:hq:cifras", hqCifras); }, [hqCifras, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:whiteboards", whiteboards); }, [whiteboards, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:timer", timer); }, [timer, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:space", currentSpace); }, [currentSpace, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:view", view); }, [view, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:customSpaces", customSpaces); }, [customSpaces, loaded]);
+  useEffect(() => { if (loaded) saveStored("hygge:deletedDefaultSpaces", deletedDefaultSpaceIds); }, [deletedDefaultSpaceIds, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:smartViews", smartViews); }, [smartViews, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:users", users); }, [users, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:spaceAccess", spaceAccess); }, [spaceAccess, loaded]);
@@ -12582,6 +13318,28 @@ export default function HyggeOS({ authUser } = {}) {
     setActivity(prev => prev.map(a => ({ ...a, read: true })));
   }, []);
 
+  const approveDropboxDelete = useCallback(async (notif) => {
+    try {
+      await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/delete_folder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: notif.dropboxPath }),
+      });
+      const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
+      delete customPaths[notif.spaceId];
+      localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+    } catch (_) { /* silent */ }
+    setActivity(prev => prev.map(a =>
+      a.id === notif.id ? { ...a, pending: false, approved: true, read: true, what: `solicitó eliminar "${notif.dropboxPath}" en Dropbox · aprobado por Sebastián` } : a
+    ));
+  }, []);
+
+  const denyDropboxDelete = useCallback((notif) => {
+    setActivity(prev => prev.map(a =>
+      a.id === notif.id ? { ...a, pending: false, approved: false, read: true, what: `solicitó eliminar "${notif.dropboxPath}" en Dropbox · denegado por Sebastián` } : a
+    ));
+  }, []);
+
   const toggleTask = useCallback((id) => {
     setTasks(prev => prev.map(t => {
       if (t.id !== id) return t;
@@ -12758,7 +13516,11 @@ export default function HyggeOS({ authUser } = {}) {
     setCustomSpaces(prev => [...prev, { id, name, count: 0, dot, custom: true, code: name.slice(0,2).toUpperCase(), parentId }]);
     if (parentId) setExpandedSpaces(prev => ({ ...prev, [parentId]: true }));
     setCurrentSpace(id);
-  }, []);
+    if (authUser?.isAdmin) {
+      const suggestedPath = parentId ? `/Hygge/${name}` : `/Hygge/${name}`;
+      setDropboxFolderPrompt({ action: "create", spaceName: name, spaceId: id, suggestedPath });
+    }
+  }, [authUser]);
   // Cascade-aware space deletion · opens modal with affected tasks/views
   const [deleteSpaceTarget, setDeleteSpaceTarget] = useState(null); // space object or null
   const [editSpaceTarget, setEditSpaceTarget] = useState(null); // space object or null
@@ -12777,25 +13539,36 @@ export default function HyggeOS({ authUser } = {}) {
       alert("Solo los administradores pueden eliminar spaces.");
       return;
     }
-    const space = customSpaces.find(s => s.id === id);
+    const space = customSpaces.find(s => s.id === id)
+      || allSpaces.find(s => s.id === id)
+      || allSpaces.flatMap(s => s.children || []).find(c => c.id === id);
     if (!space) return;
     setDeleteSpaceTarget(space);
-  }, [customSpaces, currentUser]);
+  }, [customSpaces, currentUser, allSpaces]);
 
   const performSpaceDelete = useCallback(({ mode, targetSpaceId }) => {
     const id = deleteSpaceTarget?.id;
+    const spaceName = deleteSpaceTarget?.name;
     if (!id) return;
     const label = mode === "move"
-      ? `Eliminó space '${deleteSpaceTarget.name}' · ${(stateRef.current?.tasks || []).filter(t => t.space === id).length} tareas movidas`
-      : `Eliminó space '${deleteSpaceTarget.name}' y sus tareas`;
+      ? `Eliminó space '${spaceName}' · ${(stateRef.current?.tasks || []).filter(t => t.space === id).length} tareas movidas`
+      : `Eliminó space '${spaceName}' y sus tareas`;
     recordUndo(label);
-    // Apply cascade via pure helper, then push the 3 pieces independently
     setTasks(prev => mode === "move" ? prev.map(t => t.space === id ? { ...t, space: targetSpaceId } : t) : prev.filter(t => t.space !== id));
     setCustomViews(prev => { const next = { ...prev }; delete next[id]; return next; });
     setCustomSpaces(prev => prev.filter(s => s.id !== id));
+    const isDefault = DEFAULT_SPACES.some(s => s.id === id) || DEFAULT_SPACES.some(s => (s.children || []).some(c => c.id === id));
+    if (isDefault) setDeletedDefaultSpaceIds(prev => [...prev, id]);
     if (currentSpace === id) setCurrentSpace("hq");
     setDeleteSpaceTarget(null);
-  }, [deleteSpaceTarget, currentSpace, recordUndo]);
+    if (authUser?.isAdmin) {
+      const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
+      const folderPath = SPACE_DROPBOX_PATHS[id] || customPaths[id];
+      if (folderPath) {
+        setDropboxFolderPrompt({ action: "delete", spaceName, spaceId: id, folderPath });
+      }
+    }
+  }, [deleteSpaceTarget, currentSpace, recordUndo, authUser]);
 
   // Cascade-aware task deletion · opens modal if task has subtasks
   const [deleteTaskTarget, setDeleteTaskTarget] = useState(null);
@@ -12806,21 +13579,19 @@ export default function HyggeOS({ authUser } = {}) {
       ? `Eliminó tarea '${deleteTaskTarget.task.title}' · ${deleteTaskTarget.subtaskCount} subtareas promovidas`
       : `Eliminó tarea '${deleteTaskTarget.task.title}'${deleteTaskTarget.subtaskCount ? ` + ${deleteTaskTarget.subtaskCount} subtareas` : ""}`;
     recordUndo(label);
+    const deletedIds = new Set([id]);
+    tasks.forEach(t => { if (t.parentId && deletedIds.has(t.parentId)) deletedIds.add(t.id); });
     setTasks(prev => applyTaskCascadeDelete(prev, id, mode));
+    setActivity(prev => prev.filter(a => !a.relatedTaskId || !deletedIds.has(a.relatedTaskId)));
     setDeleteTaskTarget(null);
-  }, [deleteTaskTarget, recordUndo]);
+  }, [deleteTaskTarget, recordUndo, tasks, setActivity]);
 
   const deleteTaskCascade = useCallback((id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     const subtasks = tasks.filter(t => t.parentId === id);
-    if (subtasks.length === 0) {
-      recordUndo(`Eliminó tarea '${task.title}'`);
-      setTasks(prev => prev.filter(t => t.id !== id));
-    } else {
-      setDeleteTaskTarget({ task, subtaskCount: subtasks.length });
-    }
-  }, [tasks, recordUndo]);
+    setDeleteTaskTarget({ task, subtaskCount: subtasks.length });
+  }, [tasks]);
 
   // ─── ASK HYGGE — Enhanced agent ───
   const sendToHygge = useCallback(async (userMessage) => {
@@ -12923,10 +13694,10 @@ REGLAS:
     }
   }, [conversation, tasks, allSpaces, addTask, createCustomSpace, toggleTask, updateTask]);
 
-  const totalSales = SPVS.reduce((a, b) => a + b.salesPEN, 0);
-  const totalTarget = SPVS.reduce((a, b) => a + b.targetPEN, 0);
-  const totalUnits = SPVS.reduce((a, b) => a + b.totalUnits, 0);
-  const totalSold = SPVS.reduce((a, b) => a + b.sold, 0);
+  const totalSales = spvs.reduce((a, b) => a + b.salesPEN, 0);
+  const totalTarget = spvs.reduce((a, b) => a + b.targetPEN, 0);
+  const totalUnits = spvs.reduce((a, b) => a + b.totalUnits, 0);
+  const totalSold = spvs.reduce((a, b) => a + b.sold, 0);
   const unreadCount = messages.filter(m => !m.read).length;
   const detailTask = tasks.find(t => t.id === detailTaskId);
 
@@ -12957,7 +13728,7 @@ REGLAS:
     if (currentSpace === "alicia") {
       return (
         <AliciaView
-          currentUser={currentUser}
+          currentUser={{ ...currentUser, isCEO: authUser?.isCEO }}
           tasks={tasks}
           addTask={addTask}
           updateTask={updateTask}
@@ -12987,7 +13758,7 @@ REGLAS:
       return <MessagesToolView messages={messages} markRead={markMessageRead} markAllRead={markAllMessagesRead} deleteMessage={deleteMessage} openTask={openDetail} sendMessage={sendMessage} users={users} currentUserId={currentUserId} />;
     }
     if (currentSpace === "notifications") {
-      return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} />;
+      return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} />;
     }
     // LAB · agentes Wonderland en el sidebar
     if (currentSpace && currentSpace.startsWith("lab-")) {
@@ -13029,8 +13800,8 @@ REGLAS:
       const spaceObj = flat.find(s => s.id === currentSpace);
       return <WhiteboardView spaceName={spaceObj?.name || currentSpace} elements={whiteboards[currentSpace] || []} updateElements={(updater) => updateWhiteboard(currentSpace, updater)} />;
     }
-    if (currentSpace === "hq") return <HQDashboard totalSales={totalSales} totalTarget={totalTarget} totalSold={totalSold} totalUnits={totalUnits} onOpenSpace={navigate} tasks={tasks} terrenos={terrenos} allSpaces={allSpaces} users={users} customSpaces={customSpaces} navigate={navigate} openDetail={openDetail} />;
-    if (currentSpace === "proyectos") return <ProyectosDashboard onOpenSpace={navigate} />;
+    if (currentSpace === "hq") return <HQDashboard totalSales={totalSales} totalTarget={totalTarget} totalSold={totalSold} totalUnits={totalUnits} onOpenSpace={navigate} tasks={tasks} terrenos={terrenos} allSpaces={allSpaces} users={users} customSpaces={customSpaces} navigate={navigate} openDetail={openDetail} spvs={spvs} setSpvs={setSpvs} cifras={hqCifras} setCifras={setHqCifras} isAdmin={authUser?.isAdmin} />;
+    if (currentSpace === "proyectos") return <ProyectosDashboard onOpenSpace={navigate} spvs={spvs} />;
     if (currentSpace === "bam") return <BamDashboard />;
     if (currentSpace === "finanzas") return <FinanzasDashboard />;
     if (currentSpace === "legal") return <LegalDashboard />;
@@ -13040,7 +13811,7 @@ REGLAS:
     if (PROJECT_CONFIGS[currentSpace]) return <ProjectDashboard projectId={currentSpace} />;
     const customSpace = customSpaces.find(s => s.id === currentSpace);
     if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} />;
-    return <HQDashboard totalSales={totalSales} totalTarget={totalTarget} totalSold={totalSold} totalUnits={totalUnits} onOpenSpace={navigate} />;
+    return <HQDashboard totalSales={totalSales} totalTarget={totalTarget} totalSold={totalSold} totalUnits={totalUnits} onOpenSpace={navigate} spvs={spvs} setSpvs={setSpvs} cifras={hqCifras} setCifras={setHqCifras} isAdmin={authUser?.isAdmin} />;
   })();
 
   return (
@@ -13070,7 +13841,7 @@ REGLAS:
         {(mobileSidebarOpen || mobileRightPanelOpen) && (
           <div className="fixed inset-0 z-30 lg:hidden" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => { setMobileSidebarOpen(false); setMobileRightPanelOpen(false); }} />
         )}
-        <Sidebar allSpaces={allSpaces} currentSpace={currentSpace} setSpace={setCurrentSpace}
+        <Sidebar allSpaces={visibleSpaces} tools={visibleTools} currentSpace={currentSpace} setSpace={setCurrentSpace}
           expandedSpaces={expandedSpaces} toggleSpaceExpansion={toggleSpaceExpansion}
           onCreateSpace={() => { setCreateSpaceParent(null); setCreateSpaceOpen(true); }}
           onCreateSubSpace={(parent) => { setCreateSpaceParent(parent); setCreateSpaceOpen(true); }}
@@ -13088,7 +13859,8 @@ REGLAS:
           notifCount={notifCount}
           messagesCount={messagesCount}
           onClickUser={(id) => setSelectedUserId(id)}
-          onOpenSettings={() => setSettingsOpen(true)} />
+          onOpenSettings={() => setSettingsOpen(true)}
+          tasks={tasks} />
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount}
             onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} />
@@ -13115,7 +13887,9 @@ REGLAS:
           timerSessions={timerSessions}
           timerActive={timerActive}
           timerLive={timerLive}
-          onTimerStop={stopTimerSession} />
+          onTimerStop={stopTimerSession}
+          authUser={authUser}
+          tasks={tasks} />
       </div>
       <CommandPalette
         open={cmdOpen}
@@ -13172,8 +13946,68 @@ REGLAS:
         onConfirm={performUserDelete}
       />
       <UndoToast entry={activeToast} onUndo={undoLast} onDismiss={dismissToast} />
+      <DropboxSyncModal
+        items={dropboxSyncItems}
+        onCreateSpace={(item) => {
+          const id = "custom_" + Date.now();
+          setCustomSpaces(prev => [...prev, { id, name: item.name, count: 0, dot: C.cobalt, custom: true, code: item.name.slice(0,2).toUpperCase(), parentId: null }]);
+          const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
+          customPaths[id] = item.path;
+          localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+          setDropboxSyncItems(prev => prev.filter(i => i.path !== item.path));
+        }}
+        onIgnore={(item) => {
+          const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:ignored") || "[]");
+          ignored.push(item.path);
+          localStorage.setItem("hygge:dropbox:ignored", JSON.stringify(ignored));
+          setDropboxSyncItems(prev => prev.filter(i => i.path !== item.path));
+        }}
+        onClose={() => setDropboxSyncItems([])}
+      />
+      <DropboxFolderPrompt
+        prompt={dropboxFolderPrompt}
+        onConfirm={async () => {
+          if (!dropboxFolderPrompt) return;
+          const { action, spaceId, suggestedPath, folderPath, spaceName } = dropboxFolderPrompt;
+          const path = folderPath || suggestedPath;
+          setDropboxFolderPrompt(null);
+          try {
+            if (action === "create") {
+              await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/create_folder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
+              const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
+              customPaths[spaceId] = path;
+              localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+            } else {
+              if (authUser?.isCEO) {
+                // CEO ejecuta directo
+                await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/delete_folder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
+                const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
+                delete customPaths[spaceId];
+                localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+              } else {
+                // Admin no-CEO → queda en aprobación pendiente de Sebastián
+                setActivity(prev => [{
+                  id: Date.now() + Math.random(),
+                  who: authUser?.firstName || "Admin",
+                  what: `solicitó eliminar la carpeta "${path}" en Dropbox`,
+                  ts: Date.now(),
+                  color: authUser?.color || C.ochre,
+                  read: false,
+                  type: "dropbox_delete_approval",
+                  pending: true,
+                  dropboxPath: path,
+                  spaceName,
+                  spaceId,
+                  requestedBy: authUser?.id,
+                }, ...prev].slice(0, 50));
+              }
+            }
+          } catch (_) { /* silent */ }
+        }}
+        onCancel={() => setDropboxFolderPrompt(null)}
+      />
       <AIChatPanel open={chatOpen} onClose={() => setChatOpen(false)} conversation={conversation} sending={chatSending} sendMessage={sendToHygge} />
-      <TaskDetailPanel task={detailTask} allTasks={tasks} allSpaces={allSpaces} onClose={() => setDetailTaskId(null)} onUpdate={updateTask} onToggle={toggleTask} onAddComment={addComment} onAddAttachment={addAttachment} onRemoveAttachment={removeAttachment} onAddSubtask={addSubtask} onDuplicate={duplicateTask} setTaskStatus={setTaskStatus} />
+      <TaskDetailPanel task={detailTask} allTasks={tasks} allSpaces={allSpaces} onClose={() => setDetailTaskId(null)} onUpdate={updateTask} onToggle={toggleTask} onAddComment={addComment} onAddAttachment={addAttachment} onRemoveAttachment={removeAttachment} onAddSubtask={addSubtask} onDuplicate={duplicateTask} setTaskStatus={setTaskStatus} onDelete={deleteTaskCascade} />
       <TerrenoDetailPanel terreno={terrenos.find(t => t.id === selectedTerrenoId)} users={users} onClose={() => setSelectedTerrenoId(null)} onUpdate={updateTerreno} onDelete={deleteTerreno} />
       {customViewEditOpen && (
         <CustomViewConfigModal initial={customViewEditInitial}
