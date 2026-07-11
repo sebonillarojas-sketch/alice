@@ -179,7 +179,7 @@ const LAB_TOOLS = [
 
 const TOOLS = [
   { id: "alicia", label: "Alicia", icon: Bot, dot: "#A855F7" },
-  { id: "inbox", label: "Inbox", icon: InboxIcon, dot: "#3D52D5" },
+  { id: "inbox", label: "Sin asignar", icon: InboxIcon, dot: "#3D52D5" },
   { id: "messages", label: "Mensajes", icon: MessageSquare, dot: "#A89BD9" },
   { id: "calendar-tool", label: "Calendario", icon: CalIcon, dot: "#5F8A6A" },
   { id: "wikihygge", label: "WikiHygge", icon: FileText, dot: "#C2A45A" },
@@ -2011,10 +2011,28 @@ function Chip({ label, color }) {
   );
 }
 
+const SMART_CAPTURE_PLACEHOLDERS = [
+  'Pago contadores 3500 mañana',
+  'Reunión con José el lunes 10am',
+  'Conformidad DC01 · Ariel viernes',
+  'Detracción Daniel Yep 1200 usd',
+  'Revisar planos L36 · entrega jueves',
+  'Prospecto Miraflores 140m²',
+  'Llamar a Fit Capital · estados PU01',
+  'Pago luz oficina 850 viernes',
+  'Brief marketing TG01 · Vanessa',
+  'Escritura Legendre · citar a Galup lunes',
+];
+
 function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmartView, currentSpaceContext }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [phIdx, setPhIdx] = useState(() => Math.floor(Math.random() * SMART_CAPTURE_PLACEHOLDERS.length));
+  useEffect(() => {
+    const t = setInterval(() => setPhIdx(i => (i + 1) % SMART_CAPTURE_PLACEHOLDERS.length), 3500);
+    return () => clearInterval(t);
+  }, []);
 
   const submit = async () => {
     if (!text.trim() || loading) return;
@@ -2040,7 +2058,7 @@ function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmart
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } if (e.key === "Escape") { setText(""); setPreview(null); } }}
-          placeholder='Tirá lo que sea: "Pago Daniel 4500 viernes"…'
+          placeholder={`Ej: "${SMART_CAPTURE_PLACEHOLDERS[phIdx]}"…`}
           className="flex-1 min-w-0 outline-none bg-transparent text-[13px]"
           style={{ color: C.ink, fontWeight: 500 }}
           disabled={loading || !!preview} />
@@ -7267,9 +7285,9 @@ function InboxView({ tasks, allSpaces, users, onUpdate, onDelete, onToggle, open
       <div className="mb-8 flex items-end justify-between flex-wrap gap-3">
         <div>
           <NavyRule />
-          <div className="mt-4"><Eyebrow>Inbox · {items.length}</Eyebrow></div>
-          <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Bandeja de capturas</h1>
-          <div className="text-[12px] mt-2" style={{ color: C.muted }}>Items capturados por Smart Capture o agregados directamente acá. Triage: asigná a un space, borrá, o agrupá.</div>
+          <div className="mt-4"><Eyebrow>Sin asignar · {items.length}</Eyebrow></div>
+          <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Tareas sin asignar</h1>
+          <div className="text-[12px] mt-2" style={{ color: C.muted }}>Capturas que aún no tienen space. Asigná, mové, o eliminá.</div>
         </div>
       </div>
 
@@ -7321,7 +7339,7 @@ function InboxView({ tasks, allSpaces, users, onUpdate, onDelete, onToggle, open
       {items.length === 0 && (
         <div className="text-center py-16" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
           <Sparkles size={28} style={{ color: C.muted, margin: "0 auto 12px" }} />
-          <div className="text-[14px]" style={{ color: C.ink, fontWeight: 500 }}>Inbox vacío</div>
+          <div className="text-[14px]" style={{ color: C.ink, fontWeight: 500 }}>Sin tareas pendientes de asignar</div>
           <div className="text-[11px] mt-1" style={{ color: C.muted }}>Tirá algo en Smart Capture arriba — aparecerá acá.</div>
         </div>
       )}
