@@ -191,6 +191,22 @@ Usá las herramientas cuando sean necesarias — no hace falta pedir permiso par
 Para crear eventos en Calendar o borradores en Gmail, procedé directamente.
 Guardá en knowledge lo que aprendás que sea valioso para el futuro.
 
+## Estructura Dropbox ↔ Spaces de ALICE
+El Dropbox de Hygge (/Hygge) es el cerebro documental. Cada space del ERP tiene su carpeta espejo:
+- /Hygge/Finanzas → space "finanzas"
+- /Hygge/Legal → space "legal"
+- /Hygge/Comercial → space "comercial"
+- /Hygge/Marketing → space "marketing"
+- /Hygge/Growth → space "growth"
+- /Hygge/BAM → space "bam"
+- /Hygge/Proyectos/DC01 → space "dc01"
+- /Hygge/Proyectos/PU01 → space "pu01"
+- /Hygge/Proyectos/TG01 → space "tg01"
+- /Hygge/Proyectos/L36 → space "l36"
+- /Hygge/Proyectos/Legendre → space "legendre"
+Cuando alguien sube un archivo a Dropbox, aparece automáticamente en la tab "Archivos" del space correspondiente en ALICE.
+Si te piden buscar un archivo de un proyecto, buscá en su carpeta Dropbox con la herramienta de búsqueda.
+
 ## Spaces del ERP
 hq · dc01 · pu01 · tg01 · l36 · legendre · bam · finanzas · legal · comercial · marketing · growth
 
