@@ -5912,37 +5912,87 @@ function WikiLinkEditModal({ initial, onSave, onClose }) {
   );
 }
 
+const ALICIA_BRAIN_URL = "https://aliceai.bam.pe";
+
+const dbxFileType = (name = "") => {
+  const ext = name.split(".").pop().toLowerCase();
+  if (["xlsx", "xls", "csv", "numbers"].includes(ext)) return "sheet";
+  if (["docx", "doc", "pages", "txt", "md"].includes(ext)) return "doc";
+  if (["pptx", "ppt", "key"].includes(ext)) return "slides";
+  if (ext === "pdf") return "pdf";
+  return "other";
+};
+
 function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewports, knowledgeLinks, setKnowledgeLinks, navigate }) {
-  const [activeTab, setActiveTab] = useState("drive"); // drive | viewports | links
-  const [currentFolderId, setCurrentFolderId] = useState("root");
+  const [activeTab, setActiveTab] = useState("dropbox"); // dropbox | viewports | links
+  const [currentPath, setCurrentPath] = useState("/Hygge"); // Dropbox path raíz
+  const [pathStack, setPathStack] = useState([{ name: "Hygge", path: "/Hygge" }]); // breadcrumb stack
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [dbxError, setDbxError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null); // null = not searching
+  const [searching, setSearching] = useState(false);
   const [viewMode, setViewMode] = useState("grid"); // grid | list
 
-  const currentFolder = WIKIHYGGE_TREE[currentFolderId];
-
-  // Breadcrumb path
-  const breadcrumb = useMemo(() => {
-    const path = [];
-    let node = currentFolder;
-    while (node) {
-      path.unshift(node);
-      node = node.parent ? WIKIHYGGE_TREE[node.parent] : null;
+  // Fetch folder contents from backend
+  const fetchFolder = useCallback(async (path) => {
+    setLoading(true);
+    setDbxError(null);
+    setSelectedFile(null);
+    setSearchResults(null);
+    try {
+      const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(path)}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Error ${res.status}`);
+      }
+      const data = await res.json();
+      setEntries(data.entries || []);
+    } catch (e) {
+      setDbxError(e.message);
+      setEntries([]);
+    } finally {
+      setLoading(false);
     }
-    return path;
-  }, [currentFolderId]);
+  }, []);
 
-  // Children visible in current folder
-  const children = useMemo(() => {
-    if (!currentFolder?.children) return [];
-    const items = currentFolder.children.map(cid => WIKIHYGGE_TREE[cid]).filter(Boolean);
-    if (!query.trim()) return items;
-    const q = query.toLowerCase();
-    return items.filter(it => (it.name || "").toLowerCase().includes(q));
-  }, [currentFolder, query]);
+  useEffect(() => { if (activeTab === "drive") fetchFolder(currentPath); }, [activeTab]);
 
-  const folders = children.filter(c => c.type === "folder");
-  const files = children.filter(c => c.type !== "folder");
+  const navigateTo = (name, path) => {
+    setCurrentPath(path);
+    setPathStack(prev => [...prev, { name, path }]);
+    setQuery("");
+    fetchFolder(path);
+  };
+
+  const navigateToIndex = (idx) => {
+    const entry = pathStack[idx];
+    setPathStack(prev => prev.slice(0, idx + 1));
+    setCurrentPath(entry.path);
+    setQuery("");
+    fetchFolder(entry.path);
+  };
+
+  // Search
+  useEffect(() => {
+    if (!query.trim()) { setSearchResults(null); return; }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setSearchResults(data.results || []);
+      } catch { setSearchResults([]); }
+      finally { setSearching(false); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const visibleEntries = searchResults !== null ? searchResults : entries;
+  const folders = visibleEntries.filter(e => e.type === "folder");
+  const files = visibleEntries.filter(e => e.type !== "folder");
 
   // File type icon + color
   const FileIcon = ({ type, size = 18 }) => {
@@ -6017,7 +6067,7 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
           WikiHygge
         </h1>
         <p style={{ fontSize: 13, color: C.muted, marginTop: 4, fontStyle: "italic" }}>
-          Todo el conocimiento de Hygge en una sola estructura: archivos en Drive · viewports embebidos por space · links externos curados.
+          Todo el conocimiento de Hygge en una sola estructura: Dropbox en tiempo real · viewports embebidos por space · links externos curados.
         </p>
       </div>
 
@@ -6025,7 +6075,7 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
         <div className="flex items-center gap-1">
           {[
-            { id: "drive", label: "Drive", icon: FileText, count: null },
+            { id: "dropbox", label: "Dropbox", icon: FileText, count: null },
             { id: "viewports", label: "Viewports", icon: Globe, count: Object.keys(spaceViewports || {}).length },
             { id: "links", label: "Links", icon: ExternalLink, count: (knowledgeLinks || []).length },
           ].map(t => {
@@ -6042,199 +6092,160 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
             );
           })}
         </div>
-        <WikiCreateMenu currentFolder={currentFolder} setActiveTab={setActiveTab} />
+        <button onClick={() => { fetchFolder(currentPath); }} title="Refrescar" className="p-1.5 hover:opacity-70" style={{ color: C.muted }}>
+          <RefreshCw size={12} />
+        </button>
       </div>
 
       {activeTab === "viewports" && <WikiViewportsTab viewports={spaceViewports} setViewports={setSpaceViewports} allSpaces={allSpaces} navigate={navigate} />}
       {activeTab === "links" && <WikiLinksTab links={knowledgeLinks} setLinks={setKnowledgeLinks} />}
-      {activeTab === "drive" && (
+      {activeTab === "dropbox" && (
         <>
-
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 flex-wrap mb-4 text-[12px]">
-        {breadcrumb.map((node, i) => (
-          <React.Fragment key={node.id}>
-            <button
-              onClick={() => { setCurrentFolderId(node.id); setSelectedFile(null); }}
-              className="hover:opacity-70"
-              style={{
-                color: i === breadcrumb.length - 1 ? C.ink : C.muted,
-                fontWeight: i === breadcrumb.length - 1 ? 600 : 500,
-              }}
-            >
-              {node.name}
-            </button>
-            {i < breadcrumb.length - 1 && <span style={{ color: C.muted }}>/</span>}
-          </React.Fragment>
-        ))}
-      </div>
-
-      {/* Section description (at root or section level) */}
-      {currentFolderId !== "root" && sectionDescription[currentFolderId] && (
-        <div className="mb-5 p-3.5" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-          <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 4 }}>
-            {currentFolder.section || "Área"}
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-4 text-[12px]">
+            {pathStack.map((node, i) => (
+              <React.Fragment key={i}>
+                <button onClick={() => navigateToIndex(i)} className="hover:opacity-70"
+                  style={{ color: i === pathStack.length - 1 ? C.ink : C.muted, fontWeight: i === pathStack.length - 1 ? 600 : 500 }}>
+                  {node.name}
+                </button>
+                {i < pathStack.length - 1 && <span style={{ color: C.muted }}>/</span>}
+              </React.Fragment>
+            ))}
           </div>
-          <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.55 }}>
-            {sectionDescription[currentFolderId]}
-          </div>
-        </div>
-      )}
 
-      {/* Phase description (SPV phases) */}
-      {currentFolder?.phase && phaseDescription[currentFolder.phase] && (
-        <div className="mb-5 p-3" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: 9, color: C.cobalt, fontWeight: 700, letterSpacing: "0.1em" }}>FASE {currentFolder.phase}</span>
-            <span style={{ fontSize: 11, color: C.inkSoft }}>{phaseDescription[currentFolder.phase]}</span>
+          {/* Toolbar */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 flex-1 min-w-[180px]" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+              <Search size={11} style={{ color: C.muted }} />
+              <input value={query} onChange={e => setQuery(e.target.value)}
+                placeholder="Buscar en Dropbox Hygge…"
+                className="flex-1 outline-none bg-transparent"
+                style={{ fontSize: 12, color: C.ink, fontFamily: "inherit" }} />
+              {searching && <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: C.muted }} />}
+              {query && <button onClick={() => setQuery("")}><X size={10} style={{ color: C.muted }} /></button>}
+            </div>
+            <div className="flex items-center" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+              <button onClick={() => setViewMode("grid")} className="px-2 py-1.5" style={{ backgroundColor: viewMode === "grid" ? C.ink : "transparent", color: viewMode === "grid" ? C.bg : C.muted, fontSize: 10 }}>Grid</button>
+              <button onClick={() => setViewMode("list")} className="px-2 py-1.5" style={{ backgroundColor: viewMode === "list" ? C.ink : "transparent", color: viewMode === "list" ? C.bg : C.muted, fontSize: 10 }}>Lista</button>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Toolbar: search + view mode + open in Drive */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 flex-1 min-w-[180px]" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-          <Search size={11} style={{ color: C.muted }} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Buscar en ${currentFolder?.name || "WikiHygge"}...`}
-            className="flex-1 outline-none bg-transparent"
-            style={{ fontSize: 12, color: C.ink, fontFamily: "inherit" }}
-          />
-        </div>
-        {driveUrl(currentFolder) && (
-          <a href={driveUrl(currentFolder)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] hover:opacity-80" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600 }}>
-            <ArrowRight size={10} /> Abrir en Drive
-          </a>
-        )}
-        <div className="flex items-center" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-          <button onClick={() => setViewMode("grid")} className="px-2 py-1.5" style={{ backgroundColor: viewMode === "grid" ? C.ink : "transparent", color: viewMode === "grid" ? C.bg : C.muted, fontSize: 10 }}>Grid</button>
-          <button onClick={() => setViewMode("list")} className="px-2 py-1.5" style={{ backgroundColor: viewMode === "list" ? C.ink : "transparent", color: viewMode === "list" ? C.bg : C.muted, fontSize: 10 }}>Lista</button>
-        </div>
-      </div>
-
-      {/* Folders + Files */}
-      {folders.length === 0 && files.length === 0 ? (
-        <div className="text-center py-12" style={{ backgroundColor: C.paper, border: `1px dashed ${C.lineSoft}`, borderRadius: 2 }}>
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>
-            {query.trim() ? "Sin resultados" : "Carpeta vacía"}
-          </div>
-          {!query.trim() && currentFolder?.driveId && (
-            <a href={driveUrl(currentFolder)} target="_blank" rel="noreferrer" className="text-[11px] hover:opacity-80 inline-flex items-center gap-1 mt-1" style={{ color: C.cobalt, fontWeight: 600 }}>
-              Ver en Drive <ArrowRight size={10} />
-            </a>
+          {/* Error */}
+          {dbxError && (
+            <div className="mb-4 p-3 text-[12px]" style={{ backgroundColor: `${C.brick}10`, border: `1px solid ${C.brick}30`, borderRadius: 2, color: C.brick }}>
+              {dbxError}
+            </div>
           )}
-        </div>
-      ) : (
-        <>
-          {/* FOLDERS */}
-          {folders.length > 0 && (
-            <div className="mb-6">
-              <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
-                Carpetas · {folders.length}
-              </div>
-              {viewMode === "grid" ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {folders.map(f => (
-                    <button key={f.id} onClick={() => { setCurrentFolderId(f.id); setSelectedFile(null); setQuery(""); }}
-                      className="text-left p-3 flex items-center gap-3 hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-                      <FolderIcon size={18} />
-                      <div className="flex-1 min-w-0">
-                        <div style={{ fontSize: 12, color: C.ink, fontWeight: 600, lineHeight: 1.3 }} className="truncate">{f.name}</div>
-                        {f.code && <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.08em", marginTop: 1 }}>{f.code}</div>}
-                        {f.children && f.children.length > 0 && (
-                          <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{f.children.length} items</div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center gap-2 py-8 justify-center" style={{ color: C.muted }}>
+              <Loader2 size={14} className="animate-spin" />
+              <span style={{ fontSize: 12 }}>Cargando Dropbox…</span>
+            </div>
+          )}
+
+          {/* Content */}
+          {!loading && !dbxError && (
+            <>
+              {folders.length === 0 && files.length === 0 ? (
+                <div className="text-center py-12" style={{ backgroundColor: C.paper, border: `1px dashed ${C.lineSoft}`, borderRadius: 2 }}>
+                  <div style={{ fontSize: 13, color: C.muted }}>{query.trim() ? "Sin resultados" : "Carpeta vacía"}</div>
                 </div>
               ) : (
-                <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-                  {folders.map((f, i) => (
-                    <button key={f.id} onClick={() => { setCurrentFolderId(f.id); setSelectedFile(null); setQuery(""); }}
-                      className="w-full text-left px-3 py-2 flex items-center gap-3 hover:opacity-90"
-                      style={{ backgroundColor: C.paper, borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none" }}>
-                      <FolderIcon size={14} />
-                      <div className="flex-1 min-w-0">
-                        <div style={{ fontSize: 12, color: C.ink, fontWeight: 600 }} className="truncate">{f.name}</div>
+                <>
+                  {/* FOLDERS */}
+                  {folders.length > 0 && (
+                    <div className="mb-6">
+                      <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+                        Carpetas · {folders.length}
                       </div>
-                      {f.children && f.children.length > 0 && (
-                        <span style={{ fontSize: 9, color: C.muted, letterSpacing: "0.06em" }}>{f.children.length} items</span>
+                      {viewMode === "grid" ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {folders.map(f => (
+                            <button key={f.path} onClick={() => navigateTo(f.name, f.path)}
+                              className="text-left p-3 flex items-center gap-3 hover:opacity-90"
+                              style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                              <FolderIcon size={18} />
+                              <div className="flex-1 min-w-0">
+                                <div style={{ fontSize: 12, color: C.ink, fontWeight: 600, lineHeight: 1.3 }} className="truncate">{f.name}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                          {folders.map((f, i) => (
+                            <button key={f.path} onClick={() => navigateTo(f.name, f.path)}
+                              className="w-full text-left px-3 py-2 flex items-center gap-3 hover:opacity-90"
+                              style={{ backgroundColor: C.paper, borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none" }}>
+                              <FolderIcon size={14} />
+                              <div className="flex-1 min-w-0">
+                                <div style={{ fontSize: 12, color: C.ink, fontWeight: 600 }} className="truncate">{f.name}</div>
+                              </div>
+                              <ChevronRight size={12} style={{ color: C.muted }} />
+                            </button>
+                          ))}
+                        </div>
                       )}
-                      <ChevronRight size={12} style={{ color: C.muted }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    </div>
+                  )}
 
-          {/* FILES */}
-          {files.length > 0 && (
-            <div>
-              <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
-                Archivos · {files.length}
-              </div>
-              <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-                {files.map((f, i) => (
-                  <button key={f.id} onClick={() => setSelectedFile(f)}
-                    className="w-full text-left px-3 py-2.5 flex items-center gap-3 hover:opacity-90"
-                    style={{ backgroundColor: selectedFile?.id === f.id ? `${C.cobalt}10` : C.paper, borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none", borderLeft: selectedFile?.id === f.id ? `2px solid ${C.cobalt}` : "2px solid transparent" }}>
-                    <FileIcon type={f.type} size={14} />
-                    <div className="flex-1 min-w-0">
-                      <div style={{ fontSize: 12, color: C.ink, fontWeight: 600 }} className="truncate">{f.name}</div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span style={{ fontSize: 9, color: C.muted }}>{sourceLabel(f)}</span>
-                        {f.modified && <span style={{ fontSize: 9, color: C.muted }}>· {f.modified}</span>}
-                        {f.owner && <span style={{ fontSize: 9, color: C.muted }}>· {f.owner}</span>}
+                  {/* FILES */}
+                  {files.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+                        Archivos · {files.length}
+                      </div>
+                      <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                        {files.map((f, i) => (
+                          <button key={f.path} onClick={() => setSelectedFile(selectedFile?.path === f.path ? null : f)}
+                            className="w-full text-left px-3 py-2.5 flex items-center gap-3 hover:opacity-90"
+                            style={{ backgroundColor: selectedFile?.path === f.path ? `${C.cobalt}10` : C.paper, borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none", borderLeft: selectedFile?.path === f.path ? `2px solid ${C.cobalt}` : "2px solid transparent" }}>
+                            <FileIcon type={dbxFileType(f.name)} size={14} />
+                            <div className="flex-1 min-w-0">
+                              <div style={{ fontSize: 12, color: C.ink, fontWeight: 600 }} className="truncate">{f.name}</div>
+                              {f.modified && <div style={{ fontSize: 9, color: C.muted, marginTop: 1 }}>{f.modified?.slice(0, 10)}{f.size ? ` · ${(f.size / 1024).toFixed(0)} KB` : ""}</div>}
+                            </div>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                    {driveUrl(f) && (
-                      <a href={driveUrl(f)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[9px] px-2 py-1 hover:opacity-80" style={{ color: C.cobalt, border: `1px solid ${C.cobalt}40`, borderRadius: 2, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                        Abrir
-                      </a>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+                  )}
+                </>
+              )}
 
-      {/* File detail panel */}
-      {selectedFile && (
-        <div className="mt-5 p-4" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <FileIcon type={selectedFile.type} size={20} />
-              <div className="flex-1 min-w-0">
-                <div style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{selectedFile.name}</div>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{sourceLabel(selectedFile)} · {selectedFile.owner || "—"} · modificado {selectedFile.modified || "—"}</div>
-              </div>
-            </div>
-            <button onClick={() => setSelectedFile(null)} className="p-1 hover:opacity-70"><X size={12} style={{ color: C.muted }} /></button>
-          </div>
-          {selectedFile.note && (
-            <div className="text-[12px] mb-3" style={{ color: C.inkSoft, lineHeight: 1.55, fontStyle: "italic" }}>{selectedFile.note}</div>
-          )}
-          {driveUrl(selectedFile) && (
-            <a href={driveUrl(selectedFile)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600, letterSpacing: "0.04em" }}>
-              <ArrowRight size={11} /> Abrir en {sourceLabel(selectedFile)}
-            </a>
-          )}
-        </div>
-      )}
+              {/* File detail */}
+              {selectedFile && (
+                <div className="mt-4 p-4" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileIcon type={dbxFileType(selectedFile.name)} size={20} />
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{selectedFile.name}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>
+                          Dropbox · {selectedFile.path} · {selectedFile.modified?.slice(0, 10) || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => setSelectedFile(null)} className="p-1 hover:opacity-70"><X size={12} style={{ color: C.muted }} /></button>
+                  </div>
+                  <a href={`https://www.dropbox.com/home${selectedFile.path}`} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:opacity-90"
+                    style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>
+                    <ArrowRight size={11} /> Abrir en Dropbox
+                  </a>
+                </div>
+              )}
 
-      {/* Footer note */}
-      <div className="mt-8 pt-4" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-        <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.08em", lineHeight: 1.6 }}>
-          WikiHygge muestra la estructura de tu Drive con vocabulario Hygge · cuando exista backend, sincroniza automáticamente con Drive, Miro y la suite · por ahora es un snapshot de la jerarquía con los archivos clave anclados
-        </div>
-      </div>
+              <div className="mt-8 pt-4" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+                <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.08em" }}>
+                  Conectado a Dropbox Hygge · datos en tiempo real vía aliceai.bam.pe
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
