@@ -425,6 +425,33 @@ app.post("/api/briefing", async (req, res) => {
   }
 });
 
+// ── Dropbox browse API (used by WikiHygge in ALICE frontend) ─────────────────
+
+app.get("/api/dropbox/browse", async (req, res) => {
+  try {
+    const path = req.query.path || "";
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    const entries = await dropbox.listFolder(path);
+    res.json({ path, entries });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/dropbox/search", async (req, res) => {
+  try {
+    const q = req.query.q || "";
+    if (!q.trim()) return res.json({ results: [] });
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    const results = await dropbox.search({ query: q, maxResults: 20 });
+    res.json({ results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/health", (_, res) => res.json({
   ok: true, service: "alicia-brain",
   erp: process.env.ERP_URL || "http://localhost:3002",
