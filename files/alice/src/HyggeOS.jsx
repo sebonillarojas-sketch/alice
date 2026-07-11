@@ -324,9 +324,26 @@ const VIEWS = [
   { id: "gantt", label: "Gantt", icon: GanttChart },
   { id: "calendar", label: "Calendario", icon: CalIcon },
   { id: "table", label: "Tabla", icon: Table2 },
+  { id: "archivos", label: "Archivos", icon: FileText },
   { id: "whiteboard", label: "Whiteboard", icon: PenSquare },
   { id: "viewport", label: "Viewport", icon: Globe },
 ];
+
+// Mapeo Space → carpeta Dropbox
+const SPACE_DROPBOX_PATHS = {
+  "hq":          "/Hygge",
+  "finanzas":    "/Hygge/Finanzas",
+  "legal":       "/Hygge/Legal",
+  "comercial":   "/Hygge/Comercial",
+  "marketing":   "/Hygge/Marketing",
+  "growth":      "/Hygge/Growth",
+  "bam":         "/Hygge/BAM",
+  "dc01":        "/Hygge/Proyectos/DC01",
+  "pu01":        "/Hygge/Proyectos/PU01",
+  "tg01":        "/Hygge/Proyectos/TG01",
+  "l36":         "/Hygge/Proyectos/L36",
+  "legendre":    "/Hygge/Proyectos/Legendre",
+};
 
 const SPVS = [
   { code: "DC01", name: "Hygge Del Castillo", district: "San Isidro", totalUnits: 6, sold: 4, construction: 67, salesPEN: 4_200_000, targetPEN: 6_300_000, margin: 18.4, status: "En curso", statusTone: "navy", nextMilestone: "Casco terminado · 12 jun" },
@@ -1896,8 +1913,9 @@ function ViewTabs({ active, setActive, onAdd, onFilterClick, activeFilterCount, 
     };
   }, [addOpen, computePosition]);
 
-  // Filter views: whiteboard + viewport tabs hidden unless their feature is on
+  // Filter views: archivos/whiteboard/viewport tabs hidden unless their feature is on
   const filteredViews = VIEWS.filter(v => {
+    if (v.id === "archivos" && !features.archivos) return false;
     if (v.id === "whiteboard" && !features.whiteboards) return false;
     if (v.id === "viewport" && !features.viewport) return false;
     return true;
@@ -1909,6 +1927,7 @@ function ViewTabs({ active, setActive, onAdd, onFilterClick, activeFilterCount, 
   };
 
   const featureToggles = [
+    { id: "archivos", label: "Archivos (Dropbox)", icon: FileText, hint: "Carpeta de Dropbox anclada a este space · tiempo real" },
     { id: "whiteboards", label: "Whiteboard", icon: PenSquare, hint: "Pizarra · stickies, shapes, lápiz con presión Apple Pencil" },
     { id: "viewport", label: "Viewport Externo", icon: Globe, hint: "Iframe a URL externa (Sheets, Miro, etc.)" },
     { id: "customViews", label: "Custom Views", icon: PieChartIcon, hint: "Charts, KPIs, embeds custom por space" },
@@ -6422,6 +6441,151 @@ function AppEmbedView({ app, currentUser, currentSpace }) {
           allow="fullscreen; geolocation; clipboard-write"
         />
       </div>
+    </div>
+  );
+}
+
+function SpaceArchivosView({ spaceId }) {
+  const rootPath = SPACE_DROPBOX_PATHS[spaceId] || "/Hygge";
+  const [currentPath, setCurrentPath] = useState(rootPath);
+  const [pathStack, setPathStack] = useState([{ name: rootPath.split("/").pop(), path: rootPath }]);
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  const fetchFolder = useCallback(async (path) => {
+    setLoading(true); setError(null); setSelectedFile(null); setSearchResults(null);
+    try {
+      const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(path)}`);
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
+      const data = await res.json();
+      setEntries(data.entries || []);
+    } catch (e) { setError(e.message); setEntries([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchFolder(rootPath); }, [spaceId]);
+
+  const navigateTo = (name, path) => { setCurrentPath(path); setPathStack(p => [...p, { name, path }]); setQuery(""); fetchFolder(path); };
+  const navigateToIdx = (i) => { const e = pathStack[i]; setPathStack(p => p.slice(0, i + 1)); setCurrentPath(e.path); setQuery(""); fetchFolder(e.path); };
+
+  useEffect(() => {
+    if (!query.trim()) { setSearchResults(null); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try { const r = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/search?q=${encodeURIComponent(query)}`); const d = await r.json(); setSearchResults(d.results || []); }
+      catch { setSearchResults([]); } finally { setSearching(false); }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const visible = searchResults !== null ? searchResults : entries;
+  const folders = visible.filter(e => e.type === "folder");
+  const files = visible.filter(e => e.type !== "folder");
+
+  const FolderIcon = () => (
+    <svg width="22" height="22" viewBox="0 0 26 26" fill="none" className="flex-shrink-0">
+      <path d="M3 7 L3 21 L23 21 L23 9 L13 9 L11 7 Z" fill={C.paper} stroke={C.ink} strokeWidth="1.2" />
+      <line x1="3" y1="11" x2="23" y2="11" stroke={C.ink} strokeWidth="0.6" opacity="0.4" />
+    </svg>
+  );
+
+  return (
+    <div className="px-4 lg:px-7 py-5">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-4 text-[12px]">
+        {pathStack.map((node, i) => (
+          <React.Fragment key={i}>
+            <button onClick={() => navigateToIdx(i)} className="hover:opacity-70"
+              style={{ color: i === pathStack.length - 1 ? C.ink : C.muted, fontWeight: i === pathStack.length - 1 ? 600 : 400 }}>
+              {node.name}
+            </button>
+            {i < pathStack.length - 1 && <span style={{ color: C.muted }}>/</span>}
+          </React.Fragment>
+        ))}
+        <button onClick={() => fetchFolder(currentPath)} className="ml-1 hover:opacity-70" title="Refrescar">
+          <RefreshCw size={11} style={{ color: C.muted }} />
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 mb-4" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+        <Search size={11} style={{ color: C.muted }} />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar archivos…"
+          className="flex-1 outline-none bg-transparent" style={{ fontSize: 12, color: C.ink, fontFamily: "inherit" }} />
+        {searching && <Loader2 size={11} className="animate-spin" style={{ color: C.muted }} />}
+        {query && <button onClick={() => setQuery("")}><X size={10} style={{ color: C.muted }} /></button>}
+      </div>
+
+      {error && <div className="p-3 mb-3 text-[12px]" style={{ backgroundColor: `${C.brick}10`, border: `1px solid ${C.brick}30`, borderRadius: 2, color: C.brick }}>{error}</div>}
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-10 justify-center" style={{ color: C.muted }}>
+          <Loader2 size={14} className="animate-spin" /><span style={{ fontSize: 12 }}>Cargando…</span>
+        </div>
+      ) : (
+        <>
+          {folders.length === 0 && files.length === 0 ? (
+            <div className="text-center py-10" style={{ backgroundColor: C.paper, border: `1px dashed ${C.lineSoft}`, borderRadius: 2 }}>
+              <div style={{ fontSize: 12, color: C.muted }}>{query ? "Sin resultados" : "Carpeta vacía en Dropbox"}</div>
+            </div>
+          ) : (
+            <>
+              {folders.length > 0 && (
+                <div className="mb-5">
+                  <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>Carpetas · {folders.length}</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {folders.map(f => (
+                      <button key={f.path} onClick={() => navigateTo(f.name, f.path)}
+                        className="text-left p-3 flex items-center gap-2.5 hover:opacity-90"
+                        style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                        <FolderIcon />
+                        <span style={{ fontSize: 12, color: C.ink, fontWeight: 600 }} className="truncate">{f.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {files.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>Archivos · {files.length}</div>
+                  <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                    {files.map((f, i) => (
+                      <button key={f.path} onClick={() => setSelectedFile(selectedFile?.path === f.path ? null : f)}
+                        className="w-full text-left px-3 py-2.5 flex items-center gap-3 hover:opacity-90"
+                        style={{ backgroundColor: selectedFile?.path === f.path ? `${C.cobalt}10` : C.paper, borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none", borderLeft: selectedFile?.path === f.path ? `2px solid ${C.cobalt}` : "2px solid transparent" }}>
+                        <div className="flex items-center justify-center flex-shrink-0" style={{ width: 26, height: 26, backgroundColor: `${C.cobalt}15`, borderRadius: 2, fontSize: 7, fontWeight: 800, color: C.cobalt, letterSpacing: "0.04em" }}>
+                          {dbxFileType(f.name).toUpperCase().slice(0, 3)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div style={{ fontSize: 12, color: C.ink, fontWeight: 600 }} className="truncate">{f.name}</div>
+                          {f.modified && <div style={{ fontSize: 9, color: C.muted }}>{f.modified.slice(0, 10)}{f.size ? ` · ${(f.size / 1024).toFixed(0)} KB` : ""}</div>}
+                        </div>
+                        {selectedFile?.path === f.path && (
+                          <a href={`https://www.dropbox.com/home${f.path}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                            className="text-[9px] px-2 py-1 flex-shrink-0 hover:opacity-80"
+                            style={{ color: C.cobalt, border: `1px solid ${C.cobalt}40`, borderRadius: 2, fontWeight: 600, letterSpacing: "0.06em" }}>
+                            Abrir
+                          </a>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          <div className="mt-6 pt-3" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.06em" }}>
+              Dropbox · {currentPath} · tiempo real via aliceai.bam.pe
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -12846,6 +13010,7 @@ REGLAS:
     if (view === "gantt") return <GanttView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} />;
     if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} />;
     if (view === "table") return <TableView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} />;
+    if (view === "archivos") return <SpaceArchivosView spaceId={currentSpace} />;
     if (view === "viewport") return <ViewportView spaceId={currentSpace} currentSpace={currentSpace} viewports={spaceViewports} setViewports={setSpaceViewports} />;
     // Custom views
     const activeCustom = currentCustomViews.find(v => v.id === view);
