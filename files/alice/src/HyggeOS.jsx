@@ -188,6 +188,17 @@ const TOOLS = [
 ];
 const isToolId = (id) => TOOLS.some(t => t.id === id);
 
+// ─── TASK STATUSES ───────────────────────────────────────────────────────────
+const TASK_STATUSES = [
+  { id: "pendiente",   label: "Pendiente",   color: "#6B6863", icon: "○" },
+  { id: "en_proceso",  label: "En proceso",  color: "#3D52D5", icon: "◑" },
+  { id: "en_revision", label: "En revisión", color: "#C2A45A", icon: "◐" },
+  { id: "postergada",  label: "Postergada",  color: "#A85B5B", icon: "⊘" },
+  { id: "completada",  label: "Completada",  color: "#5F8A6A", icon: "●" },
+];
+const getTaskStatus = (t) => t.status || (t.checked ? "completada" : "pendiente");
+const taskStatusDef = (id) => TASK_STATUSES.find(s => s.id === id) || TASK_STATUSES[0];
+
 // ─── APPS · Artifacts externos embebidos como iframes ──────────────────────
 // Filosofía: cada app vive en su propio repo y deployment · Hygge OS las descubre
 // y embebe vía iframe full-height. Si una app se rompe, Hygge OS sigue andando.
@@ -222,12 +233,12 @@ const APPS = [
   },
   {
     id: "app-diagramatic",
-    label: "Diagramatic",
+    label: "Whiteboard",
     icon: PenSquare,
     dot: "#3C5A78",
-    url: "/diagramatic.html",
-    description: "Canvas libre · formas, conectores, stickies, dibujo a mano",
-    badge: "v1.0",
+    url: null,
+    description: "Canvas libre · stickies, shapes, flechas, iconos + lápiz Apple Pencil",
+    badge: "v2.0",
     native: true,
   },
   {
@@ -728,7 +739,7 @@ const Avatar = ({ personId, size = 24 }) => {
 };
 
 // ═══ TASK DETAIL PANEL ═══════════════════════════════════════════════════
-function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, onToggle, onAddComment, onAddAttachment, onRemoveAttachment, onAddSubtask, onDuplicate }) {
+function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, onToggle, onAddComment, onAddAttachment, onRemoveAttachment, onAddSubtask, onDuplicate, setTaskStatus }) {
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
   const [comment, setComment] = useState("");
@@ -819,9 +830,13 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
         {/* Header */}
         <div className="px-8 py-5 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div className="flex items-center gap-3">
-            <button onClick={() => onToggle(task.id)} className="hover:opacity-70">
-              {task.checked ? <CheckCircle2 size={20} style={{ color: C.green }} /> : <Circle size={20} style={{ color: C.muted }} />}
-            </button>
+            {setTaskStatus ? (
+              <StatusMenu task={task} setTaskStatus={setTaskStatus} size={20} />
+            ) : (
+              <button onClick={() => onToggle(task.id)} className="hover:opacity-70">
+                {task.checked ? <CheckCircle2 size={20} style={{ color: C.green }} /> : <Circle size={20} style={{ color: C.muted }} />}
+              </button>
+            )}
             <Eyebrow>Tarea · {task.project}</Eyebrow>
           </div>
           <div className="flex items-center gap-2">
@@ -2088,11 +2103,47 @@ function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmart
 }
 
 
-function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, timerProps }) {
+function StatusMenu({ task, setTaskStatus, size = 15 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const status = getTaskStatus(task);
+  const def = taskStatusDef(status);
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  return (
+    <div ref={ref} className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
+      <button onClick={() => setOpen(o => !o)} title={def.label}
+        style={{ fontSize: size, lineHeight: 1, color: def.color, background: "none", border: "none", cursor: "pointer", padding: 1 }}>
+        {def.icon}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 w-[140px]"
+          style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}>
+          {TASK_STATUSES.map(s => (
+            <button key={s.id} onClick={() => { setTaskStatus(task.id, s.id); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:opacity-80"
+              style={{ backgroundColor: status === s.id ? C.surface : "transparent" }}>
+              <span style={{ fontSize: 13, color: s.color }}>{s.icon}</span>
+              <span style={{ fontSize: 11, color: C.ink, fontWeight: status === s.id ? 600 : 400 }}>{s.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, timerProps, setTaskStatus }) {
   const hasChildren = children && children.length > 0;
   const indent = depth * 28;
   const hasAttach = (task.attachments?.length || 0) > 0;
   const hasComments = (task.comments?.length || 0) > 0;
+  const status = getTaskStatus(task);
+  const isDone = status === "completada";
   return (
     <>
       <div className="px-6 py-3 flex items-center gap-3 group cursor-pointer hover:bg-opacity-50"
@@ -2103,10 +2154,14 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
             {task.expanded ? <ChevronDown size={12} style={{ color: C.muted }} /> : <ChevronRight size={12} style={{ color: C.muted }} />}
           </button>
         ) : depth > 0 ? <CornerDownRight size={11} style={{ color: C.mutedSoft, flexShrink: 0 }} /> : <span className="w-3" />}
-        <button onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }} className="flex-shrink-0">
-          {task.checked ? <CheckCircle2 size={15} style={{ color: C.green }} /> : <Circle size={15} style={{ color: C.muted }} />}
-        </button>
-        <div className="flex-1 text-[13px]" style={{ color: task.checked ? C.muted : C.ink, fontWeight: 500, textDecoration: task.checked ? "line-through" : "none" }}>
+        {setTaskStatus ? (
+          <StatusMenu task={task} setTaskStatus={setTaskStatus} size={15} />
+        ) : (
+          <button onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }} className="flex-shrink-0">
+            {task.checked ? <CheckCircle2 size={15} style={{ color: C.green }} /> : <Circle size={15} style={{ color: C.muted }} />}
+          </button>
+        )}
+        <div className="flex-1 text-[13px]" style={{ color: isDone ? C.muted : C.ink, fontWeight: 500, textDecoration: isDone ? "line-through" : "none" }}>
           {task.title}
         </div>
         {hasAttach && <Paperclip size={11} style={{ color: C.muted }} title={task.attachments.length + " adjunto(s)"} />}
@@ -2126,18 +2181,18 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
   );
 }
 
-function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, allSpaces, timerProps }) {
+function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, allSpaces, timerProps, setTaskStatus }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
   const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
   const all = tasks;
   const roots = all.filter(t => !t.parentId);
-  const open = roots.filter(t => !t.checked);
-  const done = roots.filter(t => t.checked);
+  const open = roots.filter(t => getTaskStatus(t) !== "completada");
+  const done = roots.filter(t => getTaskStatus(t) === "completada");
   const renderTree = (parent, depth = 0) => {
     const kids = all.filter(t => t.parentId === parent.id);
     return (
-      <TaskRow key={parent.id} task={parent} depth={depth} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} timerProps={timerProps}>
+      <TaskRow key={parent.id} task={parent} depth={depth} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} timerProps={timerProps} setTaskStatus={setTaskStatus}>
         {kids.length > 0 ? kids.map(k => renderTree(k, depth + 1)) : null}
       </TaskRow>
     );
@@ -2170,23 +2225,25 @@ function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, a
   );
 }
 
-function BoardView({ tasks, currentSpace, openDetail, allSpaces }) {
+function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
   const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
   const filtered = tasks.filter(t => !t.parentId);
-  const cols = [
-    { id: "todo", label: "Por hacer", color: C.muted, items: filtered.filter(t => !t.checked && t.priority !== "alta") },
-    { id: "doing", label: "En progreso", color: C.cobalt, items: filtered.filter(t => !t.checked && t.priority === "alta") },
-    { id: "done", label: "Completadas", color: C.green, items: filtered.filter(t => t.checked) },
-  ];
+  const cols = TASK_STATUSES.map(s => ({
+    ...s,
+    items: filtered.filter(t => getTaskStatus(t) === s.id),
+  }));
   return (
-    <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1280px] mx-auto">
+    <div className="px-4 lg:px-10 py-8 lg:py-12">
       <div className="mb-10"><NavyRule /><div className="mt-4"><Eyebrow>{spaceName} · board</Eyebrow></div><h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Kanban</h1><div className="text-[12px] mt-2" style={{ color: C.muted }}>{filtered.length} {filtered.length === 1 ? "tarea" : "tareas"}</div></div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-4" style={{ minWidth: 0 }}>
         {cols.map(col => (
-          <div key={col.id}>
-            <div className="flex items-center gap-2 mb-3"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} /><Eyebrow>{col.label} · {col.items.length}</Eyebrow></div>
+          <div key={col.id} style={{ minWidth: 220, width: 220, flexShrink: 0 }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span style={{ fontSize: 13, color: col.color }}>{col.icon}</span>
+              <Eyebrow>{col.label} · {col.items.length}</Eyebrow>
+            </div>
             <div className="space-y-2">
               {col.items.map(t => (
                 <button key={t.id} onClick={() => openDetail(t.id)} className="w-full p-4 text-left hover:translate-y-[-1px] transition-transform" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
@@ -2202,9 +2259,14 @@ function BoardView({ tasks, currentSpace, openDetail, allSpaces }) {
                       {t.assignee && <Avatar personId={t.assignee} size={18} />}
                     </div>
                   </div>
+                  {setTaskStatus && (
+                    <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.lineSoft}` }} onClick={e => e.stopPropagation()}>
+                      <StatusMenu task={t} setTaskStatus={setTaskStatus} size={13} />
+                    </div>
+                  )}
                 </button>
               ))}
-              {col.items.length === 0 && <div className="p-4 text-[11px] text-center" style={{ color: C.mutedSoft }}>—</div>}
+              {col.items.length === 0 && <div className="p-4 text-[11px] text-center" style={{ color: C.muted, opacity: 0.5 }}>—</div>}
             </div>
           </div>
         ))}
@@ -6194,7 +6256,41 @@ const VIEWPORT_PRESETS = [
 // ─── APP EMBED VIEW ────────────────────────────────────────────────────────
 // Renderiza una app externa (Radar, futuro Reactor, etc.) como iframe full-screen.
 // Aporta: barra de control superior, postMessage para auth handshake, fallback si bloquea iframe.
+function AppWhiteboardView({ app }) {
+  const [elements, setElements] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("hygge:wb:app-diagramatic") || "[]"); } catch { return []; }
+  });
+  const updateElements = (fn) => {
+    const next = typeof fn === "function" ? fn(elements) : fn;
+    setElements(next);
+    try { localStorage.setItem("hygge:wb:app-diagramatic", JSON.stringify(next)); } catch {}
+  };
+  return (
+    <div className="h-full flex flex-col" style={{ backgroundColor: C.bg }}>
+      <div className="flex items-center justify-between px-4 lg:px-8 py-3 flex-wrap gap-2" style={{ borderBottom: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-7 h-7 flex items-center justify-center flex-shrink-0" style={{ backgroundColor: app.dot + "20", border: `1px solid ${app.dot}40`, borderRadius: 2 }}>
+            <app.icon size={14} style={{ color: app.dot }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.ink, letterSpacing: "-0.01em" }}>{app.label}</span>
+              {app.badge && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 10, backgroundColor: C.lineSoft, color: C.muted, fontWeight: 700, fontFamily: "ui-monospace, monospace" }}>{app.badge}</span>}
+              <span style={{ fontSize: 10, color: C.muted, letterSpacing: "0.04em" }}>· {app.description}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <WhiteboardView spaceName="Whiteboard" elements={elements} updateElements={updateElements} />
+      </div>
+    </div>
+  );
+}
+
 function AppEmbedView({ app, currentUser, currentSpace }) {
+  if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
+
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(!!app.blocked);
   const iframeRef = useRef(null);
@@ -12301,6 +12397,14 @@ export default function HyggeOS({ authUser } = {}) {
       return { ...t, checked: !wasChecked, activity: [...(t.activity || []), { when: nowHHMM(), text: wasChecked ? "Reabrió la tarea" : "Marcó como completada" }] };
     }));
   }, [recordActivity]);
+  const setTaskStatus = useCallback((id, status) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const checked = status === "completada";
+      recordActivity(`cambió estado de "${t.title}" a ${status}`, { taskId: id, space: t.space });
+      return { ...t, status, checked, activity: [...(t.activity || []), { when: nowHHMM(), text: `Estado: ${taskStatusDef(status).label}` }] };
+    }));
+  }, [recordActivity]);
   const toggleExpand = useCallback((id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, expanded: !t.expanded } : t)), []);
   const updateTask = useCallback((id, patch) => {
     setTasks(prev => prev.map(t => {
@@ -12643,6 +12747,7 @@ REGLAS:
     if (isAppId(currentSpace)) {
       const app = APPS.find(a => a.id === currentSpace);
       if (app && app.native) {
+        if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
             <iframe
@@ -12707,8 +12812,8 @@ REGLAS:
         setSubTab={() => {}}
       />;
     }
-    if (view === "list") return <ListView tasks={visibleTasks} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace={currentSpace} allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} />;
-    if (view === "board") return <BoardView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} />;
+    if (view === "list") return <ListView tasks={visibleTasks} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace={currentSpace} allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
+    if (view === "board") return <BoardView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} setTaskStatus={setTaskStatus} />;
     if (view === "gantt") return <GanttView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} />;
     if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} />;
     if (view === "table") return <TableView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} />;
@@ -12874,7 +12979,7 @@ REGLAS:
       />
       <UndoToast entry={activeToast} onUndo={undoLast} onDismiss={dismissToast} />
       <AIChatPanel open={chatOpen} onClose={() => setChatOpen(false)} conversation={conversation} sending={chatSending} sendMessage={sendToHygge} />
-      <TaskDetailPanel task={detailTask} allTasks={tasks} allSpaces={allSpaces} onClose={() => setDetailTaskId(null)} onUpdate={updateTask} onToggle={toggleTask} onAddComment={addComment} onAddAttachment={addAttachment} onRemoveAttachment={removeAttachment} onAddSubtask={addSubtask} onDuplicate={duplicateTask} />
+      <TaskDetailPanel task={detailTask} allTasks={tasks} allSpaces={allSpaces} onClose={() => setDetailTaskId(null)} onUpdate={updateTask} onToggle={toggleTask} onAddComment={addComment} onAddAttachment={addAttachment} onRemoveAttachment={removeAttachment} onAddSubtask={addSubtask} onDuplicate={duplicateTask} setTaskStatus={setTaskStatus} />
       <TerrenoDetailPanel terreno={terrenos.find(t => t.id === selectedTerrenoId)} users={users} onClose={() => setSelectedTerrenoId(null)} onUpdate={updateTerreno} onDelete={deleteTerreno} />
       {customViewEditOpen && (
         <CustomViewConfigModal initial={customViewEditInitial}
