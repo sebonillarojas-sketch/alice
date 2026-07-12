@@ -90,6 +90,17 @@ export function useTimer(currentUserId) {
     }
   }, [sessions, active, persistSessions]);
 
+  // Remove all timer sessions for a set of task IDs (called when tasks are deleted)
+  const deleteTaskSessions = useCallback((taskIds) => {
+    const idSet = new Set(taskIds);
+    const next = sessions.filter(s => !idSet.has(s.taskId));
+    persistSessions(next);
+    if (active && idSet.has(active.taskId)) {
+      setActive(null);
+      save(ACTIVE_KEY, null);
+    }
+  }, [sessions, active, persistSessions]);
+
   const isRunning = useCallback((taskId) => active?.taskId === taskId, [active]);
 
   // Seconds elapsed for the currently running timer (live)
@@ -111,6 +122,7 @@ export function useTimer(currentUserId) {
     startTimer,
     stopTimer,
     deleteSession,
+    deleteTaskSessions,
     isRunning,
     getTaskTotal,
   };

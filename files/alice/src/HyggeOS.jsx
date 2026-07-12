@@ -13562,7 +13562,7 @@ export default function HyggeOS({ authUser } = {}) {
   const [smartViews, setSmartViews] = useState(INITIAL_SMART_VIEWS);
   const [activeSmartViewId, setActiveSmartViewId] = useState(null);
   const [timer, setTimer] = useState({ running: false, elapsed: 0, todayTotal: 0, label: "Sin temporizador activo", project: "", spaceName: "", taskId: null });
-  const { sessions: timerSessions, active: timerActive, liveSeconds: timerLive, startTimer, stopTimer: stopTimerSession, deleteSession: deleteTimerSession, isRunning: isTimerRunning, getTaskTotal } = useTimer(currentUserId);
+  const { sessions: timerSessions, active: timerActive, liveSeconds: timerLive, startTimer, stopTimer: stopTimerSession, deleteSession: deleteTimerSession, deleteTaskSessions: deleteTimerTaskSessions, isRunning: isTimerRunning, getTaskTotal } = useTimer(currentUserId);
   useRecurring(tasks, setTasks);
   const [detailTaskId, setDetailTaskId] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -14291,9 +14291,10 @@ export default function HyggeOS({ authUser } = {}) {
     tasks.forEach(t => { if (t.parentId && deletedIds.has(t.parentId)) deletedIds.add(t.id); });
     setTasks(prev => applyTaskCascadeDelete(prev, id, mode));
     setActivity(prev => prev.filter(a => !a.relatedTaskId || !deletedIds.has(a.relatedTaskId)));
+    deleteTimerTaskSessions([...deletedIds]);
     deletedIds.forEach(did => db.deleteTask(did).catch(console.error));
     setDeleteTaskTarget(null);
-  }, [deleteTaskTarget, recordUndo, tasks, setActivity]);
+  }, [deleteTaskTarget, recordUndo, tasks, setActivity, deleteTimerTaskSessions]);
 
   const deleteTaskCascade = useCallback((id) => {
     const task = tasks.find(t => t.id === id);
