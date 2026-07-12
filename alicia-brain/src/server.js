@@ -262,7 +262,18 @@ async function processAliciaMessage(userId, userText, channel = "app") {
     });
 
     const textBlock = resp.content.find(b => b.type === "text");
-    if (textBlock) finalText = textBlock.text;
+    if (textBlock) {
+      let raw = textBlock.text;
+      // Si Claude devuelve JSON (por historial contaminado), extraemos solo el mensaje
+      try {
+        const cleaned = raw.trim().replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+        if (cleaned.startsWith("{")) {
+          const parsed = JSON.parse(cleaned);
+          if (parsed.message) raw = parsed.message;
+        }
+      } catch {}
+      finalText = raw;
+    }
 
     const toolUseBlocks = resp.content.filter(b => b.type === "tool_use");
     if (!toolUseBlocks.length || resp.stop_reason === "end_turn") break;
