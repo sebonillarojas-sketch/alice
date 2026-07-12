@@ -692,192 +692,171 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
     : C.brick;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: C.bg }}>
-      {/* Header */}
-      <div style={{ padding: "20px 28px 0", flexShrink: 0 }}>
-        <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>
-          Análisis de mercado · Lima
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto", background: C.bg }}>
+
+      {/* ── MAPA grande ─────────────────────────────────────────────────────── */}
+      <div style={{ position: "relative", height: 380, flexShrink: 0, borderBottom: `1px solid ${C.line}` }}>
+        <DistrictMap selectedId={selectedDistrict?.id} onSelect={setSelectedDistrict} height={380} />
+
+        {/* District pills flotando sobre el mapa */}
+        <div style={{
+          position: "absolute", bottom: 12, left: 12, right: 12,
+          display: "flex", flexWrap: "wrap", gap: 6, pointerEvents: "none",
+        }}>
+          {DISTRICTS.map(d => (
+            <button key={d.id} onClick={() => setSelectedDistrict(d)}
+              style={{
+                pointerEvents: "all", padding: "4px 10px", borderRadius: 2, border: "none",
+                fontSize: 11, fontWeight: selectedDistrict?.id === d.id ? 700 : 500, cursor: "pointer",
+                background: selectedDistrict?.id === d.id ? C.ink : "rgba(244,241,234,0.92)",
+                color: selectedDistrict?.id === d.id ? "#fff" : C.inkSoft,
+                boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                borderLeft: `3px solid ${TREND_COLOR[d.trend]}`,
+              }}>
+              {d.name}
+            </button>
+          ))}
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", margin: 0 }}>
+
+        {/* Header overlay top-left */}
+        <div style={{
+          position: "absolute", top: 14, left: 16,
+          background: "rgba(244,241,234,0.92)", padding: "6px 12px", borderRadius: 2,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
+        }}>
+          <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>Análisis de mercado · Lima</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
             Simulador de Ventas
-          </h1>
-          {selectedDistrict && (
-            <span style={{ fontSize: 13, color: C.muted }}>
-              {selectedDistrict.name} ·{" "}
-              <span style={{ color: TREND_COLOR[selectedDistrict.trend], fontWeight: 600 }}>
-                {TREND_LABEL[selectedDistrict.trend]}
+            {selectedDistrict && (
+              <span style={{ fontSize: 12, fontWeight: 500, color: TREND_COLOR[selectedDistrict.trend], marginLeft: 8 }}>
+                {selectedDistrict.name}
               </span>
-            </span>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Tycoon link top-right */}
+        <div style={{ position: "absolute", top: 14, right: 16 }}>
+          <a href="https://hygge-radar.netlify.app" target="_blank" rel="noreferrer"
+            style={{
+              display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 600,
+              color: C.cobalt, textDecoration: "none", background: "rgba(244,241,234,0.92)",
+              padding: "5px 10px", borderRadius: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
+            }}>
+            <ExternalLink size={11} /> Radar + Tycoon AI
+          </a>
         </div>
       </div>
 
-      {/* Body — 3 columns */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "320px 300px 1fr", gap: 0, overflow: "hidden" }}>
+      {/* ── CONTENIDO ABAJO ─────────────────────────────────────────────────── */}
+      <div style={{ padding: "28px 32px 48px", maxWidth: 1100, width: "100%", alignSelf: "center" }}>
 
-        {/* COL 1 — Map + District selector */}
-        <div style={{ display: "flex", flexDirection: "column", borderRight: `1px solid ${C.line}`, overflow: "hidden" }}>
-          {/* Map */}
-          <div style={{ height: 260, flexShrink: 0, borderBottom: `1px solid ${C.line}` }}>
-            <DistrictMap selectedId={selectedDistrict?.id} onSelect={setSelectedDistrict} />
-          </div>
-
-          {/* District list */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 0 12px" }}>
-            <div style={{ padding: "10px 14px 6px", fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              Seleccioná un distrito
-            </div>
-            {DISTRICTS.map(d => (
-              <button key={d.id} onClick={() => setSelectedDistrict(d)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, width: "100%",
-                  padding: "8px 14px", border: "none", cursor: "pointer", textAlign: "left",
-                  background: selectedDistrict?.id === d.id ? C.surface : "transparent",
-                  borderLeft: selectedDistrict?.id === d.id ? `3px solid ${C.cobalt}` : "3px solid transparent",
-                  transition: "background .1s",
-                }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: TREND_COLOR[d.trend], flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: selectedDistrict?.id === d.id ? 700 : 500, color: C.ink }}>{d.name}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>
-                    {d.base} u/mes base · USD {d.priceRange[0].toLocaleString()}–{d.priceRange[1].toLocaleString()}/m²
-                  </div>
-                </div>
-                <span style={{ fontSize: 9, fontWeight: 600, color: TREND_COLOR[d.trend], textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                  {d.trend === "trending" ? "↑" : d.trend === "emergente" ? "~" : "→"}
-                </span>
-              </button>
-            ))}
-
-            {/* Tycoon link */}
-            <div style={{ margin: "12px 14px 0", padding: "10px 12px", background: C.surface, borderRadius: 2 }}>
-              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 4 }}>Más datos de mercado</div>
-              <a href="https://hygge-radar.netlify.app" target="_blank" rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.cobalt, fontWeight: 600, textDecoration: "none" }}>
-                <ExternalLink size={12} /> Abrir Radar + Tycoon AI ↗
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* COL 2 — Factor inputs */}
-        <div style={{ borderRight: `1px solid ${C.line}`, overflowY: "auto", padding: "16px 16px 24px" }}>
-          <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14 }}>
+        {/* ── VARIABLES ─────────────────────────────────────────────────────── */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 16 }}>
             Parámetros del proyecto
           </div>
 
-          {/* Proyecto */}
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 6 }}>Tipología</div>
-            <select value={factors.tipologia} onChange={e => setF("tipologia", Number(e.target.value))}
-              style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink }}>
-              {TIPOLOGIA_OPTS.map((o, i) => <option key={i} value={i}>{o}</option>)}
-            </select>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+          {/* Row 1: tipología / precio / unidades / precio relativo */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 2fr", gap: 16, marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>USD/m²</div>
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 5 }}>Tipología</div>
+              <select value={factors.tipologia} onChange={e => setF("tipologia", Number(e.target.value))}
+                style={{ width: "100%", padding: "7px 8px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink }}>
+                {TIPOLOGIA_OPTS.map((o, i) => <option key={i} value={i}>{o}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 5 }}>USD/m²</div>
               <input type="number" placeholder="ej. 3800" value={factors.preciom2}
                 onChange={e => setF("preciom2", e.target.value)}
-                style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink, boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "7px 8px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink, boxSizing: "border-box" }} />
             </div>
             <div>
-              <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>Unidades</div>
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 5 }}>Unidades</div>
               <input type="number" min={1} max={500} value={factors.totalUnits}
                 onChange={e => setF("totalUnits", Math.max(1, Number(e.target.value)))}
-                style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink, boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "7px 8px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink, boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <Slider label="Precio relativo al mercado" value={factors.priceDelta} min={-25} max={25} step={5}
+                onChange={v => setF("priceDelta", v)}
+                format={v => v === 0 ? "En mercado" : `${v > 0 ? "+" : ""}${v}%`}
+                hint={factors.priceDelta > 10 ? "⚠ Sobre-precio" : factors.priceDelta < -10 ? "✓ Precio agresivo" : ""} />
             </div>
           </div>
 
-          <Slider label="Precio relativo al mercado" value={factors.priceDelta} min={-25} max={25} step={5}
-            onChange={v => setF("priceDelta", v)}
-            format={v => v === 0 ? "En mercado" : `${v > 0 ? "+" : ""}${v}%`}
-            hint={factors.priceDelta > 10 ? "⚠ Sobre-precio — exige storytelling sólido" : factors.priceDelta < -10 ? "✓ Precio agresivo — acelera absorción" : ""} />
-
-          <div style={{ height: 1, background: C.lineSoft, margin: "4px 0 14px" }} />
-
-          {/* Producto */}
-          <RadioGroup label="Acabados" options={ACABADOS_OPTS} value={factors.acabados} onChange={v => setF("acabados", v)} />
-
-          <div style={{ height: 1, background: C.lineSoft, margin: "4px 0 14px" }} />
-
-          {/* Narrativa */}
-          <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            Marca & Narrativa
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Storytelling / concepto</span>
-              <span style={{ fontSize: 11, color: C.cobalt, fontWeight: 700 }}>{factors.storytelling + 1}/5</span>
+          {/* Row 2: acabados / storytelling / arquitecto / developer */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <div>
+              <RadioGroup label="Acabados" options={ACABADOS_OPTS} value={factors.acabados} onChange={v => setF("acabados", v)} />
             </div>
-            <input type="range" min={0} max={4} value={factors.storytelling}
-              onChange={e => setF("storytelling", Number(e.target.value))}
-              style={{ width: "100%", accentColor: C.cobalt }} />
-            <div style={{ fontSize: 10, color: C.cobalt, marginTop: 3, fontStyle: "italic" }}>
-              {STORY_LABELS[factors.storytelling]}
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 5 }}>Storytelling</div>
+              <input type="range" min={0} max={4} value={factors.storytelling}
+                onChange={e => setF("storytelling", Number(e.target.value))}
+                style={{ width: "100%", accentColor: C.cobalt, marginBottom: 4 }} />
+              <div style={{ fontSize: 10, color: C.cobalt, fontStyle: "italic" }}>{STORY_LABELS[factors.storytelling]}</div>
+            </div>
+            <div>
+              <RadioGroup label="Arquitecto" options={ARCHITECT_OPTS} value={factors.architect} onChange={v => setF("architect", v)} />
+            </div>
+            <div>
+              <RadioGroup label="Developer" options={DEVELOPER_OPTS} value={factors.developer} onChange={v => setF("developer", v)} />
             </div>
           </div>
 
-          <RadioGroup label="Arquitecto" options={ARCHITECT_OPTS} value={factors.architect} onChange={v => setF("architect", v)} />
-          <RadioGroup label="Developer" options={DEVELOPER_OPTS} value={factors.developer} onChange={v => setF("developer", v)} />
-
-          <div style={{ height: 1, background: C.lineSoft, margin: "4px 0 14px" }} />
-
-          {/* Activación */}
-          <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            Activación comercial
+          {/* Row 3: pauta / boutique / vista */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <div>
+              <RadioGroup label="Pauta mediática" options={MEDIA_OPTS} value={factors.media} onChange={v => setF("media", v)} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, justifyContent: "flex-end" }}>
+              <Toggle label="Boutique / exclusivo" value={factors.exclusivity} onChange={v => setF("exclusivity", v)}
+                hint="Menos de 20 unidades · premium aspiracional" />
+              <Toggle label="Vista o diferenciador especial" value={factors.specialView} onChange={v => setF("specialView", v)}
+                hint="Mar, parque, altura, arquitectura icónica…" />
+            </div>
           </div>
-
-          <RadioGroup label="Pauta mediática" options={MEDIA_OPTS} value={factors.media} onChange={v => setF("media", v)} />
-
-          <Toggle label="Boutique / exclusivo" value={factors.exclusivity} onChange={v => setF("exclusivity", v)}
-            hint="Menos de 20 unidades · premium aspiracional" />
-          <Toggle label="Vista o diferenciador especial" value={factors.specialView} onChange={v => setF("specialView", v)}
-            hint="Mar, parque grande, altura, arquitectura icónica…" />
         </div>
 
-        {/* COL 3 — Output */}
-        <div style={{ overflowY: "auto", padding: "16px 20px 32px" }}>
-
-          {!selectedDistrict ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "60%", gap: 12 }}>
-              <MapPin size={32} style={{ color: C.muted, opacity: 0.4 }} />
-              <div style={{ fontSize: 14, color: C.muted, textAlign: "center" }}>
-                Seleccioná un distrito en el mapa o en la lista<br />para ver el análisis de velocidad
-              </div>
+        {/* ── OUTPUT ──────────────────────────────────────────────────────────── */}
+        {!selectedDistrict ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 0", color: C.muted }}>
+            <MapPin size={18} style={{ opacity: 0.4 }} />
+            <span style={{ fontSize: 13 }}>Seleccioná un distrito en el mapa para ver el análisis</span>
+          </div>
+        ) : (
+          <>
+            {/* District context */}
+            <div style={{ background: C.surface, borderRadius: 2, padding: "10px 16px", marginBottom: 24, fontSize: 12, color: C.inkSoft, fontStyle: "italic", borderLeft: `3px solid ${TREND_COLOR[selectedDistrict.trend]}` }}>
+              <strong style={{ fontStyle: "normal", color: C.ink }}>{selectedDistrict.name}</strong> · {selectedDistrict.desc}
             </div>
-          ) : (
-            <>
-              {/* KPI strip */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
-                {[
-                  { label: "Velocidad estimada", value: velocity ? `${velocity.toFixed(1)} u/mes` : "—", color: velocityColor, sub: selectedDistrict ? `Base: ${selectedDistrict.base} u/mes` : "" },
-                  { label: "Absorción total", value: absMonths ? `${absMonths} meses` : "—", color: C.ink, sub: absMonths ? `${Math.round(absMonths / 12 * 10) / 10} años` : "" },
-                  { label: "Score narrativo", value: `${storyScore}/100`, color: storyScore >= 70 ? C.green : storyScore >= 45 ? C.ochre : C.brick, sub: storyScore >= 70 ? "Diferenciado" : storyScore >= 45 ? "Moderado" : "Débil" },
-                  { label: "Revenue bruto est.", value: revenueEst ? `USD ${revenueEst}M` : "—", color: C.navy, sub: "85m² promedio" },
-                ].map(k => (
-                  <div key={k.label} style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{k.label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: k.color, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
-                    <div style={{ fontSize: 10, color: C.muted }}>{k.sub}</div>
-                  </div>
-                ))}
-              </div>
 
-              {/* District context */}
-              <div style={{ background: C.surface, borderRadius: 2, padding: "10px 14px", marginBottom: 20, fontSize: 11, color: C.inkSoft, fontStyle: "italic", borderLeft: `3px solid ${TREND_COLOR[selectedDistrict.trend]}` }}>
-                {selectedDistrict.desc}
-              </div>
+            {/* KPI strip */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 28 }}>
+              {[
+                { label: "Velocidad estimada", value: velocity ? `${velocity.toFixed(1)} u/mes` : "—", color: velocityColor, sub: selectedDistrict ? `Base: ${selectedDistrict.base} u/mes` : "" },
+                { label: "Absorción total", value: absMonths ? `${absMonths} meses` : "—", color: C.ink, sub: absMonths ? `${Math.round(absMonths / 12 * 10) / 10} años` : "" },
+                { label: "Score narrativo", value: `${storyScore}/100`, color: storyScore >= 70 ? C.green : storyScore >= 45 ? C.ochre : C.brick, sub: storyScore >= 70 ? "Diferenciado" : storyScore >= 45 ? "Moderado" : "Débil" },
+                { label: "Revenue bruto est.", value: revenueEst ? `USD ${revenueEst}M` : "—", color: C.navy, sub: "85m² promedio" },
+              ].map(k => (
+                <div key={k.label} style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{k.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: k.color, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{k.sub}</div>
+                </div>
+              ))}
+            </div>
 
+            {/* Charts: absorción + tornado side by side */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 28 }}>
               {/* Absorption chart */}
-              <div style={{ marginBottom: 24 }}>
+              <div>
                 <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
                   Curva de absorción proyectada
                 </div>
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={absorption} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="absGrad" x1="0" y1="0" x2="0" y2="1">
@@ -899,12 +878,12 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
               </div>
 
               {/* Tornado chart */}
-              <div style={{ marginBottom: 24 }}>
+              <div>
                 <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
-                  Sensibilidad de factores — impacto en velocidad (u/mes)
+                  Sensibilidad de factores
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={tornado} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 80 }}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={tornado} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={C.lineSoft} horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 9, fill: C.muted }} tickLine={false}
                       tickFormatter={v => v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1)} />
@@ -917,43 +896,39 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 4, fontStyle: "italic" }}>
-                  Muestra cuánto cambia la velocidad si cada factor pasa de su peor a su mejor valor posible
+              </div>
+            </div>
+
+            {/* Spider + secondary row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 28 }}>
+              <div>
+                <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
+                  Perfil del proyecto
                 </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <RadarChart data={spider}>
+                    <PolarGrid stroke={C.line} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: C.muted }} />
+                    <Radar name="Proyecto" dataKey="value" stroke={C.cobalt} fill={C.cobalt} fillOpacity={0.2} strokeWidth={2} />
+                  </RadarChart>
+                </ResponsiveContainer>
               </div>
 
-              {/* Spider / Radar chart */}
-              <div style={{ marginBottom: 24 }}>
-                <button onClick={() => setShowSpider(s => !s)}
-                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
-                    letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", marginBottom: 10, padding: 0 }}>
-                  {showSpider ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  Perfil del proyecto (spider)
-                </button>
-                {showSpider && (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <RadarChart data={spider}>
-                      <PolarGrid stroke={C.line} />
-                      <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: C.muted }} />
-                      <Radar name="Proyecto" dataKey="value" stroke={C.cobalt} fill={C.cobalt} fillOpacity={0.2} strokeWidth={2} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-
-              {/* Comparables */}
-              <div style={{ marginBottom: 24, padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
+              {/* Comparables inline */}
+              <div style={{ padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
                 <button onClick={() => setShowComps(s => !s)}
                   style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
                     letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showComps ? 12 : 0 }}>
                   {showComps ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  Proyectos comparables ({comps.length})
+                  Comparables ({comps.length})
                 </button>
                 {showComps && <ComparableTable comps={comps} setComps={setComps} />}
               </div>
+            </div>
 
-              {/* Fotos del entorno */}
-              <div style={{ marginBottom: 24, padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
+            {/* Fotos + Noticias side by side */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 28 }}>
+              <div style={{ padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
                 <button onClick={() => setShowPhotos(s => !s)}
                   style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
                     letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showPhotos ? 12 : 0 }}>
@@ -962,9 +937,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                 </button>
                 {showPhotos && <PhotoGallery photos={photos} setPhotos={setPhotos} district={selectedDistrict} />}
               </div>
-
-              {/* Noticias & contexto */}
-              <div style={{ marginBottom: 24, padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
+              <div style={{ padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
                 <button onClick={() => setShowNews(s => !s)}
                   style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
                     letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showNews ? 12 : 0 }}>
@@ -973,41 +946,40 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                 </button>
                 {showNews && <NewsPanel news={news} setNews={setNews} />}
               </div>
+            </div>
 
-              {/* Alicia analysis */}
-              <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Análisis de Alicia</div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Validación con IA · mercado limeño</div>
-                  </div>
-                  <button onClick={runAnalysis} disabled={analyzing}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-                      background: analyzing ? C.surface : C.ink, color: analyzing ? C.muted : "#fff",
-                      border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: analyzing ? "not-allowed" : "pointer",
-                    }}>
-                    {analyzing ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Analizando…</> : <><Sparkles size={13} /> Analizar con Alicia</>}
-                  </button>
+            {/* Alicia analysis */}
+            <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "20px 24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Análisis de Alicia</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Validación con IA · mercado limeño</div>
                 </div>
-
-                {analysis ? (
-                  <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                    {analysis.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                      part.startsWith("**") && part.endsWith("**")
-                        ? <strong key={i} style={{ color: C.ink }}>{part.slice(2, -2)}</strong>
-                        : part
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "20px 0", fontStyle: "italic" }}>
-                    Completá los parámetros y hacé click en "Analizar con Alicia" para obtener validación de mercado
-                  </div>
-                )}
+                <button onClick={runAnalysis} disabled={analyzing}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
+                    background: analyzing ? C.surface : C.ink, color: analyzing ? C.muted : "#fff",
+                    border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: analyzing ? "not-allowed" : "pointer",
+                  }}>
+                  {analyzing ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Analizando…</> : <><Sparkles size={13} /> Analizar con Alicia</>}
+                </button>
               </div>
-            </>
-          )}
-        </div>
+              {analysis ? (
+                <div style={{ fontSize: 13, color: C.inkSoft, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  {analysis.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                    part.startsWith("**") && part.endsWith("**")
+                      ? <strong key={i} style={{ color: C.ink }}>{part.slice(2, -2)}</strong>
+                      : part
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: C.muted, padding: "16px 0", fontStyle: "italic" }}>
+                  Completá los parámetros y hacé click en "Analizar con Alicia" para obtener validación de mercado.
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

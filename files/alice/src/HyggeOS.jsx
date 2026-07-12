@@ -4837,6 +4837,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
             { id: "detalles", label: "Detalles" },
             { id: "comentarios", label: `Comentarios · ${(terreno.comments || []).length}` },
             { id: "documentos", label: `Documentos · ${(terreno.documents || []).length}` },
+            { id: "analisis", label: "Análisis" },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} className="px-3 py-3 text-[11px]"
               style={{ color: tab === t.id ? C.ink : C.muted, fontWeight: tab === t.id ? 600 : 500, borderBottom: `2px solid ${tab === t.id ? C.ink : "transparent"}`, marginBottom: -1 }}>
@@ -4943,8 +4944,130 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
               </div>
             </div>
           )}
+          {tab === "analisis" && (
+            <TerrenoMercadoAnalysis terreno={terreno} />
+          )}
         </div>
       </aside>
+    </div>
+  );
+}
+
+function TerrenoMercadoAnalysis({ terreno }) {
+  const [analysis, setAnalysis] = React.useState("");
+  const [analyzing, setAnalyzing] = React.useState(false);
+  const DISTRICTS_DATA = {
+    "Miraflores":  { base: 3.5, priceRange: [3200, 6500], trend: "estable",   trendScore: 1.05, desc: "NSE A. Demanda sostenida, premium consolidado." },
+    "San Isidro":  { base: 2.8, priceRange: [3800, 7200], trend: "estable",   trendScore: 1.00, desc: "NSE A+. Mercado small & luxury. Absorción lenta pero precio alto." },
+    "Barranco":    { base: 2.5, priceRange: [2800, 5000], trend: "trending",  trendScore: 1.28, desc: "NSE A/B+. Narrativa cultural fuerte. Storytelling = driver clave." },
+    "La Molina":   { base: 4.8, priceRange: [2200, 4800], trend: "estable",   trendScore: 1.00, desc: "NSE B+/A. Familia como buyer principal." },
+    "Surco":       { base: 6.2, priceRange: [1800, 3800], trend: "estable",   trendScore: 0.98, desc: "NSE B/B+. Mercado masivo con bolsones premium." },
+    "Jesús María": { base: 7.5, priceRange: [1600, 2800], trend: "trending",  trendScore: 1.22, desc: "NSE B/B+. Alta velocidad, precio accesible." },
+    "Magdalena":   { base: 5.5, priceRange: [1700, 3000], trend: "trending",  trendScore: 1.18, desc: "NSE B+. Zona en consolidación." },
+    "San Borja":   { base: 4.2, priceRange: [2200, 4200], trend: "estable",   trendScore: 1.00, desc: "NSE A/B+. Familiar." },
+    "Pueblo Libre":{ base: 5.8, priceRange: [1500, 2600], trend: "emergente", trendScore: 0.88, desc: "NSE B. Emergente." },
+    "San Miguel":  { base: 6.8, priceRange: [1400, 2500], trend: "emergente", trendScore: 0.90, desc: "NSE B. Volumen es el negocio." },
+    "Lince":       { base: 8.2, priceRange: [1300, 2200], trend: "emergente", trendScore: 0.85, desc: "NSE B/C+. Riesgo: sobre-oferta." },
+    "Chorrillos":  { base: 5.2, priceRange: [1500, 2800], trend: "emergente", trendScore: 0.82, desc: "NSE B. Playa como diferenciador." },
+  };
+  const TREND_COLOR = { trending: C.green, estable: C.cobalt, emergente: C.ochre };
+  const d = DISTRICTS_DATA[terreno.district] || DISTRICTS_DATA["Miraflores"];
+
+  const runAnalysis = async () => {
+    setAnalyzing(true);
+    setAnalysis("");
+    const prompt = `Sos Alicia, asistente ejecutiva de Hygge Holding. Analizá este terreno en evaluación.
+
+TERRENO: ${terreno.name}
+Distrito: ${terreno.district}
+Dirección: ${terreno.address || "—"}
+Área: ${terreno.areaM2 ? terreno.areaM2 + " m²" : "—"}
+Precio pedido: ${terreno.askedPrice ? "USD " + terreno.askedPrice.toLocaleString() : "—"}
+Score de interés: ${terreno.score || "—"}/100
+Estado pipeline: ${terreno.status}
+Notas: ${terreno.notes || "Sin notas"}
+
+DATOS DEL DISTRITO (${terreno.district}):
+${d.desc}
+Absorción base: ${d.base} u/mes
+Rango de precios: USD ${d.priceRange[0].toLocaleString()}–${d.priceRange[1].toLocaleString()}/m²
+Tendencia: ${d.trend} (score ${d.trendScore})
+
+Dame:
+1. **Validación del precio del terreno** — ¿el precio pedido es razonable para el distrito? ¿Qué producto podría desarrollarse y a qué velocidad?
+2. **Potencial del distrito** — contexto de mercado, demanda actual, riesgos
+3. **Fit estratégico** — ¿encaja con el perfil de Hygge? ¿Qué tipología recomendarías?
+4. **Próximo paso concreto** — una acción específica para avanzar o descartar
+
+Sé directa. 4 puntos claros, sin genérico. Hablá de Lima.`;
+
+    try {
+      const BRAIN_URL = "http://localhost:3001";
+      let res = await fetch(`${BRAIN_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }], systemPrompt: "Sos Alicia, asistente ejecutiva de Hygge Holding. Experta en mercado inmobiliario limeño." }),
+      }).catch(() => null);
+      if (!res || !res.ok) {
+        const apiKey = localStorage.getItem("alicia_api_key");
+        if (!apiKey) throw new Error("Sin API key — configurala en Alicia > Settings.");
+        res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+          body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 800, messages: [{ role: "user", content: prompt }] }),
+        });
+      }
+      const json = await res.json();
+      const text = json.choices?.[0]?.message?.content || json.content?.[0]?.text || json.error?.message || "Sin respuesta";
+      setAnalysis(text);
+    } catch (err) {
+      setAnalysis(`Error: ${err.message}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* District summary */}
+      <div style={{ padding: "10px 14px", marginBottom: 16, background: C.surface, borderRadius: 2, borderLeft: `3px solid ${TREND_COLOR[d.trend]}` }}>
+        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{terreno.district} · {d.trend}</div>
+        <div style={{ fontSize: 12, color: C.inkSoft }}>{d.desc}</div>
+        <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+          <div><div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Absorción base</div><div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{d.base} u/mes</div></div>
+          <div><div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Precio sector</div><div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>USD {d.priceRange[0].toLocaleString()}–{d.priceRange[1].toLocaleString()}/m²</div></div>
+        </div>
+      </div>
+
+      {/* Alicia CTA */}
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "14px 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: analysis ? 14 : 0 }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Análisis de Alicia</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Validación del terreno · mercado limeño</div>
+          </div>
+          <button onClick={runAnalysis} disabled={analyzing}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: analyzing ? C.surface : C.ink, color: analyzing ? C.muted : "#fff", border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: analyzing ? "not-allowed" : "pointer" }}>
+            {analyzing
+              ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Analizando…</>
+              : <><Sparkles size={13} /> Analizar</>}
+          </button>
+        </div>
+        {analysis && (
+          <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+            {analysis.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+              part.startsWith("**") && part.endsWith("**")
+                ? <strong key={i} style={{ color: C.ink }}>{part.slice(2, -2)}</strong>
+                : part
+            )}
+          </div>
+        )}
+        {!analysis && !analyzing && (
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 10, fontStyle: "italic" }}>
+            Hacé click en "Analizar" para que Alicia evalúe este terreno con datos del mercado limeño.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -13867,7 +13990,7 @@ REGLAS:
     if (currentSpace === "legal") return <LegalDashboard />;
     if (currentSpace === "comercial") return <ComercialDashboard />;
     if (currentSpace === "marketing") return <MarketingDashboard />;
-    if (currentSpace === "growth") return <GrowthSpace terrenos={terrenos} onSelect={setSelectedTerrenoId} onCreate={createTerreno} onUpdate={updateTerreno} selectedTerrenoId={selectedTerrenoId} />;
+    if (currentSpace === "growth") return <GrowthDashboard terrenos={terrenos} onSelect={setSelectedTerrenoId} onCreate={createTerreno} onUpdate={updateTerreno} selectedTerrenoId={selectedTerrenoId} />;
     if (PROJECT_CONFIGS[currentSpace]) return <ProjectDashboard projectId={currentSpace} />;
     const customSpace = customSpaces.find(s => s.id === currentSpace);
     if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} />;
