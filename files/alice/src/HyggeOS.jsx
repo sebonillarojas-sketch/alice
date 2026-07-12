@@ -10,6 +10,7 @@ import { useERPSync } from "./api/useERPSync.js";
 import { TimerView } from "./modules/timer/TimerView";
 import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
+import { db } from "./lib/supabase";
 
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
 const anthropicHeaders = () => ({
@@ -13737,14 +13738,14 @@ export default function HyggeOS({ authUser } = {}) {
   useEffect(() => {
     (async () => {
       const [t, m, wb, tm, sp, vw, cs, sv, us, sa, tr, cv, rpc, act, cp, cn, ft, vp, kl, spv, hqcf, dds] = await Promise.all([
-        loadStored("hygge:tasks", INITIAL_TASKS), loadStored("hygge:messages", INITIAL_MESSAGES),
+        db.getTasks().catch(() => loadStored("hygge:tasks", INITIAL_TASKS)), loadStored("hygge:messages", INITIAL_MESSAGES),
         loadStored("hygge:whiteboards", INITIAL_WHITEBOARDS), loadStored("hygge:timer", timer),
         loadStored("hygge:space", "hq"), loadStored("hygge:view", "dashboard"),
         loadStored("hygge:customSpaces", []),
         loadStored("hygge:smartViews", INITIAL_SMART_VIEWS),
         loadStored("hygge:users", INITIAL_USERS),
         loadStored("hygge:spaceAccess", {}),
-        loadStored("hygge:terrenos", INITIAL_TERRENOS),
+        db.getTerrenos().catch(() => loadStored("hygge:terrenos", INITIAL_TERRENOS)),
         loadStored("hygge:customViews", INITIAL_CUSTOM_VIEWS),
         loadStored("hygge:rightPanelCollapsed", false),
         loadStored("hygge:activity", []),
@@ -13803,16 +13804,24 @@ export default function HyggeOS({ authUser } = {}) {
 
   // ─── Terrenos · CRUD ───
   const createTerreno = useCallback((data) => {
-    const id = "t_" + Date.now();
-    setTerrenos(prev => [{ id, ...data }, ...prev]);
+    const id = Date.now();
+    const newT = { id, ...data };
+    setTerrenos(prev => [newT, ...prev]);
     setSelectedTerrenoId(id);
+    db.upsertTerreno(newT).catch(console.error);
   }, []);
   const updateTerreno = useCallback((id, patch) => {
-    setTerrenos(prev => prev.map(t => t.id === id ? { ...t, ...patch, updatedAt: Date.now() } : t));
+    setTerrenos(prev => {
+      const next = prev.map(t => t.id === id ? { ...t, ...patch, updatedAt: Date.now() } : t);
+      const updated = next.find(t => t.id === id);
+      if (updated) db.upsertTerreno(updated).catch(console.error);
+      return next;
+    });
   }, []);
   const deleteTerreno = useCallback((id) => {
     setTerrenos(prev => prev.filter(t => t.id !== id));
     setSelectedTerrenoId(null);
+    db.deleteTerreno(id).catch(console.error);
   }, []);
 
   // ─── Users · CRUD ───
@@ -14018,12 +14027,17 @@ export default function HyggeOS({ authUser } = {}) {
   }, []);
 
   const toggleTask = useCallback((id) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      const wasChecked = t.checked;
-      recordActivity(wasChecked ? `reabrió "${t.title}"` : `cerró "${t.title}"`, { taskId: id, space: t.space });
-      return { ...t, checked: !wasChecked, activity: [...(t.activity || []), { when: nowHHMM(), text: wasChecked ? "Reabrió la tarea" : "Marcó como completada" }] };
-    }));
+    setTasks(prev => {
+      const next = prev.map(t => {
+        if (t.id !== id) return t;
+        const wasChecked = t.checked;
+        recordActivity(wasChecked ? `reabrió "${t.title}"` : `cerró "${t.title}"`, { taskId: id, space: t.space });
+        return { ...t, checked: !wasChecked, activity: [...(t.activity || []), { when: nowHHMM(), text: wasChecked ? "Reabrió la tarea" : "Marcó como completada" }] };
+      });
+      const updated = next.find(t => t.id === id);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
   }, [recordActivity]);
   const setTaskStatus = useCallback((id, status) => {
     setTasks(prev => prev.map(t => {
@@ -14035,14 +14049,19 @@ export default function HyggeOS({ authUser } = {}) {
   }, [recordActivity]);
   const toggleExpand = useCallback((id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, expanded: !t.expanded } : t)), []);
   const updateTask = useCallback((id, patch) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      const activity = [...(t.activity || [])];
-      if (patch.assignee && patch.assignee !== t.assignee) { activity.push({ when: nowHHMM(), text: `Asignada a ${findPerson(patch.assignee)?.name || patch.assignee}` }); recordActivity(`asignó "${t.title}" a ${findPerson(patch.assignee)?.name || patch.assignee}`, { taskId: id, space: t.space }); }
-      if (patch.priority && patch.priority !== t.priority) { activity.push({ when: nowHHMM(), text: `Prioridad: ${patch.priority}` }); recordActivity(`cambió prioridad de "${t.title}" a ${patch.priority}`, { taskId: id, space: t.space }); }
-      if (patch.title && patch.title !== t.title) { activity.push({ when: nowHHMM(), text: "Título editado" }); recordActivity(`renombró tarea a "${patch.title}"`, { taskId: id, space: t.space }); }
-      return { ...t, ...patch, activity };
-    }));
+    setTasks(prev => {
+      const next = prev.map(t => {
+        if (t.id !== id) return t;
+        const activity = [...(t.activity || [])];
+        if (patch.assignee && patch.assignee !== t.assignee) { activity.push({ when: nowHHMM(), text: `Asignada a ${findPerson(patch.assignee)?.name || patch.assignee}` }); recordActivity(`asignó "${t.title}" a ${findPerson(patch.assignee)?.name || patch.assignee}`, { taskId: id, space: t.space }); }
+        if (patch.priority && patch.priority !== t.priority) { activity.push({ when: nowHHMM(), text: `Prioridad: ${patch.priority}` }); recordActivity(`cambió prioridad de "${t.title}" a ${patch.priority}`, { taskId: id, space: t.space }); }
+        if (patch.title && patch.title !== t.title) { activity.push({ when: nowHHMM(), text: "Título editado" }); recordActivity(`renombró tarea a "${patch.title}"`, { taskId: id, space: t.space }); }
+        return { ...t, ...patch, activity };
+      });
+      const updated = next.find(t => t.id === id);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
   }, [recordActivity]);
   const addTask = useCallback((task) => {
     let newTask;
@@ -14054,6 +14073,7 @@ export default function HyggeOS({ authUser } = {}) {
     if (newTask) {
       recordActivity(`creó "${newTask.title}"`, { taskId: newTask.id, space: newTask.space });
       pushNewTask(newTask);
+      db.upsertTask(newTask).catch(console.error);
     }
     return newTask;
   }, [recordActivity, pushNewTask]);
@@ -14272,6 +14292,7 @@ export default function HyggeOS({ authUser } = {}) {
     tasks.forEach(t => { if (t.parentId && deletedIds.has(t.parentId)) deletedIds.add(t.id); });
     setTasks(prev => applyTaskCascadeDelete(prev, id, mode));
     setActivity(prev => prev.filter(a => !a.relatedTaskId || !deletedIds.has(a.relatedTaskId)));
+    deletedIds.forEach(did => db.deleteTask(did).catch(console.error));
     setDeleteTaskTarget(null);
   }, [deleteTaskTarget, recordUndo, tasks, setActivity]);
 
