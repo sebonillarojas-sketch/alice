@@ -618,23 +618,43 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const speak = useCallback((text) => {
-    if (!voiceEnabled || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+  const audioRef = useRef(null);
+
+  const speak = useCallback(async (text) => {
+    if (!voiceEnabled) return;
+    // Stop any current audio
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    window.speechSynthesis?.cancel();
     const clean = text.replace(/[*_`#]/g, "").trim();
-    const utt = new SpeechSynthesisUtterance(clean);
-    utt.lang = "es-PE";
-    utt.rate = 1.08;
-    utt.pitch = 1.05;
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang.startsWith("es") && v.name.toLowerCase().includes("female"))
-      || voices.find(v => v.lang.startsWith("es-419") || v.lang.startsWith("es-MX") || v.lang.startsWith("es-US") || v.lang.startsWith("es-PE"))
-      || voices.find(v => v.lang.startsWith("es"));
-    if (preferred) utt.voice = preferred;
-    utt.onstart = () => setIsSpeaking(true);
-    utt.onend = () => setIsSpeaking(false);
-    utt.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utt);
+    if (!clean) return;
+    try {
+      const brainUrl = import.meta.env.VITE_ALICIA_URL || "http://localhost:3001";
+      const res = await fetch(`${brainUrl}/api/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean }),
+      });
+      if (!res.ok) throw new Error("TTS failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onplay = () => setIsSpeaking(true);
+      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(url); audioRef.current = null; };
+      audio.onerror = () => { setIsSpeaking(false); audioRef.current = null; };
+      await audio.play();
+    } catch {
+      // Fallback to browser TTS
+      if (!window.speechSynthesis) return;
+      const utt = new SpeechSynthesisUtterance(clean);
+      utt.lang = "es-PE";
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith("es"));
+      if (preferred) utt.voice = preferred;
+      utt.onstart = () => setIsSpeaking(true);
+      utt.onend = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utt);
+    }
   }, [voiceEnabled]);
 
   const avatarState = sending ? "thinking" : isSpeaking ? "speaking" : "idle";
@@ -752,7 +772,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   }, [addTask, createEvent, allSpaces, currentUserId, selectedUserId]);
 
   // Send message to Alicia
-  const BRAIN_URL = "http://localhost:3001";
+  const BRAIN_URL = import.meta.env.VITE_ALICIA_URL || "http://localhost:3001";
 
   const send = useCallback(async (text) => {
     if (!text.trim() || sending) return;
@@ -948,13 +968,13 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
             </button>
           )}
           <button
-            onClick={() => { setVoiceEnabled(v => !v); window.speechSynthesis?.cancel(); }}
+            onClick={() => { setVoiceEnabled(v => !v); window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } }}
             title={voiceEnabled ? "Silenciar voz" : "Activar voz"}
             style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${voiceEnabled ? BAM + "60" : C.line}`, background: voiceEnabled ? BAM + "10" : "none", fontSize: 11, color: voiceEnabled ? BAM : C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>
             {voiceEnabled ? "🔊" : "🔇"} Voz
           </button>
           {messages.length > 0 && (
-            <button onClick={() => { window.speechSynthesis?.cancel(); const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <button onClick={() => { window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
               <Trash2 size={11} /> Limpiar
             </button>
           )}
