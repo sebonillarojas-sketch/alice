@@ -62,6 +62,15 @@ function initSchema(db) {
       scraped_at TEXT DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_market_time ON market_snapshots(scraped_at DESC);
+    CREATE TABLE IF NOT EXISTS macro_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT NOT NULL UNIQUE,
+      value REAL,
+      period TEXT,
+      label TEXT,
+      source TEXT DEFAULT 'bcrp',
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 }
 

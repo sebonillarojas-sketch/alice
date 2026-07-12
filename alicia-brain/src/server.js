@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 import { query, parseArr } from "./db.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
-import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema } from "./market.js";
+import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData } from "./market.js";
 import { readFile } from "fs/promises";
 dotenv.config();
 
@@ -522,8 +522,14 @@ app.post("/api/dropbox/delete_folder", async (req, res) => {
 app.get("/api/market-data", (req, res) => {
   try {
     const snap = getLatestSnapshot();
-    if (!snap) return res.json({ ok: false, projects: [], total: 0, scraped_at: null });
-    res.json({ ok: true, projects: snap.projects, total: snap.total, scraped_at: snap.scraped_at });
+    const macro = getMacroData();
+    res.json({
+      ok: true,
+      projects: snap?.projects || [],
+      total: snap?.total || 0,
+      scraped_at: snap?.scraped_at || null,
+      macro,  // { tasa_hip_pen, tasa_hip_usd, usd_pen } from BCRP
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -562,7 +568,7 @@ app.listen(PORT, async () => {
   console.log(`   Dropbox: ${process.env.DROPBOX_ACCESS_TOKEN ? "✅" : "⏳ pendiente"}`);
   console.log(`   Tavily:  ${process.env.TAVILY_API_KEY ? "✅" : "⏳ pendiente"}\n`);
 
-  // Ensure market table exists and seed from static file if empty
+  // Ensure market tables exist, seed projects from static file if empty
   ensureMarketSchema();
   try {
     const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
@@ -572,6 +578,9 @@ app.listen(PORT, async () => {
   } catch (e) {
     console.warn("Market seed: no se pudo leer el static file:", e.message);
   }
+
+  // Fetch real macro data from BCRP on startup (non-blocking)
+  refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
 
   startCron();
 });

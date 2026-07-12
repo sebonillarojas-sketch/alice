@@ -1,12 +1,35 @@
-// market.js — White Rabbit scraper · Lima real estate data
-// Fetches from nexoinmobiliario.pe, stores in local SQLite, serves to ALICE
+// market.js — White Rabbit · Lima real estate data pipeline
+//
+// Data sources:
+//   BCRP API (public, no auth) — tasas hipotecarias + tipo de cambio
+//   Nexo Inmobiliario           — proyectos activos (Cloudflare-protected, seeds from static JSON)
+//
+// BCRP series used:
+//   PN07848NM — Tasa hipotecaria MN (PEN, TEA promedio banca)
+//   PN07857NM — Tasa hipotecaria ME (USD, TEA promedio banca)
+//   PN01210PM — Tipo de cambio USD/PEN promedio mensual (bancario)
 
 import { query } from "./db.js";
 
-const NEXO_SEARCH_URL = "https://nexoinmobiliario.pe/search/projects";
-const NEXO_API_URL    = "https://nexoinmobiliario.pe/api/v2/projects";
+const BCRP_API = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api";
 
-// ── Schema (called once in db.js initSchema but added here for safety) ────────
+// Returns { period, value } for the latest non-null observation of a BCRP series
+async function fetchBCRP(seriesCode) {
+  const url = `${BCRP_API}/${seriesCode}/json/2025-1/2026-12/ing`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`BCRP ${seriesCode} HTTP ${res.status}`);
+  const d = await res.json();
+  const name = d.config?.series?.[0]?.name || seriesCode;
+  for (let i = d.periods.length - 1; i >= 0; i--) {
+    const v = d.periods[i].values[0];
+    if (v && v !== "n.d.") {
+      return { series: seriesCode, name, period: d.periods[i].name, value: parseFloat(v) };
+    }
+  }
+  throw new Error(`BCRP ${seriesCode}: no data`);
+}
+
+// ── Schema ────────────────────────────────────────────────────────────────────
 export function ensureMarketSchema() {
   query(`
     CREATE TABLE IF NOT EXISTS market_snapshots (
@@ -18,6 +41,17 @@ export function ensureMarketSchema() {
     )
   `);
   query(`CREATE INDEX IF NOT EXISTS idx_market_time ON market_snapshots(scraped_at DESC)`);
+  query(`
+    CREATE TABLE IF NOT EXISTS macro_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT NOT NULL UNIQUE,
+      value REAL,
+      period TEXT,
+      label TEXT,
+      source TEXT DEFAULT 'bcrp',
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 // ── Latest snapshot ───────────────────────────────────────────────────────────
@@ -158,29 +192,68 @@ function saveSnapshot(projects) {
   query(`DELETE FROM market_snapshots WHERE id NOT IN (SELECT id FROM market_snapshots ORDER BY scraped_at DESC LIMIT 10)`);
 }
 
+// ── Macro data (BCRP) ────────────────────────────────────────────────────────
+const BCRP_SERIES = [
+  { key: "tasa_hip_pen",  code: "PN07848NM", label: "Tasa hip. PEN (TEA)" },
+  { key: "tasa_hip_usd",  code: "PN07857NM", label: "Tasa hip. USD (TEA)" },
+  { key: "usd_pen",       code: "PN01210PM", label: "USD/PEN (promedio mensual)" },
+];
+
+async function refreshMacro() {
+  const results = [];
+  for (const s of BCRP_SERIES) {
+    try {
+      const d = await fetchBCRP(s.code);
+      query(
+        `INSERT INTO macro_data (key, value, period, label, source, updated_at)
+         VALUES (?,?,?,?,?,datetime('now'))
+         ON CONFLICT(key) DO UPDATE SET value=excluded.value, period=excluded.period, updated_at=excluded.updated_at`,
+        [s.key, d.value, d.period, s.label, "bcrp"]
+      );
+      results.push({ key: s.key, value: d.value, period: d.period });
+      console.log(`🐰 BCRP ${s.key}: ${d.value} (${d.period})`);
+    } catch (e) {
+      console.warn(`🐰 BCRP ${s.key} error:`, e.message);
+    }
+  }
+  return results;
+}
+
+export function getMacroData() {
+  const { rows } = query(`SELECT key, value, period, label, source, updated_at FROM macro_data`);
+  return Object.fromEntries(rows.map(r => [r.key, r]));
+}
+
 // ── Main refresh (called by cron + API) ───────────────────────────────────────
 export async function refreshMarketData() {
-  console.log("🐰 White Rabbit: iniciando refresh de market data...");
+  console.log("🐰 White Rabbit: iniciando refresh...");
+  const result = { projects: null, macro: null };
+
+  // 1. BCRP macro data (always works — public API)
+  try {
+    result.macro = await refreshMacro();
+    console.log(`🐰 BCRP: ${result.macro.length} series actualizadas`);
+  } catch (e) {
+    console.error("🐰 BCRP error:", e.message);
+  }
+
+  // 2. Nexo projects (Cloudflare-protected — tries but will usually fall back to cached)
   try {
     const projects = await fetchNexoProjects();
     if (projects && projects.length > 0) {
       saveSnapshot(projects);
-      console.log(`🐰 White Rabbit: ${projects.length} proyectos guardados`);
-      return { ok: true, total: projects.length, source: "nexo_live" };
+      console.log(`🐰 Nexo: ${projects.length} proyectos guardados`);
+      result.projects = { ok: true, total: projects.length, source: "nexo_live" };
+    } else {
+      const last = getLatestSnapshot();
+      result.projects = { ok: false, reason: "scrape_failed", last_update: last?.scraped_at, total: last?.total };
     }
-
-    // Scraping failed — check if we have any data at all
-    const last = getLatestSnapshot();
-    if (last) {
-      console.log(`🐰 White Rabbit: scrape falló, manteniendo datos de ${last.scraped_at}`);
-      return { ok: false, reason: "scrape_failed", last_update: last.scraped_at, total: last.total };
-    }
-
-    return { ok: false, reason: "no_data" };
   } catch (e) {
-    console.error("🐰 White Rabbit market error:", e.message);
-    return { ok: false, reason: e.message };
+    console.error("🐰 Nexo error:", e.message);
+    result.projects = { ok: false, reason: e.message };
   }
+
+  return result;
 }
 
 // ── Seed from static file (one-time, called on startup if table empty) ────────

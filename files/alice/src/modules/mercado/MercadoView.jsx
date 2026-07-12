@@ -594,16 +594,17 @@ export default function MercadoView() {
 
   const setF = useCallback((key, val) => setFactors(f => ({ ...f, [key]: val })), []);
 
+  const [macro, setMacro] = useState(null); // { tasa_hip_pen, tasa_hip_usd, usd_pen }
+
   // Fetch live market data from alicia-brain
   const fetchMarket = useCallback(async () => {
     try {
       const res = await fetch(`${BRAIN_URL}/api/market-data`);
       if (res.ok) {
         const json = await res.json();
-        if (json.ok && json.projects?.length) {
-          setLiveProjects(json.projects);
-          setMarketTs(json.scraped_at);
-        }
+        if (json.projects?.length) setLiveProjects(json.projects);
+        if (json.scraped_at) setMarketTs(json.scraped_at);
+        if (json.macro && Object.keys(json.macro).length) setMacro(json.macro);
       }
     } catch (e) {
       // silently ignore — hardcoded data still works
@@ -680,7 +681,11 @@ DISTRITO: ${selectedDistrict.name}
 Contexto: ${selectedDistrict.desc}
 Absorción base del distrito: ${selectedDistrict.base} unidades/mes
 Tendencia: ${selectedDistrict.trend} (score: ${selectedDistrict.trendScore})
-Rango de precios del sector: USD ${selectedDistrict.priceRange[0]}–${selectedDistrict.priceRange[1]}/m²
+Rango de precios del sector: USD ${selectedDistrict.priceRange[0]}–${selectedDistrict.priceRange[1]}/m²${selectedDistrict.liveAvgM2 ? ` (promedio real Nexo: USD ${selectedDistrict.liveAvgM2}/m²)` : ""}
+DATOS MACRO REALES (BCRP${macro?.tasa_hip_pen?.period ? " · " + macro.tasa_hip_pen.period : ""}):
+- Tasa hipotecaria PEN: ${macro?.tasa_hip_pen?.value?.toFixed(2) ?? "7.8"}% TEA
+- Tasa hipotecaria USD: ${macro?.tasa_hip_usd?.value?.toFixed(2) ?? "6.5"}% TEA
+- Tipo de cambio: S/ ${macro?.usd_pen?.value?.toFixed(3) ?? "3.78"} por USD
 
 PROYECTO:
 - Tipología: ${TIPOLOGIA_OPTS[factors.tipologia]}
@@ -799,9 +804,12 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
 
         {/* Live data status + refresh */}
         <div style={{ position: "absolute", top: 14, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
-          {marketTs && (
-            <span style={{ fontSize: 9, color: C.muted, background: "rgba(244,241,234,0.9)", padding: "3px 8px", borderRadius: 2 }}>
-              {liveProjects.length} proyectos · {new Date(marketTs).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
+          {(marketTs || macro) && (
+            <span style={{ fontSize: 9, color: C.muted, background: "rgba(244,241,234,0.9)", padding: "3px 8px", borderRadius: 2, lineHeight: 1.4 }}>
+              {liveProjects.length > 0 && <>{liveProjects.length} proy · </>}
+              {macro?.tasa_hip_pen && <>hip. PEN <strong style={{ color: C.ink }}>{macro.tasa_hip_pen.value?.toFixed(2)}%</strong> · USD <strong style={{ color: C.ink }}>{macro.tasa_hip_usd?.value?.toFixed(2)}%</strong> · </>}
+              {macro?.usd_pen && <>S/ <strong style={{ color: C.ink }}>{macro.usd_pen.value?.toFixed(3)}</strong></>}
+              {macro?.tasa_hip_pen?.period && <span style={{ opacity: 0.5 }}> · {macro.tasa_hip_pen.period}</span>}
             </span>
           )}
           <button onClick={handleRefresh} disabled={refreshing}

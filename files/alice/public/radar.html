@@ -226,10 +226,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);heig
 
 <!-- MACRO STRIP -->
 <div id="macro">
-  <span class="mi">USD/PEN <strong>3.78</strong></span><span class="mdot">·</span>
-  <span class="mi">Tasa hip. <strong>7.8%</strong></span><span class="mdot">·</span>
-  <span class="mi">Inflación <strong>2.1%</strong></span><span class="mdot">·</span>
-  <span class="mi">PBI Const. <strong>+4.8%</strong></span><span class="mdot">·</span>
+  <span class="mi" id="macro-tc">USD/PEN <strong>3.78</strong></span><span class="mdot">·</span>
+  <span class="mi" id="macro-hip">Tasa hip. PEN <strong>7.8%</strong> · USD <strong>6.5%</strong></span><span class="mdot">·</span>
   <span class="mi">Déficit Lima <strong>612K u.</strong></span><span class="mdot">·</span>
   <span class="mi" id="macro-mkt">Lima Moderna · cargando...</span>
 </div>
@@ -282,16 +280,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);heig
 <script>
 (function(){
 
-// ── CONSTANTS ────────────────────────────────────────────────
-const TC = 3.78;
-const BANKS = [
-  {bank:'BCP',     rate:7.8, currency:'PEN', plazo:20},
-  {bank:'Scotiabank',rate:7.9,currency:'PEN', plazo:20},
-  {bank:'Interbank',rate:8.1,currency:'PEN', plazo:20},
-  {bank:'BBVA',    rate:8.3, currency:'PEN', plazo:20},
-  {bank:'BCP',     rate:6.5, currency:'USD', plazo:20},
-  {bank:'BBVA',    rate:6.8, currency:'USD', plazo:20},
-];
+// ── MACRO (live from BCRP via alicia-brain, fallback to last known) ──────────
+let MACRO = {
+  tasa_hip_pen: { value: 7.8,  period: '—', label: 'Tasa hip. PEN (TEA)' },
+  tasa_hip_usd: { value: 6.5,  period: '—', label: 'Tasa hip. USD (TEA)' },
+  usd_pen:      { value: 3.78, period: '—', label: 'USD/PEN' },
+};
+// TC and BANKS are derived from MACRO after load
+let TC = MACRO.usd_pen.value;
+let BANKS = buildBanksFromMacro(MACRO);
+function buildBanksFromMacro(m){
+  const rPEN = +(m.tasa_hip_pen?.value || 7.8).toFixed(2);
+  const rUSD = +(m.tasa_hip_usd?.value || 6.5).toFixed(2);
+  return [
+    {bank:'Banca PEN (BCRP prom.)', rate:rPEN, currency:'PEN', plazo:20},
+    {bank:'Banca USD (BCRP prom.)', rate:rUSD, currency:'USD', plazo:20},
+    {bank:'BCP',        rate:+(rPEN*0.98).toFixed(1), currency:'PEN', plazo:20},
+    {bank:'Scotiabank', rate:+(rPEN*1.01).toFixed(1), currency:'PEN', plazo:20},
+    {bank:'BBVA',       rate:+(rPEN*1.05).toFixed(1), currency:'PEN', plazo:20},
+    {bank:'BCP USD',    rate:+(rUSD*0.98).toFixed(1), currency:'USD', plazo:20},
+  ];
+}
 const SALARY = {
   'Miraflores': {junior:3800,mid:6500,senior:11000,exec:22000,pm:1.65},
   'San Isidro': {junior:4200,mid:7500,senior:14000,exec:28000,pm:1.65},
@@ -390,11 +399,27 @@ async function fetchFromBrain(){
   return null;
 }
 
+function applyMacro(json){
+  if(!json.macro) return;
+  MACRO = { ...MACRO, ...json.macro };
+  TC = +(MACRO.usd_pen?.value || 3.78);
+  BANKS = buildBanksFromMacro(MACRO);
+  // Update macro strip
+  const rPEN=+(MACRO.tasa_hip_pen?.value||7.8).toFixed(2);
+  const rUSD=+(MACRO.tasa_hip_usd?.value||6.5).toFixed(2);
+  const per=MACRO.tasa_hip_pen?.period||'';
+  const mktEl=document.getElementById('macro-hip');
+  if(mktEl) mktEl.innerHTML=`Tasa hip. PEN <strong>${rPEN}%</strong> · USD <strong>${rUSD}%</strong>${per?' <span style="opacity:.4">'+per+'</span>':''}`;
+  const tcEl=document.getElementById('macro-tc');
+  if(tcEl) tcEl.innerHTML=`USD/PEN <strong>S/ ${TC.toFixed(3)}</strong>`;
+}
+
 async function loadData(){
   try{
     document.getElementById('loader-txt').textContent='Conectando con White Rabbit...';
     const json=await fetchFromBrain();
     if(!json) throw new Error('No data');
+    applyMacro(json);
     const raw=json.projects||[];
     ALL=raw.filter(p=>p.list_price_m2_usd&&p.list_price_m2_usd>500&&p.list_price_m2_usd<15000);
     SCRAPE_DATE=json.scraped_at||'';
@@ -429,6 +454,7 @@ async function refreshData(){
     await new Promise(r=>setTimeout(r,3000));
     const json=await fetchFromBrain();
     if(!json) throw new Error();
+    applyMacro(json);
     ALL=(json.projects||[]).filter(p=>p.list_price_m2_usd&&p.list_price_m2_usd>500&&p.list_price_m2_usd<15000);
     SCRAPE_DATE=json.scraped_at||'';
     const tsEl=document.getElementById('data-ts');
