@@ -82,6 +82,31 @@ function initSchema(db) {
       scraped_at TEXT DEFAULT (datetime('now')),
       UNIQUE(bank, product)
     );
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent TEXT NOT NULL CHECK (agent IN ('white-rabbit','cheshire','bandersnatch','mad-hatter','jabberwocky','dark-alice','tea-table')),
+      started_at TEXT DEFAULT (datetime('now')),
+      finished_at TEXT,
+      result TEXT DEFAULT 'ok' CHECK (result IN ('ok','issues','error')),
+      summary TEXT,
+      actions_taken TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_runs ON agent_runs(agent, created_at DESC);
+    CREATE TABLE IF NOT EXISTS agent_findings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent TEXT NOT NULL,
+      run_id INTEGER,
+      severity TEXT NOT NULL DEFAULT 'minor' CHECK (severity IN ('critical','major','minor','info')),
+      category TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      status TEXT DEFAULT 'open' CHECK (status IN ('open','auto-fixed','escalated','acknowledged','resolved','wont-fix')),
+      resolved_by TEXT,
+      resolution TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_findings ON agent_findings(status, severity, created_at DESC);
   `);
 }
 

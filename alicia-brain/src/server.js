@@ -585,6 +585,98 @@ app.post("/api/dropbox/delete_folder", async (req, res) => {
   }
 });
 
+// ── Wonderland IT · agentes autónomos (ver docs/WONDERLAND_IT.md) ────────────
+
+function requireAgentKey(req, res, next) {
+  const key = req.headers["x-agent-key"] || "";
+  if (!process.env.AGENTS_API_KEY || key !== process.env.AGENTS_API_KEY) {
+    return res.status(401).json({ error: "x-agent-key inválida" });
+  }
+  next();
+}
+
+// Los agentes reportan una corrida completa (run + findings en una llamada)
+app.post("/api/agents/report", requireAgentKey, async (req, res) => {
+  try {
+    const { agent, result = "ok", summary = "", actions_taken = [], findings = [] } = req.body || {};
+    if (!agent) return res.status(400).json({ error: "agent requerido" });
+    const { lastID: runId } = query(
+      `INSERT INTO agent_runs (agent, finished_at, result, summary, actions_taken) VALUES (?, datetime('now'), ?, ?, ?)`,
+      [agent, result, summary, JSON.stringify(actions_taken)]
+    );
+    for (const f of findings) {
+      query(
+        `INSERT INTO agent_findings (agent, run_id, severity, category, detail, status) VALUES (?,?,?,?,?,?)`,
+        [agent, runId, f.severity || "minor", f.category || "general", f.detail || "", f.status || "open"]
+      );
+    }
+    // Críticos → WhatsApp inmediato a Sebastián
+    const criticals = findings.filter(f => f.severity === "critical");
+    if (criticals.length > 0 && process.env.PHONE_sb) {
+      const lines = criticals.map(f => `• [${f.category}] ${f.detail}`).join("\n");
+      sendWhatsAppMessage(process.env.PHONE_sb,
+        `🚨 *${agent}* encontró ${criticals.length} crítico(s):\n${lines}`
+      ).catch(e => console.error("Alerta WA falló:", e.message));
+    }
+    console.log(`🧪 [${agent}] run #${runId} · ${result} · ${findings.length} findings`);
+    res.json({ ok: true, runId });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// El Lab del cockpit lee el estado real (público, solo lectura)
+app.get("/api/agents/status", (req, res) => {
+  try {
+    const { rows: lastRuns } = query(`
+      SELECT r.* FROM agent_runs r
+      INNER JOIN (SELECT agent, MAX(id) AS max_id FROM agent_runs GROUP BY agent) m
+        ON r.agent = m.agent AND r.id = m.max_id
+    `);
+    const { rows: openFindings } = query(
+      `SELECT * FROM agent_findings WHERE status IN ('open','escalated') ORDER BY
+        CASE severity WHEN 'critical' THEN 0 WHEN 'major' THEN 1 WHEN 'minor' THEN 2 ELSE 3 END,
+        created_at DESC LIMIT 100`
+    );
+    res.json({
+      agents: lastRuns.map(r => ({ ...r, actions_taken: parseArr(r.actions_taken) })),
+      findings: openFindings,
+      quarantine: process.env.QUARANTINE === "true",
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Historial de corridas de un agente
+app.get("/api/agents/:agent/runs", (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const { rows } = query(
+      `SELECT * FROM agent_runs WHERE agent = ? ORDER BY id DESC LIMIT ?`,
+      [req.params.agent, limit]
+    );
+    res.json(rows.map(r => ({ ...r, actions_taken: parseArr(r.actions_taken) })));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Actualizar estado de un finding (auto-fixed, resolved, etc.)
+app.patch("/api/agents/findings/:id", requireAgentKey, (req, res) => {
+  try {
+    const { status, resolved_by, resolution } = req.body || {};
+    if (!status) return res.status(400).json({ error: "status requerido" });
+    query(
+      `UPDATE agent_findings SET status = ?, resolved_by = ?, resolution = ?, updated_at = datetime('now') WHERE id = ?`,
+      [status, resolved_by || null, resolution || null, req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Market Data (White Rabbit) ────────────────────────────────────────────────
 
 app.get("/api/market-data", (req, res) => {
