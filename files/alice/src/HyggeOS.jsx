@@ -4646,6 +4646,35 @@ function GrowthDashboard({ terrenos, onSelect, onCreate, onUpdate, selectedTerre
   );
 }
 
+function GrowthSpace({ terrenos, onSelect, onCreate, onUpdate, selectedTerrenoId }) {
+  const [tab, setTab] = React.useState("terrenos");
+  const tabs = [
+    { id: "terrenos", label: "Terrenos" },
+    { id: "mercado",  label: "Análisis de Mercado" },
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ display: "flex", gap: 0, borderBottom: `1px solid ${C.line}`, padding: "0 24px", background: C.bg, flexShrink: 0 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{
+              padding: "10px 18px", fontSize: 12, fontWeight: 600, border: "none", background: "none",
+              cursor: "pointer", color: tab === t.id ? C.ink : C.muted,
+              borderBottom: tab === t.id ? `2px solid ${C.ink}` : "2px solid transparent",
+              marginBottom: -1, letterSpacing: "0.02em",
+            }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {tab === "terrenos" && <GrowthDashboard terrenos={terrenos} onSelect={onSelect} onCreate={onCreate} onUpdate={onUpdate} selectedTerrenoId={selectedTerrenoId} />}
+        {tab === "mercado"  && <MercadoView />}
+      </div>
+    </div>
+  );
+}
+
 function NewTerrenoModal({ onClose, onCreate, initial }) {
   const [data, setData] = useState(initial || {
     name: "", district: "Miraflores", address: "",
@@ -13838,7 +13867,7 @@ REGLAS:
     if (currentSpace === "legal") return <LegalDashboard />;
     if (currentSpace === "comercial") return <ComercialDashboard />;
     if (currentSpace === "marketing") return <MarketingDashboard />;
-    if (currentSpace === "growth") return <GrowthDashboard terrenos={terrenos} onSelect={setSelectedTerrenoId} onCreate={createTerreno} onUpdate={updateTerreno} selectedTerrenoId={selectedTerrenoId} />;
+    if (currentSpace === "growth") return <GrowthSpace terrenos={terrenos} onSelect={setSelectedTerrenoId} onCreate={createTerreno} onUpdate={updateTerreno} selectedTerrenoId={selectedTerrenoId} />;
     if (PROJECT_CONFIGS[currentSpace]) return <ProjectDashboard projectId={currentSpace} />;
     const customSpace = customSpaces.find(s => s.id === currentSpace);
     if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} />;
