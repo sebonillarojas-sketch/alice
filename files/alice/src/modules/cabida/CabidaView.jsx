@@ -100,8 +100,8 @@ function Kpi({ label, value, unit, accent }) {
   );
 }
 
-export default function CabidaView() {
-  const [terreno, setTerreno] = useState(693);
+export default function CabidaView({ initialTerreno, compact }) {
+  const [terreno, setTerreno] = useState(initialTerreno || 693);
   const [areaLibre, setAreaLibre] = useState(35);
   const [pisos, setPisos] = useState(8);
   const [azoteaTechada, setAzoteaTechada] = useState(30);
@@ -171,15 +171,17 @@ export default function CabidaView() {
         input[type=number]::-webkit-inner-spin-button { opacity: 0.25; }
       `}</style>
 
-      {/* header */}
-      <header style={{ background: C.card, borderBottom: `1px solid ${C.line}`, padding: "18px 28px", display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ fontFamily: sans, fontWeight: 800, fontSize: 24, margin: 0, letterSpacing: "-0.02em" }}>
-          cabida<span style={{ color: C.orange }}>.</span>
-        </h1>
-        <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>
-          cálculo preliminar — hygge / bam
-        </span>
-      </header>
+      {/* header — solo en modo standalone */}
+      {!compact && (
+        <header style={{ background: C.card, borderBottom: `1px solid ${C.line}`, padding: "18px 28px", display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+          <h1 style={{ fontFamily: sans, fontWeight: 800, fontSize: 24, margin: 0, letterSpacing: "-0.02em" }}>
+            cabida<span style={{ color: C.orange }}>.</span>
+          </h1>
+          <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>
+            cálculo preliminar — hygge / bam
+          </span>
+        </header>
+      )}
 
       {/* KPI bar */}
       <div style={{ background: C.card, borderBottom: `1px solid ${C.line}`, display: "flex", flexWrap: "wrap" }}>

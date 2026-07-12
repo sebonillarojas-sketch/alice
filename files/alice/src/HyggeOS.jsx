@@ -4827,7 +4827,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
-      <aside className="h-full w-full flex flex-col" style={{ maxWidth: tab === "analisis" ? 1060 : 560, backgroundColor: C.bg, borderLeft: `1px solid ${C.line}`, transition: "max-width 0.28s ease" }} onClick={e => e.stopPropagation()}>
+      <aside className="h-full w-full flex flex-col" style={{ maxWidth: (tab === "analisis" || tab === "cabida") ? 1060 : 560, backgroundColor: C.bg, borderLeft: `1px solid ${C.line}`, transition: "max-width 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div className="px-5 lg:px-6 pt-5 pb-3 flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
@@ -4861,6 +4861,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
             { id: "comentarios", label: `Comentarios · ${(terreno.comments || []).length}` },
             { id: "documentos", label: `Documentos · ${(terreno.documents || []).length}` },
             { id: "analisis", label: "Análisis" },
+            { id: "cabida", label: "Cabida" },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} className="px-3 py-3 text-[11px]"
               style={{ color: tab === t.id ? C.ink : C.muted, fontWeight: tab === t.id ? 600 : 500, borderBottom: `2px solid ${tab === t.id ? C.ink : "transparent"}`, marginBottom: -1 }}>
@@ -4969,6 +4970,9 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
           )}
           {tab === "analisis" && (
             <TerrenoOpportunidad terreno={terreno} />
+          )}
+          {tab === "cabida" && (
+            <CabidaView initialTerreno={terreno.areaM2 || 500} compact />
           )}
         </div>
       </aside>
