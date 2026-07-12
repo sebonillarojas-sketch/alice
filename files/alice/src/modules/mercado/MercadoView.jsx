@@ -156,14 +156,14 @@ function DistrictMap({ selectedId, onSelect }) {
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>html,body,#map{margin:0;padding:0;height:100%;background:#EEEBE3;}
-  .leaflet-tile-pane{filter:saturate(0.5) brightness(1.05);}
+  .leaflet-control-attribution{display:none;}
   </style></head><body>
   <div id="map"></div>
   <script>
     const map = L.map("map", { zoomControl: true, scrollWheelZoom: true })
       .setView([-12.08, -77.03], 12);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OSM", maxZoom: 18
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19, subdomains: "abcd"
     }).addTo(map);
     ${markersJs}
     window.addEventListener("message", e => {
