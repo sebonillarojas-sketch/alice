@@ -743,7 +743,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
               color: C.cobalt, textDecoration: "none", background: "rgba(244,241,234,0.92)",
               padding: "5px 10px", borderRadius: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
             }}>
-            <ExternalLink size={11} /> Radar + Tycoon AI
+            <ExternalLink size={11} /> Radar + Velocity AI
           </a>
         </div>
       </div>

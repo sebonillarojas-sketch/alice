@@ -287,7 +287,7 @@ const APPS = [
     icon: Activity,
     dot: "#3D52D5",
     url: "https://hygge-radar.netlify.app/",
-    description: "Lima Moderna · 688 proyectos · mapa reactivo · Tycoon AI",
+    description: "Lima Moderna · 688 proyectos · mapa reactivo · Velocity AI",
     badge: "v3.0",
     native: false,
   },
@@ -332,8 +332,8 @@ const APPS = [
     native: true,
   },
   {
-    id: "app-tycoon",
-    label: "Tycoon",
+    id: "app-velocity",
+    label: "Velocity",
     icon: TrendingUp,
     dot: "#5F8A6A",
     url: null,
@@ -13903,7 +13903,7 @@ REGLAS:
       const app = APPS.find(a => a.id === currentSpace);
       if (app && app.native) {
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
-        if (app.id === "app-tycoon") return <MercadoView />;
+        if (app.id === "app-velocity") return <MercadoView />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
             <iframe
