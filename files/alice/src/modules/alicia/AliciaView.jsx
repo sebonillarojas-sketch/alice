@@ -611,7 +611,23 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       .catch(() => {});
   }, []);
 
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const VOICE_OPTIONS = [
+    { value: "Celeste-PlayAI",  label: "Celeste — cálida" },
+    { value: "Arista-PlayAI",   label: "Arista — profesional" },
+    { value: "Lana-PlayAI",     label: "Lana — suave" },
+    { value: "Maya-PlayAI",     label: "Maya — enérgica" },
+    { value: "Nora-PlayAI",     label: "Nora — neutra" },
+    { value: "Scarlett-PlayAI", label: "Scarlett — expresiva" },
+    { value: "Selena-PlayAI",   label: "Selena — natural" },
+    { value: "Stella-PlayAI",   label: "Stella — elegante" },
+    { value: "Zara-PlayAI",     label: "Zara — moderna" },
+    { value: "Fritz-PlayAI",    label: "Fritz — masculina" },
+    { value: "James-PlayAI",    label: "James — masculina" },
+    { value: "Atlas-PlayAI",    label: "Atlas — masculina" },
+  ];
+
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem("alicia_voice_enabled") !== "false");
+  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem("alicia_voice") || "Celeste-PlayAI");
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const endRef = useRef(null);
@@ -622,7 +638,6 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
   const speak = useCallback(async (text) => {
     if (!voiceEnabled) return;
-    // Stop any current audio
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     window.speechSynthesis?.cancel();
     const clean = text.replace(/[*_`#]/g, "").trim();
@@ -632,7 +647,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       const res = await fetch(`${brainUrl}/api/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clean }),
+        body: JSON.stringify({ text: clean, voice: selectedVoice }),
       });
       if (!res.ok) throw new Error("TTS failed");
       const blob = await res.blob();
@@ -644,7 +659,6 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       audio.onerror = () => { setIsSpeaking(false); audioRef.current = null; };
       await audio.play();
     } catch {
-      // Fallback to browser TTS
       if (!window.speechSynthesis) return;
       const utt = new SpeechSynthesisUtterance(clean);
       utt.lang = "es-PE";
@@ -655,7 +669,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       utt.onend = () => setIsSpeaking(false);
       window.speechSynthesis.speak(utt);
     }
-  }, [voiceEnabled]);
+  }, [voiceEnabled, selectedVoice]);
 
   const avatarState = sending ? "thinking" : isSpeaking ? "speaking" : "idle";
 
@@ -968,11 +982,22 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
             </button>
           )}
           <button
-            onClick={() => { setVoiceEnabled(v => !v); window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } }}
+            onClick={() => { const next = !voiceEnabled; setVoiceEnabled(next); localStorage.setItem("alicia_voice_enabled", next); window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } }}
             title={voiceEnabled ? "Silenciar voz" : "Activar voz"}
             style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${voiceEnabled ? BAM + "60" : C.line}`, background: voiceEnabled ? BAM + "10" : "none", fontSize: 11, color: voiceEnabled ? BAM : C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>
             {voiceEnabled ? "🔊" : "🔇"} Voz
           </button>
+          {voiceEnabled && (
+            <select
+              value={selectedVoice}
+              onChange={e => { setSelectedVoice(e.target.value); localStorage.setItem("alicia_voice", e.target.value); }}
+              title="Voz de Alicia"
+              style={{ padding: "4px 6px", borderRadius: 2, border: `1px solid ${C.line}`, background: C.card, color: C.text, fontSize: 11, cursor: "pointer", maxWidth: 140 }}>
+              {VOICE_OPTIONS.map(v => (
+                <option key={v.value} value={v.value}>{v.label}</option>
+              ))}
+            </select>
+          )}
           {messages.length > 0 && (
             <button onClick={() => { window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
               <Trash2 size={11} /> Limpiar
