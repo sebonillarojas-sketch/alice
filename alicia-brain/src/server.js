@@ -8,6 +8,8 @@ import { dirname, join } from "path";
 import { query, parseArr } from "./db.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
+import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema } from "./market.js";
+import { readFile } from "fs/promises";
 dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -515,6 +517,29 @@ app.post("/api/dropbox/delete_folder", async (req, res) => {
   }
 });
 
+// ── Market Data (White Rabbit) ────────────────────────────────────────────────
+
+app.get("/api/market-data", (req, res) => {
+  try {
+    const snap = getLatestSnapshot();
+    if (!snap) return res.json({ ok: false, projects: [], total: 0, scraped_at: null });
+    res.json({ ok: true, projects: snap.projects, total: snap.total, scraped_at: snap.scraped_at });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/api/market-refresh", async (req, res) => {
+  // Simple bearer check so random internet can't spam refreshes
+  const auth = req.headers.authorization || "";
+  const token = process.env.MARKET_REFRESH_TOKEN || "white-rabbit";
+  if (auth !== `Bearer ${token}`) return res.status(401).json({ ok: false, error: "unauthorized" });
+
+  res.json({ ok: true, status: "refresh_started" });
+  // Run async so response returns immediately
+  refreshMarketData().catch(e => console.error("market refresh error:", e.message));
+});
+
 app.get("/health", (_, res) => res.json({
   ok: true, service: "alicia-brain",
   erp: process.env.ERP_URL || "http://localhost:3002",
@@ -529,12 +554,24 @@ app.get("/health", (_, res) => res.json({
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🧠 Alicia Brain · http://localhost:${PORT}`);
   console.log(`   ERP: ${process.env.ERP_URL || "http://localhost:3002"}`);
   console.log(`   Google:  ${process.env.GOOGLE_CLIENT_ID ? "✅" : "⏳ pendiente"}`);
   console.log(`   Zoom:    ${process.env.ZOOM_ACCOUNT_ID ? "✅" : "⏳ pendiente"}`);
   console.log(`   Dropbox: ${process.env.DROPBOX_ACCESS_TOKEN ? "✅" : "⏳ pendiente"}`);
   console.log(`   Tavily:  ${process.env.TAVILY_API_KEY ? "✅" : "⏳ pendiente"}\n`);
+
+  // Ensure market table exists and seed from static file if empty
+  ensureMarketSchema();
+  try {
+    const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
+    const raw = await readFile(staticPath, "utf8");
+    const parsed = JSON.parse(raw);
+    await seedFromStaticIfEmpty(parsed.projects || []);
+  } catch (e) {
+    console.warn("Market seed: no se pudo leer el static file:", e.message);
+  }
+
   startCron();
 });

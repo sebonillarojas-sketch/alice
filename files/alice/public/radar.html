@@ -217,6 +217,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);heig
   </div>
   <div class="hspace"></div>
   <div class="hctrl">
+    <span class="mi" style="font-size:8px;margin-right:4px;">Act. <strong id="data-ts">—</strong></span>
     <button class="hbtn" onclick="openAddModal()">★ Mi proyecto</button>
     <button class="hbtn" id="rfbtn" onclick="refreshData()">↻ Refresh</button>
     <button class="hbtn primary" onclick="toggleTycoon()">⚡ Tycoon</button>
@@ -363,19 +364,44 @@ function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; 
 function segColor(s){ return s==='A'?'#C2A45A':s==='B'?'#4A5BD6':'#3E6B4F'; }
 
 // ── DATA LOAD ────────────────────────────────────────────────
+const BRAIN_URL = 'https://aliceai.bam.pe';
+const REFRESH_TOKEN = 'white-rabbit';
+
+async function fetchFromBrain(){
+  // Try live backend first, fallback to static file
+  try{
+    const r=await fetch(`${BRAIN_URL}/api/market-data`,{signal:AbortSignal.timeout(8000)});
+    if(r.ok){
+      const json=await r.json();
+      if(json.ok && json.projects && json.projects.length>0) return json;
+    }
+  }catch(e){}
+  // Fallback to static file
+  const urls=['./data/projects.json','./projects.json'];
+  for(const u of urls){
+    try{
+      const r=await fetch(u);
+      if(r.ok){
+        const json=await r.json();
+        return { ok:true, projects:json.projects||[], scraped_at:json.scraped_at||json.date||'' };
+      }
+    }catch(e){}
+  }
+  return null;
+}
+
 async function loadData(){
   try{
-    document.getElementById('loader-txt').textContent='Conectando con Nexo Inmobiliario...';
-    const urls=['./projects.json','./data/projects.json'];
-    let json=null;
-    for(const u of urls){
-      try{ const r=await fetch(u); if(r.ok){json=await r.json();break;} }catch(e){}
-    }
+    document.getElementById('loader-txt').textContent='Conectando con White Rabbit...';
+    const json=await fetchFromBrain();
     if(!json) throw new Error('No data');
     const raw=json.projects||[];
     ALL=raw.filter(p=>p.list_price_m2_usd&&p.list_price_m2_usd>500&&p.list_price_m2_usd<15000);
-    SCRAPE_DATE=json.date||'';
+    SCRAPE_DATE=json.scraped_at||'';
     document.getElementById('loader-txt').textContent=`${ALL.length} proyectos cargados`;
+    // Update timestamp in header if element exists
+    const tsEl=document.getElementById('data-ts');
+    if(tsEl&&SCRAPE_DATE) tsEl.textContent=new Date(SCRAPE_DATE).toLocaleString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     // Restore own
     try{ const s=localStorage.getItem('hygge_own'); if(s) OWN=JSON.parse(s); }catch(e){}
     // Populate district filter
@@ -394,14 +420,19 @@ async function refreshData(){
   const btn=document.getElementById('rfbtn');
   btn.textContent='↻ ...';btn.disabled=true;
   try{
-    const urls=['./projects.json?t='+Date.now(),'./data/projects.json?t='+Date.now()];
-    let json=null;
-    for(const u of urls){
-      try{ const r=await fetch(u); if(r.ok){json=await r.json();break;} }catch(e){}
-    }
+    // Trigger backend refresh (White Rabbit scrapes Nexo)
+    fetch(`${BRAIN_URL}/api/market-refresh`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${REFRESH_TOKEN}`}
+    }).catch(()=>{});
+    // Wait briefly then re-fetch
+    await new Promise(r=>setTimeout(r,3000));
+    const json=await fetchFromBrain();
     if(!json) throw new Error();
     ALL=(json.projects||[]).filter(p=>p.list_price_m2_usd&&p.list_price_m2_usd>500&&p.list_price_m2_usd<15000);
-    SCRAPE_DATE=json.date||'';
+    SCRAPE_DATE=json.scraped_at||'';
+    const tsEl=document.getElementById('data-ts');
+    if(tsEl&&SCRAPE_DATE) tsEl.textContent=new Date(SCRAPE_DATE).toLocaleString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     applyFilters();
     btn.textContent='✓ OK';
     setTimeout(()=>{btn.textContent='↻ Refresh';btn.disabled=false;},2000);

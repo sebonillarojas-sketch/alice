@@ -54,6 +54,14 @@ function initSchema(db) {
       attendees TEXT DEFAULT '[]', zoom_id TEXT, duration_min INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS market_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT NOT NULL DEFAULT 'nexo',
+      total INTEGER DEFAULT 0,
+      data TEXT NOT NULL DEFAULT '[]',
+      scraped_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_market_time ON market_snapshots(scraped_at DESC);
   `);
 }
 

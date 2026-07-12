@@ -542,7 +542,38 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ─── MAIN VIEW ───────────────────────────────────────────────────────────────
+const BRAIN_URL = "https://aliceai.bam.pe";
+
+// Merge live project data into district definitions
+function buildLiveDistricts(staticDistricts, liveProjects) {
+  if (!liveProjects || liveProjects.length === 0) return staticDistricts;
+  return staticDistricts.map(d => {
+    const matches = liveProjects.filter(p =>
+      p.district && p.district.toLowerCase().includes(d.name.toLowerCase().split(" ")[0].toLowerCase())
+    );
+    if (matches.length === 0) return d;
+    const prices = matches.map(p => p.close_price_m2_usd || p.list_price_m2_usd).filter(Boolean);
+    const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+    const sorted = [...prices].sort((a, b) => a - b);
+    return {
+      ...d,
+      base: matches.length > 0 ? +(matches.length / 4).toFixed(1) : d.base,
+      priceRange: sorted.length >= 2 ? [Math.round(sorted[0]), Math.round(sorted[sorted.length - 1])] : d.priceRange,
+      liveAvgM2: avg ? Math.round(avg) : null,
+      liveCount: matches.length,
+    };
+  });
+}
+
 export default function MercadoView() {
+  // Market data from White Rabbit
+  const [liveProjects, setLiveProjects] = useState([]);
+  const [marketTs, setMarketTs] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Merge live data into districts
+  const districts = useMemo(() => buildLiveDistricts(DISTRICTS, liveProjects), [liveProjects]);
+
   // District
   const [selectedDistrict, setSelectedDistrict] = useState(null);
 
@@ -562,6 +593,37 @@ export default function MercadoView() {
   });
 
   const setF = useCallback((key, val) => setFactors(f => ({ ...f, [key]: val })), []);
+
+  // Fetch live market data from alicia-brain
+  const fetchMarket = useCallback(async () => {
+    try {
+      const res = await fetch(`${BRAIN_URL}/api/market-data`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.ok && json.projects?.length) {
+          setLiveProjects(json.projects);
+          setMarketTs(json.scraped_at);
+        }
+      }
+    } catch (e) {
+      // silently ignore — hardcoded data still works
+    }
+  }, []);
+
+  useEffect(() => { fetchMarket(); }, [fetchMarket]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetch(`${BRAIN_URL}/api/market-refresh`, {
+        method: "POST",
+        headers: { Authorization: "Bearer white-rabbit" },
+      });
+      await new Promise(r => setTimeout(r, 3500));
+      await fetchMarket();
+    } catch (e) {}
+    setRefreshing(false);
+  }, [fetchMarket]);
 
   // Analysis
   const [analysis, setAnalysis] = useState("");
@@ -584,13 +646,13 @@ export default function MercadoView() {
   useEffect(() => {
     const handler = e => {
       if (e.data?.type === "district:select") {
-        const d = DISTRICTS.find(x => x.id === e.data.id);
+        const d = districts.find(x => x.id === e.data.id);
         if (d) setSelectedDistrict(d);
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [districts]);
 
   // Computed
   const velocity     = useMemo(() => calcVelocity(selectedDistrict, factors), [selectedDistrict, factors]);
@@ -703,7 +765,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
           position: "absolute", bottom: 12, left: 12, right: 12,
           display: "flex", flexWrap: "wrap", gap: 6, pointerEvents: "none",
         }}>
-          {DISTRICTS.map(d => (
+          {districts.map(d => (
             <button key={d.id} onClick={() => setSelectedDistrict(d)}
               style={{
                 pointerEvents: "all", padding: "4px 10px", borderRadius: 2, border: "none",
@@ -735,8 +797,21 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
           </div>
         </div>
 
-        {/* Tycoon link top-right */}
-        <div style={{ position: "absolute", top: 14, right: 16 }}>
+        {/* Live data status + refresh */}
+        <div style={{ position: "absolute", top: 14, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
+          {marketTs && (
+            <span style={{ fontSize: 9, color: C.muted, background: "rgba(244,241,234,0.9)", padding: "3px 8px", borderRadius: 2 }}>
+              {liveProjects.length} proyectos · {new Date(marketTs).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
+            </span>
+          )}
+          <button onClick={handleRefresh} disabled={refreshing}
+            style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "rgba(244,241,234,0.92)", fontSize: 10, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", gap: 4 }}>
+            <RefreshCw size={10} className={refreshing ? "animate-spin" : ""} />
+            {refreshing ? "..." : "Refresh"}
+          </button>
+        </div>
+        {/* Tycoon link top-right (moved inside refresh div above) */}
+        <div style={{ position: "absolute", top: 46, right: 16 }}>
           <a href="https://hygge-radar.netlify.app" target="_blank" rel="noreferrer"
             style={{
               display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 600,
