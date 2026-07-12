@@ -148,7 +148,6 @@ const DEFAULT_PREFS = {
 };
 
 // User profiles — extends PEOPLE with editable fields (avatar, password, preferences).
-const ONLINE_BY_DEFAULT = ["sb", "aa", "jt", "vd"]; // mocked online status for demo
 const INITIAL_USERS = PEOPLE.map(p => {
   const [firstName, ...rest] = p.name.split(" ");
   return {
@@ -168,7 +167,7 @@ const INITIAL_USERS = PEOPLE.map(p => {
     initials: p.initials,
     avatar: null,
     password: "",
-    online: ONLINE_BY_DEFAULT.includes(p.id),
+    online: false,
     preferences: { ...DEFAULT_PREFS },
     createdAt: Date.now(),
   };
@@ -13758,7 +13757,7 @@ export default function HyggeOS({ authUser } = {}) {
         loadStored("hygge:hq:cifras", DEFAULT_HQ_CIFRAS),
         loadStored("hygge:deletedDefaultSpaces", []),
       ]);
-      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length === 4 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 72); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport } : { whiteboards: false, customViews: false, viewport: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
+      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(Array.isArray(us) ? us.map(u => ({ ...u, online: false })) : us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length === 4 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 72); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport } : { whiteboards: false, customViews: false, viewport: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
     })();
   }, []);
 
