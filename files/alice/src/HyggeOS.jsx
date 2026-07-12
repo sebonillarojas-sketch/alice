@@ -254,7 +254,6 @@ const TOOLS = [
   { id: "calendar-tool", label: "Calendario", icon: CalIcon, dot: "#5F8A6A" },
   { id: "wikihygge", label: "WikiHygge", icon: FileText, dot: "#C2A45A" },
   { id: "ceo-dashboard", label: "CEO Dashboard", icon: LayoutDashboard, dot: "#1E2A4A" },
-  { id: "mercado", label: "Mercado", icon: TrendingUp, dot: "#5F8A6A" },
   { id: "notifications", label: "Notificaciones", icon: Bell, dot: "#A85B5B" },
 ];
 const isToolId = (id) => TOOLS.some(t => t.id === id);
@@ -329,6 +328,16 @@ const APPS = [
     dot: "#A855F7",
     url: "/games.html",
     description: "Helicopter BAM Edition · esquivá obstáculos · modo salvo",
+    badge: "v1.0",
+    native: true,
+  },
+  {
+    id: "app-tycoon",
+    label: "Tycoon",
+    icon: TrendingUp,
+    dot: "#5F8A6A",
+    url: null,
+    description: "Simulador de velocidad de ventas · análisis de mercado · Alicia AI",
     badge: "v1.0",
     native: true,
   },
@@ -13894,6 +13903,7 @@ REGLAS:
       const app = APPS.find(a => a.id === currentSpace);
       if (app && app.native) {
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
+        if (app.id === "app-tycoon") return <MercadoView />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
             <iframe
@@ -13939,7 +13949,6 @@ REGLAS:
     if (currentSpace === "messages") {
       return <MessagesToolView messages={messages} markRead={markMessageRead} markAllRead={markAllMessagesRead} deleteMessage={deleteMessage} openTask={openDetail} sendMessage={sendMessage} users={users} currentUserId={currentUserId} />;
     }
-    if (currentSpace === "mercado") return <MercadoView />;
     if (currentSpace === "notifications") {
       return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} />;
     }
