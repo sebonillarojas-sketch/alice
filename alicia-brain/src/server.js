@@ -423,18 +423,17 @@ async function transcribeAudio(mediaUrl, mediaType) {
 const ttsCache = new Map(); // id → Buffer, cleaned up after 5 min
 
 const ALLOWED_VOICES = new Set([
-  "Celeste-PlayAI","Arista-PlayAI","Lana-PlayAI","Maya-PlayAI","Nora-PlayAI",
-  "Scarlett-PlayAI","Selena-PlayAI","Stella-PlayAI","Zara-PlayAI",
-  "Fritz-PlayAI","James-PlayAI","Atlas-PlayAI",
+  "tara","leah","jess","mia","zoe",  // femeninas
+  "leo","dan","zac",                  // masculinas
 ]);
 
-async function generateSpeech(text, voice = "Celeste-PlayAI") {
-  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "Celeste-PlayAI";
+async function generateSpeech(text, voice = "leah") {
+  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "leah";
   const limited = text.slice(0, 2000);
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "playai-tts", input: limited, voice: safeVoice, response_format: "mp3" }),
+    body: JSON.stringify({ model: "canopylabs/orpheus-v1-english", input: limited, voice: safeVoice, response_format: "mp3" }),
   });
   if (!res.ok) throw new Error(`Groq TTS error: ${await res.text()}`);
   return Buffer.from(await res.arrayBuffer());
