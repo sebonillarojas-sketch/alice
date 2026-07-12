@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } from "react";
 import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
+import MercadoView from "./modules/mercado/MercadoView";
 import { useTimer } from "./modules/timer/useTimer";
 import { TimerButton } from "./modules/timer/TimerButton";
 import { useERPSync } from "./api/useERPSync.js";
@@ -253,6 +254,7 @@ const TOOLS = [
   { id: "calendar-tool", label: "Calendario", icon: CalIcon, dot: "#5F8A6A" },
   { id: "wikihygge", label: "WikiHygge", icon: FileText, dot: "#C2A45A" },
   { id: "ceo-dashboard", label: "CEO Dashboard", icon: LayoutDashboard, dot: "#1E2A4A" },
+  { id: "mercado", label: "Mercado", icon: TrendingUp, dot: "#5F8A6A" },
   { id: "notifications", label: "Notificaciones", icon: Bell, dot: "#A85B5B" },
 ];
 const isToolId = (id) => TOOLS.some(t => t.id === id);
@@ -3847,6 +3849,9 @@ function FinanzasDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
+  const blob = useModalBlob();
+
+  useEffect(() => { if (configOpen) blob.reset(); }, [configOpen]);
 
   const fetchCSV = useCallback(async (src) => {
     if (!src?.path) return;
@@ -3869,11 +3874,13 @@ function FinanzasDashboard() {
   useEffect(() => { if (source) fetchCSV(source); }, [source, fetchCSV]);
 
   const saveSource = () => {
-    if (!pathInput.trim()) return;
-    const src = { path: pathInput.trim(), label: labelInput.trim() || pathInput.trim().split("/").pop() };
-    localStorage.setItem(FZ_SOURCE_KEY, JSON.stringify(src));
-    setSource(src);
-    setConfigOpen(false);
+    if (!pathInput.trim()) { blob.onError(); return; }
+    blob.onHappy(() => {
+      const src = { path: pathInput.trim(), label: labelInput.trim() || pathInput.trim().split("/").pop() };
+      localStorage.setItem(FZ_SOURCE_KEY, JSON.stringify(src));
+      setSource(src);
+      setConfigOpen(false);
+    });
   };
 
   const widgets = data ? autoWidgets(data.headers, data.rows) : [];
@@ -3920,35 +3927,49 @@ function FinanzasDashboard() {
 
       {/* Config modal */}
       {configOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 500, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 480, padding: 32 }}>
-            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Finanzas · Fuente de datos</div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginBottom: 6 }}>Conectar CSV desde Dropbox</h3>
-            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 24 }}>
-              Exportá tu reporte desde tu software contable como CSV y guardalo en Dropbox. ALICE lo lee cada vez que entrás a Finanzas y genera widgets automáticamente.
-            </p>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Ruta en Dropbox</label>
-              <input value={pathInput} onChange={e => setPathInput(e.target.value)}
-                placeholder="/Hygge/Finanzas/reporte.csv"
-                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 3, fontSize: 13, color: C.ink, background: C.bg, fontFamily: "monospace", boxSizing: "border-box" }} />
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>Formato soportado: CSV o TSV exportado desde Excel, Google Sheets, Defontana, etc.</div>
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setConfigOpen(false)}>
+          <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 480 }}
+            onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.lineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Finanzas · Fuente de datos</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, letterSpacing: "-0.02em" }}>Conectar CSV desde Dropbox</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ModalBlob state={blob.state} />
+                <button onClick={() => setConfigOpen(false)}><X size={14} style={{ color: C.muted }} /></button>
+              </div>
             </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Nombre del reporte (opcional)</label>
-              <input value={labelInput} onChange={e => setLabelInput(e.target.value)}
-                placeholder="Cashflow 2026"
-                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 3, fontSize: 13, color: C.ink, background: C.bg, boxSizing: "border-box" }} />
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={saveSource} disabled={!pathInput.trim()}
-                style={{ flex: 1, padding: "11px 0", backgroundColor: C.cobalt, color: "white", border: "none", borderRadius: 3, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                Conectar y cargar
-              </button>
-              <button onClick={() => setConfigOpen(false)}
-                style={{ padding: "11px 18px", border: `1px solid ${C.line}`, borderRadius: 3, background: "none", fontSize: 13, color: C.muted, cursor: "pointer" }}>
-                Cancelar
-              </button>
+            {/* Body */}
+            <div style={{ padding: 24 }}>
+              <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 20 }}>
+                Exportá tu reporte desde tu software contable como CSV y guardalo en Dropbox. ALICE lo lee cada vez que entrás a Finanzas y genera widgets automáticamente.
+              </p>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Ruta en Dropbox</label>
+                <input value={pathInput} onChange={e => { setPathInput(e.target.value); blob.onType(); }}
+                  placeholder="/Hygge/Finanzas/reporte.csv"
+                  style={{ width: "100%", padding: "10px 12px", border: `1px solid ${blob.state === "error" || blob.state === "crashed" ? "#c2607e" : C.line}`, borderRadius: 3, fontSize: 13, color: C.ink, background: C.bg, fontFamily: "monospace", boxSizing: "border-box", transition: "border-color 0.2s" }} />
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>Formato soportado: CSV o TSV exportado desde Excel, Google Sheets, Defontana, etc.</div>
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Nombre del reporte <span style={{ fontWeight: 400 }}>· opcional</span></label>
+                <input value={labelInput} onChange={e => { setLabelInput(e.target.value); blob.onType(); }}
+                  placeholder="Cashflow 2026"
+                  style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 3, fontSize: 13, color: C.ink, background: C.bg, boxSizing: "border-box" }} />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={saveSource} disabled={!pathInput.trim()}
+                  style={{ flex: 1, padding: "11px 0", backgroundColor: C.cobalt, color: "white", border: "none", borderRadius: 3, fontSize: 13, fontWeight: 600, cursor: pathInput.trim() ? "pointer" : "not-allowed", opacity: pathInput.trim() ? 1 : 0.5 }}>
+                  Conectar y cargar
+                </button>
+                <button onClick={() => setConfigOpen(false)}
+                  style={{ padding: "11px 18px", border: `1px solid ${C.line}`, borderRadius: 3, background: "none", fontSize: 13, color: C.muted, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -5837,13 +5858,14 @@ function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9990, backgroundColor: "rgba(10,11,15,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 460, overflow: "hidden", boxShadow: "0 24px 64px rgba(10,11,15,0.24)" }}>
-        <div style={{ backgroundColor: C.navy, padding: "20px 24px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          </div>
+        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.lineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Dropbox · Sync</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>Carpetas nuevas en Dropbox</div>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Dropbox · Sync</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>Carpetas nuevas en Dropbox</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state="thinking" />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
           </div>
         </div>
         <div style={{ padding: "20px 24px" }}>
@@ -5873,16 +5895,21 @@ function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
 }
 
 function DropboxFolderPrompt({ prompt, onConfirm, onCancel }) {
+  const [blobState, setBlobState] = useState("confused");
+  const isCreate = prompt?.action === "create";
+  useEffect(() => { if (prompt) setBlobState("confused"); }, [prompt]);
   if (!prompt) return null;
-  const isCreate = prompt.action === "create";
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9991, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 16px 48px rgba(10,11,15,0.2)" }}>
-        <div style={{ padding: "20px 24px 18px", borderBottom: `1px solid ${C.line}` }}>
-          <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Dropbox · {isCreate ? "Nueva carpeta" : "Eliminar carpeta"}</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>
-            {isCreate ? `¿Crear carpeta en Dropbox?` : `¿Eliminar carpeta en Dropbox?`}
+        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Dropbox · {isCreate ? "Nueva carpeta" : "Eliminar carpeta"}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>
+              {isCreate ? `¿Crear carpeta en Dropbox?` : `¿Eliminar carpeta en Dropbox?`}
+            </div>
           </div>
+          <ModalBlob state={blobState} />
         </div>
         <div style={{ padding: "16px 24px 20px" }}>
           <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 4 }}>
@@ -5895,7 +5922,10 @@ function DropboxFolderPrompt({ prompt, onConfirm, onCancel }) {
             {prompt.folderPath || prompt.suggestedPath}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={onConfirm} style={{ flex: 1, padding: "9px 0", fontSize: 12.5, fontWeight: 600, backgroundColor: isCreate ? C.cobalt : C.brick, color: "white", border: "none", borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            <button onClick={onConfirm}
+              onMouseEnter={() => setBlobState("error")}
+              onMouseLeave={() => setBlobState("confused")}
+              style={{ flex: 1, padding: "9px 0", fontSize: 12.5, fontWeight: 600, backgroundColor: isCreate ? C.cobalt : C.brick, color: "white", border: "none", borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
               {isCreate ? "Sí, crear carpeta" : "Sí, eliminar carpeta"}
             </button>
             <button onClick={onCancel} style={{ flex: 1, padding: "9px 0", fontSize: 12.5, backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
@@ -13757,6 +13787,7 @@ REGLAS:
     if (currentSpace === "messages") {
       return <MessagesToolView messages={messages} markRead={markMessageRead} markAllRead={markAllMessagesRead} deleteMessage={deleteMessage} openTask={openDetail} sendMessage={sendMessage} users={users} currentUserId={currentUserId} />;
     }
+    if (currentSpace === "mercado") return <MercadoView />;
     if (currentSpace === "notifications") {
       return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} />;
     }
