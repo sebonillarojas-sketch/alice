@@ -351,14 +351,32 @@ app.post("/webhook/twilio", async (req, res) => {
     const phone = from.replace("whatsapp:", "");
     const userId = phoneToUserId(phone) || "sb";
     let userText = body;
+    let inputWasAudio = false;
     if (numMedia > 0 && mediaType.startsWith("audio/")) {
       console.log(`🎤 Audio [${userId}] tipo: ${mediaType}`);
       userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
+      inputWasAudio = true;
       console.log(`📝 Transcripción: ${userText}`);
     }
     if (!userText) return res.set("Content-Type", "text/xml").send("<Response/>");
     console.log(`📱 Twilio [${userId}] ${userText}`);
     const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
+
+    if (inputWasAudio) {
+      // Respond with voice note
+      try {
+        const audioBuf = await generateSpeech(reply);
+        const id = Math.random().toString(36).slice(2);
+        ttsCache.set(id, audioBuf);
+        setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
+        const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.mp3`;
+        res.set("Content-Type", "text/xml").send(`<Response><Message><Media>${audioUrl}</Media></Message></Response>`);
+        return;
+      } catch (ttsErr) {
+        console.error("TTS falló, respondiendo texto:", ttsErr.message);
+      }
+    }
+
     const chunks = reply.length <= 1500 ? [reply] : reply.match(/[\s\S]{1,1500}/g) || [reply];
     const msgs = chunks.map(c => `<Message>${escapeXml(c)}</Message>`).join("");
     res.set("Content-Type", "text/xml").send(`<Response>${msgs}</Response>`);
@@ -389,6 +407,39 @@ async function transcribeAudio(mediaUrl, mediaType) {
   if (!groqRes.ok) throw new Error(`Groq error: ${await groqRes.text()}`);
   return (await groqRes.json()).text?.trim() || null;
 }
+
+// ── TTS (Groq PlayAI) ─────────────────────────────────────────────────────────
+const ttsCache = new Map(); // id → Buffer, cleaned up after 5 min
+
+async function generateSpeech(text) {
+  const limited = text.slice(0, 2000); // Groq TTS limit
+  const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "playai-tts", input: limited, voice: "Celeste-PlayAI", response_format: "mp3" }),
+  });
+  if (!res.ok) throw new Error(`Groq TTS error: ${await res.text()}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+app.post("/api/tts", async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: "No text" });
+  try {
+    const buf = await generateSpeech(text);
+    res.set("Content-Type", "audio/mpeg").send(buf);
+  } catch (e) {
+    console.error("TTS error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Serve cached TTS audio for Twilio (needs public URL)
+app.get("/tts/:id.mp3", (req, res) => {
+  const buf = ttsCache.get(req.params.id);
+  if (!buf) return res.status(404).send("Not found");
+  res.set("Content-Type", "audio/mpeg").send(buf);
+});
 
 function escapeXml(str) {
   return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
