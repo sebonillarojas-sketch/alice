@@ -18,6 +18,8 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip, Cell,
   PieChart, Pie, Legend, LineChart, Line,
+  ScatterChart, Scatter, ZAxis, ReferenceLine,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis,
 } from "recharts";
 import {
   Search, Bell, Plus, Play, Pause, MessageSquare, MessageCircle, Activity, ChevronLeft, ChevronRight, ChevronDown,
@@ -4813,7 +4815,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
-      <aside className="h-full w-full flex flex-col" style={{ maxWidth: tab === "analisis" ? 820 : 560, backgroundColor: C.bg, borderLeft: `1px solid ${C.line}`, transition: "max-width 0.25s ease" }} onClick={e => e.stopPropagation()}>
+      <aside className="h-full w-full flex flex-col" style={{ maxWidth: tab === "analisis" ? 1060 : 560, backgroundColor: C.bg, borderLeft: `1px solid ${C.line}`, transition: "max-width 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div className="px-5 lg:px-6 pt-5 pb-3 flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
@@ -4964,117 +4966,219 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
 
 function TerrenoOpportunidad({ terreno }) {
   const DISTRICTS_DATA = {
-    "Miraflores":  { base: 3.5, priceRange: [3200, 6500], trend: "estable",   trendScore: 1.05, desc: "NSE A. Demanda sostenida, premium consolidado.", lat: -12.1191, lng: -77.0289, competitors: 18 },
-    "San Isidro":  { base: 2.8, priceRange: [3800, 7200], trend: "estable",   trendScore: 1.00, desc: "NSE A+. Small & luxury. Absorción lenta, precio alto.", lat: -12.0934, lng: -77.0368, competitors: 12 },
-    "Barranco":    { base: 2.5, priceRange: [2800, 5000], trend: "trending",  trendScore: 1.28, desc: "NSE A/B+. Storytelling = driver clave.", lat: -12.1476, lng: -77.0217, competitors: 9 },
-    "La Molina":   { base: 4.8, priceRange: [2200, 4800], trend: "estable",   trendScore: 1.00, desc: "NSE B+/A. Buyer familiar.", lat: -12.0851, lng: -76.9422, competitors: 22 },
-    "Surco":       { base: 6.2, priceRange: [1800, 3800], trend: "estable",   trendScore: 0.98, desc: "NSE B/B+. Masivo con bolsones premium.", lat: -12.1374, lng: -76.9967, competitors: 35 },
-    "Jesús María": { base: 7.5, priceRange: [1600, 2800], trend: "trending",  trendScore: 1.22, desc: "NSE B/B+. Alta velocidad, precio accesible.", lat: -12.0806, lng: -77.0472, competitors: 28 },
-    "Magdalena":   { base: 5.5, priceRange: [1700, 3000], trend: "trending",  trendScore: 1.18, desc: "NSE B+. Zona en consolidación.", lat: -12.0924, lng: -77.0684, competitors: 14 },
-    "San Borja":   { base: 4.2, priceRange: [2200, 4200], trend: "estable",   trendScore: 1.00, desc: "NSE A/B+. Familiar.", lat: -12.1006, lng: -76.9985, competitors: 20 },
-    "Pueblo Libre":{ base: 5.8, priceRange: [1500, 2600], trend: "emergente", trendScore: 0.88, desc: "NSE B. Emergente.", lat: -12.0743, lng: -77.0618, competitors: 16 },
-    "San Miguel":  { base: 6.8, priceRange: [1400, 2500], trend: "emergente", trendScore: 0.90, desc: "NSE B. Volumen es el negocio.", lat: -12.0780, lng: -77.0900, competitors: 31 },
-    "Lince":       { base: 8.2, priceRange: [1300, 2200], trend: "emergente", trendScore: 0.85, desc: "NSE B/C+. Riesgo sobre-oferta.", lat: -12.0820, lng: -77.0368, competitors: 24 },
-    "Chorrillos":  { base: 5.2, priceRange: [1500, 2800], trend: "emergente", trendScore: 0.82, desc: "NSE B. Playa como diferenciador.", lat: -12.1727, lng: -77.0175, competitors: 19 },
+    "Miraflores":  { base: 3.5, priceRange: [3200, 6500], trend: "estable",   trendScore: 1.05, nse: "A",    desc: "NSE A. Demanda sostenida, premium consolidado.",          lat: -12.1191, lng: -77.0289, oferta: 18, demanda: 82, stock: 340, m2Prom: 95 },
+    "San Isidro":  { base: 2.8, priceRange: [3800, 7200], trend: "estable",   trendScore: 1.00, nse: "A+",   desc: "NSE A+. Small & luxury. Absorción lenta, precio alto.",    lat: -12.0934, lng: -77.0368, oferta: 12, demanda: 68, stock: 180, m2Prom: 78 },
+    "Barranco":    { base: 2.5, priceRange: [2800, 5000], trend: "trending",  trendScore: 1.28, nse: "A/B+", desc: "NSE A/B+. Storytelling = driver clave.",                   lat: -12.1476, lng: -77.0217, oferta: 9,  demanda: 91, stock: 210, m2Prom: 88 },
+    "La Molina":   { base: 4.8, priceRange: [2200, 4800], trend: "estable",   trendScore: 1.00, nse: "B+/A", desc: "NSE B+/A. Buyer familiar.",                                lat: -12.0851, lng: -76.9422, oferta: 22, demanda: 74, stock: 520, m2Prom: 120 },
+    "Surco":       { base: 6.2, priceRange: [1800, 3800], trend: "estable",   trendScore: 0.98, nse: "B/B+", desc: "NSE B/B+. Masivo con bolsones premium.",                   lat: -12.1374, lng: -76.9967, oferta: 35, demanda: 78, stock: 890, m2Prom: 105 },
+    "Jesús María": { base: 7.5, priceRange: [1600, 2800], trend: "trending",  trendScore: 1.22, nse: "B/B+", desc: "NSE B/B+. Alta velocidad, precio accesible.",              lat: -12.0806, lng: -77.0472, oferta: 28, demanda: 88, stock: 670, m2Prom: 70 },
+    "Magdalena":   { base: 5.5, priceRange: [1700, 3000], trend: "trending",  trendScore: 1.18, nse: "B+",   desc: "NSE B+. Zona en consolidación.",                           lat: -12.0924, lng: -77.0684, oferta: 14, demanda: 85, stock: 310, m2Prom: 75 },
+    "San Borja":   { base: 4.2, priceRange: [2200, 4200], trend: "estable",   trendScore: 1.00, nse: "A/B+", desc: "NSE A/B+. Familiar.",                                      lat: -12.1006, lng: -76.9985, oferta: 20, demanda: 72, stock: 430, m2Prom: 100 },
+    "Pueblo Libre":{ base: 5.8, priceRange: [1500, 2600], trend: "emergente", trendScore: 0.88, nse: "B",    desc: "NSE B. Emergente.",                                        lat: -12.0743, lng: -77.0618, oferta: 16, demanda: 79, stock: 380, m2Prom: 68 },
+    "San Miguel":  { base: 6.8, priceRange: [1400, 2500], trend: "emergente", trendScore: 0.90, nse: "B",    desc: "NSE B. Volumen es el negocio.",                            lat: -12.0780, lng: -77.0900, oferta: 31, demanda: 76, stock: 720, m2Prom: 65 },
+    "Lince":       { base: 8.2, priceRange: [1300, 2200], trend: "emergente", trendScore: 0.85, nse: "B/C+", desc: "NSE B/C+. Riesgo sobre-oferta.",                           lat: -12.0820, lng: -77.0368, oferta: 24, demanda: 62, stock: 540, m2Prom: 58 },
+    "Chorrillos":  { base: 5.2, priceRange: [1500, 2800], trend: "emergente", trendScore: 0.82, nse: "B",    desc: "NSE B. Playa como diferenciador.",                         lat: -12.1727, lng: -77.0175, oferta: 19, demanda: 71, stock: 410, m2Prom: 72 },
   };
+  const COMPETITORS_DB = {
+    "Miraflores":  [
+      { name: "The 21st",          dev: "Menorca",        priceM2: 6200, units: 32, absorption: 2.1, status: "En venta",    link: "https://menorca.pe" },
+      { name: "Miraflores 380",    dev: "Paz Centenario", priceM2: 5800, units: 45, absorption: 2.8, status: "En venta",    link: "" },
+      { name: "Parque Reducto",    dev: "Armas Doomo",    priceM2: 5200, units: 28, absorption: 2.4, status: "Pre-venta",   link: "" },
+      { name: "Vivo Miraflores",   dev: "Besco",          priceM2: 4200, units: 78, absorption: 4.2, status: "En venta",    link: "https://besco.com.pe" },
+      { name: "Residencial Larco", dev: "JLL Lima",       priceM2: 4800, units: 60, absorption: 3.5, status: "Entrega",     link: "" },
+    ],
+    "Barranco":    [
+      { name: "Espacio Barranco",  dev: "JLL Lima",       priceM2: 4200, units: 38, absorption: 2.8, status: "En venta",    link: "" },
+      { name: "Park Barranco",     dev: "Altas Cumbres",  priceM2: 3800, units: 52, absorption: 3.1, status: "En venta",    link: "" },
+      { name: "Vista Barranco",    dev: "Paz Centenario", priceM2: 4800, units: 24, absorption: 1.9, status: "Pre-venta",   link: "" },
+      { name: "The Bloom",         dev: "Menorca",        priceM2: 5200, units: 18, absorption: 1.5, status: "Lanzamiento", link: "https://menorca.pe" },
+      { name: "Colonia 550",       dev: "Besco",          priceM2: 3500, units: 65, absorption: 3.8, status: "Entrega",     link: "" },
+    ],
+    "San Isidro":  [
+      { name: "Torre Camino Real", dev: "Grupo T&C",      priceM2: 7200, units: 18, absorption: 1.4, status: "En venta",    link: "" },
+      { name: "1 Augusto Tamayo",  dev: "Marcan",         priceM2: 6800, units: 24, absorption: 1.8, status: "En venta",    link: "" },
+      { name: "Petit",             dev: "Menorca",        priceM2: 5400, units: 35, absorption: 2.6, status: "Pre-venta",   link: "https://menorca.pe" },
+      { name: "Santander",         dev: "Besco",          priceM2: 4800, units: 42, absorption: 2.2, status: "En venta",    link: "" },
+    ],
+    "Jesús María": [
+      { name: "Residencial JM",    dev: "Altas Cumbres",  priceM2: 2600, units: 88, absorption: 7.2, status: "En venta",    link: "" },
+      { name: "Parque Aurelio",    dev: "Besco",          priceM2: 2400, units: 102, absorption: 8.1, status: "En venta",   link: "" },
+      { name: "La Cuadra",         dev: "Paz Centenario", priceM2: 2800, units: 65, absorption: 6.0, status: "Pre-venta",   link: "" },
+      { name: "Urbano JM",         dev: "Grupo T&C",      priceM2: 2200, units: 120, absorption: 9.0, status: "En venta",   link: "" },
+    ],
+    "Surco":       [
+      { name: "Viva Surco",        dev: "Besco",          priceM2: 3200, units: 95, absorption: 6.8, status: "En venta",    link: "" },
+      { name: "Park 8",            dev: "Paz Centenario", priceM2: 3800, units: 48, absorption: 5.2, status: "En venta",    link: "" },
+      { name: "Residencial 40",    dev: "Altas Cumbres",  priceM2: 2800, units: 130, absorption: 7.5, status: "En venta",   link: "" },
+      { name: "Nuevo Surco",       dev: "JLL Lima",       priceM2: 2600, units: 160, absorption: 8.0, status: "Entrega",    link: "" },
+    ],
+    "La Molina":   [
+      { name: "Parque La Molina",  dev: "Grupo T&C",      priceM2: 4500, units: 55, absorption: 4.2, status: "En venta",    link: "" },
+      { name: "Natura",            dev: "Paz Centenario", priceM2: 3800, units: 72, absorption: 5.0, status: "En venta",    link: "" },
+      { name: "Las Praderas",      dev: "Altas Cumbres",  priceM2: 3200, units: 90, absorption: 5.8, status: "En venta",    link: "" },
+    ],
+    "Magdalena":   [
+      { name: "Magdalena Park",    dev: "Besco",          priceM2: 2900, units: 70, absorption: 5.2, status: "En venta",    link: "" },
+      { name: "Av. Del Ejército",  dev: "Altas Cumbres",  priceM2: 2600, units: 88, absorption: 5.8, status: "Pre-venta",   link: "" },
+      { name: "Costa Azul",        dev: "JLL Lima",       priceM2: 3200, units: 45, absorption: 4.5, status: "En venta",    link: "" },
+    ],
+    "San Borja":   [
+      { name: "Parque Borja",      dev: "Menorca",        priceM2: 4000, units: 48, absorption: 3.8, status: "En venta",    link: "" },
+      { name: "Residencial SB",    dev: "Besco",          priceM2: 3500, units: 65, absorption: 4.5, status: "En venta",    link: "" },
+      { name: "Torres Centenario", dev: "Paz Centenario", priceM2: 3200, units: 80, absorption: 4.2, status: "Pre-venta",   link: "" },
+    ],
+    "Pueblo Libre":[ { name: "Viva Libre",      dev: "Besco",          priceM2: 2400, units: 75, absorption: 5.5, status: "En venta", link: "" }, { name: "Parque Grau",   dev: "Altas Cumbres",  priceM2: 2200, units: 95, absorption: 6.2, status: "En venta", link: "" } ],
+    "San Miguel":  [ { name: "Nuevo Miguel",    dev: "JLL Lima",       priceM2: 2300, units: 110, absorption: 7.0, status: "En venta", link: "" }, { name: "Playa Park",    dev: "Besco",          priceM2: 2600, units: 80, absorption: 5.8, status: "En venta", link: "" } ],
+    "Lince":       [ { name: "Lince Center",    dev: "Grupo T&C",      priceM2: 2000, units: 120, absorption: 8.0, status: "En venta", link: "" }, { name: "Residencial L", dev: "Altas Cumbres",  priceM2: 1800, units: 150, absorption: 9.2, status: "En venta", link: "" } ],
+    "Chorrillos":  [ { name: "Costa Sur",       dev: "Besco",          priceM2: 2500, units: 90, absorption: 5.0, status: "En venta", link: "" }, { name: "Playa Costa",   dev: "Paz Centenario", priceM2: 2800, units: 65, absorption: 4.5, status: "Pre-venta", link: "" } ],
+  };
+
   const TREND_COLOR = { trending: "#5F8A6A", estable: "#3D52D5", emergente: "#C2A45A" };
   const TREND_LABEL = { trending: "En alza", estable: "Estable", emergente: "Emergente" };
+  const STATUS_COLOR = { "En venta": "#3D52D5", "Pre-venta": "#C2A45A", "Lanzamiento": "#5F8A6A", "Entrega": "#6B6863" };
 
   const d = DISTRICTS_DATA[terreno.district] || DISTRICTS_DATA["Miraflores"];
+  const competidores = COMPETITORS_DB[terreno.district] || COMPETITORS_DB["Miraflores"];
 
-  // Velocity params state
   const [tipologia, setTipologia] = React.useState("Departamento");
   const [precioM2, setPrecioM2] = React.useState(Math.round((d.priceRange[0] + d.priceRange[1]) / 2));
   const [acabados, setAcabados] = React.useState("Estándar");
   const [storytelling, setStorytelling] = React.useState(50);
+  const [arquitecto, setArquitecto] = React.useState("Reconocido local");
   const [aliciaText, setAliciaText] = React.useState("");
   const [aliciaLoading, setAliciaLoading] = React.useState(false);
 
-  // Derived metrics
   const midPrice = (d.priceRange[0] + d.priceRange[1]) / 2;
-  const priceRatio = precioM2 / midPrice; // 1.0 = en mercado
-  const acabadosMult = { Básico: 1.15, Estándar: 1.0, Premium: 0.82, Luxury: 0.60 }[acabados] || 1.0;
-  const storyMult = 0.85 + (storytelling / 100) * 0.35;
-  const absorption = Math.max(0.5, d.base * acabadosMult * storyMult * (priceRatio < 0.9 ? 1.2 : priceRatio > 1.15 ? 0.75 : 1.0)).toFixed(1);
+  const priceRatio = precioM2 / midPrice;
+  const acabadosMult = { Básico: 1.18, Estándar: 1.0, Premium: 0.80, Luxury: 0.58 }[acabados] || 1.0;
+  const storyMult = 0.82 + (storytelling / 100) * 0.40;
+  const arquiMult = { "Sin nombre conocido": 0.92, "Reconocido local": 1.0, "Internacional": 0.80 }[arquitecto] || 1.0;
+  const absorption = Math.max(0.4, d.base * acabadosMult * storyMult * arquiMult * (priceRatio < 0.88 ? 1.25 : priceRatio > 1.18 ? 0.70 : 1.0));
+  const absorptionFmt = absorption.toFixed(1);
   const units = terreno.areaM2 ? Math.max(8, Math.round(terreno.areaM2 / 65)) : 40;
-  const monthsToSell = (units / parseFloat(absorption)).toFixed(0);
-  const pricePosition = priceRatio < 0.9 ? "Bajo mercado" : priceRatio > 1.1 ? "Sobre mercado" : "En mercado";
-  const priceColor = priceRatio < 0.9 ? "#5F8A6A" : priceRatio > 1.1 ? "#A85B5B" : "#3D52D5";
+  const monthsToSell = Math.ceil(units / absorption);
+  const pricePosition = priceRatio < 0.90 ? "Bajo mercado" : priceRatio > 1.12 ? "Sobre mercado" : "En mercado";
+  const priceColor = priceRatio < 0.90 ? C.green : priceRatio > 1.12 ? "#A85B5B" : C.cobalt;
+  const revenueEst = units * precioM2 * (terreno.areaM2 ? terreno.areaM2 / units : 70);
 
-  // Opp score = terreno.score blended with market score
-  const marketScore = Math.round((d.trendScore * 50) + (Math.min(d.base, 10) / 10 * 30) + (d.competitors < 20 ? 20 : d.competitors < 30 ? 10 : 0));
+  const marketScore = Math.round((d.trendScore * 45) + (Math.min(d.base, 10) / 10 * 30) + ((100 - d.oferta) / 100 * 25));
   const blendedScore = Math.round(((terreno.score || 70) + marketScore) / 2);
 
-  // Map HTML — generates based on velocity params
+  // Absorción curve data (cumulative units sold per month)
+  const absorptionCurve = React.useMemo(() => {
+    const data = [];
+    let sold = 0;
+    for (let m = 1; m <= Math.min(monthsToSell + 6, 30); m++) {
+      sold = Math.min(units, sold + absorption);
+      data.push({ mes: `M${m}`, vendidas: Math.round(sold), disponibles: Math.max(0, units - Math.round(sold)) });
+    }
+    return data;
+  }, [units, absorption, monthsToSell]);
+
+  // Scatter data — competidores + mi propuesta
+  const scatterData = React.useMemo(() => {
+    const comps = competidores.map(c => ({ x: c.priceM2, y: c.absorption, z: c.units, name: c.name, type: "comp" }));
+    const mine = { x: precioM2, y: parseFloat(absorptionFmt), z: units, name: "Hygge · " + terreno.name, type: "mine" };
+    return { comps, mine: [mine] };
+  }, [competidores, precioM2, absorptionFmt, units]);
+
+  // Radar diferenciadores
+  const radarData = React.useMemo(() => {
+    const avgComp = {
+      precio: 50,
+      velocidad: Math.round((d.base / 10) * 100),
+      story: 40,
+      acabados: 50,
+      ubicacion: 60,
+      track: 60,
+    };
+    const storyScore = Math.round(storytelling);
+    const acabScore = { Básico: 20, Estándar: 50, Premium: 80, Luxury: 100 }[acabados] || 50;
+    const arquiScore = { "Sin nombre conocido": 20, "Reconocido local": 60, "Internacional": 95 }[arquitecto] || 50;
+    const priceScore = Math.round(Math.max(0, Math.min(100, (1 - (priceRatio - 1) * 2) * 100)));
+    const veloScore = Math.round((absorption / (d.base * 1.5)) * 100);
+    return [
+      { axis: "Precio competitivo", comp: avgComp.precio, hygge: priceScore },
+      { axis: "Velocidad est.",     comp: avgComp.velocidad, hygge: Math.min(100, veloScore) },
+      { axis: "Storytelling",       comp: avgComp.story, hygge: storyScore },
+      { axis: "Acabados",           comp: avgComp.acabados, hygge: acabScore },
+      { axis: "Ubicación",          comp: avgComp.ubicacion, hygge: Math.round((terreno.score || 70) * 0.8) },
+      { axis: "Arquitecto",         comp: avgComp.track, hygge: arquiScore },
+    ];
+  }, [precioM2, acabados, storytelling, arquitecto, absorption]);
+
+  // Price comparison bar data
+  const priceBarData = React.useMemo(() => {
+    const rows = competidores.map(c => ({ name: c.name.length > 14 ? c.name.slice(0, 13) + "…" : c.name, precio: c.priceM2, type: "comp" }));
+    rows.push({ name: "◆ Hygge", precio: precioM2, type: "mine" });
+    return rows.sort((a, b) => b.precio - a.precio);
+  }, [competidores, precioM2]);
+
+  // Map HTML
   const mapHtml = React.useMemo(() => {
     const terrenoLat = terreno.lat || d.lat;
     const terrenoLng = terreno.lng || d.lng;
     const allDistricts = Object.entries(DISTRICTS_DATA);
     const markersJs = allDistricts.map(([name, dd]) => {
-      const absScore = Math.min(dd.base / 10, 1);
       const color = dd.trend === "trending" ? "#5F8A6A" : dd.trend === "estable" ? "#3D52D5" : "#C2A45A";
-      const r = 18 + Math.round(absScore * 22);
+      const r = 16 + Math.round((dd.base / 10) * 20);
       const isSelected = name === terreno.district;
-      return `L.circleMarker([${dd.lat},${dd.lng}],{radius:${isSelected ? r + 8 : r},color:"${color}",fillColor:"${color}",fillOpacity:${isSelected ? 0.55 : 0.22},weight:${isSelected ? 2.5 : 1}})
-        .bindTooltip('<div style="font:600 11px DM Sans,sans-serif;padding:4px 8px">${name}<br><span style="font-weight:400;color:#6B6863">${dd.base} u/mes · ${TREND_LABEL[dd.trend]}</span></div>',{permanent:false})
-        .addTo(map);`;
+      return `L.circleMarker([${dd.lat},${dd.lng}],{radius:${isSelected ? r + 8 : r},color:"${color}",fillColor:"${color}",fillOpacity:${isSelected ? 0.55 : 0.20},weight:${isSelected ? 2.5 : 1}}).bindTooltip('<div style="font:600 11px sans-serif;padding:4px 8px">${name}<br><span style="font-weight:400;color:#6B6863">${dd.base} u/mes · ${TREND_LABEL[dd.trend]}</span></div>',{permanent:false}).addTo(map);`;
     }).join("\n");
-
-    const compJs = allDistricts.map(([name, dd]) => {
-      const cx = dd.lat + (Math.random() * 0.02 - 0.01);
-      const cy = dd.lng + (Math.random() * 0.02 - 0.01);
-      return `L.circleMarker([${cx},${cy}],{radius:4,color:"#0A0B0F",fillColor:"#0A0B0F",fillOpacity:0.35,weight:0.5})
-        .bindTooltip('Competidor · ${name}',{permanent:false}).addTo(map);`;
+    const compJs = (COMPETITORS_DB[terreno.district] || []).map((c, i) => {
+      const offset = i * 0.003;
+      return `L.circleMarker([${d.lat + Math.cos(i) * 0.012},${d.lng + Math.sin(i) * 0.015}],{radius:5,color:"#0A0B0F",fillColor:"#0A0B0F",fillOpacity:0.5,weight:0}).bindTooltip('<b>${c.name.replace(/'/g, "\\'")}</b><br>${c.dev} · USD ${c.priceM2.toLocaleString()}/m² · ${c.absorption} u/mes',{permanent:false}).addTo(map);`;
     }).join("\n");
-
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>*{margin:0;padding:0;box-sizing:border-box}body,html{height:100%;background:#EEEBE3}
-.leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
-.leaflet-tile-pane{filter:grayscale(0.15) brightness(1.02)}</style></head>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>*{margin:0;padding:0}body,html{height:100%;background:#EEEBE3}.leaflet-control-zoom,.leaflet-control-attribution{display:none!important}</style></head>
 <body><div id="map" style="width:100%;height:100vh"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${terrenoLat},${terrenoLng}],12);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
-${markersJs}
-${compJs}
-var terrenoIcon=L.divIcon({html:'<div style="width:18px;height:18px;border-radius:50%;background:#0A0B0F;border:3px solid #F4F1EA;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',className:'',iconSize:[18,18],iconAnchor:[9,9]});
-L.marker([${terrenoLat},${terrenoLng}],{icon:terrenoIcon}).bindTooltip('<b>${(terreno.name || "Terreno").replace(/'/g, "\\'")}</b>',{permanent:true,direction:'top',offset:[0,-12],className:''}).addTo(map);
+${markersJs}${compJs}
+var icon=L.divIcon({html:'<div style="width:16px;height:16px;border-radius:50%;background:#0A0B0F;border:3px solid #F4F1EA;box-shadow:0 2px 8px rgba(0,0,0,0.5)"></div>',className:'',iconSize:[16,16],iconAnchor:[8,8]});
+L.marker([${terrenoLat},${terrenoLng}],{icon}).bindTooltip('<b>${(terreno.name||"Terreno").replace(/'/g,"\\'")}</b>',{permanent:true,direction:'top',offset:[0,-10]}).addTo(map);
 </script></body></html>`;
   }, [terreno.id, terreno.lat, terreno.lng, terreno.district]);
 
   const runAlicia = async () => {
-    setAliciaLoading(true);
-    setAliciaText("");
-    const prompt = `Sos Alicia, asistente ejecutiva de Hygge Holding. Analizá esta oportunidad de terreno con los datos de mercado y parámetros Velocity.
+    setAliciaLoading(true); setAliciaText("");
+    const compSummary = competidores.map(c => `  · ${c.name} (${c.dev}): USD ${c.priceM2.toLocaleString()}/m², ${c.absorption} u/mes, ${c.units} u`).join("\n");
+    const prompt = `Sos Alicia, asistente ejecutiva de Hygge Holding. Análisis profundo de oportunidad para este terreno.
 
 TERRENO: ${terreno.name} · ${terreno.district}
 Área: ${terreno.areaM2 ? terreno.areaM2 + " m²" : "—"} · Precio pedido: ${terreno.askedPrice ? "USD " + terreno.askedPrice.toLocaleString() : "—"}
+Score interno: ${terreno.score || "—"}/100
 
-PARÁMETROS VELOCITY:
-- Tipología: ${tipologia}
+PROPUESTA HYGGE (Velocity):
+- Tipología: ${tipologia} · Acabados: ${acabados} · Arquitecto: ${arquitecto}
 - Precio/m²: USD ${precioM2.toLocaleString()} (${pricePosition})
-- Acabados: ${acabados}
 - Storytelling: ${storytelling}/100
-- Absorción estimada: ${absorption} u/mes
-- Unidades estimadas: ${units} u
-- Tiempo de venta: ~${monthsToSell} meses
+- Absorción estimada: ${absorptionFmt} u/mes · ${units} unidades · ${monthsToSell} meses de venta
+- Revenue estimado: USD ${Math.round(revenueEst).toLocaleString()}
 
-MERCADO DEL DISTRITO:
-${d.desc} · ${d.competitors} proyectos competidores activos.
-Rango de precios: USD ${d.priceRange[0].toLocaleString()}–${d.priceRange[1].toLocaleString()}/m²
-Tendencia: ${d.trend} · Score oportunidad: ${blendedScore}/100
+COMPETIDORES EN ${terreno.district}:
+${compSummary}
 
-Dame 3 insights concretos sobre este terreno: ¿es buena oportunidad con estos parámetros? ¿qué ajustarías? ¿cuál es el riesgo principal? Sé directa y específica para Lima.`;
+MERCADO:
+${d.desc} · Oferta activa: ${d.oferta} proyectos · Demanda índice: ${d.demanda}/100
+Precio/m²: USD ${d.priceRange[0].toLocaleString()}–${d.priceRange[1].toLocaleString()} · Absorción sector: ${d.base} u/mes · Tendencia: ${TREND_LABEL[d.trend]}
+
+Dame:
+1. **Posicionamiento** — ¿dónde queda Hygge vs la competencia con estos parámetros? ¿ventaja o desventaja?
+2. **Riesgo principal** — un riesgo concreto del terreno + mercado
+3. **Palanca clave** — qué un parámetro cambiado maximizaría el retorno
+4. **Veredicto** — ¿avanzar, negociar precio o descartar? Una línea.
+
+Concisa. Sin genérico. Lima 2025.`;
 
     try {
-      const BRAIN_URL = "http://localhost:3001";
-      let res = await fetch(`${BRAIN_URL}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }) }).catch(() => null);
+      let res = await fetch("http://localhost:3001/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }) }).catch(() => null);
       if (!res || !res.ok) {
-        const apiKey = localStorage.getItem("alicia_api_key");
-        if (!apiKey) throw new Error("Sin API key · configurala en Alicia > Settings.");
-        res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 600, messages: [{ role: "user", content: prompt }] }) });
+        const k = localStorage.getItem("alicia_api_key");
+        if (!k) throw new Error("Sin API key · configurala en Alicia > Settings.");
+        res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": k, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 700, messages: [{ role: "user", content: prompt }] }) });
       }
       const json = await res.json();
       setAliciaText(json.choices?.[0]?.message?.content || json.content?.[0]?.text || "Sin respuesta");
@@ -5082,117 +5186,264 @@ Dame 3 insights concretos sobre este terreno: ¿es buena oportunidad con estos p
     finally { setAliciaLoading(false); }
   };
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+  const SectionLabel = ({ children }) => (
+    <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>{children}</div>
+  );
 
-      {/* ── Reporte automático ── */}
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* ── 1. KPIs del distrito ── */}
       <div>
-        <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Reporte · {terreno.district}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+        <SectionLabel>Reporte · {terreno.district} · {TREND_LABEL[d.trend]}</SectionLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 8 }}>
           {[
-            { label: "Absorción", value: `${d.base} u/mes` },
-            { label: "Precio/m²", value: `$${d.priceRange[0].toLocaleString()}–${(d.priceRange[1]/1000).toFixed(1)}k` },
-            { label: "Competidores", value: `${d.competitors} proy.` },
-            { label: "Tendencia", value: TREND_LABEL[d.trend] },
+            { label: "Absorción sector",  value: `${d.base} u/mes`,        sub: "promedio distrito" },
+            { label: "Precio/m² rango",   value: `$${(d.priceRange[0]/1000).toFixed(1)}k–${(d.priceRange[1]/1000).toFixed(1)}k`, sub: "USD/m²" },
+            { label: "Proyectos activos", value: `${d.oferta}`,             sub: "competidores" },
+            { label: "Índice demanda",    value: `${d.demanda}/100`,        sub: d.demanda >= 80 ? "Alta" : d.demanda >= 65 ? "Media-alta" : "Media" },
           ].map(k => (
-            <div key={k.label} style={{ background: C.surface, borderRadius: 2, padding: "8px 10px" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{k.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{k.value}</div>
+            <div key={k.label} style={{ background: C.surface, borderRadius: 2, padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{k.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>{k.value}</div>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{k.sub}</div>
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, marginBottom: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 }}>
+          {[
+            { label: "NSE objetivo",     value: d.nse },
+            { label: "Stock disponible", value: `${d.stock} u`,              sub: "en el mercado" },
+            { label: "m² promedio",      value: `${d.m2Prom} m²`,            sub: "unidades sector" },
+            { label: "Precio terreno",   value: terreno.askedPrice ? `$${(terreno.askedPrice/1000).toFixed(0)}k` : "—", sub: "pedido propietario" },
+          ].map(k => (
+            <div key={k.label} style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{k.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{k.value}</div>
+              {k.sub && <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{k.sub}</div>}
+            </div>
+          ))}
+        </div>
+        {/* Score oportunidad */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", background: C.paper, border: `1px solid ${C.lineSoft}`, borderLeft: `3px solid ${TREND_COLOR[d.trend]}`, borderRadius: 2 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Score oportunidad</div>
-            <div style={{ marginTop: 6, height: 4, background: C.lineSoft, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${blendedScore}%`, background: blendedScore >= 75 ? C.green : blendedScore >= 55 ? C.cobalt : C.ochre, borderRadius: 2, transition: "width 0.4s ease" }} />
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Score oportunidad · terreno + mercado</div>
+            <div style={{ height: 5, background: C.lineSoft, borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${blendedScore}%`, background: blendedScore >= 75 ? C.green : blendedScore >= 55 ? C.cobalt : C.ochre, borderRadius: 3, transition: "width 0.4s ease" }} />
             </div>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: blendedScore >= 75 ? C.green : blendedScore >= 55 ? C.cobalt : C.ochre, letterSpacing: "-0.02em" }}>{blendedScore}</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: blendedScore >= 75 ? C.green : blendedScore >= 55 ? C.cobalt : C.ochre, letterSpacing: "-0.03em", minWidth: 40, textAlign: "right" }}>{blendedScore}</div>
+          <div style={{ fontSize: 10, color: C.muted }}>{d.desc}</div>
         </div>
-        <div style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.6, padding: "8px 12px", background: C.paper, border: `1px solid ${C.lineSoft}`, borderLeft: `3px solid ${TREND_COLOR[d.trend]}`, borderRadius: 2 }}>{d.desc}</div>
       </div>
 
-      {/* ── Mapa combinado ── */}
-      <div>
-        <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>
-          Mapa · Velocity + Radar
-          <span style={{ marginLeft: 10, fontSize: 9, fontWeight: 400, color: C.muted }}>
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.green, marginRight: 4 }} />en alza
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.cobalt, marginRight: 4, marginLeft: 8 }} />estable
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.ochre, marginRight: 4, marginLeft: 8 }} />emergente
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#0A0B0F", opacity: 0.35, marginRight: 4, marginLeft: 8 }} />competidor
-          </span>
-        </div>
-        <iframe
-          key={terreno.id}
-          srcDoc={mapHtml}
-          style={{ width: "100%", height: 320, border: "none", borderRadius: 2, display: "block" }}
-          sandbox="allow-scripts"
-        />
-      </div>
-
-      {/* ── Controles Velocity ── */}
+      {/* ── 2. Controles Velocity ── */}
       <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "14px 16px" }}>
-        <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Parámetros Velocity · jugá con las métricas</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <SectionLabel>Parámetros · jugá con las métricas</SectionLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Tipología</div>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Tipología</div>
             <select value={tipologia} onChange={e => setTipologia(e.target.value)} style={{ width: "100%", padding: "6px 8px", fontSize: 12, background: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink, outline: "none" }}>
               {["Departamento", "Mix tipologías", "Flat premium", "Penthouse", "Oficinas", "Retail"].map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Acabados</div>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Arquitecto</div>
+            <select value={arquitecto} onChange={e => setArquitecto(e.target.value)} style={{ width: "100%", padding: "6px 8px", fontSize: 12, background: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink, outline: "none" }}>
+              {["Sin nombre conocido", "Reconocido local", "Internacional"].map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Acabados</div>
             <div style={{ display: "flex", gap: 4 }}>
               {["Básico", "Estándar", "Premium", "Luxury"].map(a => (
-                <button key={a} onClick={() => setAcabados(a)} style={{ flex: 1, padding: "5px 2px", fontSize: 10, fontWeight: 500, borderRadius: 2, border: `1px solid ${acabados === a ? C.ink : C.lineSoft}`, background: acabados === a ? C.ink : "transparent", color: acabados === a ? C.bg : C.muted, cursor: "pointer" }}>{a}</button>
+                <button key={a} onClick={() => setAcabados(a)} style={{ flex: 1, padding: "6px 2px", fontSize: 10, fontWeight: 500, borderRadius: 2, border: `1px solid ${acabados === a ? C.ink : C.lineSoft}`, background: acabados === a ? C.ink : "transparent", color: acabados === a ? C.bg : C.muted, cursor: "pointer" }}>{a}</button>
               ))}
             </div>
           </div>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Precio/m² · <span style={{ color: priceColor, fontWeight: 700 }}>USD {precioM2.toLocaleString()} · {pricePosition}</span></div>
-          <input type="range" min={d.priceRange[0] * 0.7} max={d.priceRange[1] * 1.2} step={50} value={precioM2}
-            onChange={e => setPrecioM2(Number(e.target.value))}
-            style={{ width: "100%", accentColor: C.ink }} />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginTop: 2 }}>
-            <span>USD {d.priceRange[0].toLocaleString()}</span><span>USD {d.priceRange[1].toLocaleString()}</span>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+            Precio/m² · <span style={{ color: priceColor, fontWeight: 700 }}>USD {precioM2.toLocaleString()} · {pricePosition}</span>
+          </div>
+          <input type="range" min={Math.round(d.priceRange[0] * 0.65)} max={Math.round(d.priceRange[1] * 1.25)} step={50} value={precioM2} onChange={e => setPrecioM2(Number(e.target.value))} style={{ width: "100%", accentColor: C.ink }} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted }}>
+            <span>USD {d.priceRange[0].toLocaleString()}</span><span>Rango sector</span><span>USD {d.priceRange[1].toLocaleString()}</span>
           </div>
         </div>
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Storytelling · <span style={{ color: C.ink, fontWeight: 600 }}>{storytelling < 33 ? "Genérico" : storytelling < 66 ? "Bien definido" : "Icónico"}</span></div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+            Storytelling · <span style={{ color: C.ink, fontWeight: 600 }}>{storytelling < 30 ? "Genérico" : storytelling < 60 ? "Definido" : storytelling < 85 ? "Sólido" : "Icónico"}</span>
+          </div>
           <input type="range" min={0} max={100} value={storytelling} onChange={e => setStorytelling(Number(e.target.value))} style={{ width: "100%", accentColor: C.ink }} />
         </div>
-
-        {/* Live results */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, padding: "12px", background: C.surface, borderRadius: 2 }}>
+        {/* Live output */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, padding: "12px", background: C.surface, borderRadius: 2 }}>
           {[
-            { label: "Absorción est.", value: `${absorption} u/mes`, color: parseFloat(absorption) >= d.base ? C.green : C.ochre },
-            { label: "Unidades aprox.", value: `${units} u` },
-            { label: "Tiempo de venta", value: `${monthsToSell} meses`, color: parseInt(monthsToSell) <= 18 ? C.green : C.ochre },
+            { label: "Absorción est.", value: `${absorptionFmt} u/mes`, color: parseFloat(absorptionFmt) >= d.base ? C.green : C.ochre },
+            { label: "Unidades",       value: `${units} u` },
+            { label: "Tiempo venta",   value: `${monthsToSell} meses`, color: monthsToSell <= 18 ? C.green : monthsToSell <= 30 ? C.cobalt : "#A85B5B" },
+            { label: "Revenue est.",   value: `$${(revenueEst/1000000).toFixed(1)}M` },
+            { label: "Precio/m²",      value: `$${precioM2.toLocaleString()}`, color: priceColor },
           ].map(k => (
             <div key={k.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{k.label}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: k.color || C.ink }}>{k.value}</div>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{k.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: k.color || C.ink }}>{k.value}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Alicia ── */}
-      <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aliciaText ? 12 : 0 }}>
+      {/* ── 3. Competidores ── */}
+      <div>
+        <SectionLabel>Competidores · {terreno.district} · {competidores.length} proyectos</SectionLabel>
+        <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <thead>
+              <tr style={{ background: C.surface }}>
+                {["Proyecto", "Developer", "USD/m²", "Unidades", "Absorción", "Estado", "Link"].map(h => (
+                  <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, borderBottom: `1px solid ${C.lineSoft}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Mi propuesta — primera fila destacada */}
+              <tr style={{ background: C.ink + "08", borderBottom: `1px solid ${C.lineSoft}` }}>
+                <td style={{ padding: "8px 10px", fontWeight: 700, color: C.ink }}>◆ Hygge · {tipologia}</td>
+                <td style={{ padding: "8px 10px", color: C.muted }}>Hygge Holding</td>
+                <td style={{ padding: "8px 10px", fontWeight: 700, color: priceColor }}>{precioM2.toLocaleString()}</td>
+                <td style={{ padding: "8px 10px", color: C.ink }}>{units}</td>
+                <td style={{ padding: "8px 10px", fontWeight: 700, color: parseFloat(absorptionFmt) >= d.base ? C.green : C.ochre }}>{absorptionFmt}</td>
+                <td style={{ padding: "8px 10px" }}><span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: C.cobalt + "18", color: C.cobalt, fontWeight: 600 }}>Propuesta</span></td>
+                <td style={{ padding: "8px 10px" }}>—</td>
+              </tr>
+              {competidores.map((c, i) => {
+                const vsHygge = precioM2 - c.priceM2;
+                return (
+                  <tr key={i} style={{ borderBottom: `1px solid ${C.lineSoft}`, background: i % 2 === 0 ? "transparent" : C.paper + "80" }}>
+                    <td style={{ padding: "8px 10px", color: C.ink, fontWeight: 500 }}>{c.name}</td>
+                    <td style={{ padding: "8px 10px", color: C.muted }}>{c.dev}</td>
+                    <td style={{ padding: "8px 10px", color: C.inkSoft }}>
+                      {c.priceM2.toLocaleString()}
+                      <span style={{ fontSize: 9, marginLeft: 4, color: vsHygge > 0 ? C.green : vsHygge < 0 ? "#A85B5B" : C.muted }}>
+                        {vsHygge > 0 ? `−${vsHygge.toLocaleString()}` : vsHygge < 0 ? `+${Math.abs(vsHygge).toLocaleString()}` : "="}
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 10px", color: C.muted }}>{c.units}</td>
+                    <td style={{ padding: "8px 10px", color: C.inkSoft }}>{c.absorption}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: (STATUS_COLOR[c.status] || C.muted) + "18", color: STATUS_COLOR[c.status] || C.muted, fontWeight: 600, whiteSpace: "nowrap" }}>{c.status}</span>
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>
+                      {c.link ? <a href={c.link} target="_blank" rel="noopener noreferrer" style={{ color: C.cobalt, fontSize: 10, display: "flex", alignItems: "center", gap: 3 }}><ExternalLink size={10} /> Ver</a> : <span style={{ color: C.lineSoft }}>—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── 4. Mapa ── */}
+      <div>
+        <SectionLabel>
+          Mapa · Velocity + Radar
+          <span style={{ marginLeft: 10, fontWeight: 400 }}>
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.green, marginRight: 3 }} />alza
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.cobalt, marginRight: 3, marginLeft: 8 }} />estable
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.ochre, marginRight: 3, marginLeft: 8 }} />emergente
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#0A0B0F", opacity: 0.5, marginRight: 3, marginLeft: 8 }} />competidor
+          </span>
+        </SectionLabel>
+        <iframe key={terreno.id} srcDoc={mapHtml} style={{ width: "100%", height: 300, border: "none", borderRadius: 2, display: "block" }} sandbox="allow-scripts" />
+      </div>
+
+      {/* ── 5. Gráficos ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+        {/* Scatter posicionamiento */}
+        <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+          <SectionLabel>Posicionamiento · precio vs absorción</SectionLabel>
+          <ResponsiveContainer width="100%" height={220}>
+            <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
+              <CartesianGrid stroke={C.lineSoft} strokeDasharray="3 3" />
+              <XAxis dataKey="x" type="number" name="Precio/m²" domain={["auto","auto"]} tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} label={{ value: "USD/m²", position: "insideBottom", offset: -12, fontSize: 9, fill: C.muted }} />
+              <YAxis dataKey="y" type="number" name="Absorción" tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `${v}u`} label={{ value: "u/mes", angle: -90, position: "insideLeft", fontSize: 9, fill: C.muted }} />
+              <ZAxis dataKey="z" range={[40, 260]} />
+              <Tooltip cursor={{ strokeDasharray: "3 3" }} content={({ payload }) => {
+                if (!payload?.length) return null;
+                const p = payload[0]?.payload;
+                return <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "6px 10px", fontSize: 11 }}><div style={{ fontWeight: 600, color: C.ink }}>{p.name}</div><div style={{ color: C.muted }}>USD {p.x?.toLocaleString()}/m² · {p.y} u/mes · {p.z} u</div></div>;
+              }} />
+              <ReferenceLine x={midPrice} stroke={C.muted} strokeDasharray="4 2" label={{ value: "Precio medio", fontSize: 8, fill: C.muted }} />
+              <Scatter name="Competidores" data={scatterData.comps} fill={C.cobalt} fillOpacity={0.45} />
+              <Scatter name="Hygge" data={scatterData.mine} fill={C.ink} shape="diamond" />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Radar diferenciadores */}
+        <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+          <SectionLabel>Diferenciadores · Hygge vs mercado</SectionLabel>
+          <ResponsiveContainer width="100%" height={220}>
+            <RadarChart data={radarData} margin={{ top: 8, right: 20, bottom: 8, left: 20 }}>
+              <PolarGrid stroke={C.lineSoft} />
+              <PolarAngleAxis dataKey="axis" tick={{ fontSize: 9, fill: C.muted }} />
+              <Radar name="Mercado" dataKey="comp" stroke={C.muted} fill={C.muted} fillOpacity={0.15} />
+              <Radar name="Hygge" dataKey="hygge" stroke={C.cobalt} fill={C.cobalt} fillOpacity={0.25} />
+              <Legend wrapperStyle={{ fontSize: 10, color: C.muted }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Absorción acumulada */}
+        <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+          <SectionLabel>Curva de absorción proyectada</SectionLabel>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={absorptionCurve} margin={{ top: 4, right: 16, bottom: 20, left: 8 }}>
+              <CartesianGrid stroke={C.lineSoft} strokeDasharray="3 3" />
+              <XAxis dataKey="mes" tick={{ fontSize: 9, fill: C.muted }} interval={Math.floor(absorptionCurve.length / 6)} label={{ value: "Mes", position: "insideBottom", offset: -10, fontSize: 9, fill: C.muted }} />
+              <YAxis tick={{ fontSize: 9, fill: C.muted }} />
+              <Tooltip contentStyle={{ fontSize: 11, background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }} formatter={(v, n) => [v + " u", n]} />
+              <Area type="monotone" dataKey="vendidas" name="Vendidas" stroke={C.green} fill={C.green} fillOpacity={0.2} strokeWidth={2} />
+              <Area type="monotone" dataKey="disponibles" name="Disponibles" stroke={C.muted} fill={C.muted} fillOpacity={0.1} strokeWidth={1} strokeDasharray="3 2" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Bar comparativa precio */}
+        <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+          <SectionLabel>Comparativa precio/m² vs competidores</SectionLabel>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={priceBarData} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+              <CartesianGrid stroke={C.lineSoft} strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: C.muted }} width={80} />
+              <Tooltip contentStyle={{ fontSize: 11, background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }} formatter={v => [`USD ${v.toLocaleString()}/m²`]} />
+              <Bar dataKey="precio" radius={[0, 2, 2, 0]}>
+                {priceBarData.map((entry, i) => (
+                  <Cell key={i} fill={entry.type === "mine" ? C.ink : C.cobalt} fillOpacity={entry.type === "mine" ? 1 : 0.45} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* ── 6. Alicia ── */}
+      <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "14px 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aliciaText ? 14 : 0 }}>
           <div>
             <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Alicia · análisis de oportunidad</div>
-            <div style={{ fontSize: 11, color: C.muted }}>Con los parámetros actuales</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Propuesta actual vs {competidores.length} competidores</div>
           </div>
-          <button onClick={runAlicia} disabled={aliciaLoading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: aliciaLoading ? C.surface : C.ink, color: aliciaLoading ? C.muted : "#fff", border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: aliciaLoading ? "not-allowed" : "pointer" }}>
+          <button onClick={runAlicia} disabled={aliciaLoading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: aliciaLoading ? C.surface : C.ink, color: aliciaLoading ? C.muted : "#fff", border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: aliciaLoading ? "not-allowed" : "pointer" }}>
             {aliciaLoading ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Analizando…</> : <><Sparkles size={13} /> Consultar Alicia</>}
           </button>
         </div>
         {aliciaText && (
-          <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+          <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>
             {aliciaText.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
               part.startsWith("**") && part.endsWith("**")
                 ? <strong key={i} style={{ color: C.ink }}>{part.slice(2, -2)}</strong>
