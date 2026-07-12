@@ -3,6 +3,7 @@ import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
 import MercadoView from "./modules/mercado/MercadoView";
 import CabidaView from "./modules/cabida/CabidaView";
+import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { useTimer } from "./modules/timer/useTimer";
 import { TimerButton } from "./modules/timer/TimerButton";
 import { useERPSync } from "./api/useERPSync.js";
@@ -4862,6 +4863,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
             { id: "documentos", label: `Documentos · ${(terreno.documents || []).length}` },
             { id: "analisis", label: "Análisis" },
             { id: "cabida", label: "Cabida" },
+            { id: "propuesta", label: "Propuesta BAM" },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} className="px-3 py-3 text-[11px]"
               style={{ color: tab === t.id ? C.ink : C.muted, fontWeight: tab === t.id ? 600 : 500, borderBottom: `2px solid ${tab === t.id ? C.ink : "transparent"}`, marginBottom: -1 }}>
@@ -4973,6 +4975,9 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
           )}
           {tab === "cabida" && (
             <CabidaView initialTerreno={terreno.areaM2 || 500} compact />
+          )}
+          {tab === "propuesta" && (
+            <PropuestaBamTab terreno={terreno} onUpdate={onUpdate} />
           )}
         </div>
       </aside>
