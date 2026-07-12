@@ -411,22 +411,29 @@ async function transcribeAudio(mediaUrl, mediaType) {
 // ── TTS (Groq PlayAI) ─────────────────────────────────────────────────────────
 const ttsCache = new Map(); // id → Buffer, cleaned up after 5 min
 
-async function generateSpeech(text) {
-  const limited = text.slice(0, 2000); // Groq TTS limit
+const ALLOWED_VOICES = new Set([
+  "Celeste-PlayAI","Arista-PlayAI","Lana-PlayAI","Maya-PlayAI","Nora-PlayAI",
+  "Scarlett-PlayAI","Selena-PlayAI","Stella-PlayAI","Zara-PlayAI",
+  "Fritz-PlayAI","James-PlayAI","Atlas-PlayAI",
+]);
+
+async function generateSpeech(text, voice = "Celeste-PlayAI") {
+  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "Celeste-PlayAI";
+  const limited = text.slice(0, 2000);
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "playai-tts", input: limited, voice: "Celeste-PlayAI", response_format: "mp3" }),
+    body: JSON.stringify({ model: "playai-tts", input: limited, voice: safeVoice, response_format: "mp3" }),
   });
   if (!res.ok) throw new Error(`Groq TTS error: ${await res.text()}`);
   return Buffer.from(await res.arrayBuffer());
 }
 
 app.post("/api/tts", async (req, res) => {
-  const { text } = req.body;
+  const { text, voice } = req.body;
   if (!text) return res.status(400).json({ error: "No text" });
   try {
-    const buf = await generateSpeech(text);
+    const buf = await generateSpeech(text, voice);
     res.set("Content-Type", "audio/mpeg").send(buf);
   } catch (e) {
     console.error("TTS error:", e.message);
