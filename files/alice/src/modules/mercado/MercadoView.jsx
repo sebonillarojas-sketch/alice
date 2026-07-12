@@ -8,6 +8,7 @@ import {
   MapPin, TrendingUp, TrendingDown, Zap, BarChart2,
   ChevronDown, ChevronRight, Plus, Trash2, Sparkles,
   RefreshCw, ExternalLink, Target, Building,
+  Image, Newspaper, Link, Tag, X, Globe,
 } from "lucide-react";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
@@ -245,6 +246,230 @@ function Toggle({ label, value, onChange, hint }) {
   );
 }
 
+// ─── PHOTO GALLERY ───────────────────────────────────────────────────────────
+const EMPTY_PHOTO = () => ({ id: Date.now() + Math.random(), url: "", caption: "", isStreetView: false });
+
+function PhotoGallery({ photos, setPhotos, district }) {
+  const [lightbox, setLightbox] = useState(null);
+
+  const streetViewUrl = district
+    ? `https://www.google.com/maps/@${district.lat},${district.lng},3a,75y,0h,90t/data=!3m6!1e1`
+    : null;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Fotos del entorno
+        </span>
+        <div style={{ display: "flex", gap: 6 }}>
+          {district && (
+            <a href={streetViewUrl} target="_blank" rel="noreferrer"
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.cobalt, fontWeight: 600,
+                textDecoration: "none", padding: "3px 8px", border: `1px solid ${C.line}`, borderRadius: 2 }}>
+              <Globe size={10} /> Street View ↗
+            </a>
+          )}
+          <button onClick={() => setPhotos(p => [...p, EMPTY_PHOTO()])}
+            style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.cobalt,
+              background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+            <Plus size={12} /> Agregar foto
+          </button>
+        </div>
+      </div>
+
+      {/* Add URL inputs */}
+      {photos.map(ph => (
+        <div key={ph.id} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
+          <input value={ph.url} onChange={e => setPhotos(p => p.map(x => x.id === ph.id ? { ...x, url: e.target.value } : x))}
+            placeholder="URL de imagen (jpg, png, webp…)"
+            style={{ flex: 2, padding: "5px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2,
+              background: C.paper, color: C.ink, outline: "none" }} />
+          <input value={ph.caption} onChange={e => setPhotos(p => p.map(x => x.id === ph.id ? { ...x, caption: e.target.value } : x))}
+            placeholder="Descripción…"
+            style={{ flex: 1, padding: "5px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2,
+              background: C.paper, color: C.ink, outline: "none" }} />
+          <button onClick={() => setPhotos(p => p.filter(x => x.id !== ph.id))}
+            style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, flexShrink: 0 }}>
+            <X size={12} />
+          </button>
+        </div>
+      ))}
+
+      {/* Grid */}
+      {photos.filter(p => p.url).length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginTop: 8 }}>
+          {photos.filter(p => p.url).map(ph => (
+            <div key={ph.id} onClick={() => setLightbox(ph)}
+              style={{ position: "relative", aspectRatio: "4/3", borderRadius: 2, overflow: "hidden",
+                cursor: "pointer", background: C.surface, border: `1px solid ${C.line}` }}>
+              <img src={ph.url} alt={ph.caption}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                onError={e => { e.target.style.display = "none"; }} />
+              {ph.caption && (
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.55)",
+                  color: "#fff", fontSize: 9, padding: "4px 6px", lineHeight: 1.3 }}>
+                  {ph.caption}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {photos.filter(p => p.url).length === 0 && photos.length === 0 && (
+        <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "14px 0",
+          borderTop: `1px solid ${C.lineSoft}`, fontStyle: "italic" }}>
+          Pegá URLs de imágenes del entorno, renders, o abrí Street View
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.85)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 900, width: "100%", position: "relative" }}>
+            <img src={lightbox.url} alt={lightbox.caption}
+              style={{ width: "100%", maxHeight: "80vh", objectFit: "contain", borderRadius: 2 }} />
+            {lightbox.caption && (
+              <div style={{ color: "#fff", fontSize: 12, textAlign: "center", marginTop: 10 }}>{lightbox.caption}</div>
+            )}
+            <button onClick={() => setLightbox(null)}
+              style={{ position: "absolute", top: -12, right: -12, background: C.ink, border: "none",
+                color: "#fff", width: 28, height: 28, borderRadius: "50%", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── NEWS PANEL ──────────────────────────────────────────────────────────────
+const NEWS_TAGS = ["Mercado", "Legal", "Urbanismo", "Macro", "Competencia", "Tendencia", "Riesgo"];
+const TAG_COLORS = {
+  "Mercado": C.cobalt, "Legal": C.ochre, "Urbanismo": C.green,
+  "Macro": C.navy, "Competencia": C.lavender, "Tendencia": C.sky, "Riesgo": C.brick,
+};
+const EMPTY_NEWS = () => ({ id: Date.now() + Math.random(), title: "", url: "", source: "", date: "", tag: "Mercado", note: "" });
+
+function NewsPanel({ news, setNews }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState(EMPTY_NEWS());
+
+  const save = () => {
+    if (!draft.title.trim()) return;
+    setNews(n => [{ ...draft, id: Date.now() }, ...n]);
+    setDraft(EMPTY_NEWS());
+    setAdding(false);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Noticias & contexto del sector
+        </span>
+        <button onClick={() => setAdding(a => !a)}
+          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.cobalt,
+            background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+          <Plus size={12} /> {adding ? "Cancelar" : "Agregar"}
+        </button>
+      </div>
+
+      {/* Add form */}
+      {adding && (
+        <div style={{ background: C.surface, borderRadius: 2, padding: "12px", marginBottom: 12 }}>
+          <input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))}
+            placeholder="Título de la noticia o insight…"
+            style={{ width: "100%", padding: "6px 8px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2,
+              background: C.paper, color: C.ink, outline: "none", boxSizing: "border-box", marginBottom: 6 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, marginBottom: 6 }}>
+            <input value={draft.url} onChange={e => setDraft(d => ({ ...d, url: e.target.value }))}
+              placeholder="URL (opcional)"
+              style={{ padding: "5px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2,
+                background: C.paper, color: C.ink, outline: "none" }} />
+            <input value={draft.source} onChange={e => setDraft(d => ({ ...d, source: e.target.value }))}
+              placeholder="Fuente"
+              style={{ padding: "5px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2,
+                background: C.paper, color: C.ink, outline: "none" }} />
+            <input value={draft.date} onChange={e => setDraft(d => ({ ...d, date: e.target.value }))}
+              placeholder="Fecha" type="date"
+              style={{ padding: "5px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2,
+                background: C.paper, color: C.ink, outline: "none" }} />
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
+            {NEWS_TAGS.map(t => (
+              <button key={t} onClick={() => setDraft(d => ({ ...d, tag: t }))}
+                style={{ padding: "3px 8px", fontSize: 10, borderRadius: 2, border: "none", cursor: "pointer",
+                  background: draft.tag === t ? (TAG_COLORS[t] || C.cobalt) : C.line,
+                  color: draft.tag === t ? "#fff" : C.muted, fontWeight: 600 }}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <textarea value={draft.note} onChange={e => setDraft(d => ({ ...d, note: e.target.value }))}
+            placeholder="Nota / relevancia para el proyecto…" rows={2}
+            style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: `1px solid ${C.line}`, borderRadius: 2,
+              background: C.paper, color: C.ink, outline: "none", resize: "vertical", boxSizing: "border-box", marginBottom: 8, fontFamily: "inherit" }} />
+          <button onClick={save}
+            style={{ padding: "6px 16px", background: C.ink, color: "#fff", border: "none", borderRadius: 2,
+              fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            Guardar
+          </button>
+        </div>
+      )}
+
+      {/* News list */}
+      {news.length === 0 && !adding && (
+        <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "14px 0",
+          borderTop: `1px solid ${C.lineSoft}`, fontStyle: "italic" }}>
+          Agregá noticias, informes o insights del sector para enriquecer el análisis
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {news.map(item => (
+          <div key={item.id} style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "10px 12px" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 2,
+                    background: TAG_COLORS[item.tag] || C.cobalt, color: "#fff" }}>
+                    {item.tag}
+                  </span>
+                  {item.source && <span style={{ fontSize: 10, color: C.muted }}>{item.source}</span>}
+                  {item.date && <span style={{ fontSize: 10, color: C.muted }}>{item.date}</span>}
+                </div>
+                {item.url ? (
+                  <a href={item.url} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 12, fontWeight: 600, color: C.ink, textDecoration: "none", lineHeight: 1.4,
+                      display: "flex", alignItems: "center", gap: 4 }}>
+                    {item.title} <ExternalLink size={10} style={{ flexShrink: 0, color: C.muted }} />
+                  </a>
+                ) : (
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.ink, lineHeight: 1.4 }}>{item.title}</div>
+                )}
+                {item.note && (
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4, fontStyle: "italic", lineHeight: 1.4 }}>
+                    {item.note}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setNews(n => n.filter(x => x.id !== item.id))}
+                style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, flexShrink: 0 }}>
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── COMPARABLE ROW ──────────────────────────────────────────────────────────
 const EMPTY_COMP = () => ({ id: Date.now(), nombre: "", precio: "", velocidad: "", acabados: "Estándar", nota: "" });
 
@@ -345,9 +570,15 @@ export default function MercadoView() {
   // Comparables
   const [comps, setComps] = useState([]);
 
-  // Active section collapse
+  // Photos & news
+  const [photos, setPhotos] = useState([]);
+  const [news, setNews] = useState([]);
+
+  // Section collapse
   const [showComps, setShowComps] = useState(false);
   const [showSpider, setShowSpider] = useState(true);
+  const [showPhotos, setShowPhotos] = useState(true);
+  const [showNews, setShowNews] = useState(true);
 
   // Listen for district selection from map iframe
   useEffect(() => {
@@ -409,6 +640,8 @@ RESULTADO DEL MODELO:
 - Velocidad proyectada: ${velocity.toFixed(1)} unidades/mes
 - Absorción total estimada: ${absMonths} meses
 ${comps.length > 0 ? `\nCOMPARABLES EN EL SECTOR:\n${comps.map(c => `- ${c.nombre}: USD ${c.precio}/m², ${c.velocidad} u/mes, ${c.acabados}. ${c.nota}`).join("\n")}` : ""}
+${news.length > 0 ? `\nCONTEXTO DE MERCADO Y NOTICIAS RELEVANTES:\n${news.map(n => `- [${n.tag}] ${n.title}${n.source ? ` (${n.source}${n.date ? ", " + n.date : ""})` : ""}${n.note ? ": " + n.note : ""}`).join("\n")}` : ""}
+${photos.filter(p => p.url && p.caption).length > 0 ? `\nFOTOS DEL ENTORNO (${photos.filter(p => p.url).length} imágenes cargadas): ${photos.filter(p => p.caption).map(p => p.caption).join(", ")}` : ""}
 
 Dame:
 1. **Validación del precio** — ¿el precio relativo es realista para el perfil del proyecto y el distrito? ¿Hay espacio para subir o hay riesgo de over-pricing?
@@ -717,6 +950,28 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                   Proyectos comparables ({comps.length})
                 </button>
                 {showComps && <ComparableTable comps={comps} setComps={setComps} />}
+              </div>
+
+              {/* Fotos del entorno */}
+              <div style={{ marginBottom: 24, padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
+                <button onClick={() => setShowPhotos(s => !s)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
+                    letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showPhotos ? 12 : 0 }}>
+                  {showPhotos ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  <Image size={11} /> Fotos del entorno ({photos.filter(p => p.url).length})
+                </button>
+                {showPhotos && <PhotoGallery photos={photos} setPhotos={setPhotos} district={selectedDistrict} />}
+              </div>
+
+              {/* Noticias & contexto */}
+              <div style={{ marginBottom: 24, padding: "14px 16px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}>
+                <button onClick={() => setShowNews(s => !s)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
+                    letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showNews ? 12 : 0 }}>
+                  {showNews ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  <Newspaper size={11} /> Noticias & contexto ({news.length})
+                </button>
+                {showNews && <NewsPanel news={news} setNews={setNews} />}
               </div>
 
               {/* Alicia analysis */}
