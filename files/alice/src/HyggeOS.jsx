@@ -30,7 +30,7 @@ import {
   Search, Bell, Plus, Play, Pause, MessageSquare, MessageCircle, Activity, ChevronLeft, ChevronRight, ChevronDown,
   LayoutDashboard, List, Kanban, GanttChart, Calendar as CalIcon, Table2,
   PenSquare, Filter, Sparkles, CheckCircle2, Circle, Star, X, StickyNote,
-  ArrowRight, FileText, Send, Loader2, CornerDownRight, Trash2, Paperclip,
+  ArrowLeft, ArrowRight, FileText, Send, Loader2, CornerDownRight, Trash2, Paperclip,
   Image as ImageIcon, AtSign, Clock, User as UserIcon, FileUp, Download,
   MousePointer2, Type, Square, ArrowUpRight, Pencil, ZoomIn, ZoomOut, Maximize2,
   Hand, Trash,
@@ -14187,7 +14187,19 @@ export default function HyggeOS({ authUser } = {}) {
   }, []);
   const toggleTimer = useCallback(() => setTimer(t => ({ ...t, running: !t.running })), []);
   const stopTimer = useCallback(() => setTimer(t => ({ ...t, running: false, elapsed: 0, label: "Sin tarea activa", taskId: null })), []);
-  const navigate = useCallback((space, vw) => { setCurrentSpace(space); if (vw) setView(vw); }, []);
+  const [spaceHistory, setSpaceHistory] = useState([]);
+  const navigate = useCallback((space, vw) => {
+    setSpaceHistory(h => [...h.slice(-19), currentSpace]);
+    setCurrentSpace(space);
+    if (vw) setView(vw);
+  }, [currentSpace]);
+  const goBack = useCallback(() => {
+    setSpaceHistory(h => {
+      const prev = h[h.length - 1];
+      if (prev) setCurrentSpace(prev);
+      return h.slice(0, -1);
+    });
+  }, []);
   const createCustomSpace = useCallback((name, dot, parentId = null) => {
     const id = "custom_" + Date.now();
     setCustomSpaces(prev => [...prev, { id, name, count: 0, dot, custom: true, code: name.slice(0,2).toUpperCase(), parentId }]);
@@ -14520,7 +14532,7 @@ REGLAS:
         {(mobileSidebarOpen || mobileRightPanelOpen) && (
           <div className="fixed inset-0 z-30 lg:hidden" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => { setMobileSidebarOpen(false); setMobileRightPanelOpen(false); }} />
         )}
-        <Sidebar allSpaces={visibleSpaces} tools={visibleTools} currentSpace={currentSpace} setSpace={setCurrentSpace}
+        <Sidebar allSpaces={visibleSpaces} tools={visibleTools} currentSpace={currentSpace} setSpace={navigate}
           expandedSpaces={expandedSpaces} toggleSpaceExpansion={toggleSpaceExpansion}
           onCreateSpace={() => { setCreateSpaceParent(null); setCreateSpaceOpen(true); }}
           onCreateSubSpace={(parent) => { setCreateSpaceParent(parent); setCreateSpaceOpen(true); }}
@@ -14551,6 +14563,13 @@ REGLAS:
               <span className="text-[10px]" style={{ color: C.muted }}>{visibleTasks.length} tareas</span>
               <button onClick={() => setActiveSmartViewId(null)} className="ml-auto text-[10px] hover:opacity-70 flex items-center gap-1" style={{ color: C.muted }}>
                 <X size={10} /> limpiar
+              </button>
+            </div>
+          )}
+          {spaceHistory.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 20px", borderBottom: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
+              <button onClick={goBack} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "2px 0", fontFamily: "DM Sans, sans-serif" }}>
+                <ArrowLeft size={13} /> Atrás
               </button>
             </div>
           )}
