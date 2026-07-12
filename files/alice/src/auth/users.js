@@ -12,6 +12,9 @@
 // PRÓXIMO PASO REAL: migrar a Supabase Auth o Clerk (ver README.md)
 //
 
+// allowedSpaces: null = acceso a todos los spaces
+// allowedSpaces: [...ids] = solo esos spaces (+ sus sub-spaces)
+// isCEO: solo Sebastián puede ver todos los chats de Alicia
 export const USERS = [
   {
     id: "sb",
@@ -23,6 +26,8 @@ export const USERS = [
     email: "sebastian@hygge.pe",
     color: "#0A0B0F",
     isAdmin: true,
+    isCEO: true,
+    allowedSpaces: null,
   },
   {
     id: "vd",
@@ -31,9 +36,11 @@ export const USERS = [
     firstName: "Vanessa",
     lastName: "Dongo",
     role: "Admin + Marketing",
-    email: "vanessa@hygge.pe",
+    email: "vane@hygge.pe",
     color: "#A89BD9",
     isAdmin: true,
+    isCEO: false,
+    allowedSpaces: null,
   },
   {
     id: "jt",
@@ -45,6 +52,8 @@ export const USERS = [
     email: "jose@hygge.pe",
     color: "#C2A45A",
     isAdmin: false,
+    isCEO: false,
+    allowedSpaces: ["comercial", "proyectos"],
   },
   {
     id: "jm",
@@ -56,6 +65,8 @@ export const USERS = [
     email: "joel@hygge.pe",
     color: "#5F8A6A",
     isAdmin: false,
+    isCEO: false,
+    allowedSpaces: ["finanzas", "proyectos"],
   },
   {
     id: "aa",
@@ -67,6 +78,8 @@ export const USERS = [
     email: "ariel@bam.pe",
     color: "#3D52D5",
     isAdmin: false,
+    isCEO: false,
+    allowedSpaces: ["bam", "proyectos"],
   },
   {
     id: "ac",
@@ -75,20 +88,24 @@ export const USERS = [
     firstName: "Andrea",
     lastName: "Castillo",
     role: "Operaciones",
-    email: "andrea@hygge.pe",
+    email: "andre@hygge.pe",
     color: "#A85B5B",
     isAdmin: false,
+    isCEO: false,
+    allowedSpaces: ["proyectos", "bam", "finanzas", "legal"],
   },
   {
     id: "jmg",
     username: "galup",
     password: "hygge2026",
-    firstName: "J.M.",
+    firstName: "Juan Miguel",
     lastName: "Galup",
     role: "Legal",
-    email: "jmgalup@hygge.pe",
+    email: "galup@hygge.pe",
     color: "#1E2A4A",
     isAdmin: false,
+    isCEO: false,
+    allowedSpaces: ["legal", "proyectos"],
   },
 ];
 

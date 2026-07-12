@@ -589,7 +589,8 @@ function ActionResult({ action }) {
 // ── Main Alicia view ───────────────────────────────────────────────────────────
 export default function AliciaView({ currentUser, tasks = [], addTask, updateTask, allSpaces = [], knowledgeLinks = [], createEvent }) {
   const currentUserId = currentUser?.id || "sb";
-  const isAdmin = currentUser?.isAdmin || currentUserId === "sebastian";
+  // Solo el CEO puede ver y cambiar entre conversaciones de otros usuarios
+  const isAdmin = currentUser?.isCEO === true;
 
   const [apiKey, setApiKey] = useState(loadApiKey);
   const [backendAvailable, setBackendAvailable] = useState(false);

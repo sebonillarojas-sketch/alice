@@ -57,6 +57,14 @@ export const dropbox = {
       size:     e.size,
     }));
   },
+
+  createFolder: async (path) => {
+    return dbxFetch("/files/create_folder_v2", { path, autorename: false });
+  },
+
+  deleteFolder: async (path) => {
+    return dbxFetch("/files/delete_v2", { path });
+  },
 };
 
 export const dropboxAvailable = () => !!ACCESS_TOKEN;

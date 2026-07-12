@@ -20,6 +20,7 @@ import {
   PieChart, Pie, Legend, LineChart, Line,
   ScatterChart, Scatter, ZAxis, ReferenceLine,
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
+  ComposedChart,
 } from "recharts";
 import {
   Search, Bell, Plus, Play, Pause, MessageSquare, MessageCircle, Activity, ChevronLeft, ChevronRight, ChevronDown,
@@ -5431,7 +5432,86 @@ Concisa. Sin genérico. Lima 2025.`;
         </div>
       </div>
 
-      {/* ── 6. Alicia ── */}
+      {/* ── 6. Absorción y precios por metraje ── */}
+      {(() => {
+        const METRAJE_DB = {
+          "Miraflores":  [{ rango: "Estudio <55", m2: 48,  absorcion: 4.2, precioM2: 5800, min: 230000, max: 310000 }, { rango: "2D 55-80",    m2: 68,  absorcion: 3.6, precioM2: 5500, min: 340000, max: 420000 }, { rango: "3D 80-110",  m2: 95,  absorcion: 2.5, precioM2: 5200, min: 470000, max: 590000 }, { rango: "4D+ 110+",  m2: 145, absorcion: 1.2, precioM2: 6200, min: 820000, max: 1100000 }],
+          "San Isidro":  [{ rango: "Estudio <55", m2: 45,  absorcion: 2.8, precioM2: 6800, min: 280000, max: 360000 }, { rango: "2D 55-80",    m2: 65,  absorcion: 2.2, precioM2: 6500, min: 390000, max: 500000 }, { rango: "3D 80-110",  m2: 88,  absorcion: 1.8, precioM2: 6200, min: 520000, max: 680000 }, { rango: "4D+ 110+",  m2: 150, absorcion: 0.8, precioM2: 7500, min: 1000000, max: 1500000 }],
+          "Barranco":    [{ rango: "Estudio <55", m2: 42,  absorcion: 3.2, precioM2: 4800, min: 185000, max: 240000 }, { rango: "2D 55-80",    m2: 65,  absorcion: 2.6, precioM2: 4500, min: 265000, max: 340000 }, { rango: "3D 80-110",  m2: 88,  absorcion: 1.8, precioM2: 4200, min: 350000, max: 460000 }, { rango: "4D+ 110+",  m2: 130, absorcion: 0.9, precioM2: 5100, min: 600000, max: 800000 }],
+          "La Molina":   [{ rango: "2D 60-80",    m2: 70,  absorcion: 5.0, precioM2: 3800, min: 250000, max: 310000 }, { rango: "3D 80-110",  m2: 100, absorcion: 4.8, precioM2: 3500, min: 330000, max: 420000 }, { rango: "4D 110-140", m2: 125, absorcion: 3.5, precioM2: 3200, min: 390000, max: 490000 }, { rango: "Casa 140+",  m2: 180, absorcion: 1.5, precioM2: 4500, min: 750000, max: 950000 }],
+          "Surco":       [{ rango: "Estudio <55", m2: 48,  absorcion: 7.5, precioM2: 3200, min: 140000, max: 180000 }, { rango: "2D 55-80",    m2: 68,  absorcion: 6.8, precioM2: 2900, min: 185000, max: 240000 }, { rango: "3D 80-110",  m2: 95,  absorcion: 5.2, precioM2: 2700, min: 245000, max: 320000 }, { rango: "4D+ 110+",  m2: 130, absorcion: 2.8, precioM2: 3500, min: 420000, max: 560000 }],
+          "Jesús María": [{ rango: "Estudio <55", m2: 42,  absorcion: 9.0, precioM2: 2600, min: 100000, max: 135000 }, { rango: "2D 55-75",    m2: 65,  absorcion: 7.8, precioM2: 2400, min: 145000, max: 185000 }, { rango: "3D 75-95",   m2: 85,  absorcion: 5.5, precioM2: 2200, min: 180000, max: 230000 }, { rango: "3D+ 95+",   m2: 110, absorcion: 2.8, precioM2: 2800, min: 280000, max: 340000 }],
+          "Magdalena":   [{ rango: "Estudio <55", m2: 44,  absorcion: 6.0, precioM2: 2800, min: 115000, max: 150000 }, { rango: "2D 55-80",    m2: 65,  absorcion: 5.5, precioM2: 2600, min: 158000, max: 210000 }, { rango: "3D 80-100",  m2: 90,  absorcion: 4.0, precioM2: 2400, min: 210000, max: 270000 }, { rango: "4D 100+",   m2: 120, absorcion: 2.0, precioM2: 3000, min: 330000, max: 420000 }],
+          "San Borja":   [{ rango: "2D 60-80",    m2: 70,  absorcion: 4.5, precioM2: 3800, min: 250000, max: 310000 }, { rango: "3D 80-110",  m2: 95,  absorcion: 4.0, precioM2: 3500, min: 320000, max: 400000 }, { rango: "4D 110-130", m2: 120, absorcion: 2.8, precioM2: 3200, min: 370000, max: 460000 }, { rango: "4D+ 130+",  m2: 150, absorcion: 1.5, precioM2: 4200, min: 580000, max: 720000 }],
+          "Pueblo Libre":[ { rango: "Estudio <50", m2: 44, absorcion: 6.2, precioM2: 2400, min: 98000,  max: 128000 }, { rango: "2D 50-75",    m2: 62,  absorcion: 5.8, precioM2: 2200, min: 130000, max: 170000 }, { rango: "3D 75-95",   m2: 85,  absorcion: 4.2, precioM2: 2000, min: 165000, max: 210000 }, { rango: "3D+ 95+",   m2: 108, absorcion: 2.0, precioM2: 2500, min: 255000, max: 310000 }],
+          "San Miguel":  [{ rango: "Estudio <50", m2: 42,  absorcion: 7.5, precioM2: 2300, min: 90000,  max: 115000 }, { rango: "2D 50-75",    m2: 62,  absorcion: 7.0, precioM2: 2100, min: 122000, max: 160000 }, { rango: "3D 75-90",   m2: 82,  absorcion: 5.5, precioM2: 1950, min: 155000, max: 195000 }, { rango: "3D+ 90+",   m2: 105, absorcion: 2.8, precioM2: 2500, min: 240000, max: 290000 }],
+          "Lince":       [{ rango: "Estudio <48", m2: 40,  absorcion: 9.5, precioM2: 2000, min: 76000,  max: 98000  }, { rango: "2D 48-68",    m2: 58,  absorcion: 8.5, precioM2: 1850, min: 100000, max: 130000 }, { rango: "3D 68-88",   m2: 78,  absorcion: 5.8, precioM2: 1700, min: 128000, max: 160000 }, { rango: "3D+ 88+",   m2: 100, absorcion: 2.5, precioM2: 2100, min: 195000, max: 240000 }],
+          "Chorrillos":  [{ rango: "Estudio <55", m2: 46,  absorcion: 5.8, precioM2: 2600, min: 110000, max: 145000 }, { rango: "2D 55-75",    m2: 65,  absorcion: 5.2, precioM2: 2400, min: 148000, max: 192000 }, { rango: "3D 75-95",   m2: 85,  absorcion: 3.8, precioM2: 2200, min: 182000, max: 230000 }, { rango: "4D 95+",    m2: 115, absorcion: 1.8, precioM2: 2800, min: 300000, max: 380000 }],
+        };
+        const mData = METRAJE_DB[terreno.district] || METRAJE_DB["Miraflores"];
+        // Scatter data: each bracket has min, mid, max price total vs m2
+        const scatterMet = mData.flatMap(b => [
+          { x: b.m2 - 4, y: b.min, rango: b.rango },
+          { x: b.m2,     y: Math.round((b.min + b.max) / 2), rango: b.rango },
+          { x: b.m2 + 4, y: b.max, rango: b.rango },
+        ]);
+        // My proposal point (if areaM2 given, estimate unit size from tipologia)
+        const myM2 = { "Estudio": 48, "Departamento": 80, "Mix tipologías": 75, "Flat premium": 110, "Penthouse": 160, "Oficinas": 90, "Retail": 120 }[tipologia] || 80;
+        const myPrecioTotal = myM2 * precioM2;
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {/* Absorción por metraje */}
+            <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+              <SectionLabel>Absorción por metraje · {terreno.district}</SectionLabel>
+              <ResponsiveContainer width="100%" height={220}>
+                <ComposedChart data={mData} margin={{ top: 8, right: 24, bottom: 28, left: 8 }}>
+                  <CartesianGrid stroke={C.lineSoft} strokeDasharray="3 3" />
+                  <XAxis dataKey="rango" tick={{ fontSize: 9, fill: C.muted }} angle={-15} textAnchor="end" interval={0} />
+                  <YAxis yAxisId="abs" tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `${v}u`} />
+                  <YAxis yAxisId="price" orientation="right" tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
+                  <Tooltip contentStyle={{ fontSize: 11, background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2 }}
+                    formatter={(v, n) => n === "absorcion" ? [`${v} u/mes`, "Absorción"] : [`USD ${v.toLocaleString()}/m²`, "Precio/m²"]} />
+                  <Bar yAxisId="abs" dataKey="absorcion" fill={C.cobalt} fillOpacity={0.55} radius={[2, 2, 0, 0]} />
+                  <Line yAxisId="price" type="monotone" dataKey="precioM2" stroke={C.ochre} strokeWidth={2} dot={{ r: 3, fill: C.ochre }} />
+                  <ReferenceLine yAxisId="abs" y={parseFloat(absorptionFmt)} stroke={C.green} strokeDasharray="4 2"
+                    label={{ value: `Hygge ${absorptionFmt}u`, fontSize: 8, fill: C.green, position: "insideTopRight" }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
+                <span style={{ display: "inline-block", width: 10, height: 10, background: C.cobalt, opacity: 0.55, borderRadius: 1, marginRight: 4, verticalAlign: "middle" }} />absorción u/mes
+                <span style={{ display: "inline-block", width: 20, height: 2, background: C.ochre, marginLeft: 10, marginRight: 4, verticalAlign: "middle" }} />precio/m²
+                <span style={{ display: "inline-block", width: 20, height: 1, background: C.green, marginLeft: 10, marginRight: 4, verticalAlign: "middle", borderTop: `2px dashed ${C.green}` }} />tu absorción est.
+              </div>
+            </div>
+
+            {/* Precio total por metraje */}
+            <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+              <SectionLabel>Precios de venta por metraje · rango mín–máx</SectionLabel>
+              <ResponsiveContainer width="100%" height={220}>
+                <ScatterChart margin={{ top: 8, right: 16, bottom: 28, left: 12 }}>
+                  <CartesianGrid stroke={C.lineSoft} strokeDasharray="3 3" />
+                  <XAxis dataKey="x" type="number" name="m²" domain={["auto","auto"]} tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `${v}m²`} label={{ value: "Superficie (m²)", position: "insideBottom", offset: -14, fontSize: 9, fill: C.muted }} />
+                  <YAxis dataKey="y" type="number" name="Precio" tick={{ fontSize: 9, fill: C.muted }} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} label={{ value: "Precio total USD", angle: -90, position: "insideLeft", fontSize: 9, fill: C.muted, offset: 8 }} />
+                  <Tooltip cursor={{ strokeDasharray: "3 3" }} content={({ payload }) => {
+                    if (!payload?.length) return null;
+                    const p = payload[0]?.payload;
+                    return <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "6px 10px", fontSize: 11 }}><div style={{ fontWeight: 600, color: C.ink }}>{p.rango}</div><div style={{ color: C.muted }}>{p.x} m² · USD {p.y?.toLocaleString()}</div></div>;
+                  }} />
+                  <Scatter name="Sector" data={scatterMet} fill={C.cobalt} fillOpacity={0.45} />
+                  <Scatter name="Hygge" data={[{ x: myM2, y: myPrecioTotal, rango: `Hygge · ${tipologia}` }]} fill={C.ink} shape="diamond" />
+                  <ReferenceLine x={myM2} stroke={C.ink} strokeDasharray="4 2" strokeWidth={1}
+                    label={{ value: tipologia, fontSize: 8, fill: C.ink, position: "insideTopRight" }} />
+                </ScatterChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
+                {mData.map(b => <span key={b.rango} style={{ marginRight: 12 }}><strong style={{ color: C.ink }}>{b.rango}</strong> USD {(b.min/1000).toFixed(0)}k–{(b.max/1000).toFixed(0)}k</span>)}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 7. Alicia ── */}
       <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "14px 16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aliciaText ? 14 : 0 }}>
           <div>

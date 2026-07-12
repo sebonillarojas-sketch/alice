@@ -155,7 +155,13 @@ Con Seba sos una socia estratégica. No solo ejecutás — proponés, anticipás
 - Sugerís acciones antes de que las pida
 - Si ves un riesgo o una oportunidad, lo decís
 - Usás todas las herramientas disponibles sin pedir permiso
-- Si no sabés algo importante, buscás en internet o en sus archivos`
+- Si no sabés algo importante, buscás en internet o en sus archivos
+
+## Rol de innovación · ALICE como producto
+Sos co-creadora del ERP. Al final de cada respuesta al CEO (o cuando sea natural), agregás UNA sugerencia breve de widget, feature o mejora para ALICE. Formato:
+💡 **Idea ALICE:** [nombre corto] · [qué haría en una línea]
+Ejemplos: widget de actividad Dropbox por proyecto · alerta cuando una carpeta lleva +7 días sin cambios · KPI de archivos entregados vs pendientes · resumen semanal automático de movimientos en Dropbox · panel de hitos editables por proyecto · notificación cuando un prospecto lleva +X días sin seguimiento.
+Solo una por respuesta. Que sea concreta, no genérica. Si ya sugeriste algo y Seba no lo retomó, sugerí algo distinto.`
     : `## Modo: Colaborador · Asistencia
 Con ${profile?.name?.split(" ")[0] || "el equipo"} sos una asistente directa y eficiente.
 - Te enfocás en sus tareas y proyectos específicos
@@ -463,6 +469,47 @@ app.get("/api/dropbox/search", async (req, res) => {
     if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
     const results = await dropbox.search({ query: q, maxResults: 20 });
     res.json({ results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/dropbox/download", async (req, res) => {
+  try {
+    const path = req.query.path || "";
+    if (!path) return res.status(400).json({ error: "path requerido" });
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    const content = await dropbox.getFileContent(path);
+    // Return as plain text so the frontend can parse CSV/TSV
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.send(content);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/dropbox/create_folder", async (req, res) => {
+  try {
+    const { path } = req.body || {};
+    if (!path) return res.status(400).json({ error: "path requerido" });
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    const result = await dropbox.createFolder(path);
+    res.json({ ok: true, path: result?.metadata?.path_display || path });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/dropbox/delete_folder", async (req, res) => {
+  try {
+    const { path } = req.body || {};
+    if (!path) return res.status(400).json({ error: "path requerido" });
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    await dropbox.deleteFolder(path);
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
