@@ -10,13 +10,10 @@ const C = {
 const sans = "DM Sans, Helvetica Neue, sans-serif";
 const mono = "JetBrains Mono, SF Mono, Menlo, monospace";
 
-// ─── BAM logo SVG ─────────────────────────────────────────────
+// ─── BAM logo ─────────────────────────────────────────────────
 function BamLogo({ size = 32 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <rect width="40" height="40" rx="2" fill={C.ink} />
-      <text x="5" y="28" fontFamily={sans} fontWeight="800" fontSize="16" fill="#EEEBE3" letterSpacing="-0.5">BAM</text>
-    </svg>
+    <img src="/bam-logo.png" alt="BAM" style={{ display: "block", height: size, width: "auto", objectFit: "contain" }} />
   );
 }
 

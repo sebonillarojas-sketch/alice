@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300">
+  <!-- B block -->
+  <rect x="0" y="0" width="280" height="300" fill="#8AAEDE"/>
+  <rect x="58" y="22" width="148" height="108" fill="white" rx="54"/>
+  <rect x="52" y="168" width="160" height="113" fill="white" rx="56"/>
+
+  <!-- A block -->
+  <rect x="308" y="0" width="284" height="300" fill="#8AAEDE"/>
+  <!-- A apex: small rounded rect cutout at very top center -->
+  <rect x="392" y="18" width="116" height="100" fill="white" rx="58"/>
+
+  <!-- M block -->
+  <rect x="620" y="0" width="280" height="300" fill="#8AAEDE"/>
+  <!-- M center V notch: triangle pointing UP from bottom edge -->
+  <polygon points="620,300 760,110 900,300" fill="white"/>
+</svg>
