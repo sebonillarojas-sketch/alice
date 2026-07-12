@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, createContext
 import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
 import MercadoView from "./modules/mercado/MercadoView";
+import CabidaView from "./modules/cabida/CabidaView";
 import { useTimer } from "./modules/timer/useTimer";
 import { TimerButton } from "./modules/timer/TimerButton";
 import { useERPSync } from "./api/useERPSync.js";
@@ -31,7 +32,7 @@ import {
   MousePointer2, Type, Square, ArrowUpRight, Pencil, ZoomIn, ZoomOut, Maximize2,
   Hand, Trash,
   Triangle, Diamond, Hexagon, Cloud as CloudIcon,
-  Building, Home, MapPin, Warehouse, DollarSign, TrendingUp, TrendingDown,
+  Building, Building2, Home, MapPin, Warehouse, DollarSign, TrendingUp, TrendingDown,
   AlertTriangle, AlertCircle, CheckCircle, XCircle, Info,
   Users, UserCheck, CalendarDays, Mail, Phone, Copy, Check, Hash, CornerDownLeft, CornerUpLeft,
   Heart, Zap, Flag, Folder, Briefcase, Eye, Settings, Award, Target,
@@ -331,6 +332,16 @@ const APPS = [
     dot: "#5F8A6A",
     url: null,
     description: "Simulador de velocidad de ventas · análisis de mercado · Alicia AI",
+    badge: "v1.0",
+    native: true,
+  },
+  {
+    id: "app-cabida",
+    label: "Cabida",
+    icon: Building2,
+    dot: "#F7643B",
+    url: null,
+    description: "Calculadora de cabida preliminar · áreas, unidades, sótanos, margen bruto",
     badge: "v1.0",
     native: true,
   },
@@ -14360,6 +14371,7 @@ REGLAS:
       if (app && app.native) {
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
         if (app.id === "app-velocity") return <MercadoView />;
+        if (app.id === "app-cabida")   return <CabidaView />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
             <iframe
