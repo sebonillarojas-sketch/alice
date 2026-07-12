@@ -4813,7 +4813,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
-      <aside className="h-full w-full max-w-[560px] flex flex-col" style={{ backgroundColor: C.bg, borderLeft: `1px solid ${C.line}` }} onClick={e => e.stopPropagation()}>
+      <aside className="h-full w-full flex flex-col" style={{ maxWidth: tab === "analisis" ? 820 : 560, backgroundColor: C.bg, borderLeft: `1px solid ${C.line}`, transition: "max-width 0.25s ease" }} onClick={e => e.stopPropagation()}>
         <div className="px-5 lg:px-6 pt-5 pb-3 flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
@@ -4954,7 +4954,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
             </div>
           )}
           {tab === "analisis" && (
-            <TerrenoMercadoAnalysis terreno={terreno} />
+            <TerrenoOpportunidad terreno={terreno} />
           )}
         </div>
       </aside>
@@ -4962,121 +4962,246 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
   );
 }
 
-function TerrenoMercadoAnalysis({ terreno }) {
-  const [analysis, setAnalysis] = React.useState("");
-  const [analyzing, setAnalyzing] = React.useState(false);
+function TerrenoOpportunidad({ terreno }) {
   const DISTRICTS_DATA = {
-    "Miraflores":  { base: 3.5, priceRange: [3200, 6500], trend: "estable",   trendScore: 1.05, desc: "NSE A. Demanda sostenida, premium consolidado." },
-    "San Isidro":  { base: 2.8, priceRange: [3800, 7200], trend: "estable",   trendScore: 1.00, desc: "NSE A+. Mercado small & luxury. Absorción lenta pero precio alto." },
-    "Barranco":    { base: 2.5, priceRange: [2800, 5000], trend: "trending",  trendScore: 1.28, desc: "NSE A/B+. Narrativa cultural fuerte. Storytelling = driver clave." },
-    "La Molina":   { base: 4.8, priceRange: [2200, 4800], trend: "estable",   trendScore: 1.00, desc: "NSE B+/A. Familia como buyer principal." },
-    "Surco":       { base: 6.2, priceRange: [1800, 3800], trend: "estable",   trendScore: 0.98, desc: "NSE B/B+. Mercado masivo con bolsones premium." },
-    "Jesús María": { base: 7.5, priceRange: [1600, 2800], trend: "trending",  trendScore: 1.22, desc: "NSE B/B+. Alta velocidad, precio accesible." },
-    "Magdalena":   { base: 5.5, priceRange: [1700, 3000], trend: "trending",  trendScore: 1.18, desc: "NSE B+. Zona en consolidación." },
-    "San Borja":   { base: 4.2, priceRange: [2200, 4200], trend: "estable",   trendScore: 1.00, desc: "NSE A/B+. Familiar." },
-    "Pueblo Libre":{ base: 5.8, priceRange: [1500, 2600], trend: "emergente", trendScore: 0.88, desc: "NSE B. Emergente." },
-    "San Miguel":  { base: 6.8, priceRange: [1400, 2500], trend: "emergente", trendScore: 0.90, desc: "NSE B. Volumen es el negocio." },
-    "Lince":       { base: 8.2, priceRange: [1300, 2200], trend: "emergente", trendScore: 0.85, desc: "NSE B/C+. Riesgo: sobre-oferta." },
-    "Chorrillos":  { base: 5.2, priceRange: [1500, 2800], trend: "emergente", trendScore: 0.82, desc: "NSE B. Playa como diferenciador." },
+    "Miraflores":  { base: 3.5, priceRange: [3200, 6500], trend: "estable",   trendScore: 1.05, desc: "NSE A. Demanda sostenida, premium consolidado.", lat: -12.1191, lng: -77.0289, competitors: 18 },
+    "San Isidro":  { base: 2.8, priceRange: [3800, 7200], trend: "estable",   trendScore: 1.00, desc: "NSE A+. Small & luxury. Absorción lenta, precio alto.", lat: -12.0934, lng: -77.0368, competitors: 12 },
+    "Barranco":    { base: 2.5, priceRange: [2800, 5000], trend: "trending",  trendScore: 1.28, desc: "NSE A/B+. Storytelling = driver clave.", lat: -12.1476, lng: -77.0217, competitors: 9 },
+    "La Molina":   { base: 4.8, priceRange: [2200, 4800], trend: "estable",   trendScore: 1.00, desc: "NSE B+/A. Buyer familiar.", lat: -12.0851, lng: -76.9422, competitors: 22 },
+    "Surco":       { base: 6.2, priceRange: [1800, 3800], trend: "estable",   trendScore: 0.98, desc: "NSE B/B+. Masivo con bolsones premium.", lat: -12.1374, lng: -76.9967, competitors: 35 },
+    "Jesús María": { base: 7.5, priceRange: [1600, 2800], trend: "trending",  trendScore: 1.22, desc: "NSE B/B+. Alta velocidad, precio accesible.", lat: -12.0806, lng: -77.0472, competitors: 28 },
+    "Magdalena":   { base: 5.5, priceRange: [1700, 3000], trend: "trending",  trendScore: 1.18, desc: "NSE B+. Zona en consolidación.", lat: -12.0924, lng: -77.0684, competitors: 14 },
+    "San Borja":   { base: 4.2, priceRange: [2200, 4200], trend: "estable",   trendScore: 1.00, desc: "NSE A/B+. Familiar.", lat: -12.1006, lng: -76.9985, competitors: 20 },
+    "Pueblo Libre":{ base: 5.8, priceRange: [1500, 2600], trend: "emergente", trendScore: 0.88, desc: "NSE B. Emergente.", lat: -12.0743, lng: -77.0618, competitors: 16 },
+    "San Miguel":  { base: 6.8, priceRange: [1400, 2500], trend: "emergente", trendScore: 0.90, desc: "NSE B. Volumen es el negocio.", lat: -12.0780, lng: -77.0900, competitors: 31 },
+    "Lince":       { base: 8.2, priceRange: [1300, 2200], trend: "emergente", trendScore: 0.85, desc: "NSE B/C+. Riesgo sobre-oferta.", lat: -12.0820, lng: -77.0368, competitors: 24 },
+    "Chorrillos":  { base: 5.2, priceRange: [1500, 2800], trend: "emergente", trendScore: 0.82, desc: "NSE B. Playa como diferenciador.", lat: -12.1727, lng: -77.0175, competitors: 19 },
   };
-  const TREND_COLOR = { trending: C.green, estable: C.cobalt, emergente: C.ochre };
+  const TREND_COLOR = { trending: "#5F8A6A", estable: "#3D52D5", emergente: "#C2A45A" };
+  const TREND_LABEL = { trending: "En alza", estable: "Estable", emergente: "Emergente" };
+
   const d = DISTRICTS_DATA[terreno.district] || DISTRICTS_DATA["Miraflores"];
 
-  const runAnalysis = async () => {
-    setAnalyzing(true);
-    setAnalysis("");
-    const prompt = `Sos Alicia, asistente ejecutiva de Hygge Holding. Analizá este terreno en evaluación.
+  // Velocity params state
+  const [tipologia, setTipologia] = React.useState("Departamento");
+  const [precioM2, setPrecioM2] = React.useState(Math.round((d.priceRange[0] + d.priceRange[1]) / 2));
+  const [acabados, setAcabados] = React.useState("Estándar");
+  const [storytelling, setStorytelling] = React.useState(50);
+  const [aliciaText, setAliciaText] = React.useState("");
+  const [aliciaLoading, setAliciaLoading] = React.useState(false);
 
-TERRENO: ${terreno.name}
-Distrito: ${terreno.district}
-Dirección: ${terreno.address || "—"}
-Área: ${terreno.areaM2 ? terreno.areaM2 + " m²" : "—"}
-Precio pedido: ${terreno.askedPrice ? "USD " + terreno.askedPrice.toLocaleString() : "—"}
-Score de interés: ${terreno.score || "—"}/100
-Estado pipeline: ${terreno.status}
-Notas: ${terreno.notes || "Sin notas"}
+  // Derived metrics
+  const midPrice = (d.priceRange[0] + d.priceRange[1]) / 2;
+  const priceRatio = precioM2 / midPrice; // 1.0 = en mercado
+  const acabadosMult = { Básico: 1.15, Estándar: 1.0, Premium: 0.82, Luxury: 0.60 }[acabados] || 1.0;
+  const storyMult = 0.85 + (storytelling / 100) * 0.35;
+  const absorption = Math.max(0.5, d.base * acabadosMult * storyMult * (priceRatio < 0.9 ? 1.2 : priceRatio > 1.15 ? 0.75 : 1.0)).toFixed(1);
+  const units = terreno.areaM2 ? Math.max(8, Math.round(terreno.areaM2 / 65)) : 40;
+  const monthsToSell = (units / parseFloat(absorption)).toFixed(0);
+  const pricePosition = priceRatio < 0.9 ? "Bajo mercado" : priceRatio > 1.1 ? "Sobre mercado" : "En mercado";
+  const priceColor = priceRatio < 0.9 ? "#5F8A6A" : priceRatio > 1.1 ? "#A85B5B" : "#3D52D5";
 
-DATOS DEL DISTRITO (${terreno.district}):
-${d.desc}
-Absorción base: ${d.base} u/mes
+  // Opp score = terreno.score blended with market score
+  const marketScore = Math.round((d.trendScore * 50) + (Math.min(d.base, 10) / 10 * 30) + (d.competitors < 20 ? 20 : d.competitors < 30 ? 10 : 0));
+  const blendedScore = Math.round(((terreno.score || 70) + marketScore) / 2);
+
+  // Map HTML — generates based on velocity params
+  const mapHtml = React.useMemo(() => {
+    const terrenoLat = terreno.lat || d.lat;
+    const terrenoLng = terreno.lng || d.lng;
+    const allDistricts = Object.entries(DISTRICTS_DATA);
+    const markersJs = allDistricts.map(([name, dd]) => {
+      const absScore = Math.min(dd.base / 10, 1);
+      const color = dd.trend === "trending" ? "#5F8A6A" : dd.trend === "estable" ? "#3D52D5" : "#C2A45A";
+      const r = 18 + Math.round(absScore * 22);
+      const isSelected = name === terreno.district;
+      return `L.circleMarker([${dd.lat},${dd.lng}],{radius:${isSelected ? r + 8 : r},color:"${color}",fillColor:"${color}",fillOpacity:${isSelected ? 0.55 : 0.22},weight:${isSelected ? 2.5 : 1}})
+        .bindTooltip('<div style="font:600 11px DM Sans,sans-serif;padding:4px 8px">${name}<br><span style="font-weight:400;color:#6B6863">${dd.base} u/mes · ${TREND_LABEL[dd.trend]}</span></div>',{permanent:false})
+        .addTo(map);`;
+    }).join("\n");
+
+    const compJs = allDistricts.map(([name, dd]) => {
+      const cx = dd.lat + (Math.random() * 0.02 - 0.01);
+      const cy = dd.lng + (Math.random() * 0.02 - 0.01);
+      return `L.circleMarker([${cx},${cy}],{radius:4,color:"#0A0B0F",fillColor:"#0A0B0F",fillOpacity:0.35,weight:0.5})
+        .bindTooltip('Competidor · ${name}',{permanent:false}).addTo(map);`;
+    }).join("\n");
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>*{margin:0;padding:0;box-sizing:border-box}body,html{height:100%;background:#EEEBE3}
+.leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
+.leaflet-tile-pane{filter:grayscale(0.15) brightness(1.02)}</style></head>
+<body><div id="map" style="width:100%;height:100vh"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${terrenoLat},${terrenoLng}],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+${markersJs}
+${compJs}
+var terrenoIcon=L.divIcon({html:'<div style="width:18px;height:18px;border-radius:50%;background:#0A0B0F;border:3px solid #F4F1EA;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',className:'',iconSize:[18,18],iconAnchor:[9,9]});
+L.marker([${terrenoLat},${terrenoLng}],{icon:terrenoIcon}).bindTooltip('<b>${(terreno.name || "Terreno").replace(/'/g, "\\'")}</b>',{permanent:true,direction:'top',offset:[0,-12],className:''}).addTo(map);
+</script></body></html>`;
+  }, [terreno.id, terreno.lat, terreno.lng, terreno.district]);
+
+  const runAlicia = async () => {
+    setAliciaLoading(true);
+    setAliciaText("");
+    const prompt = `Sos Alicia, asistente ejecutiva de Hygge Holding. Analizá esta oportunidad de terreno con los datos de mercado y parámetros Velocity.
+
+TERRENO: ${terreno.name} · ${terreno.district}
+Área: ${terreno.areaM2 ? terreno.areaM2 + " m²" : "—"} · Precio pedido: ${terreno.askedPrice ? "USD " + terreno.askedPrice.toLocaleString() : "—"}
+
+PARÁMETROS VELOCITY:
+- Tipología: ${tipologia}
+- Precio/m²: USD ${precioM2.toLocaleString()} (${pricePosition})
+- Acabados: ${acabados}
+- Storytelling: ${storytelling}/100
+- Absorción estimada: ${absorption} u/mes
+- Unidades estimadas: ${units} u
+- Tiempo de venta: ~${monthsToSell} meses
+
+MERCADO DEL DISTRITO:
+${d.desc} · ${d.competitors} proyectos competidores activos.
 Rango de precios: USD ${d.priceRange[0].toLocaleString()}–${d.priceRange[1].toLocaleString()}/m²
-Tendencia: ${d.trend} (score ${d.trendScore})
+Tendencia: ${d.trend} · Score oportunidad: ${blendedScore}/100
 
-Dame:
-1. **Validación del precio del terreno** — ¿el precio pedido es razonable para el distrito? ¿Qué producto podría desarrollarse y a qué velocidad?
-2. **Potencial del distrito** — contexto de mercado, demanda actual, riesgos
-3. **Fit estratégico** — ¿encaja con el perfil de Hygge? ¿Qué tipología recomendarías?
-4. **Próximo paso concreto** — una acción específica para avanzar o descartar
-
-Sé directa. 4 puntos claros, sin genérico. Hablá de Lima.`;
+Dame 3 insights concretos sobre este terreno: ¿es buena oportunidad con estos parámetros? ¿qué ajustarías? ¿cuál es el riesgo principal? Sé directa y específica para Lima.`;
 
     try {
       const BRAIN_URL = "http://localhost:3001";
-      let res = await fetch(`${BRAIN_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: prompt }], systemPrompt: "Sos Alicia, asistente ejecutiva de Hygge Holding. Experta en mercado inmobiliario limeño." }),
-      }).catch(() => null);
+      let res = await fetch(`${BRAIN_URL}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }) }).catch(() => null);
       if (!res || !res.ok) {
         const apiKey = localStorage.getItem("alicia_api_key");
-        if (!apiKey) throw new Error("Sin API key — configurala en Alicia > Settings.");
-        res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-          body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 800, messages: [{ role: "user", content: prompt }] }),
-        });
+        if (!apiKey) throw new Error("Sin API key · configurala en Alicia > Settings.");
+        res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 600, messages: [{ role: "user", content: prompt }] }) });
       }
       const json = await res.json();
-      const text = json.choices?.[0]?.message?.content || json.content?.[0]?.text || json.error?.message || "Sin respuesta";
-      setAnalysis(text);
-    } catch (err) {
-      setAnalysis(`Error: ${err.message}`);
-    } finally {
-      setAnalyzing(false);
-    }
+      setAliciaText(json.choices?.[0]?.message?.content || json.content?.[0]?.text || "Sin respuesta");
+    } catch (err) { setAliciaText(`Error: ${err.message}`); }
+    finally { setAliciaLoading(false); }
   };
 
   return (
-    <div>
-      {/* District summary */}
-      <div style={{ padding: "10px 14px", marginBottom: 16, background: C.surface, borderRadius: 2, borderLeft: `3px solid ${TREND_COLOR[d.trend]}` }}>
-        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{terreno.district} · {d.trend}</div>
-        <div style={{ fontSize: 12, color: C.inkSoft }}>{d.desc}</div>
-        <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-          <div><div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Absorción base</div><div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{d.base} u/mes</div></div>
-          <div><div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Precio sector</div><div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>USD {d.priceRange[0].toLocaleString()}–{d.priceRange[1].toLocaleString()}/m²</div></div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* ── Reporte automático ── */}
+      <div>
+        <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Reporte · {terreno.district}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+          {[
+            { label: "Absorción", value: `${d.base} u/mes` },
+            { label: "Precio/m²", value: `$${d.priceRange[0].toLocaleString()}–${(d.priceRange[1]/1000).toFixed(1)}k` },
+            { label: "Competidores", value: `${d.competitors} proy.` },
+            { label: "Tendencia", value: TREND_LABEL[d.trend] },
+          ].map(k => (
+            <div key={k.label} style={{ background: C.surface, borderRadius: 2, padding: "8px 10px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{k.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, marginBottom: 4 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Score oportunidad</div>
+            <div style={{ marginTop: 6, height: 4, background: C.lineSoft, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${blendedScore}%`, background: blendedScore >= 75 ? C.green : blendedScore >= 55 ? C.cobalt : C.ochre, borderRadius: 2, transition: "width 0.4s ease" }} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: blendedScore >= 75 ? C.green : blendedScore >= 55 ? C.cobalt : C.ochre, letterSpacing: "-0.02em" }}>{blendedScore}</div>
+        </div>
+        <div style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.6, padding: "8px 12px", background: C.paper, border: `1px solid ${C.lineSoft}`, borderLeft: `3px solid ${TREND_COLOR[d.trend]}`, borderRadius: 2 }}>{d.desc}</div>
+      </div>
+
+      {/* ── Mapa combinado ── */}
+      <div>
+        <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>
+          Mapa · Velocity + Radar
+          <span style={{ marginLeft: 10, fontSize: 9, fontWeight: 400, color: C.muted }}>
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.green, marginRight: 4 }} />en alza
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.cobalt, marginRight: 4, marginLeft: 8 }} />estable
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: C.ochre, marginRight: 4, marginLeft: 8 }} />emergente
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#0A0B0F", opacity: 0.35, marginRight: 4, marginLeft: 8 }} />competidor
+          </span>
+        </div>
+        <iframe
+          key={terreno.id}
+          srcDoc={mapHtml}
+          style={{ width: "100%", height: 320, border: "none", borderRadius: 2, display: "block" }}
+          sandbox="allow-scripts"
+        />
+      </div>
+
+      {/* ── Controles Velocity ── */}
+      <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "14px 16px" }}>
+        <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Parámetros Velocity · jugá con las métricas</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Tipología</div>
+            <select value={tipologia} onChange={e => setTipologia(e.target.value)} style={{ width: "100%", padding: "6px 8px", fontSize: 12, background: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink, outline: "none" }}>
+              {["Departamento", "Mix tipologías", "Flat premium", "Penthouse", "Oficinas", "Retail"].map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Acabados</div>
+            <div style={{ display: "flex", gap: 4 }}>
+              {["Básico", "Estándar", "Premium", "Luxury"].map(a => (
+                <button key={a} onClick={() => setAcabados(a)} style={{ flex: 1, padding: "5px 2px", fontSize: 10, fontWeight: 500, borderRadius: 2, border: `1px solid ${acabados === a ? C.ink : C.lineSoft}`, background: acabados === a ? C.ink : "transparent", color: acabados === a ? C.bg : C.muted, cursor: "pointer" }}>{a}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Precio/m² · <span style={{ color: priceColor, fontWeight: 700 }}>USD {precioM2.toLocaleString()} · {pricePosition}</span></div>
+          <input type="range" min={d.priceRange[0] * 0.7} max={d.priceRange[1] * 1.2} step={50} value={precioM2}
+            onChange={e => setPrecioM2(Number(e.target.value))}
+            style={{ width: "100%", accentColor: C.ink }} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginTop: 2 }}>
+            <span>USD {d.priceRange[0].toLocaleString()}</span><span>USD {d.priceRange[1].toLocaleString()}</span>
+          </div>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Storytelling · <span style={{ color: C.ink, fontWeight: 600 }}>{storytelling < 33 ? "Genérico" : storytelling < 66 ? "Bien definido" : "Icónico"}</span></div>
+          <input type="range" min={0} max={100} value={storytelling} onChange={e => setStorytelling(Number(e.target.value))} style={{ width: "100%", accentColor: C.ink }} />
+        </div>
+
+        {/* Live results */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, padding: "12px", background: C.surface, borderRadius: 2 }}>
+          {[
+            { label: "Absorción est.", value: `${absorption} u/mes`, color: parseFloat(absorption) >= d.base ? C.green : C.ochre },
+            { label: "Unidades aprox.", value: `${units} u` },
+            { label: "Tiempo de venta", value: `${monthsToSell} meses`, color: parseInt(monthsToSell) <= 18 ? C.green : C.ochre },
+          ].map(k => (
+            <div key={k.label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{k.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: k.color || C.ink }}>{k.value}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Alicia CTA */}
-      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "14px 16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: analysis ? 14 : 0 }}>
+      {/* ── Alicia ── */}
+      <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aliciaText ? 12 : 0 }}>
           <div>
-            <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Análisis de Alicia</div>
-            <div style={{ fontSize: 11, color: C.muted }}>Validación del terreno · mercado limeño</div>
+            <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Alicia · análisis de oportunidad</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Con los parámetros actuales</div>
           </div>
-          <button onClick={runAnalysis} disabled={analyzing}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: analyzing ? C.surface : C.ink, color: analyzing ? C.muted : "#fff", border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: analyzing ? "not-allowed" : "pointer" }}>
-            {analyzing
-              ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Analizando…</>
-              : <><Sparkles size={13} /> Analizar</>}
+          <button onClick={runAlicia} disabled={aliciaLoading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: aliciaLoading ? C.surface : C.ink, color: aliciaLoading ? C.muted : "#fff", border: "none", borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: aliciaLoading ? "not-allowed" : "pointer" }}>
+            {aliciaLoading ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Analizando…</> : <><Sparkles size={13} /> Consultar Alicia</>}
           </button>
         </div>
-        {analysis && (
+        {aliciaText && (
           <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-            {analysis.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+            {aliciaText.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
               part.startsWith("**") && part.endsWith("**")
                 ? <strong key={i} style={{ color: C.ink }}>{part.slice(2, -2)}</strong>
                 : part
             )}
           </div>
         )}
-        {!analysis && !analyzing && (
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 10, fontStyle: "italic" }}>
-            Hacé click en "Analizar" para que Alicia evalúe este terreno con datos del mercado limeño.
-          </div>
-        )}
       </div>
+
     </div>
   );
 }
