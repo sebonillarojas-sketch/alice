@@ -11472,7 +11472,7 @@ REGLAS:
 - Decisión grande → varios, jabberwocky cerrando
 - Tu intro = UNA oración brevísima
 
-ESTADO ACTUAL DE HYGGE OS: ${JSON.stringify(hyggeContext)}
+ESTADO ACTUAL DE ALICE: ${JSON.stringify(hyggeContext)}
 
 JSON estricto sin markdown:
 {"intro": "...", "route_to": [...]}`;
