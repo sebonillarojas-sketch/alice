@@ -513,20 +513,7 @@ function Gate() {
     setPwSet(true);
   };
 
-  return (
-    <>
-      <HyggeOS authUser={user} />
-      {calGranted === false && (
-        <CalendarConsentModal user={user} onGrant={handleGrant} />
-      )}
-      {calGranted === true && waSet === false && (
-        <WhatsAppModal user={user} onDone={handleWa} />
-      )}
-      {calGranted === true && waSet === true && pwSet === false && (
-        <SetPasswordModal user={user} onDone={handleSetPassword} />
-      )}
-    </>
-  );
+  return <HyggeOS authUser={user} />;
 }
 
 export default function App() {
