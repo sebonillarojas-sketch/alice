@@ -400,16 +400,40 @@ async function fetchFromBrain(){
 }
 
 function applyMacro(json){
-  if(!json.macro) return;
-  MACRO = { ...MACRO, ...json.macro };
-  TC = +(MACRO.usd_pen?.value || 3.78);
-  BANKS = buildBanksFromMacro(MACRO);
+  if(json.macro) {
+    MACRO = { ...MACRO, ...json.macro };
+    TC = +(MACRO.usd_pen?.value || 3.78);
+  }
+  // Prefer per-bank rates from Playwright scraper, fallback to BCRP aggregate
+  if(json.bank_rates && json.bank_rates.length > 0){
+    BANKS = json.bank_rates
+      .filter(b => b.product === 'hipotecario')
+      .map(b => ({
+        bank: b.bank,
+        rate: b.rate_pen,
+        ratePEN: b.rate_pen,
+        rateUSD: b.rate_usd,
+        currency: 'PEN',
+        plazo: b.plazo || 20,
+        source: b.source,
+        scraped_at: b.scraped_at,
+      }))
+      .sort((a,b) => a.rate - b.rate);
+    // Add USD variants
+    const usdBanks = json.bank_rates
+      .filter(b => b.rate_usd)
+      .map(b => ({ bank: b.bank+' USD', rate: b.rate_usd, currency:'USD', plazo:20, source:b.source }));
+    BANKS = [...BANKS, ...usdBanks];
+  } else {
+    BANKS = buildBanksFromMacro(MACRO);
+  }
   // Update macro strip
   const rPEN=+(MACRO.tasa_hip_pen?.value||7.8).toFixed(2);
   const rUSD=+(MACRO.tasa_hip_usd?.value||6.5).toFixed(2);
   const per=MACRO.tasa_hip_pen?.period||'';
+  const src=json.bank_rates?.length>0?` · <span style="opacity:.4">SBS/bancos</span>`:'';
   const mktEl=document.getElementById('macro-hip');
-  if(mktEl) mktEl.innerHTML=`Tasa hip. PEN <strong>${rPEN}%</strong> · USD <strong>${rUSD}%</strong>${per?' <span style="opacity:.4">'+per+'</span>':''}`;
+  if(mktEl) mktEl.innerHTML=`Tasa hip. PEN <strong>${rPEN}%</strong> · USD <strong>${rUSD}%</strong>${per?' <span style="opacity:.4">'+per+'</span>':''}${src}`;
   const tcEl=document.getElementById('macro-tc');
   if(tcEl) tcEl.innerHTML=`USD/PEN <strong>S/ ${TC.toFixed(3)}</strong>`;
 }

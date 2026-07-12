@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 import { query, parseArr } from "./db.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
-import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData } from "./market.js";
+import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, importProjects } from "./market.js";
 import { readFile } from "fs/promises";
 dotenv.config();
 
@@ -523,13 +523,37 @@ app.get("/api/market-data", (req, res) => {
   try {
     const snap = getLatestSnapshot();
     const macro = getMacroData();
+    const bank_rates = getBankRates();
     res.json({
       ok: true,
       projects: snap?.projects || [],
       total: snap?.total || 0,
       scraped_at: snap?.scraped_at || null,
-      macro,  // { tasa_hip_pen, tasa_hip_usd, usd_pen } from BCRP
+      macro,        // { tasa_hip_pen, tasa_hip_usd, usd_pen } from BCRP
+      bank_rates,   // per-bank hipotecario rates from Playwright scraper
     });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Receives data from the local Playwright scraper (runs on Mac, pushes here)
+app.post("/api/market-import", (req, res) => {
+  const auth = req.headers.authorization || "";
+  const token = process.env.MARKET_REFRESH_TOKEN || "white-rabbit";
+  if (auth !== `Bearer ${token}`) return res.status(401).json({ ok: false, error: "unauthorized" });
+
+  try {
+    const { type, projects, rates } = req.body;
+    if (type === "projects" && Array.isArray(projects)) {
+      const saved = importProjects(projects);
+      return res.json({ ok: true, type, saved });
+    }
+    if (type === "bank_rates" && Array.isArray(rates)) {
+      saveBankRates(rates);
+      return res.json({ ok: true, type, saved: rates.length });
+    }
+    res.status(400).json({ ok: false, error: "unknown type" });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }

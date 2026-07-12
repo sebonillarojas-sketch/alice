@@ -52,6 +52,19 @@ export function ensureMarketSchema() {
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `);
+  query(`
+    CREATE TABLE IF NOT EXISTS bank_rates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bank TEXT NOT NULL,
+      product TEXT NOT NULL DEFAULT 'hipotecario',
+      rate_pen REAL,
+      rate_usd REAL,
+      plazo INTEGER DEFAULT 20,
+      source TEXT DEFAULT 'playwright',
+      scraped_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(bank, product)
+    )
+  `);
 }
 
 // ── Latest snapshot ───────────────────────────────────────────────────────────
@@ -222,6 +235,71 @@ async function refreshMacro() {
 export function getMacroData() {
   const { rows } = query(`SELECT key, value, period, label, source, updated_at FROM macro_data`);
   return Object.fromEntries(rows.map(r => [r.key, r]));
+}
+
+// ── Bank rates (from Playwright scraper) ─────────────────────────────────────
+export function saveBankRates(rates) {
+  for (const r of rates) {
+    if (!r.bank || (!r.rate_pen && !r.rate_usd)) continue;
+    query(
+      `INSERT INTO bank_rates (bank, product, rate_pen, rate_usd, plazo, source, scraped_at)
+       VALUES (?,?,?,?,?,?,datetime('now'))
+       ON CONFLICT(bank, product) DO UPDATE SET
+         rate_pen=excluded.rate_pen, rate_usd=excluded.rate_usd,
+         source=excluded.source, scraped_at=excluded.scraped_at`,
+      [r.bank, r.product || "hipotecario", r.rate_pen || null, r.rate_usd || null, r.plazo || 20, r.source || "playwright"]
+    );
+  }
+  console.log(`🐰 Bank rates: ${rates.length} entidades guardadas`);
+}
+
+export function getBankRates() {
+  const { rows } = query(
+    `SELECT bank, product, rate_pen, rate_usd, plazo, source, scraped_at
+     FROM bank_rates ORDER BY rate_pen ASC`
+  );
+  return rows;
+}
+
+// ── Import from Playwright scraper ────────────────────────────────────────────
+export function importProjects(projects) {
+  if (!projects?.length) return 0;
+  // Normalize raw scraped data to our schema
+  const normalized = projects.map((p, i) => ({
+    id: `nexo_scraped_${i}`,
+    source: "nexo",
+    url: p.url || "",
+    name: p.name || p.title || "",
+    developer: p.developer || "",
+    district: p.district || extractDistrict(p.url || p.raw || ""),
+    list_price_m2_usd: extractPrice(p.price || p.raw || ""),
+    scraped_at: new Date().toISOString(),
+  })).filter(p => p.name);
+
+  if (normalized.length > 0) {
+    saveSnapshot(normalized);
+    console.log(`🐰 Import: ${normalized.length} proyectos guardados`);
+  }
+  return normalized.length;
+}
+
+function extractDistrict(text) {
+  const districts = ["Miraflores","San Isidro","Barranco","Surco","La Molina","Jesús María",
+    "Jesus Maria","Magdalena","San Borja","Pueblo Libre","San Miguel","Lince","Chorrillos",
+    "Surquillo","Breña","Lima","San Luis","La Victoria","Ate","San Martín de Porres"];
+  for (const d of districts) {
+    if (text.toLowerCase().includes(d.toLowerCase())) return d;
+  }
+  return "";
+}
+
+function extractPrice(text) {
+  const match = text.match(/\$\s*([\d,]+(?:\.\d+)?)|USD\s*([\d,]+(?:\.\d+)?)/i);
+  if (match) {
+    const v = parseFloat((match[1] || match[2]).replace(/,/g, ""));
+    if (v > 500 && v < 20000) return v; // plausible $/m2
+  }
+  return null;
 }
 
 // ── Main refresh (called by cron + API) ───────────────────────────────────────

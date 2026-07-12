@@ -71,6 +71,17 @@ function initSchema(db) {
       source TEXT DEFAULT 'bcrp',
       updated_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS bank_rates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bank TEXT NOT NULL,
+      product TEXT NOT NULL DEFAULT 'hipotecario',
+      rate_pen REAL,
+      rate_usd REAL,
+      plazo INTEGER DEFAULT 20,
+      source TEXT DEFAULT 'playwright',
+      scraped_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(bank, product)
+    );
   `);
 }
 
