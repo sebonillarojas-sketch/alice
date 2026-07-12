@@ -1,71 +1,80 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 import { USERS } from "./users.js";
 
 const AuthContext = createContext(null);
 
-const STORAGE_KEY = "hygge:auth:session";
-const PW_KEY = (id) => `hygge:user:pw:${id}`;
+// Map username → email for login form (keeps username-based UX)
+const USERNAME_TO_EMAIL = Object.fromEntries(USERS.map(u => [u.username.toLowerCase(), u.email]));
 
-// Returns the effective password for a user (localStorage override > hardcoded default)
-function getEffectivePassword(user) {
-  try {
-    const stored = localStorage.getItem(PW_KEY(user.id));
-    if (stored) return stored;
-  } catch {}
-  return user.password;
+async function fetchProfile(supabaseUser) {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("id", supabaseUser.id)
+    .single();
+  if (error || !data) return null;
+  return {
+    id: data.alice_id,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    email: data.email,
+    role: data.role,
+    color: data.color,
+    initials: data.initials,
+    isAdmin: data.is_admin,
+    isCEO: data.is_ceo,
+    allowedSpaces: data.allowed_spaces,
+  };
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Restore session on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const session = JSON.parse(raw);
-        const u = USERS.find(x => x.id === session.userId);
-        if (u) {
-          const { password, ...safe } = u;
-          setUser(safe);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
+    // Restore existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await fetchProfile(session.user);
+        if (profile) setUser(profile);
       }
-    } catch {}
-    setLoaded(true);
+      setLoaded(true);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const profile = await fetchProfile(session.user);
+        if (profile) setUser(profile);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = useCallback((username, password) => {
-    const trimmedUser = (username || "").trim().toLowerCase();
-    const trimmedPass = (password || "").trim();
-    const match = USERS.find(u => u.username.toLowerCase() === trimmedUser);
-    if (!match || getEffectivePassword(match) !== trimmedPass) {
-      return { ok: false, error: "Usuario o contraseña incorrectos" };
-    }
-    const { password: _pw, ...safe } = match;
-    setUser(safe);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId: match.id, ts: Date.now() }));
-    } catch {}
+  const login = useCallback(async (username, password) => {
+    const trimmed = (username || "").trim().toLowerCase();
+    const email = USERNAME_TO_EMAIL[trimmed];
+    if (!email) return { ok: false, error: "Usuario o contraseña incorrectos" };
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password: (password || "").trim() });
+    if (error) return { ok: false, error: "Usuario o contraseña incorrectos" };
     return { ok: true };
   }, []);
 
-  const setOwnPassword = useCallback((userId, newPassword) => {
-    try {
-      localStorage.setItem(PW_KEY(userId), newPassword);
-    } catch {}
-  }, []);
-
-  const hasSetOwnPassword = useCallback((userId) => {
-    try { return !!localStorage.getItem(PW_KEY(userId)); } catch { return false; }
-  }, []);
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
   }, []);
+
+  const setOwnPassword = useCallback(async (userId, newPassword) => {
+    await supabase.auth.updateUser({ password: newPassword });
+  }, []);
+
+  const hasSetOwnPassword = useCallback(() => false, []);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loaded, setOwnPassword, hasSetOwnPassword }}>
