@@ -8,6 +8,8 @@ import { useTimer } from "./modules/timer/useTimer";
 import { TimerButton } from "./modules/timer/TimerButton";
 import { useERPSync } from "./api/useERPSync.js";
 import { TimerView } from "./modules/timer/TimerView";
+import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
+import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
 const anthropicHeaders = () => ({
@@ -275,8 +277,8 @@ const getTaskStatus = (t) => t.status || (t.checked ? "completada" : "pendiente"
 const taskStatusDef = (id) => TASK_STATUSES.find(s => s.id === id) || TASK_STATUSES[0];
 
 // ─── APPS · Artifacts externos embebidos como iframes ──────────────────────
-// Filosofía: cada app vive en su propio repo y deployment · Hygge OS las descubre
-// y embebe vía iframe full-height. Si una app se rompe, Hygge OS sigue andando.
+// Filosofía: cada app vive en su propio repo y deployment · ALICE las descubre
+// y embebe vía iframe full-height. Si una app se rompe, ALICE sigue andando.
 //
 // Para agregar una app nueva:
 //   1. Deploy la app independiente (URL pública)
@@ -284,7 +286,7 @@ const taskStatusDef = (id) => TASK_STATUSES.find(s => s.id === id) || TASK_STATU
 //   3. Aparece en el sidebar bajo "Apps" automáticamente
 //
 // postMessage protocol (futuro): la app recibe { type: 'hygge:context', user, spvId? }
-// y puede emitir { type: 'hygge:notify', message } para que aparezca en Hygge OS.
+// y puede emitir { type: 'hygge:notify', message } para que aparezca en ALICE.
 const APPS = [
   {
     id: "app-radar",
@@ -514,7 +516,7 @@ const INITIAL_CUSTOM_VIEWS = {};
 
 const INITIAL_MESSAGES = [];
 
-// Activity feed inicial · vacío · se popula con eventos reales de Hygge OS (toggleTask, addTask, updateTask)
+// Activity feed inicial · vacío · se popula con eventos reales de ALICE (toggleTask, addTask, updateTask)
 // Persistido en localStorage como "hygge:activity" · últimos 50 eventos
 const ACTIVITY = [];
 
@@ -852,6 +854,12 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
             <input value={task.due} onChange={e => onUpdate(task.id, { due: e.target.value })}
               className="px-2.5 py-1.5 text-[11px] outline-none w-[100px]"
               style={{ color: C.inkSoft, backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }} />
+
+            {/* Recurring */}
+            <RecurringPicker
+              value={task.recurring || null}
+              onChange={rule => onUpdate(task.id, { recurring: rule || undefined })}
+            />
 
             {/* Space (movable) */}
             <select value={task.space || "hq"} onChange={e => onUpdate(task.id, { space: e.target.value })}
@@ -2148,6 +2156,7 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
         <div className="flex-1 text-[13px]" style={{ color: isDone ? C.muted : C.ink, fontWeight: 500, textDecoration: isDone ? "line-through" : "none" }}>
           {task.title}
         </div>
+        {task.recurring?.freq && <RecurringBadge rule={task.recurring} />}
         {hasAttach && <Paperclip size={11} style={{ color: C.muted }} title={task.attachments.length + " adjunto(s)"} />}
         {hasComments && <MessageSquare size={11} style={{ color: C.muted }} title={task.comments.length + " comentario(s)"} />}
         {timerProps && (
@@ -7647,7 +7656,7 @@ function AppEmbedView({ app, currentUser, currentSpace }) {
   const [error, setError] = useState(!!app.blocked);
   const iframeRef = useRef(null);
 
-  // postMessage al iframe cuando carga, con el contexto de Hygge OS
+  // postMessage al iframe cuando carga, con el contexto de ALICE
   useEffect(() => {
     if (!loaded || !iframeRef.current) return;
     try {
@@ -7677,7 +7686,7 @@ function AppEmbedView({ app, currentUser, currentSpace }) {
       } catch { return; }
       const msg = e.data;
       if (!msg || typeof msg !== "object") return;
-      // Por ahora solo log · futuro: routear notificaciones a la inbox de Hygge OS
+      // Por ahora solo log · futuro: routear notificaciones a la inbox de ALICE
       if (msg.type === "hygge:notify") {
         console.log("[App notify]", app.id, msg.message);
       }
@@ -8077,7 +8086,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
   // Fuentes externas · Drive sheets que respaldan los KPIs
   const SOURCES = {};
 
-  // KPIs reales · derivados de Hygge OS state + projects
+  // KPIs reales · derivados de ALICE state + projects
   const kpis = useMemo(() => {
     const revenueTotal = projects.reduce((s, p) => s + p.revenue.proyectado, 0);
     const captadoTotal = projects.reduce((s, p) => s + p.revenue.captado, 0);
@@ -9525,14 +9534,14 @@ function FeaturesAdminPanel({ features, setFeatures }) {
   const toggles = [
     { id: "customViews", label: "Custom Views", description: "Chips de vistas custom (Chart, KPI, Embed, etc.) en la barra de vistas de cada space", reason: "Oculto por default · feature avanzado, agregalo si querés crear gráficos custom" },
     { id: "whiteboards", label: "Whiteboards", description: "Tab de pizarra · stickies, shapes, flechas, iconos + lápiz con variantes (lápiz / plumón / fine pen / resaltador / borrador) y presión Apple Pencil", reason: "Oculto por default · ideal para sketches, mapas mentales, planos. Funciona con Apple Pencil." },
-    { id: "viewport", label: "Viewport Externo", description: "Tab adicional en cada space que muestra un iframe a una URL externa · ideal para embebar Cash Flow sheets, Miro boards, sitios de Bronca, etc. URL configurable por space.", reason: "Oculto por default · útil para mantener fuentes externas a un click de distancia sin salir de Hygge OS" },
+    { id: "viewport", label: "Viewport Externo", description: "Tab adicional en cada space que muestra un iframe a una URL externa · ideal para embebar Cash Flow sheets, Miro boards, sitios de Bronca, etc. URL configurable por space.", reason: "Oculto por default · útil para mantener fuentes externas a un click de distancia sin salir de ALICE" },
   ];
   return (
     <div className="space-y-4">
       <div>
         <h3 className="text-[14px]" style={{ color: C.ink, fontWeight: 600 }}>Features opt-in</h3>
         <p className="text-[11px] mt-1" style={{ color: C.muted, lineHeight: 1.5 }}>
-          Algunas features están ocultas por default para mantener Hygge OS limpio. Activá las que necesites · se persisten en localStorage.
+          Algunas features están ocultas por default para mantener ALICE limpio. Activá las que necesites · se persisten en localStorage.
         </p>
       </div>
 
@@ -10281,7 +10290,7 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
             viewId: v.id, spaceId,
           });
         } else if (cls.kind === "drive-folder") {
-          // Drive folders block iframe — but Hygge OS has a fallback card · acknowledge
+          // Drive folders block iframe — but ALICE has a fallback card · acknowledge
           issues.push({
             kind: "info", severity: "minor",
             category: "Drive folder (esperado)",
@@ -10449,7 +10458,7 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
   const markdown = useMemo(() => {
     if (findings.length === 0) return "";
     const today = new Date().toISOString().slice(0, 10);
-    let md = `# Reporte del Conejo Blanco · Links externos · Hygge OS\n\n**Fecha:** ${today}\n**Issues:** ${counts.issues} · **Sugerencias:** ${counts.suggestions}\n\n---\n\n`;
+    let md = `# Reporte del Conejo Blanco · Links externos · ALICE\n\n**Fecha:** ${today}\n**Issues:** ${counts.issues} · **Sugerencias:** ${counts.suggestions}\n\n---\n\n`;
 
     // Agrupar por space para colapsar duplicados visuales
     const bySpace = findings.reduce((acc, f) => {
@@ -10888,7 +10897,7 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
   const markdown = useMemo(() => {
     if (!report) return "";
     const today = new Date().toISOString().slice(0, 10);
-    let md = `# Reporte del Mad Hatter · Performance · Hygge OS\n\n**Fecha:** ${today}\n\n`;
+    let md = `# Reporte del Mad Hatter · Performance · ALICE\n\n**Fecha:** ${today}\n\n`;
     if (aiText) md += `## Lectura general\n\n${aiText}\n\n---\n\n`;
     md += `## Sugerencias accionables (${report.suggestions.length})\n\n`;
     report.suggestions.forEach(s => {
@@ -10898,7 +10907,7 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
     report.areaMetrics.forEach(a => { md += `| ${a.name} | ${a.total} | ${a.open} | ${a.done} | ${a.overdue} | ${a.completionRate}% |\n`; });
     md += `\n## Colaboradores (${report.collabMetrics.length})\n\n| Persona | Rol | Total | Abiertas | Hechas | Vencidas | % |\n|---|---|---|---|---|---|---|\n`;
     report.collabMetrics.forEach(c => { md += `| ${c.name} | ${c.role} | ${c.total} | ${c.open} | ${c.done} | ${c.overdue} | ${c.completionRate}% |\n`; });
-    md += `\n---\n\n_Generado por El Mad Hatter · Hygge OS performance analyst_\n`;
+    md += `\n---\n\n_Generado por El Mad Hatter · ALICE performance analyst_\n`;
     return md;
   }, [report, aiText]);
 
@@ -11437,7 +11446,7 @@ function TeaTableView({ agentStatus, setSubTab, tasks, terrenos, allSpaces, user
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, thinkingAgents]);
 
-  // Contexto del estado de Hygge OS · todos los agentes lo reciben
+  // Contexto del estado de ALICE · todos los agentes lo reciben
   const hyggeContext = useMemo(() => ({
     tasks: { total: tasks.length, open: tasks.filter(t => !t.checked).length, overdue: tasks.filter(t => { if (t.checked || !t.due || t.due === "—") return false; const d = new Date(t.due); return !isNaN(d) && d < new Date(); }).length },
     terrenos: terrenos.length,
@@ -11447,7 +11456,7 @@ function TeaTableView({ agentStatus, setSubTab, tasks, terrenos, allSpaces, user
   }), [tasks, terrenos, users, allSpaces, agentStatus]);
 
   const routeQuery = async (userMsg, history) => {
-    const sys = `Sos DARK ALICE, presidenta del consejo de Wonderland en Hygge OS (ERP de Hygge Holding, desarrolladora inmobiliaria · CEO Sebastián Bonilla). Decidís qué agente(s) deben responder.
+    const sys = `Sos DARK ALICE, presidenta del consejo de Wonderland en ALICE (ERP de Hygge Holding, desarrolladora inmobiliaria · CEO Sebastián Bonilla). Decidís qué agente(s) deben responder.
 
 AGENTES:
 - cheshire: encuentra huecos, lo no dicho, contradicciones, supuestos no examinados
@@ -11486,7 +11495,7 @@ JSON estricto sin markdown:
     const agent = TT_AGENTS[agentId];
     const sys = `${agent.persona}
 
-CONTEXTO: el usuario te hizo una pregunta en Hygge OS (ERP de Hygge Holding · CEO Sebastián Bonilla · desarrolladora inmobiliaria peruana). Dark Alice te convocó. Su nota: "${aliceIntro}".
+CONTEXTO: el usuario te hizo una pregunta en ALICE (ERP de Hygge Holding · CEO Sebastián Bonilla · desarrolladora inmobiliaria peruana). Dark Alice te convocó. Su nota: "${aliceIntro}".
 
 ESTADO ACTUAL: ${JSON.stringify(hyggeContext)}
 
@@ -11979,7 +11988,7 @@ function CheshirePanel({ tasks, customViews, terrenos, customSpaces, allSpaces, 
   const cheshireMarkdown = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     const byArea = catalog.reduce((acc, c) => { (acc[c.area] = acc[c.area] || []).push(c); return acc; }, {});
-    let md = `# Audit del Cheshire Cat · UX Gaps en Hygge OS\n\n`;
+    let md = `# Audit del Cheshire Cat · UX Gaps en ALICE\n\n`;
     md += `**Fecha:** ${today}\n`;
     md += `**Total auditado:** ${catalog.length} capabilities\n\n`;
     md += `| Estado | Count |\n|---|---|\n`;
@@ -12013,7 +12022,7 @@ function CheshirePanel({ tasks, customViews, terrenos, customSpaces, allSpaces, 
     catalog.filter(c => c.status === "implemented").forEach(c => {
       md += `- ✓ ${c.area}: ${c.capability}${c.note ? ` · ${c.note}` : ""}\n`;
     });
-    md += `\n---\n\n_Generado por El Cheshire Cat · Hygge OS_\n`;
+    md += `\n---\n\n_Generado por El Cheshire Cat · ALICE_\n`;
     return md;
   }, [catalog, summary]);
 
@@ -12562,7 +12571,7 @@ function BandersnatchPanel({ tasks, setTasks, customViews, setCustomViews, terre
   const bandersnatchMarkdown = useMemo(() => {
     if (phase !== "done" || log.length === 0) return "";
     const today = new Date().toISOString().slice(0, 10);
-    let md = `# Reporte del Bandersnatch · Stress Test de Hygge OS\n\n`;
+    let md = `# Reporte del Bandersnatch · Stress Test de ALICE\n\n`;
     md += `**Fecha:** ${today}\n`;
     md += `**Experimentos totales:** ${counts.pass + counts.susp + counts.fail}\n\n`;
     md += `| Resultado | Count |\n|---|---|\n`;
@@ -12596,7 +12605,7 @@ function BandersnatchPanel({ tasks, setTasks, customViews, setCustomViews, terre
         md += `${sym} ${l.test}${l.detail ? ` · ${l.detail}` : ""}\n`;
       }
     });
-    md += `\`\`\`\n\n---\n\n_Generado por El Bandersnatch · Hygge OS stress tester_\n`;
+    md += `\`\`\`\n\n---\n\n_Generado por El Bandersnatch · ALICE stress tester_\n`;
     return md;
   }, [phase, log, counts]);
 
@@ -12730,7 +12739,7 @@ function LogLine({ entry }) {
   );
 }
 
-// ─── EL JABBERWOCKY · agente que usa Hygge OS y da veredicto ───
+// ─── EL JABBERWOCKY · agente que usa ALICE y da veredicto ───
 function JabberwockyPanel({ tasks, customViews, terrenos, customSpaces, allSpaces, users, messages, smartViews, whiteboards, spaceAccess, agentStatus, recordAgentRun }) {
   const [phase, setPhase] = useState("dormant"); // dormant | inspecting | thinking | verdict | error
   const [stream, setStream] = useState([]);
@@ -12855,7 +12864,7 @@ function JabberwockyPanel({ tasks, customViews, terrenos, customSpaces, allSpace
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 2000,
-          system: `Eres el Jabberwocky — la criatura feroz del poema de Lewis Carroll, reencarnada como agente auditor de Hygge OS, el ERP a medida de Hygge Holding (real estate developer peruano).
+          system: `Eres el Jabberwocky — la criatura feroz del poema de Lewis Carroll, reencarnada como agente auditor de ALICE, el ERP a medida de Hygge Holding (real estate developer peruano).
 
 PERSONALIDAD:
 - Hablás en español rioplatense profesional, con tono teatral y formal
@@ -12880,7 +12889,7 @@ RECOMENDACIONES:
 CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
           messages: [{
             role: "user",
-            content: `Inspecciono el estado actual de Hygge OS. Datos:\n\n${JSON.stringify(inspection, null, 2)}\n\nEmití veredicto.`
+            content: `Inspecciono el estado actual de ALICE. Datos:\n\n${JSON.stringify(inspection, null, 2)}\n\nEmití veredicto.`
           }]
         })
       });
@@ -12971,12 +12980,12 @@ CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
       sentencia = pickRandom([
         "Callooh! Callay! El sistema es frabjous.",
         "El bosque tulgey está en paz esta noche.",
-        "Vorpal sword innecesaria — Hygge OS canta.",
+        "Vorpal sword innecesaria — ALICE canta.",
         "Ningún manxome bug acecha hoy.",
       ]);
       cierre = pickRandom([
         "Que la noche pase tranquila, beamish boy.",
-        "El Jabberwocky duerme — Hygge OS vela.",
+        "El Jabberwocky duerme — ALICE vela.",
         "Sin snicker-snack en el horizonte.",
       ]);
     } else if (score >= 60) {
@@ -13025,7 +13034,7 @@ CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
   const jabberwockyMarkdown = useMemo(() => {
     if (!verdict) return "";
     const today = new Date().toISOString().slice(0, 10);
-    let md = `# Veredicto del Jabberwocky · Hygge OS\n\n`;
+    let md = `# Veredicto del Jabberwocky · ALICE\n\n`;
     md += `**Fecha:** ${today}\n`;
     md += `**Fuente:** ${verdict.source === "ai" ? "Claude Sonnet 4 vía Anthropic API" : "Jabberwocky local (heurísticas)"}\n\n`;
     md += `## ${verdict.result} · Score ${verdict.score}/100\n\n`;
@@ -13041,7 +13050,7 @@ CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
       md += `\n`;
     }
     if (verdict.cierre) md += `---\n\n_"${verdict.cierre}"_\n\n`;
-    md += `---\n\n_Generado por El Jabberwocky · Hygge OS auditor_\n`;
+    md += `---\n\n_Generado por El Jabberwocky · ALICE auditor_\n`;
     return md;
   }, [verdict]);
 
@@ -13288,7 +13297,7 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
       <div>
         <Eyebrow>Sincronización · ClickUp + Drive + Miro</Eyebrow>
         <div className="text-[11px] mt-2" style={{ color: C.muted, lineHeight: 1.55 }}>
-          Hygge OS viene pre-poblado con datos importados desde tu workspace de ClickUp (Hygge x BAM), tus carpetas de Google Drive y placeholders de Miro por proyecto. Si modificaste cosas y querés volver al estado importado, usá los botones de reset.
+          ALICE viene pre-poblado con datos importados desde tu workspace de ClickUp (Hygge x BAM), tus carpetas de Google Drive y placeholders de Miro por proyecto. Si modificaste cosas y querés volver al estado importado, usá los botones de reset.
         </div>
       </div>
 
@@ -13554,6 +13563,7 @@ export default function HyggeOS({ authUser } = {}) {
   const [activeSmartViewId, setActiveSmartViewId] = useState(null);
   const [timer, setTimer] = useState({ running: false, elapsed: 0, todayTotal: 0, label: "Sin temporizador activo", project: "", spaceName: "", taskId: null });
   const { sessions: timerSessions, active: timerActive, liveSeconds: timerLive, startTimer, stopTimer: stopTimerSession, deleteSession: deleteTimerSession, isRunning: isTimerRunning, getTaskTotal } = useTimer(currentUserId);
+  useRecurring(tasks, setTasks);
   const [detailTaskId, setDetailTaskId] = useState(null);
   const [loaded, setLoaded] = useState(false);
   // ERP sync — loaded debe estar declarado antes de este hook
