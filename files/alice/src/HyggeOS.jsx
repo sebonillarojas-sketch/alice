@@ -322,16 +322,6 @@ const APPS = [
     native: true,
   },
   {
-    id: "app-games",
-    label: "Juegos",
-    icon: Gamepad2,
-    dot: "#A855F7",
-    url: "/games.html",
-    description: "Helicopter BAM Edition · esquivá obstáculos · modo salvo",
-    badge: "v1.0",
-    native: true,
-  },
-  {
     id: "app-velocity",
     label: "Velocity",
     icon: TrendingUp,
@@ -342,6 +332,16 @@ const APPS = [
     native: true,
   },
   // Futuro: { id: "app-brochure-gen", ... }
+  {
+    id: "app-games",
+    label: "Juegos",
+    icon: Gamepad2,
+    dot: "#A855F7",
+    url: "/games.html",
+    description: "Helicopter BAM Edition · esquivá obstáculos · modo salvo",
+    badge: "v1.0",
+    native: true,
+  },
 ];
 const isAppId = (id) => APPS.some(a => a.id === id);
 
