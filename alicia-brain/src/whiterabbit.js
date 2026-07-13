@@ -34,6 +34,13 @@ export async function runWhiteRabbitChecks() {
     ? `${failed.length} check(s) fallando: ${failed.map(f => `${f.label} → ${f.detail}`).join(" · ")}`
     : `${results.length} checks públicos OK`;
 
+  // Ciclo de vida de hallazgos: si todo está OK ahora, auto-cerrar los abiertos del conejo
+  // (antes quedaban "open" para siempre y Dark Alice seguía gritando algo ya resuelto).
+  if (!failed.length) {
+    query(`UPDATE agent_findings SET status = 'auto-fixed', resolved_by = 'white-rabbit', updated_at = datetime('now')
+           WHERE agent = 'white-rabbit' AND status IN ('open','escalated')`);
+  }
+
   const { lastID: runId } = query(
     `INSERT INTO agent_runs (agent, finished_at, result, summary, actions_taken) VALUES ('white-rabbit', datetime('now'), ?, ?, ?)`,
     [result, summary, JSON.stringify(results)]

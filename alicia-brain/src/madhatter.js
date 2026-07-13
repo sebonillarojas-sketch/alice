@@ -59,6 +59,12 @@ export async function runMadHatter() {
   const lat = latency.map(l => `${l.id}:${l.ok ? l.p50 + "ms" : "caído"}`).join(" · ");
   const summary = `Latencia ${lat} · DB ${dbMB} · ${msgs24h ?? "?"} msgs/24h · ${volume.messages ?? "?"} msgs total`;
 
+  // Auto-cerrar hallazgos previos del sombrerero si ahora está sano (mismo criterio que el conejo)
+  if (!findings.length) {
+    query(`UPDATE agent_findings SET status = 'auto-fixed', resolved_by = 'mad-hatter', updated_at = datetime('now')
+           WHERE agent = 'mad-hatter' AND status IN ('open','escalated')`);
+  }
+
   const { lastID: runId } = query(
     `INSERT INTO agent_runs (agent, finished_at, result, summary, actions_taken) VALUES ('mad-hatter', datetime('now'), ?, ?, ?)`,
     [result, summary, JSON.stringify({ latency, dbBytes, volume, msgs24h, nota_costos: "El costo real de tokens requiere la Anthropic usage API (pendiente) — hoy solo se reporta volumen." })]
