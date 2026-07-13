@@ -81,7 +81,30 @@ La memoria persistente de Claude Code para este proyecto está en:
 `~/.claude/projects/-Users-eduardobonilla-Desktop-ALICE/memory/`
 Si la nueva cuenta corre desde la misma carpeta `~/Desktop/ALICE`, considerar copiar esa carpeta de memoria al path equivalente del nuevo proyecto (mismo formato). Contiene: perfil de usuario, estado del proyecto, decisión de separación de Alicia, arquitectura de memoria (NAS), roles de Alicia, hallazgos de auditoría, Wonderland IT.
 
-## 8. ARCHIVES
+## 8. LO VALIOSO DE LA SESIÓN MADRE ("ALICE project migration and setup", 6.871 mensajes)
+
+Decisiones de producto del ERP que NO están en el código-comentario y hay que respetar:
+
+**Apps del ERP** (todas construidas): Radar (mercado inmobiliario, fuentes SBS/bancos), **Velocity** (ex-Tycoon, simulador de ventas — vive en Apps), Growth (análisis de terrenos: reporte inicial al seleccionar terreno + mapa combinando Radar+Velocity + métricas de absorción por metraje + competidores + pestaña **Cabida** + pestaña **Propuesta BAM** con logo), Reactor (gastos por foto de factura), Diagramatic (diagramas), Juegos (siempre al final de la lista).
+
+**Reglas de producto ERP:**
+- El producto se llama **ALICE**, nunca "Hygge OS"
+- CERO data falsa/hardcodeada — tareas, cifras, "online", todo real o en cero
+- Cifras de HQ salen de finanzas/comercial (CSV contable exportado a Dropbox), marcadores personalizables por el CEO
+- **Permisos**: cada usuario solo ve SUS spaces y SOLO su conversación con Alicia; Vanessa ve todos los spaces pero solo su conversación; Sebastián ve todo
+- Contraseña inicial del equipo: hygge2026, con cambio obligatorio + anclar su calendar
+- WikiHygge = núcleo global anclado al Dropbox de la empresa (tiempo real); cada space tiene sus archivos; NUNCA Google Drive, solo Dropbox
+- Dropbox↔ERP sync: carpeta nueva en Dropbox → popup a admins para crear space (y viceversa); borrar space → pide aprobación de Sebastián por WhatsApp
+- Blob de Alicia (animación emocional con estados: idle/excited/error/crash) en TODOS los popups/modales del ERP
+- SPVs editables; PU01 y Legendre son EL MISMO proyecto
+- White Rabbit (el conejo) = agente responsable de refrescar data real de Radar/Velocity cada hora + botón refresh (fuentes: SBS, tasas de bancos, Metabase del CRM)
+- CRM comercial: dashboard público de Metabase (logicwareperu.com) — el link está integrado en el código de comercial
+- Fase 2 del ERP = cargar la info real (la operatividad ya está auditada)
+- Migración a Supabase iniciada para tareas multi-usuario reales (antes cada browser veía sus localStorage)
+
+**Visión reiterada**: "está llegando una supercomputadora que debería tener todo automatizado — los agentes no hacen nada, están dormidos" → Wonderland IT es la respuesta; los agentes deben trabajar solos.
+
+## 9. ARCHIVES
 
 - `ALICE-handoff-alicia-brain.tar.gz` — backend completo (sin node_modules/.git)
 - `ALICE-handoff-erp.tar.gz` — cockpit ERP completo (sin node_modules/.git/dist)
