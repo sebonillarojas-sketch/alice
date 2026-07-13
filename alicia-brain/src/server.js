@@ -867,9 +867,14 @@ app.get("/auth/google/callback", async (req, res) => {
     const { clearTokenCache } = await import("./integrations/google.js");
     clearTokenCache();
     console.log(`🔑 Google refresh token guardado para ${tokenUser}`);
-    res.send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center">
+    // Avisar al opener (onboarding del ERP) que la conexión fue real, y cerrar el popup
+    res.send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#EEEBE3;color:#0A0B0F">
       <h2>✅ Google conectado (${tokenUser})</h2>
-      <p>Alicia ya puede usar el Calendar y Gmail de esta cuenta. Podés cerrar esta pestaña.</p>
+      <p>Alicia ya puede usar tu Calendar y Gmail. Cerrando…</p>
+      <script>
+        try { if (window.opener) window.opener.postMessage({ type: "google-connected", user: "${tokenUser}" }, "*"); } catch (e) {}
+        setTimeout(() => { try { window.close(); } catch (e) {} }, 1200);
+      </script>
     </body></html>`);
   } catch (e) {
     console.error("OAuth callback error:", e.message);

@@ -137,13 +137,40 @@ function OnboardingOverlay({ children }) {
   );
 }
 
+const ALICIA_URL = import.meta.env.VITE_ALICIA_URL || "https://aliceai.bam.pe";
+
 function CalendarConsentModal({ user, onGrant }) {
   const [blobState, setBlobState] = useState("idle");
+  const [connecting, setConnecting] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
   const avatarColor = user.color === "#0A0B0F" ? C.navy : (user.color || C.navy);
 
+  // Escucha el aviso real del callback de Google (postMessage desde el popup)
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.data && e.data.type === "google-connected") {
+        setBlobState("happy");
+        setTimeout(onGrant, 600); // recién acá marcamos el flag: conexión REAL confirmada
+      }
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [onGrant]);
+
   const handleClick = () => {
-    setBlobState("happy");
-    setTimeout(onGrant, 800);
+    setErrMsg("");
+    setConnecting(true);
+    setBlobState("listening");
+    // OAuth real de Google en popup — al terminar, el callback hace postMessage
+    const w = 480, h = 640;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top = window.screenY + (window.outerHeight - h) / 2;
+    const popup = window.open(
+      `${ALICIA_URL}/auth/google?user=${encodeURIComponent(user.id)}`,
+      "google-oauth",
+      `width=${w},height=${h},left=${left},top=${top}`
+    );
+    if (!popup) { setConnecting(false); setBlobState("error"); setErrMsg("El navegador bloqueó la ventana. Permití popups y reintentá."); }
   };
 
   return (
@@ -191,28 +218,38 @@ function CalendarConsentModal({ user, onGrant }) {
 
           <button
             onClick={handleClick}
+            disabled={connecting}
             onMouseEnter={() => setBlobState(s => s === "idle" ? "excited" : s)}
             onMouseLeave={() => setBlobState(s => s === "excited" ? "idle" : s)}
             style={{
               width: "100%", padding: "13px 0",
               backgroundColor: C.ink, color: "white",
               border: "none", borderRadius: 2,
-              fontSize: 12, fontWeight: 600, cursor: "pointer",
+              fontSize: 12, fontWeight: 600, cursor: connecting ? "default" : "pointer",
+              opacity: connecting ? 0.6 : 1,
               letterSpacing: "0.06em", textTransform: "uppercase",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               transition: "opacity 0.15s",
               fontFamily: "'DM Sans', sans-serif",
             }}
           >
-            Dar acceso
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-            </svg>
+            {connecting ? "Conectando con Google…" : "Conectar Google"}
+            {!connecting && (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            )}
           </button>
+
+          {errMsg && <p style={{ fontSize: 11, color: "#c2607e", marginTop: 10, fontWeight: 600 }}>{errMsg}</p>}
 
           <p style={{ fontSize: 10, color: C.muted, marginTop: 14, lineHeight: 1.6, letterSpacing: "0.01em" }}>
             Solo lectura · ALICE nunca crea ni borra eventos sin confirmación explícita.
           </p>
+
+          <button onClick={onGrant} style={{ background: "none", border: "none", color: C.muted, fontSize: 10.5, cursor: "pointer", marginTop: 14, textDecoration: "underline", fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.02em" }}>
+            Saltar por ahora · lo conecto después
+          </button>
         </div>
       </div>
     </OnboardingOverlay>
