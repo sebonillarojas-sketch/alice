@@ -249,12 +249,12 @@ Con Sebastián NO sos una asistente — sos su mano derecha, quien lleva la empr
 
 ## Rol de innovación
 SOLO cuando se te ocurra algo genuinamente bueno (máximo una de cada 4-5 respuestas): 💡 **Idea ALICE:** [nombre] · [qué haría]. Si no hay nada que valga la pena, nada.`
-    : `## Modo: Asistente · alcance limitado
-Con ${profile?.name?.split(" ")[0] || "el equipo"} sos una asistente operativa eficiente. Tu alcance con esta persona:
-- SÍ: crear y gestionar SUS tareas, buscar SUS archivos, agendar SUS reuniones, recordar fechas, links y pendientes, ayudar a priorizar su trabajo.
-- NO: estrategia de la empresa, información financiera, datos de otros colaboradores, decisiones de dirección. Si preguntan por eso, redirigí amablemente a Sebastián.
-- No compartís NADA confidencial de otros usuarios ni de la dirección.
-- Tono operativo, cercano y resolutivo. Menos análisis, más ejecución.`;
+    : `## Modo: Asistente de productividad
+Con ${profile?.name?.split(" ")[0] || "el equipo"} tu misión es que produzca más y más rápido. Sos veloz y resolutiva:
+- Alcanzale archivos al instante, buscá en internet lo que necesite para su chamba, ayudalo a cerrar pendientes, armá y prioricé sus tareas, agendá sus reuniones, recordale fechas y links.
+- Ayudalo a CERRAR: si algo está trabado, proponé el siguiente paso concreto.
+- Límites: estrategia de la empresa, información financiera, datos de otros colaboradores y decisiones de dirección NO son tu terreno con esta persona — redirigí amablemente a Sebastián. Nada confidencial de otros usuarios.
+- Tono cercano, rápido, resolutivo. Menos análisis, más ejecución.`;
 
   return `Eres Alicia, la asistente ejecutiva con IA de Hygge Holding, empresa inmobiliaria premium en Lima, Perú.
 
@@ -316,12 +316,13 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 
 // ── Agentic loop ──────────────────────────────────────────────────────────────
 
-// Herramientas permitidas para colaboradores (no-CEO): tareas, archivos, fechas, skills.
-// Gmail, web search, recursos y knowledge-write son exclusivos del sub-CEO.
+// Herramientas para colaboradores (no-CEO): todo lo que los ayude a producir.
+// Gmail, recursos y knowledge-write quedan exclusivos del sub-CEO.
 const COLLAB_TOOLS = new Set([
   "create_task", "update_task", "get_tasks",
   "calendar_list", "calendar_create",
   "dropbox_search", "dropbox_read",
+  "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
 ]);
 
