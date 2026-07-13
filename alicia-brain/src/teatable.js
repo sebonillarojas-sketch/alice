@@ -128,16 +128,11 @@ Tono: directo, cálido, cero relleno. Máximo ~350 palabras.`;
     [result, summary, JSON.stringify(data.checks), report]
   );
 
-  if (notify && process.env.PHONE_sb && process.env.WA_ACCESS_TOKEN) {
+  if (notify && process.env.PHONE_sb) {
+    const { sendWA } = await import("./wa.js");
     const head = report.split("\n").slice(0, 12).join("\n").slice(0, 900);
-    await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp", to: process.env.PHONE_sb, type: "text",
-        text: { body: `🫖 *Tea Table semanal*\n\n${head}\n\nReporte completo en el Lab de ALICE.` },
-      }),
-    }).catch(e => console.error("Tea Table WA notify falló:", e.message));
+    await sendWA(process.env.PHONE_sb, `🫖 *Tea Table semanal*\n\n${head}\n\nReporte completo en el Lab de ALICE.`)
+      .catch(e => console.error("Tea Table WA notify falló:", e.message));
   }
 
   console.log(`🫖 Tea Table run #${runId} · ${result} · ${summary}`);

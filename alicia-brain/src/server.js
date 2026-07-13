@@ -610,11 +610,12 @@ app.post("/api/agents/report", requireAgentKey, async (req, res) => {
         [agent, runId, f.severity || "minor", f.category || "general", f.detail || "", f.status || "open"]
       );
     }
-    // Críticos → WhatsApp inmediato a Sebastián
+    // Críticos → WhatsApp inmediato a Sebastián (vía Twilio)
     const criticals = findings.filter(f => f.severity === "critical");
     if (criticals.length > 0 && process.env.PHONE_sb) {
       const lines = criticals.map(f => `• [${f.category}] ${f.detail}`).join("\n");
-      sendWhatsAppMessage(process.env.PHONE_sb,
+      const { sendWA } = await import("./wa.js");
+      sendWA(process.env.PHONE_sb,
         `🚨 *${agent}* encontró ${criticals.length} crítico(s):\n${lines}`
       ).catch(e => console.error("Alerta WA falló:", e.message));
     }

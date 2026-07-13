@@ -9,16 +9,10 @@ dotenv.config();
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+import { sendWA } from "./wa.js";
+
 async function sendWhatsApp(to, text) {
-  if (!process.env.WA_PHONE_NUMBER_ID || !process.env.WA_ACCESS_TOKEN) return;
-  const chunks = text.length <= 4000 ? [text] : text.match(/.{1,4000}(\s|$)/g) || [text];
-  for (const chunk of chunks) {
-    await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: chunk } }),
-    });
-  }
+  await sendWA(to, text).catch(e => console.error("Briefing WA falló:", e.message));
 }
 
 export async function runDailyBriefing() {
