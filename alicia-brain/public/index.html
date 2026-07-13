@@ -148,6 +148,53 @@
 </head>
 <body>
 
+<div id="login-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#0A0B0F);align-items:center;justify-content:center;flex-direction:column;font-family:'DM Sans',sans-serif">
+  <div style="background:var(--card,#181C24);border:1px solid var(--border,#222730);border-radius:16px;padding:40px;width:min(360px,90vw);text-align:center">
+    <h1 style="color:var(--ink,#F4F1EA);font-size:28px;letter-spacing:2px;margin-bottom:6px">ALICE</h1>
+    <p style="color:var(--muted,#6B7280);font-size:13px;margin-bottom:24px">Panel de Control · acceso privado</p>
+    <input id="login-pw" type="password" placeholder="Clave" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()"
+      style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border,#222730);background:var(--paper,#111318);color:var(--ink,#F4F1EA);font-size:15px;margin-bottom:12px;outline:none">
+    <button onclick="doLogin()"
+      style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--ink,#F4F1EA);color:var(--bg,#0A0B0F);font-size:15px;font-weight:600;cursor:pointer">Ingresar</button>
+    <p id="login-err" style="color:#E06B6B;font-size:12px;margin-top:12px;min-height:14px"></p>
+  </div>
+</div>
+
+<script>
+// ── Gate de acceso · adjunta el token a /api y muestra login si no hay sesión ──
+(function () {
+  const TK = 'alicia_panel_token';
+  const origFetch = window.fetch.bind(window);
+  const isApi = (u) => typeof u === 'string' && u.indexOf('/api') === 0;
+  window.fetch = (input, init = {}) => {
+    const url = typeof input === 'string' ? input : (input && input.url);
+    if (isApi(url)) {
+      const t = localStorage.getItem(TK);
+      if (t) { init = { ...init }; init.headers = { ...(init.headers || {}), Authorization: 'Bearer ' + t }; }
+    }
+    return origFetch(input, init).then((r) => {
+      if (r.status === 401 && isApi(url)) { localStorage.removeItem(TK); showLogin(); }
+      return r;
+    });
+  };
+  window.showLogin = () => { const o = document.getElementById('login-overlay'); if (o) { o.style.display = 'flex'; const i = document.getElementById('login-pw'); if (i) i.focus(); } };
+  window.doLogin = async () => {
+    const pw = document.getElementById('login-pw').value;
+    const err = document.getElementById('login-err');
+    err.textContent = '';
+    try {
+      const r = await origFetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+      if (!r.ok) { err.textContent = r.status === 503 ? 'Panel sin clave configurada (PANEL_PASSWORD)' : 'Clave incorrecta'; return; }
+      const d = await r.json();
+      localStorage.setItem(TK, d.token);
+      location.reload();
+    } catch (e) { err.textContent = 'Error de conexión'; }
+  };
+  if (!localStorage.getItem(TK)) { if (document.readyState !== 'loading') showLogin(); else document.addEventListener('DOMContentLoaded', showLogin); }
+})();
+</script>
+
 <nav>
   <div class="logo">
     <h1>ALICE</h1>

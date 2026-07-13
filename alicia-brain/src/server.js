@@ -10,6 +10,7 @@ import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, importProjects } from "./market.js";
 import { readFile } from "fs/promises";
+import crypto from "crypto";
 dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -19,6 +20,50 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(join(__dirname, "../public")));
+
+// ── Gate de acceso al panel (aliceai.bam.pe) · un solo usuario, clave ─────────
+// El panel expone data sensible (conversaciones, insights del equipo, memorias).
+// Se protege TODO /api/* excepto lo que llaman terceros. Fail-closed: sin
+// PANEL_PASSWORD, se bloquea (no "abierto por defecto").
+const PANEL_PASSWORD = process.env.PANEL_PASSWORD || "";
+const SESSION_SECRET = process.env.SESSION_SECRET || PANEL_PASSWORD;
+const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
+// Rutas /api públicas (relativas al mount /api): las que NO son del panel.
+const PANEL_PUBLIC = ["/login", "/agents/report", "/agents/findings", "/calendar/team"];
+
+function signToken(exp) {
+  const sig = crypto.createHmac("sha256", SESSION_SECRET).update(String(exp)).digest("base64url");
+  return `${exp}.${sig}`;
+}
+function verifyToken(tok) {
+  if (!tok || !SESSION_SECRET) return false;
+  const [expStr, sig] = tok.split(".");
+  const exp = Number(expStr);
+  if (!expStr || !sig || !exp || Date.now() > exp) return false;
+  const expected = crypto.createHmac("sha256", SESSION_SECRET).update(expStr).digest("base64url");
+  try { return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)); } catch { return false; }
+}
+function panelGate(req, res, next) {
+  const p = req.path; // relativo al mount /api (ej: /chat, /calendar/team)
+  if (PANEL_PUBLIC.some(x => p === x || p.startsWith(x + "/"))) return next();
+  if (!PANEL_PASSWORD) return res.status(503).json({ error: "panel_locked", detail: "PANEL_PASSWORD no configurado en Railway" });
+  const auth = req.headers.authorization || "";
+  const tok = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (verifyToken(tok)) return next();
+  return res.status(401).json({ error: "no_auth" });
+}
+app.use("/api", panelGate);
+
+app.post("/api/login", (req, res) => {
+  if (!PANEL_PASSWORD) return res.status(503).json({ error: "PANEL_PASSWORD no configurado" });
+  const { password } = req.body || {};
+  if (typeof password !== "string" || !password) return res.status(401).json({ error: "clave_incorrecta" });
+  const a = crypto.createHash("sha256").update(password).digest();
+  const b = crypto.createHash("sha256").update(PANEL_PASSWORD).digest();
+  if (!crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: "clave_incorrecta" });
+  const exp = Date.now() + SESSION_TTL_MS;
+  res.json({ token: signToken(exp), exp });
+});
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
