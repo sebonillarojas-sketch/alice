@@ -14,8 +14,28 @@ function getDropboxRefreshToken() {
   } catch { return null; }
 }
 
-let _dbxToken = null, _dbxExpiry = 0;
-export function clearDropboxTokenCache() { _dbxToken = null; _dbxExpiry = 0; }
+let _dbxToken = null, _dbxExpiry = 0, _rootNs = null;
+export function clearDropboxTokenCache() { _dbxToken = null; _dbxExpiry = 0; _rootNs = null; }
+
+// Cuenta de equipo: los paths (/Hygge/...) viven en el team space, no en el home
+// namespace del miembro. Hay que resolver contra la raíz del equipo vía este header,
+// o la API devuelve 400. Se cachea el root namespace del token actual.
+async function getRootNamespace(token) {
+  if (_rootNs !== null) return _rootNs;
+  try {
+    const res = await fetch("https://api.dropboxapi.com/2/users/get_current_account", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    _rootNs = data?.root_info?.root_namespace_id || "";
+  } catch { _rootNs = ""; }
+  return _rootNs;
+}
+async function pathRootHeader(token) {
+  const ns = await getRootNamespace(token);
+  return ns ? { "Dropbox-API-Path-Root": JSON.stringify({ ".tag": "root", root: ns }) } : {};
+}
 
 async function getToken() {
   // Refresh token (permanente) → access token fresco
@@ -47,12 +67,14 @@ async function dbxFetch(path, body) {
   const token = await getToken();
   const res = await fetch(`https://api.dropboxapi.com/2${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(await pathRootHeader(token)) },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Dropbox error ${res.status}: ${err.error_summary || JSON.stringify(err)}`);
+    const txt = await res.text();
+    let summary = txt;
+    try { summary = JSON.parse(txt).error_summary || txt; } catch {}
+    throw new Error(`Dropbox error ${res.status}: ${summary || "(sin detalle)"}`);
   }
   return res.json();
 }
@@ -79,9 +101,10 @@ export const dropbox = {
       headers: {
         Authorization: `Bearer ${token}`,
         "Dropbox-API-Arg": JSON.stringify({ path: filePath }),
+        ...(await pathRootHeader(token)),
       },
     });
-    if (!res.ok) throw new Error(`Dropbox download error ${res.status}`);
+    if (!res.ok) throw new Error(`Dropbox download error ${res.status}: ${await res.text()}`);
     const buffer = await res.arrayBuffer();
     return Buffer.from(buffer).toString("utf8");
   },
@@ -113,12 +136,15 @@ export const dropbox = {
         Authorization: `Bearer ${token}`,
         "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", autorename: false, mute: true }),
         "Content-Type": "application/octet-stream",
+        ...(await pathRootHeader(token)),
       },
       body: Buffer.from(content, "utf8"),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(`Dropbox upload error ${res.status}: ${err.error_summary || JSON.stringify(err)}`);
+      const txt = await res.text();
+      let summary = txt;
+      try { summary = JSON.parse(txt).error_summary || txt; } catch {}
+      throw new Error(`Dropbox upload error ${res.status}: ${summary || "(sin detalle)"}`);
     }
     return res.json();
   },
