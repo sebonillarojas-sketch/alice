@@ -74,7 +74,6 @@ export const dropbox = {
 
   getFileContent: async (filePath) => {
     const token = await getToken();
-    if (!ACCESS_TOKEN) throw new Error("Dropbox no configurado");
     const res = await fetch("https://content.dropboxapi.com/2/files/download", {
       method: "POST",
       headers: {

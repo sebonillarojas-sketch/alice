@@ -1177,16 +1177,20 @@ app.post("/api/market-refresh", async (req, res) => {
   refreshMarketData().catch(e => console.error("market refresh error:", e.message));
 });
 
-app.get("/health", (_, res) => res.json({
-  ok: true, service: "alicia-brain",
-  erp: process.env.ERP_URL || "http://localhost:3002",
-  integrations: {
-    google:  !!(process.env.GOOGLE_CLIENT_ID),
-    zoom:    !!(process.env.ZOOM_ACCOUNT_ID),
-    dropbox: !!(process.env.DROPBOX_ACCESS_TOKEN),
-    tavily:  !!(process.env.TAVILY_API_KEY),
-  }
-}));
+app.get("/health", async (_, res) => {
+  let dropbox = false;
+  try { ({ dropboxAvailable: dropbox } = await import("./integrations/dropbox.js")); dropbox = dropbox(); } catch { dropbox = false; }
+  res.json({
+    ok: true, service: "alicia-brain",
+    erp: process.env.ERP_URL || "http://localhost:3002",
+    integrations: {
+      google:  !!(process.env.GOOGLE_CLIENT_ID),
+      zoom:    !!(process.env.ZOOM_ACCOUNT_ID),
+      dropbox,  // chequeo real: env legacy O (app key+secret + refresh token en DB)
+      tavily:  !!(process.env.TAVILY_API_KEY),
+    }
+  });
+});
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 

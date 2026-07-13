@@ -1,12 +1,15 @@
 // Cerebro de Alicia → Dropbox · espejo legible y organizado
-// /Hygge/Sistema/Alicia/ = cerebro (knowledge, skills, config)
-// /Hygge/Sistema/Alicia/Memoria/<nombre>.md = una carpeta mental por persona
+// /Hygge/09_ALICE/_cerebro/ = cerebro (knowledge, skills, config) · guion bajo = sistema/infra (convenciones _SISTEMA)
+//   ⚠️ contiene insights de coaching por persona → la carpeta DEBE estar restringida a admins en Dropbox
+// /Hygge/09_ALICE/_cerebro/memoria/<id>_<nombre>.md = una carpeta mental por persona
 import { query, parseArr } from "./db.js";
 import { dropbox, dropboxAvailable } from "./integrations/dropbox.js";
 
-const BASE = "/Hygge/Sistema/Alicia";
+const BASE = "/Hygge/09_ALICE/_cerebro";
 
 const fmtDate = () => new Date().toLocaleString("es-PE", { timeZone: "America/Lima", dateStyle: "full", timeStyle: "short" });
+// nombre de archivo seguro: sin tildes, sin espacios, minúsculas (convenciones Hygge)
+const slug = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
 function personaMd(userId) {
   const { rows } = query("SELECT * FROM user_personas WHERE user_id = ?", [userId]);
@@ -59,7 +62,7 @@ export async function exportBrainToDropbox() {
   const files = [];
 
   // Estructura
-  for (const p of [BASE, `${BASE}/Memoria`, `${BASE}/Skills`]) {
+  for (const p of [BASE, `${BASE}/memoria`, `${BASE}/skills`]) {
     await dropbox.createFolder(p).catch(() => {}); // ya existe = ok
   }
 
@@ -67,9 +70,9 @@ export async function exportBrainToDropbox() {
   files.push([`${BASE}/README.md`, `# Cerebro de Alicia 🧠
 Espejo legible de mi memoria viva. Se regenera automáticamente cada noche — **no editar a mano** (los cambios se pisan; para enseñarme cosas usá el panel en aliceai.bam.pe o contame directamente).
 
-- \`Empresa.md\` — lo que sé de Hygge
-- \`Skills/\` — los oficios que me enseñaron
-- \`Memoria/<persona>.md\` — mi relación con cada uno: su personalidad, cómo lo trato, lo que sé de él/ella
+- \`empresa.md\` — lo que sé de Hygge
+- \`skills/\` — los oficios que me enseñaron
+- \`memoria/<id>_<nombre>.md\` — mi relación con cada uno: su personalidad, cómo lo trato, lo que sé de él/ella
 
 _Última sincronización: ${fmtDate()}_
 `]);
@@ -78,7 +81,7 @@ _Última sincronización: ${fmtDate()}_
   const { rows: knowledge } = query("SELECT topic, category, content, updated_at FROM knowledge ORDER BY category, updated_at DESC");
   const byCat = {};
   for (const k of knowledge) (byCat[k.category] ||= []).push(k);
-  files.push([`${BASE}/Empresa.md`, `# Lo que sé de Hygge\n_${fmtDate()}_\n\n` +
+  files.push([`${BASE}/empresa.md`, `# Lo que sé de Hygge\n_${fmtDate()}_\n\n` +
     (Object.entries(byCat).map(([cat, ks]) =>
       `## ${cat.charAt(0).toUpperCase() + cat.slice(1)}\n` +
       ks.map(k => `### ${k.topic}\n${k.content}\n_(actualizado ${(k.updated_at || "").slice(0, 10)})_`).join("\n\n")
@@ -87,7 +90,7 @@ _Última sincronización: ${fmtDate()}_
   // Skills
   const { rows: skills } = query("SELECT name, description, content FROM skills ORDER BY name");
   for (const sk of skills) {
-    files.push([`${BASE}/Skills/${sk.name.replace(/[^a-zA-Z0-9-_ ]/g, "")}.md`,
+    files.push([`${BASE}/skills/${slug(sk.name)}.md`,
       `# Skill: ${sk.name}\n_Cuándo la uso: ${sk.description}_\n\n${sk.content}\n`]);
   }
 
@@ -95,7 +98,7 @@ _Última sincronización: ${fmtDate()}_
   const { rows: profiles } = query("SELECT user_id, name, role FROM profiles ORDER BY user_id");
   for (const prof of profiles) {
     const first = (prof.name || prof.user_id).split(" ")[0];
-    files.push([`${BASE}/Memoria/${first} (${prof.user_id}).md`, `# ${prof.name} · ${prof.role || ""}
+    files.push([`${BASE}/memoria/${prof.user_id}_${slug(first)}.md`, `# ${prof.name} · ${prof.role || ""}
 _${statsMd(prof.user_id)}_
 
 ${personaMd(prof.user_id)}
