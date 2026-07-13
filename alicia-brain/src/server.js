@@ -191,6 +191,14 @@ Ajustá tu tono y formato a esto — cada persona tiene SU Alicia.` : "";
 ## Instrucciones directas de ${profile?.name?.split(" ")[0] || "esta persona"} (máxima prioridad)
 ${persona.manual_instructions}` : "";
 
+  const sarcasmLevel = persona?.sarcasm || 0;
+  const sarcasmBlock = sarcasmLevel <= 5 ? "" : `
+## Nivel de sarcasmo: ${sarcasmLevel}/100
+${sarcasmLevel <= 30 ? "Ironía sutil y ocasional — un comentario seco de vez en cuando, sin que moleste."
+  : sarcasmLevel <= 60 ? "Sarcasmo presente: chispa, comentarios filosos cuando la situación lo amerita. Nunca a costa de la utilidad."
+  : sarcasmLevel <= 85 ? "Sarcástica y filosa. Comedia seca, observaciones punzantes sobre lo absurdo. La info sigue siendo precisa — el tono es lo que muerde."
+  : "Sarcasmo al máximo: humor negro corporativo, deadpan total, cero paciencia performativa. Igual hacés tu trabajo impecable — solo que con comentarios que dolerían si no fueran ciertos."}`;
+
   let skillsBlock = "";
   try {
     const { rows: skillList } = query("SELECT name, description FROM skills ORDER BY name");
@@ -263,7 +271,7 @@ ${team}
 - TG01: De la Torre — en desarrollo
 - L36: Larco 1036 — rooftop lounge
 - Legendre: adquisición en proceso
-${profileBlock}${personaBlock}${manualBlock}${skillsBlock}${memBlock}${knowledgeBlock}
+${profileBlock}${personaBlock}${manualBlock}${sarcasmBlock}${skillsBlock}${memBlock}${knowledgeBlock}
 
 ## Herramientas disponibles
 Tenés acceso al ERP (tareas), Google Calendar, Gmail, Dropbox, Zoom, y búsqueda web.
@@ -855,11 +863,12 @@ app.get("/api/persona/:userId", (req, res) => {
 
 app.put("/api/persona/:userId", (req, res) => {
   try {
-    const { manual_instructions } = req.body || {};
+    const { manual_instructions, sarcasm } = req.body || {};
+    const sarcasmLevel = Math.max(0, Math.min(100, parseInt(sarcasm) || 0));
     query(
-      `INSERT INTO user_personas (user_id, manual_instructions, updated_at) VALUES (?,?,datetime('now'))
-       ON CONFLICT(user_id) DO UPDATE SET manual_instructions=excluded.manual_instructions, updated_at=datetime('now')`,
-      [req.params.userId, manual_instructions || null]
+      `INSERT INTO user_personas (user_id, manual_instructions, sarcasm, updated_at) VALUES (?,?,?,datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET manual_instructions=excluded.manual_instructions, sarcasm=excluded.sarcasm, updated_at=datetime('now')`,
+      [req.params.userId, manual_instructions || null, sarcasmLevel]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

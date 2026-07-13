@@ -120,6 +120,7 @@ function initSchema(db) {
       preferences TEXT,
       avoid TEXT,
       manual_instructions TEXT,
+      sarcasm INTEGER DEFAULT 0,
       msg_count_at_update INTEGER DEFAULT 0,
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -140,6 +141,7 @@ function initSchema(db) {
   // Migración: DBs creadas antes de que agent_runs tuviera columna report
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}
+  try { db.exec("ALTER TABLE user_personas ADD COLUMN sarcasm INTEGER DEFAULT 0"); } catch {}
 }
 
 export function query(sql, params = []) {
