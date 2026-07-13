@@ -585,6 +585,64 @@ app.post("/api/dropbox/delete_folder", async (req, res) => {
   }
 });
 
+// ── Google OAuth · obtener refresh token ──────────────────────────────────────
+
+const OAUTH_BASE = process.env.BASE_URL || "https://aliceai.bam.pe";
+const GOOGLE_SCOPES = [
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/gmail.modify",
+].join(" ");
+
+app.get("/auth/google", (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(500).send("GOOGLE_CLIENT_ID no configurado");
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: `${OAUTH_BASE}/auth/google/callback`,
+    response_type: "code",
+    access_type: "offline",
+    prompt: "consent",
+    scope: GOOGLE_SCOPES,
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+app.get("/auth/google/callback", async (req, res) => {
+  try {
+    const { code, error } = req.query;
+    if (error) return res.status(400).send(`Google devolvió error: ${error}`);
+    if (!code) return res.status(400).send("Falta el código de autorización");
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: `${OAUTH_BASE}/auth/google/callback`,
+        grant_type: "authorization_code",
+      }),
+    });
+    const data = await tokenRes.json();
+    if (!tokenRes.ok) return res.status(500).send(`Error intercambiando código: ${data.error_description || data.error}`);
+    if (!data.refresh_token) return res.status(500).send("Google no devolvió refresh_token — revocá el acceso en myaccount.google.com/permissions y volvé a intentar");
+    query(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES ('google_refresh_token', ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+      [data.refresh_token]
+    );
+    const { clearTokenCache } = await import("./integrations/google.js");
+    clearTokenCache();
+    console.log("🔑 Google refresh token guardado vía OAuth");
+    res.send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center">
+      <h2>✅ Google conectado</h2>
+      <p>Alicia ya puede usar tu Calendar y Gmail. Podés cerrar esta pestaña.</p>
+    </body></html>`);
+  } catch (e) {
+    console.error("OAuth callback error:", e.message);
+    res.status(500).send(`Error: ${e.message}`);
+  }
+});
+
 // ── Wonderland IT · agentes autónomos (ver docs/WONDERLAND_IT.md) ────────────
 
 function requireAgentKey(req, res, next) {

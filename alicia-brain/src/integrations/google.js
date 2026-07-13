@@ -2,16 +2,29 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { query } from "../db.js";
+
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
+
+// El refresh token puede venir del env o de la DB (guardado por /auth/google/callback)
+export function getRefreshToken() {
+  if (process.env.GOOGLE_REFRESH_TOKEN) return process.env.GOOGLE_REFRESH_TOKEN;
+  try {
+    const { rows } = query("SELECT value FROM app_settings WHERE key = 'google_refresh_token'");
+    return rows[0]?.value || null;
+  } catch { return null; }
+}
 
 let _accessToken = null;
 let _tokenExpiry = 0;
 
+export function clearTokenCache() { _accessToken = null; _tokenExpiry = 0; }
+
 async function getAccessToken() {
   if (_accessToken && Date.now() < _tokenExpiry - 60000) return _accessToken;
-  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+  const refreshToken = getRefreshToken();
+  if (!CLIENT_ID || !CLIENT_SECRET || !refreshToken) {
     throw new Error("Google credentials no configuradas (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)");
   }
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -20,7 +33,7 @@ async function getAccessToken() {
     body: new URLSearchParams({
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
-      refresh_token: REFRESH_TOKEN,
+      refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -145,4 +158,4 @@ function extractBody(payload) {
   return "";
 }
 
-export const googleAvailable = () => !!(CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN);
+export const googleAvailable = () => !!(CLIENT_ID && CLIENT_SECRET && getRefreshToken());
