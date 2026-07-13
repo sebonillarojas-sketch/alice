@@ -513,6 +513,19 @@ function Gate() {
     setPwSet(true);
   };
 
+  // Onboarding obligatorio en orden: 01 Calendario → 02 WhatsApp → 03 Contraseña.
+  // (null = flags aún no leídos → no flashear HyggeOS ni un paso equivocado)
+  if (calGranted === null || waSet === null || pwSet === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: C.bg }}>
+        <div style={{ fontSize: 11, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>Cargando...</div>
+      </div>
+    );
+  }
+  if (!calGranted) return <CalendarConsentModal user={user} onGrant={handleGrant} />;
+  if (!waSet)      return <WhatsAppModal user={user} onDone={handleWa} />;
+  if (!pwSet)      return <SetPasswordModal user={user} onDone={handleSetPassword} />;
+
   return <HyggeOS authUser={user} />;
 }
 

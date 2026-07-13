@@ -30,6 +30,7 @@ async function fetchProfile(supabaseUser) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [pwSetMeta, setPwSetMeta] = useState(false); // user_metadata.pw_set — vive en Supabase, cross-device
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         const profile = await fetchProfile(session.user);
         if (profile) setUser(profile);
+        setPwSetMeta(session.user.user_metadata?.pw_set === true);
       }
       setLoaded(true);
     });
@@ -47,8 +49,10 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         const profile = await fetchProfile(session.user);
         if (profile) setUser(profile);
+        setPwSetMeta(session.user.user_metadata?.pw_set === true);
       } else {
         setUser(null);
+        setPwSetMeta(false);
       }
     });
 
@@ -71,10 +75,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const setOwnPassword = useCallback(async (userId, newPassword) => {
-    await supabase.auth.updateUser({ password: newPassword });
+    // password real + marca pw_set en metadata (la señal que lee hasSetOwnPassword)
+    await supabase.auth.updateUser({ password: newPassword, data: { pw_set: true } });
+    setPwSetMeta(true);
   }, []);
 
-  const hasSetOwnPassword = useCallback(() => false, []);
+  const hasSetOwnPassword = useCallback(() => pwSetMeta, [pwSetMeta]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loaded, setOwnPassword, hasSetOwnPassword }}>

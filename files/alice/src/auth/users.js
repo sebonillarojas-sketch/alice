@@ -2,14 +2,8 @@
 //
 // ⚠️ AVISO DE SEGURIDAD ⚠️
 // Esto es auth FRONT-END temporal para el MVP. NO es seguro para producción real:
-//   - Las contraseñas están en plaintext en el bundle JS (cualquiera con DevTools las ve)
-//   - No hay verificación server-side
-//   - No hay tokens, no hay revocación, no hay rate-limiting
-//
-// SIRVE COMO: gate básico para que la URL pública no esté abierta al mundo
-// NO SIRVE COMO: protección real de datos sensibles
-//
-// PRÓXIMO PASO REAL: migrar a Supabase Auth o Clerk (ver README.md)
+// Auth real = Supabase (AuthContext). Este archivo solo mapea username→email y metadata
+// de UI. NUNCA poner passwords acá: el bundle es público (lección del 13 jul 2026).
 //
 
 // allowedSpaces: null = acceso a todos los spaces
@@ -19,7 +13,6 @@ export const USERS = [
   {
     id: "sb",
     username: "sebastian",
-    password: "hygge2026",
     firstName: "Sebastián",
     lastName: "Bonilla",
     role: "CEO",
@@ -32,7 +25,6 @@ export const USERS = [
   {
     id: "vd",
     username: "vanessa",
-    password: "hygge2026",
     firstName: "Vanessa",
     lastName: "Dongo",
     role: "Admin + Marketing",
@@ -45,7 +37,6 @@ export const USERS = [
   {
     id: "jt",
     username: "jose",
-    password: "hygge2026",
     firstName: "Jose",
     lastName: "Torres",
     role: "Comercial",
@@ -58,7 +49,6 @@ export const USERS = [
   {
     id: "jm",
     username: "joel",
-    password: "hygge2026",
     firstName: "Joel",
     lastName: "Moy",
     role: "Finanzas",
@@ -71,7 +61,6 @@ export const USERS = [
   {
     id: "aa",
     username: "ariel",
-    password: "hygge2026",
     firstName: "Ariel",
     lastName: "Almaguer",
     role: "BAM · Arquitectura",
@@ -84,7 +73,6 @@ export const USERS = [
   {
     id: "ac",
     username: "andrea",
-    password: "hygge2026",
     firstName: "Andrea",
     lastName: "Castillo",
     role: "Operaciones",
@@ -97,7 +85,6 @@ export const USERS = [
   {
     id: "jmg",
     username: "galup",
-    password: "hygge2026",
     firstName: "Juan Miguel",
     lastName: "Galup",
     role: "Legal",

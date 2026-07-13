@@ -188,8 +188,9 @@ function loadProfiles() {
 function saveProfiles(p) { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(p)); } catch {} }
 function loadChat(uid) { try { const r = localStorage.getItem(chatKey(uid)); return r ? JSON.parse(r) : []; } catch { return []; } }
 function saveChat(uid, msgs) { try { localStorage.setItem(chatKey(uid), JSON.stringify(msgs.slice(-100))); } catch {} }
-const ENV_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
-function loadApiKey() { try { return localStorage.getItem(API_KEY_KEY) || ENV_API_KEY; } catch { return ENV_API_KEY; } }
+// Sin key de env: el bundle es público (así se filtró la key el 13 jul 2026). El chat va vía
+// backend aliceai; el fallback directo a Anthropic solo corre si el admin pegó su key en localStorage.
+function loadApiKey() { try { return localStorage.getItem(API_KEY_KEY) || ""; } catch { return ""; } }
 function saveApiKey(k) { try { localStorage.setItem(API_KEY_KEY, k); } catch {} }
 
 // ── Build Alicia system prompt ─────────────────────────────────────────────────

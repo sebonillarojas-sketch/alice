@@ -12,7 +12,9 @@ import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 import { db } from "./lib/supabase";
 
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
+// Key SOLO desde localStorage (el admin la pega en su browser si quiere paneles Lab con Claude).
+// NUNCA desde env: VITE_* se hornea en el bundle público — así se filtró la key el 13 jul 2026.
+const ANTHROPIC_KEY = (() => { try { return localStorage.getItem("alicia_api_key") || ""; } catch { return ""; } })();
 const anthropicHeaders = () => ({
   "Content-Type": "application/json",
   "x-api-key": ANTHROPIC_KEY,
