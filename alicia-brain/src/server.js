@@ -495,30 +495,66 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
   try {
     const message = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    if (!message || message.type !== "text") return;
+    if (!message || !["text", "audio"].includes(message.type)) return;
     const fromPhone = message.from;
-    const text = message.text.body;
     const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, ""));
     if (!allowed.includes(fromPhone.replace(/\D/g, ""))) return;
     const userId = phoneToUserId(fromPhone);
     if (!userId) return;
-    console.log(`📱 [${userId}] ${text}`);
-    const { text: reply } = await processAliciaMessage(userId, text, "whatsapp");
-    await sendWhatsAppMessage(fromPhone, reply);
+
+    // Audio entrante → descargar de Graph API y transcribir (paridad con el path de Twilio)
+    let userText, inputWasAudio = false;
+    if (message.type === "audio") {
+      console.log(`🎤 WA Cloud audio [${userId}]`);
+      const { buffer, mediaType } = await downloadWACloudMedia(message.audio.id);
+      userText = await transcribeBuffer(buffer, mediaType) || "[audio no entendido]";
+      inputWasAudio = true;
+      console.log(`📝 Transcripción: ${userText}`);
+    } else {
+      userText = message.text.body;
+    }
+
+    console.log(`📱 [${userId}] ${userText}`);
+    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
+
+    // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
+    // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza,
+    // cae a texto. Conversión a ogg/opus pendiente para paridad total.
+    if (inputWasAudio) {
+      try {
+        const audioBuf = await generateSpeech(reply);
+        const id = Math.random().toString(36).slice(2);
+        ttsCache.set(id, audioBuf);
+        setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
+        const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`;
+        const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ messaging_product: "whatsapp", to: fromPhone, type: "audio", audio: { link: audioUrl } }),
+        });
+        if (r.ok) return;
+        console.error("WA Cloud nota de voz rechazada, respondiendo texto:", (await r.text()).slice(0, 200));
+      } catch (ttsErr) {
+        console.error("TTS falló, respondiendo texto:", ttsErr.message);
+      }
+    }
+
+    const { sendWA } = await import("./wa.js");
+    await sendWA(fromPhone, reply);
   } catch (e) {
     console.error("Webhook error:", e.message);
   }
 });
 
-async function sendWhatsAppMessage(to, text) {
-  const chunks = text.length <= 4000 ? [text] : text.match(/.{1,4000}(\s|$)/g) || [text];
-  for (const chunk of chunks) {
-    await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: chunk } }),
-    });
-  }
+// Descarga media de WA Cloud API: media_id → URL firmada → buffer
+async function downloadWACloudMedia(mediaId) {
+  const auth = { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}` };
+  const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, { headers: auth });
+  if (!metaRes.ok) throw new Error(`WA media meta failed: ${metaRes.status}`);
+  const meta = await metaRes.json();
+  const fileRes = await fetch(meta.url, { headers: auth });
+  if (!fileRes.ok) throw new Error(`WA media download failed: ${fileRes.status}`);
+  return { buffer: Buffer.from(await fileRes.arrayBuffer()), mediaType: meta.mime_type || "audio/ogg" };
 }
 
 // ── Twilio webhook ────────────────────────────────────────────────────────────
@@ -569,13 +605,17 @@ app.post("/webhook/twilio", async (req, res) => {
 });
 
 async function transcribeAudio(mediaUrl, mediaType) {
+  // Twilio: descarga con basic auth, luego transcripción compartida
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const audioRes = await fetch(mediaUrl, {
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64") },
   });
   if (!audioRes.ok) throw new Error(`Audio download failed: ${audioRes.status}`);
-  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+  return transcribeBuffer(Buffer.from(await audioRes.arrayBuffer()), mediaType);
+}
+
+async function transcribeBuffer(audioBuffer, mediaType) {
   const ext = mediaType.includes("ogg") ? "ogg" : mediaType.includes("mp4") ? "mp4" : "wav";
   const formData = new FormData();
   formData.append("file", new Blob([audioBuffer], { type: mediaType }), `audio.${ext}`);
