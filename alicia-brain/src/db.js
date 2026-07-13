@@ -119,12 +119,27 @@ function initSchema(db) {
       focus TEXT,
       preferences TEXT,
       avoid TEXT,
+      manual_instructions TEXT,
       msg_count_at_update INTEGER DEFAULT 0,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS user_insights (
+      user_id TEXT PRIMARY KEY,
+      report TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS skills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_by TEXT DEFAULT 'sb',
       updated_at TEXT DEFAULT (datetime('now'))
     );
   `);
   // Migración: DBs creadas antes de que agent_runs tuviera columna report
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
+  try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}
 }
 
 export function query(sql, params = []) {

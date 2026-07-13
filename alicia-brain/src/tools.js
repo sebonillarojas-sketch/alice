@@ -190,6 +190,17 @@ export const ALICIA_TOOLS = [
       required: ["topic"],
     },
   },
+  {
+    name: "use_skill",
+    description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nombre exacto de la skill a cargar" },
+      },
+      required: ["name"],
+    },
+  },
 ];
 
 // ── Ejecutor de tools ─────────────────────────────────────────────────────────
@@ -305,6 +316,12 @@ export async function executeTool(toolName, input, userId) {
       );
       if (!rows.length) return `No encontré nada sobre "${input.topic}" en la base de conocimiento.`;
       return rows.map(r => `[${r.category}] ${r.topic} (${r.updated_at?.slice(0,10)})\n${r.content}`).join("\n\n");
+    }
+
+    case "use_skill": {
+      const { rows } = query(`SELECT name, content FROM skills WHERE name = ? OR name LIKE ?`, [input.name, `%${input.name}%`]);
+      if (!rows.length) return `No existe la skill "${input.name}". Skills disponibles: ${query("SELECT name FROM skills").rows.map(r => r.name).join(", ") || "ninguna"}`;
+      return `## Skill: ${rows[0].name}\n\n${rows[0].content}`;
     }
 
     default:

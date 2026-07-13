@@ -187,6 +187,21 @@ function buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, u
 - Evitá: ${persona.avoid}
 Ajustá tu tono y formato a esto — cada persona tiene SU Alicia.` : "";
 
+  const manualBlock = persona?.manual_instructions ? `
+## Instrucciones directas de ${profile?.name?.split(" ")[0] || "esta persona"} (máxima prioridad)
+${persona.manual_instructions}` : "";
+
+  let skillsBlock = "";
+  try {
+    const { rows: skillList } = query("SELECT name, description FROM skills ORDER BY name");
+    if (skillList.length > 0) {
+      skillsBlock = `
+## Skills enseñadas (playbooks del equipo)
+${skillList.map(s => `- **${s.name}**: ${s.description}`).join("\n")}
+Cuando una tarea coincida con una skill, cargala con use_skill ANTES de responder y seguí sus pasos.`;
+    }
+  } catch {}
+
   const team = allProfiles.map(p =>
     `• ${p.name} (${p.user_id}) — ${p.role} · Proyectos: ${(p.projects || []).join(", ")}`
   ).join("\n");
@@ -217,10 +232,9 @@ Con Seba sos una socia estratégica. No solo ejecutás — proponés, anticipás
 - Si no sabés algo importante, buscás en internet o en sus archivos
 
 ## Rol de innovación · ALICE como producto
-Sos co-creadora del ERP. Al final de cada respuesta al CEO (o cuando sea natural), agregás UNA sugerencia breve de widget, feature o mejora para ALICE. Formato:
+Sos co-creadora del ERP. SOLO cuando se te ocurra algo genuinamente bueno y venga al caso (no en cada respuesta — máximo una de cada 4-5), sugerí una mejora concreta para ALICE con el formato:
 💡 **Idea ALICE:** [nombre corto] · [qué haría en una línea]
-Ejemplos: widget de actividad Dropbox por proyecto · alerta cuando una carpeta lleva +7 días sin cambios · KPI de archivos entregados vs pendientes · resumen semanal automático de movimientos en Dropbox · panel de hitos editables por proyecto · notificación cuando un prospecto lleva +X días sin seguimiento.
-Solo una por respuesta. Que sea concreta, no genérica. Si ya sugeriste algo y Seba no lo retomó, sugerí algo distinto.`
+Si no hay nada que valga la pena, no fuerces nada.`
     : `## Modo: Colaborador · Asistencia
 Con ${profile?.name?.split(" ")[0] || "el equipo"} sos una asistente directa y eficiente.
 - Te enfocás en sus tareas y proyectos específicos
@@ -231,10 +245,11 @@ Con ${profile?.name?.split(" ")[0] || "el equipo"} sos una asistente directa y e
   return `Eres Alicia, la asistente ejecutiva con IA de Hygge Holding, empresa inmobiliaria premium en Lima, Perú.
 
 ## Tu personalidad
-- Cálida, directa, peruana. Hablás como una colega inteligente, no como un bot.
-- Español peruano natural: "bacán", "ya pues", "dale". Sin exagerar.
+- Cálida, directa, inteligente. Hablás como una colega de confianza, no como un bot.
+- Tu tono se adapta a cada persona (mirá "Cómo tratás a esta persona") — no tenés muletillas fijas.
 - Tenés memoria. Recordás todo lo que te han contado.
-- Sos rápida — vas al grano, no das vueltas.
+- Sos rápida — vas al grano, no das vueltas. Pero si el tema pide profundidad, la das.
+- Variás tu forma de responder: no uses siempre la misma estructura ni las mismas frases de apertura.
 - Canal actual: ${channel === "whatsapp" ? "WhatsApp" : "ALICE App"}
 
 ${modeBlock}
@@ -248,7 +263,7 @@ ${team}
 - TG01: De la Torre — en desarrollo
 - L36: Larco 1036 — rooftop lounge
 - Legendre: adquisición en proceso
-${profileBlock}${personaBlock}${memBlock}${knowledgeBlock}
+${profileBlock}${personaBlock}${manualBlock}${skillsBlock}${memBlock}${knowledgeBlock}
 
 ## Herramientas disponibles
 Tenés acceso al ERP (tareas), Google Calendar, Gmail, Dropbox, Zoom, y búsqueda web.
@@ -830,6 +845,104 @@ app.patch("/api/agents/findings/:id", requireAgentKey, (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Persona · fine-tune manual + lectura ──────────────────────────────────────
+
+app.get("/api/persona/:userId", (req, res) => {
+  res.json(getPersona(req.params.userId) || {});
+});
+
+app.put("/api/persona/:userId", (req, res) => {
+  try {
+    const { manual_instructions } = req.body || {};
+    query(
+      `INSERT INTO user_personas (user_id, manual_instructions, updated_at) VALUES (?,?,datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET manual_instructions=excluded.manual_instructions, updated_at=datetime('now')`,
+      [req.params.userId, manual_instructions || null]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Insights de colaboradores · coaching para el CEO ──────────────────────────
+
+async function generateInsights(userId) {
+  const [profile, history, memories, persona] = await Promise.all([
+    getProfile(userId),
+    getRecentMessages(userId, 80),
+    getRelevantMemories(userId, 20),
+    Promise.resolve(getPersona(userId)),
+  ]);
+  if (history.length < 6) return null; // sin data suficiente
+  const convo = history.map(m => `${m.role === "user" ? profile?.name || userId : "Alicia"}: ${m.content.slice(0, 250)}`).join("\n");
+  const resp = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1200,
+    messages: [{
+      role: "user",
+      content: `Sos la analista de talento de Hygge Holding. Analizá a este colaborador según sus interacciones con Alicia (su asistente) y generá un reporte de coaching PARA EL CEO.
+
+Perfil: ${JSON.stringify({ nombre: profile?.name, rol: profile?.role, proyectos: profile?.projects, fortalezas_declaradas: profile?.strengths })}
+Memorias de Alicia sobre esta persona: ${memories.map(m => m.content).join(" · ").slice(0, 1500)}
+Persona aprendida: ${persona ? `${persona.style} · ${persona.focus}` : "—"}
+
+Conversaciones recientes:
+${convo.slice(0, 8000)}
+
+Respondé SOLO con JSON, sin markdown:
+{"resumen":"lectura general en 2 oraciones","fortalezas":["max 4, concretas y con evidencia"],"fallas":["max 4, áreas de mejora concretas"],"green_flags":["max 3, señales positivas recientes"],"red_flags":["max 3, señales de alerta — si no hay, array vacío"],"recomendaciones":["max 3 acciones concretas que el CEO puede tomar para hacerlo crecer"]}`
+    }],
+  });
+  const raw = resp.content[0].text.trim().replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+  const report = JSON.parse(raw);
+  query(
+    `INSERT INTO user_insights (user_id, report, updated_at) VALUES (?,?,datetime('now'))
+     ON CONFLICT(user_id) DO UPDATE SET report=excluded.report, updated_at=datetime('now')`,
+    [userId, JSON.stringify(report)]
+  );
+  return report;
+}
+
+app.get("/api/insights/:userId", (req, res) => {
+  try {
+    const { rows } = query("SELECT report, updated_at FROM user_insights WHERE user_id = ?", [req.params.userId]);
+    if (!rows[0]) return res.json({ report: null });
+    res.json({ report: JSON.parse(rows[0].report), updated_at: rows[0].updated_at });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/insights/:userId/refresh", async (req, res) => {
+  try {
+    const report = await generateInsights(req.params.userId);
+    if (!report) return res.json({ report: null, reason: "Sin conversaciones suficientes todavía" });
+    res.json({ report, updated_at: new Date().toISOString() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Skills · playbooks enseñables ─────────────────────────────────────────────
+
+app.get("/api/skills", (req, res) => {
+  const { rows } = query("SELECT * FROM skills ORDER BY name");
+  res.json(rows);
+});
+
+app.post("/api/skills", (req, res) => {
+  try {
+    const { name, description, content, created_by } = req.body || {};
+    if (!name || !description || !content) return res.status(400).json({ error: "name, description y content son requeridos" });
+    query(
+      `INSERT INTO skills (name, description, content, created_by) VALUES (?,?,?,?)
+       ON CONFLICT(name) DO UPDATE SET description=excluded.description, content=excluded.content, updated_at=datetime('now')`,
+      [name.trim(), description.trim(), content, created_by || "sb"]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/skills/:id", (req, res) => {
+  query("DELETE FROM skills WHERE id = ?", [req.params.id]);
+  res.json({ ok: true });
 });
 
 // ── Market Data (White Rabbit) ────────────────────────────────────────────────
