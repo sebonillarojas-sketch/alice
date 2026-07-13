@@ -401,56 +401,6 @@ const isAppId = (id) => APPS.some(a => a.id === id);
 // ─── WIKIHYGGE · navegador de archivos · estructura real del Drive de Hygge ───
 // Estructura sincronizada del Drive `sebastian@hygge.pe` · snapshot 2026-05-12
 // Cada nodo: id, name, type (folder|sheet|doc|slides|pdf|miro|other), parent, source(drive|miro|...), url, modified, owner
-const WIKIHYGGE_TREE = {
-  // ROOT
-  "root": { id: "root", name: "WikiHygge", type: "folder", parent: null, children: ["00-empresa", "01-proyectos", "02-bam", "03-finanzas", "04-legal", "05-comercial", "06-marketing", "07-growth"] },
-
-  // ÁREAS TOP-LEVEL · espejo de la raíz HYGGE GRUPPE del Drive
-  "00-empresa": { id: "00-empresa", name: "Empresa", section: "00 EMPRESA", type: "folder", parent: "root", driveId: "1spAMtrKFp6v4OejrvoGgjpmaQ8yx124e", children: ["cap-table", "acuerdo-privado"] },
-  "01-proyectos": { id: "01-proyectos", name: "Proyectos", section: "01 PROYECTOS", type: "folder", parent: "root", driveId: "1PIbOe9mqTJ48v9GPnwC6mKxPD8T0t_uA", children: ["dc01", "pu01", "tg01", "l36"] },
-  "02-bam": { id: "02-bam", name: "BAM · Arquitectura", section: "02 BAM", type: "folder", parent: "root", driveId: "1O_Kqjd3Ihav_Ax9RnDwipRaG_PARviQe", children: ["estudio-bam", "brand-bam"] },
-  "03-finanzas": { id: "03-finanzas", name: "Finanzas", section: "03 FINANZAS", type: "folder", parent: "root", driveId: "1ZeSIs3lXp8jAKB9xdyZB158xbE1jgOWV", children: ["fin-contabilidad", "fin-fit-deuda", "fin-inversionistas", "fin-flujos-caja", "cashflow-2026"] },
-  "04-legal": { id: "04-legal", name: "Legal", section: "04 LEGAL", type: "folder", parent: "root", driveId: "1FMUSH1tXwEsmm1kQVclPH4xDQfjwJz8Z", children: [] },
-  "05-comercial": { id: "05-comercial", name: "Comercial", section: "05 COMERCIAL", type: "folder", parent: "root", driveId: "12X1RqKCiwN2yrWPwxhqJPPZ4ST3mvpme", children: [] },
-  "06-marketing": { id: "06-marketing", name: "Marketing & Branding", section: "06 MARKETING", type: "folder", parent: "root", driveId: "1C_IYFZ8WZcva3S1IJC9B9sj6tkUk0JN1", children: ["brand-bronca"] },
-  "07-growth": { id: "07-growth", name: "Growth", section: "07 GROWTH", type: "folder", parent: "root", driveId: "1_047Y72FtOj7KppUh8YPq54-O0Jz0oj-", children: [] },
-
-  // SPVs · cada uno tiene la metodología 5-fase
-  "dc01": { id: "dc01", name: "Del Castillo · DC01", code: "DC01", type: "folder", parent: "01-proyectos", driveId: "1H9OIY6qSZYjk9pYKdS7fWt4AeLzxMRA2", children: ["dc01-01", "dc01-02", "dc01-03", "dc01-04", "dc01-05"] },
-  "dc01-01": { id: "dc01-01", name: "Diseño & Arquitectura", phase: "01", type: "folder", parent: "dc01", driveId: "1LUiluqeWiRgaEYysd2D5VpalFHVBcwTl", children: [] },
-  "dc01-02": { id: "dc01-02", name: "Permisos & Licencias", phase: "02", type: "folder", parent: "dc01", driveId: "1WfbNT1IaX0KNMAn-QCiytZtl_Mgulnym", children: [] },
-  "dc01-03": { id: "dc01-03", name: "Construcción", phase: "03", type: "folder", parent: "dc01", driveId: "1RznluRU_yZdmnteO3tfeTFNDWneS7V6W", children: [] },
-  "dc01-04": { id: "dc01-04", name: "Ventas & Contratos", phase: "04", type: "folder", parent: "dc01", driveId: "1D5We9cwxEMGsPHXT0ulokLTOsOZUbLuc", children: [] },
-  "dc01-05": { id: "dc01-05", name: "Financiero", phase: "05", type: "folder", parent: "dc01", driveId: "1j_jUfSC2Z3G7qjBAbNVH8J2esKTz9bov", children: [] },
-  "pu01": { id: "pu01", name: "Paula Ugarriza · PU01", code: "PU01", type: "folder", parent: "01-proyectos", driveId: "1nj-IW-zk7LpgN6BqwTJ0B5ncBwBAiEEr", children: [] },
-  "tg01": { id: "tg01", name: "De la Torre · TG01", code: "TG01", type: "folder", parent: "01-proyectos", driveId: "1QDbsSGIekQb3eKuYOuwma7-nQ0SSK3tt", children: [] },
-  "l36": { id: "l36", name: "Larco 1036 · L36", code: "L36", type: "folder", parent: "01-proyectos", driveId: "1NLCOo1bfaeKHJyNWfJaluMK0YGYzrOMY", children: [] },
-
-  // BAM children
-  "estudio-bam": { id: "estudio-bam", name: "Estudio BAM", type: "folder", parent: "02-bam", driveId: "1-FWqI1EaKtX6zViJsGzcApuHOXDZVP-8", children: [] },
-  "brand-bam": { id: "brand-bam", name: "Brand BAM", type: "folder", parent: "02-bam", children: [] },
-
-  // FINANZAS children
-  "fin-contabilidad": { id: "fin-contabilidad", name: "Contabilidad", type: "folder", parent: "03-finanzas", driveId: "1pQDZq6aPGs5MbM0Nx1h58je41O4-2vmu", children: [] },
-  "fin-fit-deuda": { id: "fin-fit-deuda", name: "Fit Capital · Deuda", type: "folder", parent: "03-finanzas", driveId: "1Jpy47Y2n5-FYfIsh6oCSv7KLZOlCIMD3", children: [] },
-  "fin-inversionistas": { id: "fin-inversionistas", name: "Inversionistas", type: "folder", parent: "03-finanzas", driveId: "16buC-QRfDXS32N3vsN8be8yPSBAyaocO", children: ["cap-table"] },
-  "fin-flujos-caja": { id: "fin-flujos-caja", name: "Flujos de Caja", type: "folder", parent: "03-finanzas", driveId: "1ASk9YaV2igGGbHjM2FkGgPvSVgovJSF3", children: ["fc-macro", "fc-dc", "fc-pu", "fc-tg", "fc-legendre"] },
-  "fc-macro": { id: "fc-macro", name: "FC MACRO", type: "folder", parent: "fin-flujos-caja", driveId: "1SEfb4e2cQGrNkWtUbCYKfTpo26mWq0t8", children: [] },
-  "fc-dc": { id: "fc-dc", name: "FC · Del Castillo", type: "folder", parent: "fin-flujos-caja", driveId: "1jeSZJLyUfsrsxeOImlDV8kxqHeds6F3w", children: [] },
-  "fc-pu": { id: "fc-pu", name: "FC · Paula Ugarriza", type: "folder", parent: "fin-flujos-caja", driveId: "1v1cDIR0FMXZu15YBXOuggKiTibtmrgxr", children: [] },
-  "fc-tg": { id: "fc-tg", name: "FC · De la Torre", type: "folder", parent: "fin-flujos-caja", driveId: "1zho6xqpXHac2p4VAmVJF8iSH4eOOtVXJ", children: ["legendre-xlsx"] },
-  "fc-legendre": { id: "fc-legendre", name: "Edificio Legendre", type: "folder", parent: "fin-flujos-caja", children: ["legendre-xlsx"] },
-
-  // MARKETING children
-  "brand-bronca": { id: "brand-bronca", name: "Brand Hygge · Bronca", type: "folder", parent: "06-marketing", driveId: "1TZvxsncwDME0qFP3jJZq3mMpAGjG_ZvA", children: [] },
-
-  // FILES · key files identified
-  "cap-table": { id: "cap-table", name: "Cap Table · Investors", type: "sheet", parent: "fin-inversionistas", driveId: "1eR98gF1wpxTlGNBY6qeovxSsykrkauogaYOv07cIQkY", source: "google-sheets", modified: "2026-05-15", owner: "Sebastián Bonilla", note: "Tabla de participaciones por proyecto" },
-  "cashflow-2026": { id: "cashflow-2026", name: "Cash Flow Hygge 2026", type: "sheet", parent: "03-finanzas", driveId: "1KUp7z4OtuQ24EXZvTdsLf0JQP8dQk1Jn4v3Md3a63Bo", source: "google-sheets", modified: "2026-05-20", owner: "Joel Moy", note: "Cash flow ejecutivo del año" },
-  "acuerdo-privado": { id: "acuerdo-privado", name: "ACUERDO PRIVADO Libre 5", type: "doc", parent: "00-empresa", driveId: "1fToxXb332tY23TGHweCJuMtjZiE9t8iJ", source: "google-docs", modified: "2026-04-08", owner: "J.M. Galup", note: "Acuerdo entre socios · revisar antes de pasarlo" },
-  "legendre-xlsx": { id: "legendre-xlsx", name: "Edificio Legendre · ventas brutas", type: "sheet", parent: "fc-legendre", driveId: "12cSCNNGz6QuREEuIVAk6NcVrvNb4eomM", source: "google-sheets", modified: "2026-05-18", owner: "Joel Moy", note: "FC ventas brutas $5.9M · margen 6.36% · 15 dptos · aporte $2.4M" },
-};
-
 // Helper: returns list of space ids that match a logical "current space" — for parent spaces, includes all children
 const resolveSpaceIds = (currentSpaceId, allSpaces, includeChildren = true) => {
   const parent = allSpaces.find(s => s.id === currentSpaceId);
@@ -531,27 +481,8 @@ const LEGAL_PERMITS = [];
 const COMERCIAL_FUNNEL = [];
 const MARKETING_CHANNELS = [];
 
-// ═══ TASKS — Importadas desde ClickUp workspace 90171161839 (Hygge x BAM) ═══
-const _TD = (offset) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
-// Compact constructor: ct(id, title, space, checked, assignee, priority, parentId, cuId, due, descExtra)
-const _ct = (id, title, space, checked, assignee, priority, parentId, cuId, due, descExtra = "") => ({
-  id, parentId, title,
-  description: (descExtra ? descExtra + "\n\n" : "") + `🔗 ClickUp: https://app.clickup.com/t/${cuId}`,
-  project: space === "dc01" ? "DC01" : space === "pu01" ? "PU01" : space === "tg01" ? "TG01" : space === "l36" ? "L36" : space.toUpperCase().slice(0, 3),
-  priority: priority || "media",
-  due: due || _TD(0), startDate: due || _TD(0), endDate: due || _TD(0),
-  space, checked, assignee,
-  clickupId: cuId, clickupUrl: `https://app.clickup.com/t/${cuId}`,
-  comments: [], attachments: [], activity: [{ when: "importado", text: "Sincronizado desde ClickUp · Hygge x BAM" }],
-});
-
 const INITIAL_TASKS = [];
 
-// ═══ DRIVE EMBEDS + MIRO VIEWERS — pre-poblados por space ═══
-// Drive URLs: folders use embeddedfolderview, Google Sheets use /preview, other files use /preview
-const _drvFolder = (id) => `https://drive.google.com/embeddedfolderview?id=${id}#grid`;
-const _drvSheet = (id) => `https://docs.google.com/spreadsheets/d/${id}/preview`;
-const _drvFile = (id) => `https://drive.google.com/file/d/${id}/preview`;
 const _miroPh = "https://miro.com/welcome/"; // placeholder · editar en CustomViewConfigModal
 
 const INITIAL_CUSTOM_VIEWS = {};
@@ -6997,7 +6928,7 @@ function WikiCreateMenu({ currentFolder, setActiveTab }) {
             <ExternalLink size={12} style={{ color: C.ochre, marginTop: 2, flexShrink: 0 }} />
             <div className="flex-1 min-w-0">
               <div style={{ fontSize: 11, color: C.ink, fontWeight: 600 }}>Agregar Link externo</div>
-              <div style={{ fontSize: 9, color: C.muted, marginTop: 1, lineHeight: 1.4 }}>URLs curadas · Bronca, ClickUp, Miro, proveedores, regulación, etc.</div>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 1, lineHeight: 1.4 }}>URLs curadas · Metabase, Miro, proveedores, regulación, etc.</div>
             </div>
           </button>
         </div>
@@ -7164,7 +7095,7 @@ function WikiLinksTab({ links, setLinks }) {
             Links externos · {(links || []).length} curados
           </div>
           <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontStyle: "italic" }}>
-            URLs importantes que viven afuera (Bronca, ClickUp, proveedores, regulación, etc.)
+            URLs importantes que viven afuera (Metabase, Miro, proveedores, regulación, etc.)
           </div>
         </div>
         <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.cobalt, border: `1px solid ${C.cobalt}60`, borderRadius: 2, fontWeight: 600 }}>
@@ -8220,7 +8151,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
         <div className="mb-5 flex items-start gap-2 px-3 py-2" style={{ backgroundColor: `${C.ochre}15`, border: `1px solid ${C.ochre}40`, borderRadius: 2 }}>
           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: C.ochre }} />
           <div style={{ fontSize: 10, color: C.inkSoft, lineHeight: 1.55 }}>
-            <strong style={{ color: C.ochre, fontWeight: 700 }}>Edición manual</strong> · Las tareas son datos reales (contrastables con ClickUp). Los números financieros (unidades, revenue, FC) son edición manual hasta que conectemos backend a Cash Flow 2026 + Cap Table.
+            <strong style={{ color: C.ochre, fontWeight: 700 }}>Edición manual</strong> · Las tareas son datos reales. Los números financieros (unidades, revenue, FC) son edición manual hasta que conectemos backend a Cash Flow 2026 + Cap Table.
           </div>
         </div>
       )}
@@ -10250,7 +10181,6 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
       if (u.includes("/live-embed/") || u.includes("/embed/")) return { kind: "miro-ok" };
       return { kind: "miro-share", reason: "URL de share · no es embed-friendly" };
     }
-    if (u.includes("clickup.com")) return { kind: "clickup" };
     if (u.includes("youtube.com") || u.includes("youtu.be")) return { kind: "youtube" };
     return { kind: "other" };
   };
@@ -12197,7 +12127,7 @@ function CheshirePanel({ tasks, customViews, terrenos, customSpaces, allSpaces, 
     { area: "Tareas", capability: "Archivar tarea (vs eliminar)", status: "implemented", severity: null, note: "Field 'archived' boolean · handler archiveTask · v42" },
     { area: "Tareas", capability: "Convertir subtarea en tarea principal", status: "implemented", severity: null, note: "Botón ↶ promover · v41" },
     { area: "Tareas", capability: "Bulk edit (priority/space/assignee)", status: "implemented", severity: null, note: "Bulk delete y move (Inbox) · bulk priority/assignee es nice-to-have · selección múltiple ya funciona, las acciones pueden hacerse de a una rápido" },
-    { area: "Tareas", capability: "Recurrencia / repetición", status: "wontfix-mvp", severity: "minor", fix: "Necesita librería rrule (~50KB) + cron renderer + estado server-side · ClickUp ya maneja recurrencia bien, este es un caso para mantener en ClickUp" },
+    { area: "Tareas", capability: "Recurrencia / repetición", status: "wontfix-mvp", severity: "minor", fix: "Necesita librería rrule (~50KB) + cron renderer + estado server-side" },
 
     // ─── CUSTOM VIEWS ───
     { area: "Custom Views", capability: "Crear custom view", status: "implemented", severity: null, note: "Botón + en tabs · modal con 5 tipos" },
@@ -13606,7 +13536,7 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
   const confirm = useConfirm();
   const askReset = async (kind, action) => {
     const labels = {
-      tasks: { title: "Resetear todas las tareas", message: "Volver al estado de ClickUp.\n\nEsto BORRARÁ todos los cambios locales (comentarios, attachments, etc).", confirmLabel: "Resetear tareas" },
+      tasks: { title: "Resetear todas las tareas", message: "Esto BORRARÁ todos los cambios locales (comentarios, attachments, etc).", confirmLabel: "Resetear tareas" },
       views: { title: "Resetear custom views", message: "Esto BORRARÁ los views que hayas creado manualmente y restaurará los embeds de Drive y Miro.", confirmLabel: "Resetear views" },
       terrenos: { title: "Resetear terrenos", message: "Volver a los 6 originales.\n\nEsto BORRARÁ terrenos que hayas agregado manualmente.", confirmLabel: "Resetear terrenos" },
     };
@@ -13616,9 +13546,9 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
   return (
     <div className="space-y-5">
       <div>
-        <Eyebrow>Sincronización · ClickUp + Drive + Miro</Eyebrow>
+        <Eyebrow>Sincronización</Eyebrow>
         <div className="text-[11px] mt-2" style={{ color: C.muted, lineHeight: 1.55 }}>
-          ALICE viene pre-poblado con datos importados desde tu workspace de ClickUp (Hygge x BAM), tus carpetas de Google Drive y placeholders de Miro por proyecto. Si modificaste cosas y querés volver al estado importado, usá los botones de reset.
+          Si modificaste cosas y querés volver al estado inicial, usá los botones de reset.
         </div>
       </div>
 
@@ -13626,7 +13556,7 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[12px]" style={{ color: C.ink, fontWeight: 600 }}>Tareas</div>
-            <div className="text-[10px] mt-0.5" style={{ color: C.muted }}>Actualmente: {taskCount} · Seed ClickUp: 52 tareas</div>
+            <div className="text-[10px] mt-0.5" style={{ color: C.muted }}>Actualmente: {taskCount}</div>
           </div>
           <button onClick={() => askReset("tasks", onResetTasks)} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.brick, border: `1px solid ${C.brick}55`, borderRadius: 2, fontWeight: 500 }}>
             Resetear tareas
@@ -13672,7 +13602,7 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
       </div>
 
       <div className="text-[10px] italic" style={{ color: C.muted }}>
-        Cada tarea tiene un link a ClickUp en su descripción. Para cambiar la URL de un Miro, andá al proyecto, hacé clic en la pestaña "Miro · …" y edítala desde el ícono de configuración.
+        Para cambiar la URL de un Miro, andá al proyecto, hacé clic en la pestaña "Miro · …" y edítala desde el ícono de configuración.
       </div>
     </div>
   );

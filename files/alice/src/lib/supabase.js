@@ -80,8 +80,6 @@ function toRow(t) {
     activity: t.activity ?? [],
     recurring: t.recurring ?? null,
     recurring_parent_id: t.recurringParentId ?? null,
-    clickup_id: t.clickupId ?? null,
-    clickup_url: t.clickupUrl ?? null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -113,8 +111,6 @@ function fromRow(r) {
     activity: r.activity ?? [],
     recurring: r.recurring,
     recurringParentId: r.recurring_parent_id,
-    clickupId: r.clickup_id,
-    clickupUrl: r.clickup_url,
   };
 }
 
