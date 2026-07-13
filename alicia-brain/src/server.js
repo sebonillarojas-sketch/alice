@@ -380,7 +380,7 @@ app.post("/webhook/twilio", async (req, res) => {
         const id = Math.random().toString(36).slice(2);
         ttsCache.set(id, audioBuf);
         setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
-        const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.mp3`;
+        const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`;
         res.set("Content-Type", "text/xml").send(`<Response><Message><Media>${audioUrl}</Media></Message></Response>`);
         return;
       } catch (ttsErr) {
@@ -433,7 +433,7 @@ async function generateSpeech(text, voice = "diana") {
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "canopylabs/orpheus-v1-english", input: limited, voice: safeVoice, response_format: "mp3" }),
+    body: JSON.stringify({ model: "canopylabs/orpheus-v1-english", input: limited, voice: safeVoice, response_format: "wav" }),
   });
   if (!res.ok) throw new Error(`Groq TTS error: ${await res.text()}`);
   return Buffer.from(await res.arrayBuffer());
@@ -444,7 +444,7 @@ app.post("/api/tts", async (req, res) => {
   if (!text) return res.status(400).json({ error: "No text" });
   try {
     const buf = await generateSpeech(text, voice);
-    res.set("Content-Type", "audio/mpeg").send(buf);
+    res.set("Content-Type", "audio/wav").send(buf);
   } catch (e) {
     console.error("TTS error:", e.message);
     res.status(500).json({ error: e.message });
@@ -452,10 +452,10 @@ app.post("/api/tts", async (req, res) => {
 });
 
 // Serve cached TTS audio for Twilio (needs public URL)
-app.get("/tts/:id.mp3", (req, res) => {
+app.get("/tts/:id.wav", (req, res) => {
   const buf = ttsCache.get(req.params.id);
   if (!buf) return res.status(404).send("Not found");
-  res.set("Content-Type", "audio/mpeg").send(buf);
+  res.set("Content-Type", "audio/wav").send(buf);
 });
 
 function escapeXml(str) {
