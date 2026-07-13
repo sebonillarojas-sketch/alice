@@ -65,6 +65,23 @@ export const dropbox = {
   deleteFolder: async (path) => {
     return dbxFetch("/files/delete_v2", { path });
   },
+
+  uploadFile: async (path, content) => {
+    const res = await fetch("https://content.dropboxapi.com/2/files/upload", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", autorename: false, mute: true }),
+        "Content-Type": "application/octet-stream",
+      },
+      body: Buffer.from(content, "utf8"),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Dropbox upload error ${res.status}: ${err.error_summary || JSON.stringify(err)}`);
+    }
+    return res.json();
+  },
 };
 
 export const dropboxAvailable = () => !!ACCESS_TOKEN;

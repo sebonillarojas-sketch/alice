@@ -901,6 +901,16 @@ app.patch("/api/agents/findings/:id", requireAgentKey, (req, res) => {
   }
 });
 
+// ── Cerebro → Dropbox · export on demand ──────────────────────────────────────
+
+app.post("/api/brain/export", async (req, res) => {
+  try {
+    const { exportBrainToDropbox } = await import("./brainsync.js");
+    const result = await exportBrainToDropbox();
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Calendario integral del equipo (para el ERP) ──────────────────────────────
 
 app.get("/api/calendar/team", async (req, res) => {

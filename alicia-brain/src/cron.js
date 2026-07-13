@@ -23,5 +23,12 @@ export function startCron() {
     await runTeaTableReport({ notify: true }).catch(e => console.error("Tea Table error:", e.message));
   }, { timezone: "America/Lima" });
 
-  console.log("⏰ Cron activo · briefing 7:00am + market refresh cada hora + Tea Table lunes 7:30am");
+  // Cerebro → Dropbox · espejo nocturno 3:30am Lima
+  cron.schedule("30 3 * * *", async () => {
+    console.log("🧠 Cron: export cerebro a Dropbox");
+    const { exportBrainToDropbox } = await import("./brainsync.js");
+    await exportBrainToDropbox().catch(e => console.error("Brain export error:", e.message));
+  }, { timezone: "America/Lima" });
+
+  console.log("⏰ Cron activo · briefing 7:00am + market refresh + Tea Table lunes 7:30 + cerebro→Dropbox 3:30am");
 }
