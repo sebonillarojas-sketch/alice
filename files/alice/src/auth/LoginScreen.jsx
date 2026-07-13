@@ -8,20 +8,18 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
     setError("");
-    // Pequeño delay para feedback visual de submit
-    setTimeout(() => {
-      const result = login(username, password);
-      if (!result.ok) {
-        setError(result.error);
-        setSubmitting(false);
-      }
-      // Si ok, el AuthProvider cambia user → App muestra HyggeOS
-    }, 200);
+    // login es async — antes no se esperaba y el error de clave incorrecta nunca se mostraba
+    const result = await login(username, password);
+    if (!result.ok) {
+      setError(result.error);
+      setSubmitting(false);
+    }
+    // Si ok, el AuthProvider cambia user → App muestra HyggeOS
   };
 
   return (
@@ -37,7 +35,7 @@ export default function LoginScreen() {
             ALICE
           </div>
           <div style={{ fontSize: 11, color: "#6B6863", marginTop: 8, fontStyle: "italic", letterSpacing: "0.02em" }}>
-            Cockpit ejecutivo · ingresá con tu usuario
+            Cockpit ejecutivo · ingresá con tu correo
           </div>
         </div>
 
@@ -52,14 +50,15 @@ export default function LoginScreen() {
           <div className="mb-5">
             <label className="block">
               <span style={{ fontSize: 9, color: "#6B6863", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700, display: "block", marginBottom: 6 }}>
-                Usuario
+                Correo
               </span>
               <input
-                type="text"
+                type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
-                autoComplete="username"
+                placeholder="nombre@hygge.pe"
+                autoComplete="email"
                 className="w-full px-3 py-2.5 outline-none transition-colors focus:border-black"
                 style={{
                   backgroundColor: "#EEEBE3",

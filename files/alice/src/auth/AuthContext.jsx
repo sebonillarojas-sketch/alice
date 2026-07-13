@@ -59,13 +59,14 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = useCallback(async (username, password) => {
-    const trimmed = (username || "").trim().toLowerCase();
-    const email = USERNAME_TO_EMAIL[trimmed];
-    if (!email) return { ok: false, error: "Usuario o contraseña incorrectos" };
+  const login = useCallback(async (identifier, password) => {
+    const trimmed = (identifier || "").trim().toLowerCase();
+    // Login por CORREO (decisión 13 jul 2026). El username viejo sigue funcionando como fallback.
+    const email = trimmed.includes("@") ? trimmed : USERNAME_TO_EMAIL[trimmed];
+    if (!email) return { ok: false, error: "Correo o contraseña incorrectos" };
 
     const { error } = await supabase.auth.signInWithPassword({ email, password: (password || "").trim() });
-    if (error) return { ok: false, error: "Usuario o contraseña incorrectos" };
+    if (error) return { ok: false, error: "Correo o contraseña incorrectos" };
     return { ok: true };
   }, []);
 
