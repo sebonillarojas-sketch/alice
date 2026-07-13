@@ -255,12 +255,12 @@
       <div id="hablar-status" style="font-size:22px;font-weight:700;letter-spacing:-0.01em">Hola, Sebastián</div>
       <div id="hablar-sub" style="font-size:13px;color:var(--muted);margin-top:6px">Tocá el blob y hablá · te respondo con voz</div>
       <select id="voice-select" onchange="localStorage.setItem('alicia_voice', this.value)" style="margin-top:12px;width:auto;padding:6px 12px;font-size:12px">
-        <option value="diana">Diana — cálida</option>
-        <option value="autumn">Autumn — natural</option>
-        <option value="hannah">Hannah — clara</option>
-        <option value="austin">Austin — masculina</option>
-        <option value="daniel">Daniel — masculina</option>
-        <option value="troy">Troy — masculina</option>
+        <option value="nova">Nova — femenina cálida</option>
+        <option value="shimmer">Shimmer — femenina suave</option>
+        <option value="alloy">Alloy — neutral</option>
+        <option value="fable">Fable — expresiva</option>
+        <option value="echo">Echo — masculina clara</option>
+        <option value="onyx">Onyx — masculina profunda</option>
       </select>
     </div>
     <div id="hablar-exchange" style="max-width:560px;width:100%;display:none;flex-direction:column;gap:8px;max-height:32vh;overflow-y:auto">
@@ -829,7 +829,7 @@ async function hablarSend(text) {
     const clean = reply.replace(/[*_`#]/g, '').slice(0, 1900);
     const tts = await fetch('/api/tts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: clean, voice: localStorage.getItem('alicia_voice') || 'diana' }),
+      body: JSON.stringify({ text: clean, voice: localStorage.getItem('alicia_voice') || 'nova' }),
     });
     if (tts.ok) {
       const url = URL.createObjectURL(await tts.blob());
@@ -1035,7 +1035,7 @@ async function deleteResource(id) {
 }
 
 // init selector de voz
-document.getElementById('voice-select').value = localStorage.getItem('alicia_voice') || 'diana';
+(() => { const VV = ['nova','shimmer','alloy','fable','echo','onyx']; let v = localStorage.getItem('alicia_voice'); if (!VV.includes(v)) { v = 'nova'; localStorage.setItem('alicia_voice', v); } document.getElementById('voice-select').value = v; })();
 
 </script>
 </body>

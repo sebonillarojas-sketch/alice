@@ -661,8 +661,10 @@ const ALLOWED_VOICES = new Set([
   "autumn","diana","hannah",  // femeninas
   "austin","daniel","troy",   // masculinas
 ]);
-// Mapeo voces Groq (orpheus) → voces OpenAI (tts-1)
-const OPENAI_VOICE = { diana:"nova", autumn:"shimmer", hannah:"alloy", austin:"onyx", daniel:"echo", troy:"fable" };
+// Voces nativas de OpenAI (tts-1) + mapeo de los nombres viejos de Groq (compat)
+const OPENAI_VOICES = new Set(["alloy","echo","fable","onyx","nova","shimmer"]);
+const OPENAI_VOICE_MAP = { diana:"nova", autumn:"shimmer", hannah:"alloy", austin:"onyx", daniel:"echo", troy:"fable" };
+const toOpenAIVoice = (v) => OPENAI_VOICES.has(v) ? v : (OPENAI_VOICE_MAP[v] || "nova");
 
 const trimSpeech = (text, cap) => {
   let limited = text.slice(0, cap);
@@ -674,7 +676,7 @@ async function ttsOpenAI(text, voice) {
   const res = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "tts-1", input: trimSpeech(text, 3800), voice: OPENAI_VOICE[voice] || "nova", response_format: "wav" }),
+    body: JSON.stringify({ model: "tts-1", input: trimSpeech(text, 3800), voice: toOpenAIVoice(voice), response_format: "wav" }),
   });
   if (!res.ok) throw new Error(`OpenAI TTS ${res.status}: ${(await res.text()).slice(0, 150)}`);
   return Buffer.from(await res.arrayBuffer());
