@@ -6,3 +6,5 @@ dist/
 *.db-wal
 .DS_Store
 .claude/
+ALICE-handoff-*.tar.gz
+handoff-memory/
