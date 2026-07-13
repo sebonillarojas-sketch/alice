@@ -692,7 +692,6 @@ function EquipoPanel({ profiles, currentUserId }) {
 // ── Panel Ajustes · fine-tune manual + skills enseñables (solo CEO) ───────────
 function AjustesPanel({ currentUserId }) {
   const [manual, setManual] = useState("");
-  const [sarcasm, setSarcasm] = useState(0);
   const [savedFlash, setSavedFlash] = useState(false);
   const [skills, setSkills] = useState([]);
   const [editing, setEditing] = useState(null); // {id?, name, description, content}
@@ -702,23 +701,17 @@ function AjustesPanel({ currentUserId }) {
   }, []);
 
   useEffect(() => {
-    fetch(`${BRAIN_BASE}/api/persona/${currentUserId}`).then(r => r.json()).then(d => { setManual(d.manual_instructions || ""); setSarcasm(d.sarcasm || 0); }).catch(() => {});
+    fetch(`${BRAIN_BASE}/api/persona/${currentUserId}`).then(r => r.json()).then(d => setManual(d.manual_instructions || "")).catch(() => {});
     loadSkills();
   }, [currentUserId, loadSkills]);
 
   const saveManual = async () => {
     await fetch(`${BRAIN_BASE}/api/persona/${currentUserId}`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ manual_instructions: manual, sarcasm }),
+      body: JSON.stringify({ manual_instructions: manual }),
     }).catch(() => {});
     setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2000);
   };
-
-  const sarcasmLabel = sarcasm <= 5 ? "Cero — profesional pura"
-    : sarcasm <= 30 ? "Ironía sutil"
-    : sarcasm <= 60 ? "Con chispa"
-    : sarcasm <= 85 ? "Filosa"
-    : "Modo Dark Alice 🖤";
 
   const saveSkill = async () => {
     if (!editing?.name || !editing?.description || !editing?.content) return;
@@ -751,21 +744,6 @@ function AjustesPanel({ currentUserId }) {
           <textarea value={manual} onChange={e => setManual(e.target.value)} rows={9}
             placeholder={"Ej:\n- Respuestas cortas, máximo 5 líneas salvo que pida detalle\n- Números siempre en tablas\n- Desafiame cuando veas un riesgo\n- Nada de emojis en temas financieros"}
             style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }} />
-
-          {/* Slider de sarcasmo */}
-          <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 3, border: `1px solid ${C.lineSoft}`, backgroundColor: C.bg }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ ...kicker }}>😏 Sarcasmo</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: sarcasm > 60 ? "#A85B5B" : sarcasm > 30 ? "#C2A45A" : C.inkSoft }}>{sarcasmLabel} · {sarcasm}</span>
-            </div>
-            <input type="range" min={0} max={100} step={5} value={sarcasm}
-              onChange={e => setSarcasm(Number(e.target.value))}
-              style={{ width: "100%", accentColor: sarcasm > 60 ? "#A85B5B" : sarcasm > 30 ? "#C2A45A" : "#3D52D5", cursor: "pointer" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginTop: 4 }}>
-              <span>Profesional</span><span>Chispa</span><span>Sin piedad</span>
-            </div>
-          </div>
-
           <button onClick={saveManual}
             style={{ marginTop: 10, padding: "8px 18px", borderRadius: 3, border: "none", backgroundColor: savedFlash ? "#5F8A6A" : C.ink, color: C.bg, fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}>
             {savedFlash ? "✓ Guardado — activo desde tu próximo mensaje" : "Guardar"}
