@@ -123,12 +123,69 @@ Alicia: "${assistantMsg.slice(0, 300)}"`
   }
 }
 
+// ── Persona por usuario · Alicia se adapta a cada persona ────────────────────
+
+function getPersona(userId) {
+  const { rows } = query("SELECT * FROM user_personas WHERE user_id = ?", [userId]);
+  return rows[0] || null;
+}
+
+async function refreshPersona(userId, currentMsgCount) {
+  const history = await getRecentMessages(userId, 40);
+  if (history.length < 10) return; // muy poca data para inferir estilo
+  const convo = history.map(m => `${m.role === "user" ? "Usuario" : "Alicia"}: ${m.content.slice(0, 200)}`).join("\n");
+  const resp = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 500,
+    messages: [{
+      role: "user",
+      content: `Analizá cómo se comunica este usuario con su asistente y qué necesita de ella.
+Respondé SOLO con JSON, sin markdown:
+{"style":"cómo hablarle: tono, largo de respuesta, formalidad (1 línea)","focus":"qué temas le importan y en qué contexto trabaja (1 línea)","preferences":"formatos y hábitos que prefiere: listas vs prosa, horarios, canal (1 línea)","avoid":"qué NO hacer con esta persona (1 línea)"}
+
+Conversación reciente:
+${convo.slice(0, 6000)}`
+    }],
+  });
+  const raw = resp.content[0].text.trim().replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+  const p = JSON.parse(raw);
+  query(
+    `INSERT INTO user_personas (user_id, style, focus, preferences, avoid, msg_count_at_update, updated_at)
+     VALUES (?,?,?,?,?,?,datetime('now'))
+     ON CONFLICT(user_id) DO UPDATE SET style=excluded.style, focus=excluded.focus,
+       preferences=excluded.preferences, avoid=excluded.avoid,
+       msg_count_at_update=excluded.msg_count_at_update, updated_at=datetime('now')`,
+    [userId, p.style || "", p.focus || "", p.preferences || "", p.avoid || "", currentMsgCount]
+  );
+  console.log(`🎭 [${userId}] persona actualizada`);
+}
+
+function maybeRefreshPersona(userId) {
+  try {
+    const { rows } = query("SELECT COUNT(*) AS c FROM messages WHERE user_id = ?", [userId]);
+    const count = rows[0]?.c || 0;
+    const persona = getPersona(userId);
+    if (!persona || count - (persona.msg_count_at_update || 0) >= 20) {
+      refreshPersona(userId, count).catch(e => console.warn("refreshPersona:", e.message));
+    }
+  } catch (e) { console.warn("maybeRefreshPersona:", e.message); }
+}
+
 // ── System prompt ─────────────────────────────────────────────────────────────
 
 const CEO_ID = "sb";
 
 function buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId) {
   const isCEO = userId === CEO_ID;
+  const persona = getPersona(userId);
+
+  const personaBlock = persona ? `
+## Cómo tratás a ${profile?.name?.split(" ")[0] || "esta persona"} (aprendido de sus conversaciones)
+- Estilo: ${persona.style}
+- Le importa: ${persona.focus}
+- Prefiere: ${persona.preferences}
+- Evitá: ${persona.avoid}
+Ajustá tu tono y formato a esto — cada persona tiene SU Alicia.` : "";
 
   const team = allProfiles.map(p =>
     `• ${p.name} (${p.user_id}) — ${p.role} · Proyectos: ${(p.projects || []).join(", ")}`
@@ -191,7 +248,7 @@ ${team}
 - TG01: De la Torre — en desarrollo
 - L36: Larco 1036 — rooftop lounge
 - Legendre: adquisición en proceso
-${profileBlock}${memBlock}${knowledgeBlock}
+${profileBlock}${personaBlock}${memBlock}${knowledgeBlock}
 
 ## Herramientas disponibles
 Tenés acceso al ERP (tareas), Google Calendar, Gmail, Dropbox, Zoom, y búsqueda web.
@@ -303,8 +360,9 @@ async function processAliciaMessage(userId, userText, channel = "app") {
   await saveMessage(userId, "user", userText, channel);
   const msgId = await saveMessage(userId, "assistant", finalText, channel, toolResults);
 
-  // Extraer memorias en background
+  // Extraer memorias + actualizar persona en background
   extractAndSaveMemories(userId, userText, finalText, msgId).catch(() => {});
+  maybeRefreshPersona(userId);
 
   return { text: finalText, actions: toolResults };
 }

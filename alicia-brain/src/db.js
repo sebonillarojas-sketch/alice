@@ -113,6 +113,15 @@ function initSchema(db) {
       value TEXT,
       updated_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS user_personas (
+      user_id TEXT PRIMARY KEY,
+      style TEXT,
+      focus TEXT,
+      preferences TEXT,
+      avoid TEXT,
+      msg_count_at_update INTEGER DEFAULT 0,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
   // Migración: DBs creadas antes de que agent_runs tuviera columna report
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
