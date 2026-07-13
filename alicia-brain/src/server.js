@@ -892,6 +892,14 @@ app.post("/api/agents/report", requireAgentKey, async (req, res) => {
   try {
     const { agent, result = "ok", summary = "", actions_taken = [], findings = [] } = req.body || {};
     if (!agent) return res.status(400).json({ error: "agent requerido" });
+    // Ciclo de vida: cada reporte es la verdad actual del agente → sus hallazgos abiertos
+    // previos se cierran y se reinsertan solo los que siguen vigentes. Evita findings
+    // fantasma (ej. el cert ya arreglado que Cheshire seguía reportando abierto).
+    query(
+      `UPDATE agent_findings SET status = 'auto-fixed', updated_at = datetime('now')
+       WHERE agent = ? AND status IN ('open','escalated')`,
+      [agent]
+    );
     const { lastID: runId } = query(
       `INSERT INTO agent_runs (agent, finished_at, result, summary, actions_taken) VALUES (?, datetime('now'), ?, ?, ?)`,
       [agent, result, summary, JSON.stringify(actions_taken)]
