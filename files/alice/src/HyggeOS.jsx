@@ -11432,7 +11432,269 @@ function TTSeal({ id, size = 44, active = false }) {
   return null;
 }
 
+// ═══ TEA TABLE · SYSTEM DASHBOARD ═══════════════════════════════════════════
+// Reporte exhaustivo del estado del sistema · datos reales de /api/agents/*
+
+const TT_SYS_AGENTS = [
+  { id: "white-rabbit", name: "White Rabbit", emoji: "🐰", accent: "#5F8A6A", role: "Médico de guardia · infraestructura" },
+  { id: "cheshire", name: "Cheshire", emoji: "😺", accent: "#A89BD9", role: "Tester E2E · usabilidad y bugs" },
+  { id: "bandersnatch", name: "Bandersnatch", emoji: "⚔️", accent: "#A85B5B", role: "Chaos tester · saturación" },
+  { id: "mad-hatter", name: "Mad Hatter", emoji: "🎩", accent: "#3D52D5", role: "Performance · costos" },
+  { id: "jabberwocky", name: "Jabberwocky", emoji: "⚡", accent: "#C2A45A", role: "Fuzzer · inputs adversariales" },
+  { id: "dark-alice", name: "Dark Alice", emoji: "🖤", accent: "#0A0B0F", role: "Jefa de operaciones" },
+];
+const TT_SEV = {
+  critical: { label: "Crítico", color: "#A85B5B", icon: "▲" },
+  major: { label: "Mayor", color: "#C2A45A", icon: "◆" },
+  minor: { label: "Menor", color: "#8C8F96", icon: "●" },
+  info: { label: "Info", color: "#B8C8E5", icon: "○" },
+};
+const TT_RESULT = {
+  ok: { label: "OK", color: "#5F8A6A" },
+  issues: { label: "Con hallazgos", color: "#C2A45A" },
+  error: { label: "Error", color: "#A85B5B" },
+};
+
+function ttRelTime(iso) {
+  if (!iso) return "nunca";
+  const d = new Date(iso.replace(" ", "T") + (iso.includes("Z") ? "" : "Z"));
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (isNaN(mins)) return iso;
+  if (mins < 1) return "ahora";
+  if (mins < 60) return `hace ${mins} min`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `hace ${h}h`;
+  return `hace ${Math.floor(h / 24)}d`;
+}
+
+// Markdown mínimo para el reporte de la mesa
+function TTMarkdown({ text }) {
+  const boldify = (s) => s.split(/\*\*(.+?)\*\*/g).map((seg, j) => j % 2 ? <strong key={j} style={{ fontWeight: 700 }}>{seg}</strong> : seg);
+  return (
+    <div>
+      {(text || "").split("\n").map((l, i) => {
+        if (l.startsWith("# ")) return <div key={i} style={{ fontSize: 16, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em", margin: "4px 0 6px" }}>{l.slice(2)}</div>;
+        if (l.startsWith("## ")) return <div key={i} style={{ fontSize: 10, fontWeight: 700, color: C.inkSoft, letterSpacing: "0.12em", textTransform: "uppercase", margin: "16px 0 5px" }}>{l.slice(3)}</div>;
+        if (/^\s*-{3,}\s*$/.test(l)) return <div key={i} style={{ height: 1, backgroundColor: C.lineSoft, margin: "10px 0" }} />;
+        if (l.trim().startsWith("|")) return <div key={i} style={{ fontFamily: "ui-monospace, monospace", fontSize: 10.5, color: C.inkSoft, whiteSpace: "pre", overflowX: "auto", lineHeight: 1.7 }}>{l}</div>;
+        if (/^\s*[-•*]\s/.test(l)) return <div key={i} style={{ fontSize: 12.5, lineHeight: 1.6, color: C.ink, paddingLeft: 14, textIndent: -8 }}>· {boldify(l.replace(/^\s*[-•*]\s/, ""))}</div>;
+        if (!l.trim()) return <div key={i} style={{ height: 6 }} />;
+        return <div key={i} style={{ fontSize: 12.5, lineHeight: 1.6, color: C.ink }}>{boldify(l)}</div>;
+      })}
+    </div>
+  );
+}
+
+// Sparkline de corridas · 14 días · un agente (una sola serie, hue del agente)
+function TTSparkline({ activity, agentId, accent }) {
+  const days = useMemo(() => {
+    const out = [];
+    for (let i = 13; i >= 0; i--) {
+      const day = new Date(Date.now() - i * 86400000);
+      const key = day.toISOString().slice(0, 10);
+      const runs = (activity || []).filter(r => r.agent === agentId && (r.created_at || "").startsWith(key));
+      out.push({ key, label: day.toLocaleDateString("es-PE", { day: "numeric", month: "short" }), count: runs.length, bad: runs.some(r => r.result === "error") });
+    }
+    return out;
+  }, [activity, agentId]);
+  const max = Math.max(1, ...days.map(d => d.count));
+  const W = 14 * 7 - 2, H = 26;
+  return (
+    <svg width={W} height={H} role="img" aria-label={`Corridas últimos 14 días`}>
+      {days.map((d, i) => {
+        const h = d.count === 0 ? 2 : Math.max(4, Math.round((d.count / max) * (H - 4)));
+        return (
+          <rect key={d.key} x={i * 7} y={H - h} width={5} height={h} rx={d.count === 0 ? 1 : 2}
+            fill={d.count === 0 ? C.lineSoft : d.bad ? "#A85B5B" : accent} opacity={d.count === 0 ? 1 : 0.9}>
+            <title>{`${d.label} · ${d.count} corrida${d.count === 1 ? "" : "s"}${d.bad ? " · con error" : ""}`}</title>
+          </rect>
+        );
+      })}
+    </svg>
+  );
+}
+
+function TeaTableSystemPanel() {
+  const [status, setStatus] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [reportIdx, setReportIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [convening, setConvening] = useState(false);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [s, r] = await Promise.all([
+        fetch(`${ALICIA_BRAIN_URL}/api/agents/status`).then(x => x.json()),
+        fetch(`${ALICIA_BRAIN_URL}/api/agents/tea-table/reports?limit=10`).then(x => x.json()),
+      ]);
+      setStatus(s); setReports(Array.isArray(r) ? r : []); setReportIdx(0); setError(null);
+    } catch (e) { setError(e.message); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const convene = async () => {
+    setConvening(true); setError(null);
+    try {
+      const res = await fetch(`${ALICIA_BRAIN_URL}/api/agents/tea-table/run`, { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error || "Falló la sesión");
+      await load();
+    } catch (e) { setError(e.message); }
+    setConvening(false);
+  };
+
+  const findings = status?.findings || [];
+  const resolved = status?.resolved || [];
+  const sevCounts = ["critical", "major", "minor", "info"].map(s => ({ sev: s, count: findings.filter(f => f.severity === s).length }));
+  const maxSev = Math.max(1, ...sevCounts.map(s => s.count));
+  const lastByAgent = Object.fromEntries((status?.agents || []).map(a => [a.agent, a]));
+  const overall = findings.some(f => f.severity === "critical") ? { label: "Crítico", color: "#A85B5B" }
+    : findings.some(f => f.severity === "major") || (status?.agents || []).some(a => a.result === "error") ? { label: "Atención", color: "#C2A45A" }
+    : { label: "Operativo", color: "#5F8A6A" };
+  const currentReport = reports[reportIdx];
+
+  const card = { backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 3, padding: "14px 16px" };
+  const kicker = { fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 };
+
+  if (loading) return <div className="flex items-center gap-2 py-10 justify-center" style={{ color: C.muted, fontSize: 12 }}><Loader2 size={14} className="animate-spin" /> Sirviendo el té...</div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto pr-1 pb-6">
+      {/* Fila de veredicto + acción */}
+      <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        <div style={card}>
+          <div style={kicker}>Estado general</div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span style={{ width: 9, height: 9, borderRadius: 999, backgroundColor: overall.color, display: "inline-block" }} />
+            <span style={{ fontSize: 19, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em" }}>{overall.label}</span>
+          </div>
+          {status?.quarantine && <div style={{ fontSize: 10, color: "#A85B5B", fontWeight: 700, marginTop: 3 }}>⛔ CUARENTENA ACTIVA</div>}
+        </div>
+        <div style={card}>
+          <div style={kicker}>Hallazgos abiertos</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: findings.length > 0 ? C.ink : C.muted, marginTop: 5 }}>{findings.length}</div>
+        </div>
+        <div style={card}>
+          <div style={kicker}>Resueltos · 7 días</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: C.ink, marginTop: 5 }}>{resolved.length}</div>
+        </div>
+        <div style={card}>
+          <div style={kicker}>Última sesión de la mesa</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 7 }}>{reports[0] ? ttRelTime(reports[0].created_at) : "sin sesiones"}</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>Automática: lunes 7:30am</div>
+        </div>
+      </div>
+
+      {error && <div className="mb-3 px-3 py-2" style={{ backgroundColor: "#A85B5B15", border: "1px solid #A85B5B40", borderRadius: 3, fontSize: 11.5, color: "#A85B5B" }}>{error}</div>}
+
+      <button onClick={convene} disabled={convening} className="w-full flex items-center justify-center gap-2 py-3 mb-4 transition-all disabled:opacity-60"
+        style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 3, fontSize: 11, letterSpacing: "0.14em", fontWeight: 700, textTransform: "uppercase" }}>
+        {convening ? <><Loader2 size={13} className="animate-spin" /> La mesa está en sesión · sintetizando...</> : <>🫖 Convocar la mesa · reporte ahora</>}
+      </button>
+
+      {/* Agentes */}
+      <div style={kicker} className="mb-2">Los agentes</div>
+      <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
+        {TT_SYS_AGENTS.map(a => {
+          const run = lastByAgent[a.id];
+          const res = run ? (TT_RESULT[run.result] || TT_RESULT.ok) : null;
+          const agentFindings = findings.filter(f => f.agent === a.id);
+          return (
+            <div key={a.id} style={{ ...card, borderTop: `2px solid ${a.accent}` }}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{a.emoji} {a.name}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{a.role}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2.5">
+                {res ? (
+                  <>
+                    <span style={{ width: 7, height: 7, borderRadius: 999, backgroundColor: res.color, display: "inline-block" }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.inkSoft }}>{res.label}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>· {ttRelTime(run.created_at)}</span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 11, color: C.mutedSoft, fontStyle: "italic" }}>Sin actividad · esperando liberación</span>
+                )}
+              </div>
+              {run?.summary && <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4, lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{run.summary}</div>}
+              <div className="mt-2.5"><TTSparkline activity={status?.activity} agentId={a.id} accent={a.accent} /></div>
+              {agentFindings.length > 0 && (
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {["critical", "major", "minor"].map(s => {
+                    const n = agentFindings.filter(f => f.severity === s).length;
+                    if (!n) return null;
+                    const sv = TT_SEV[s];
+                    return <span key={s} style={{ fontSize: 9.5, fontWeight: 700, color: sv.color, border: `1px solid ${sv.color}50`, borderRadius: 2, padding: "1px 6px" }}>{sv.icon} {n} {sv.label.toLowerCase()}</span>;
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Hallazgos por severidad + lista */}
+      <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: "minmax(200px, 1fr) minmax(280px, 2fr)" }}>
+        <div style={card}>
+          <div style={kicker} className="mb-3">Abiertos por severidad</div>
+          {sevCounts.map(({ sev, count }) => {
+            const sv = TT_SEV[sev];
+            return (
+              <div key={sev} className="flex items-center gap-2 mb-2">
+                <span style={{ fontSize: 10, color: C.inkSoft, fontWeight: 600, width: 52 }}>{sv.label}</span>
+                <div className="flex-1" style={{ height: 10 }}>
+                  <div style={{ width: `${(count / maxSev) * 100}%`, minWidth: count > 0 ? 8 : 0, height: 10, backgroundColor: sv.color, borderRadius: "0 3px 3px 0", opacity: 0.9 }} title={`${sv.label}: ${count}`} />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: count > 0 ? C.ink : C.mutedSoft, width: 18, textAlign: "right" }}>{count}</span>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 9.5, color: C.mutedSoft, marginTop: 8 }}>Los críticos también llegan por WhatsApp al instante.</div>
+        </div>
+        <div style={{ ...card, maxHeight: 220, overflowY: "auto" }}>
+          <div style={kicker} className="mb-2">Hallazgos abiertos</div>
+          {findings.length === 0 && <div style={{ fontSize: 11.5, color: C.mutedSoft, fontStyle: "italic", padding: "12px 0" }}>Nada abierto. El reino duerme tranquilo.</div>}
+          {findings.map(f => {
+            const sv = TT_SEV[f.severity] || TT_SEV.info;
+            const ag = TT_SYS_AGENTS.find(a => a.id === f.agent);
+            return (
+              <div key={f.id} className="flex items-start gap-2 py-1.5" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                <span style={{ fontSize: 9, color: sv.color, marginTop: 3 }} title={sv.label}>{sv.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontSize: 11.5, color: C.ink, lineHeight: 1.45 }}>{f.detail}</div>
+                  <div style={{ fontSize: 9.5, color: C.muted, marginTop: 1 }}>{ag?.emoji || "🫖"} {ag?.name || f.agent} · {f.category} · {ttRelTime(f.created_at)}{f.status === "escalated" ? " · ESCALADO" : ""}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Reporte de la mesa */}
+      <div className="flex items-center justify-between mb-2">
+        <div style={kicker}>Reporte de la mesa</div>
+        {reports.length > 1 && (
+          <select value={reportIdx} onChange={e => setReportIdx(Number(e.target.value))}
+            style={{ fontSize: 10.5, padding: "3px 6px", border: `1px solid ${C.line}`, borderRadius: 2, backgroundColor: C.surface, color: C.inkSoft }}>
+            {reports.map((r, i) => <option key={r.id} value={i}>{new Date((r.created_at || "").replace(" ", "T") + "Z").toLocaleDateString("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</option>)}
+          </select>
+        )}
+      </div>
+      <div style={{ ...card, padding: "18px 20px" }}>
+        {currentReport
+          ? <TTMarkdown text={currentReport.report} />
+          : <div style={{ fontSize: 12, color: C.mutedSoft, fontStyle: "italic" }}>La mesa aún no sesionó. Convocala con el botón de arriba, o esperá al lunes 7:30am.</div>}
+      </div>
+    </div>
+  );
+}
+
 function TeaTableView({ agentStatus, setSubTab, tasks, terrenos, allSpaces, users, customViews, customSpaces, whiteboards, smartViews }) {
+  const [ttTab, setTtTab] = useState("sistema"); // sistema | consejo
   const [messages, setMessages] = useState([
     { id: 1, role: "dark-alice", content: "La mesa está servida. Preguntá lo que quieras — yo decido a quién convoco. O elegí directamente clickeando a uno de ellos.", timestamp: Date.now() },
   ]);
@@ -11588,12 +11850,27 @@ Respondé EN PERSONAJE, breve (2-3 oraciones), desde tu lente específica. NO te
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: 480 }}>
       {/* Header */}
-      <div className="mb-4">
-        <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Wonderland Council</div>
-        <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", color: C.ink, marginTop: 2 }}>The Tea Table</div>
-        <p style={{ fontSize: 12, color: C.muted, fontStyle: "italic", marginTop: 4 }}>Seis voces alrededor de una mesa. Dark Alice decide quién habla.</p>
+      <div className="mb-4 flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Wonderland Council</div>
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", color: C.ink, marginTop: 2 }}>The Tea Table</div>
+          <p style={{ fontSize: 12, color: C.muted, fontStyle: "italic", marginTop: 4 }}>
+            {ttTab === "sistema" ? "El estado del reino, servido en una mesa." : "Seis voces alrededor de una mesa. Dark Alice decide quién habla."}
+          </p>
+        </div>
+        <div className="flex gap-1">
+          {[["sistema", "📊 Sistema"], ["consejo", "🫖 Consejo"]].map(([id, label]) => (
+            <button key={id} onClick={() => setTtTab(id)} className="px-3 py-1.5 transition-all"
+              style={{ backgroundColor: ttTab === id ? C.ink : "transparent", color: ttTab === id ? C.bg : C.inkSoft, border: `1px solid ${ttTab === id ? C.ink : C.line}`, borderRadius: 2, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600, textTransform: "uppercase" }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {ttTab === "sistema" && <TeaTableSystemPanel />}
+
+      {ttTab === "consejo" && <>
       {/* Agent ring */}
       <div className="mb-4">
         <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>Mesa</div>
@@ -11704,6 +11981,7 @@ Respondé EN PERSONAJE, breve (2-3 oraciones), desde tu lente específica. NO te
           </button>
         </div>
       </div>
+      </>}
 
       <style>{`
         @keyframes tea-pulse {
