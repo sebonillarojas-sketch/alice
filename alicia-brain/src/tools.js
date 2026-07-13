@@ -191,6 +191,18 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "search_resources",
+    description: "Busca en la biblioteca de recursos del equipo: links, conectores, snippets de código y notas guardadas por Sebastián. Úsala cuando pidan un link, una credencial de servicio, un código o algo 'que está guardado'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Qué buscar (nombre o contenido)" },
+        type:  { type: "string", enum: ["link","connector","code","skill","nota"], description: "Filtrar por tipo (opcional)" },
+      },
+      required: ["query"],
+    },
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -316,6 +328,15 @@ export async function executeTool(toolName, input, userId) {
       );
       if (!rows.length) return `No encontré nada sobre "${input.topic}" en la base de conocimiento.`;
       return rows.map(r => `[${r.category}] ${r.topic} (${r.updated_at?.slice(0,10)})\n${r.content}`).join("\n\n");
+    }
+
+    case "search_resources": {
+      const params = [`%${input.query}%`, `%${input.query}%`];
+      let sql = `SELECT type, name, content, notes FROM resources WHERE (name LIKE ? OR content LIKE ?)`;
+      if (input.type) { sql += ` AND type = ?`; params.push(input.type); }
+      const { rows } = query(sql + ` LIMIT 10`, params);
+      if (!rows.length) return `No encontré recursos para "${input.query}".`;
+      return rows.map(r => `[${r.type}] ${r.name}\n${r.content}${r.notes ? `\nNota: ${r.notes}` : ""}`).join("\n\n");
     }
 
     case "use_skill": {

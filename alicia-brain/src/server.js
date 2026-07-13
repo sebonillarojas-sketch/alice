@@ -192,12 +192,19 @@ Ajustá tu tono y formato a esto — cada persona tiene SU Alicia.` : "";
 ${persona.manual_instructions}` : "";
 
   const sarcasmLevel = persona?.sarcasm || 0;
-  const sarcasmBlock = sarcasmLevel <= 5 ? "" : `
-## Nivel de sarcasmo: ${sarcasmLevel}/100
-${sarcasmLevel <= 30 ? "Ironía sutil y ocasional — un comentario seco de vez en cuando, sin que moleste."
-  : sarcasmLevel <= 60 ? "Sarcasmo presente: chispa, comentarios filosos cuando la situación lo amerita. Nunca a costa de la utilidad."
-  : sarcasmLevel <= 85 ? "Sarcástica y filosa. Comedia seca, observaciones punzantes sobre lo absurdo. La info sigue siendo precisa — el tono es lo que muerde."
-  : "Sarcasmo al máximo: humor negro corporativo, deadpan total, cero paciencia performativa. Igual hacés tu trabajo impecable — solo que con comentarios que dolerían si no fueran ciertos."}`;
+  const scale = (v, low, mid, high) => v <= 3 ? low : v <= 7 ? mid : high;
+  const characterBlock = !persona ? "" : `
+## ⚙️ CARÁCTER CONFIGURADO (dial actual — OBEDECELO aunque el historial de conversación muestre otro tono; el dial manda sobre cómo venías hablando)
+- Sarcasmo ${sarcasmLevel}/100: ${sarcasmLevel <= 5 ? "cero — profesional pura."
+    : sarcasmLevel <= 30 ? "ironía sutil y ocasional."
+    : sarcasmLevel <= 60 ? "sarcasmo presente EN CADA RESPUESTA: chispa, comentarios filosos. Nunca a costa de la utilidad."
+    : sarcasmLevel <= 85 ? "sarcástica y filosa EN CADA RESPUESTA. Comedia seca, observaciones punzantes. La info sigue precisa — el tono es lo que muerde."
+    : "sarcasmo al máximo EN CADA RESPUESTA: humor negro corporativo, deadpan total. El trabajo impecable; los comentarios, letales."}
+- Humor ${persona.humor ?? 5}/10: ${scale(persona.humor ?? 5, "serio, sin chistes.", "humor moderado cuando encaja.", "juguetona, buscá el remate.")}
+- Formalidad ${persona.formality ?? 5}/10: ${scale(persona.formality ?? 5, "coloquial total, como amigos.", "profesional cercana.", "formal y protocolar.")}
+- Proactividad ${persona.proactivity ?? 7}/10: ${scale(persona.proactivity ?? 7, "respondé solo lo que piden.", "sugerí lo obvio si aporta.", "anticipate: proponé siguientes pasos, señalá riesgos sin que te pregunten.")}
+- Longitud ${persona.length ?? 5}/10: ${scale(persona.length ?? 5, "telegráfica — lo mínimo indispensable.", "concisa con lo esencial.", "detallada y completa.")}
+- Emojis ${persona.emojis ?? 3}/10: ${scale(persona.emojis ?? 3, "ninguno.", "ocasionales, con criterio.", "generosa con emojis.")}`;
 
   let skillsBlock = "";
   try {
@@ -271,7 +278,7 @@ ${team}
 - TG01: De la Torre — en desarrollo
 - L36: Larco 1036 — rooftop lounge
 - Legendre: adquisición en proceso
-${profileBlock}${personaBlock}${manualBlock}${sarcasmBlock}${skillsBlock}${memBlock}${knowledgeBlock}
+${profileBlock}${personaBlock}${manualBlock}${characterBlock}${skillsBlock}${memBlock}${knowledgeBlock}
 
 ## Herramientas disponibles
 Tenés acceso al ERP (tareas), Google Calendar, Gmail, Dropbox, Zoom, y búsqueda web.
@@ -863,15 +870,47 @@ app.get("/api/persona/:userId", (req, res) => {
 
 app.put("/api/persona/:userId", (req, res) => {
   try {
-    const { manual_instructions, sarcasm } = req.body || {};
-    const sarcasmLevel = Math.max(0, Math.min(100, parseInt(sarcasm) || 0));
+    const b = req.body || {};
+    const clamp = (v, def, max = 10) => Math.max(0, Math.min(max, parseInt(v ?? def)));
     query(
-      `INSERT INTO user_personas (user_id, manual_instructions, sarcasm, updated_at) VALUES (?,?,?,datetime('now'))
-       ON CONFLICT(user_id) DO UPDATE SET manual_instructions=excluded.manual_instructions, sarcasm=excluded.sarcasm, updated_at=datetime('now')`,
-      [req.params.userId, manual_instructions || null, sarcasmLevel]
+      `INSERT INTO user_personas (user_id, manual_instructions, sarcasm, humor, formality, proactivity, length, emojis, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET
+         manual_instructions=excluded.manual_instructions, sarcasm=excluded.sarcasm,
+         humor=excluded.humor, formality=excluded.formality, proactivity=excluded.proactivity,
+         length=excluded.length, emojis=excluded.emojis, updated_at=datetime('now')`,
+      [req.params.userId, b.manual_instructions || null, clamp(b.sarcasm, 0, 100),
+       clamp(b.humor, 5), clamp(b.formality, 5), clamp(b.proactivity, 7), clamp(b.length, 5), clamp(b.emojis, 3)]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Recursos · links, conectores, código, notas ───────────────────────────────
+
+app.get("/api/resources", (req, res) => {
+  const { rows } = query("SELECT * FROM resources ORDER BY type, name");
+  res.json(rows);
+});
+
+app.post("/api/resources", (req, res) => {
+  try {
+    const { id, type, name, content, notes, created_by } = req.body || {};
+    if (!name || !content) return res.status(400).json({ error: "name y content requeridos" });
+    if (id) {
+      query(`UPDATE resources SET type=?, name=?, content=?, notes=?, updated_at=datetime('now') WHERE id=?`,
+        [type || "link", name, content, notes || null, id]);
+    } else {
+      query(`INSERT INTO resources (type, name, content, notes, created_by) VALUES (?,?,?,?,?)`,
+        [type || "link", name, content, notes || null, created_by || "sb"]);
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/resources/:id", (req, res) => {
+  query("DELETE FROM resources WHERE id = ?", [req.params.id]);
+  res.json({ ok: true });
 });
 
 // ── Insights de colaboradores · coaching para el CEO ──────────────────────────

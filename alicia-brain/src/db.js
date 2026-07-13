@@ -142,6 +142,21 @@ function initSchema(db) {
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN sarcasm INTEGER DEFAULT 0"); } catch {}
+  for (const col of ["humor INTEGER DEFAULT 5", "formality INTEGER DEFAULT 5", "proactivity INTEGER DEFAULT 7", "length INTEGER DEFAULT 5", "emojis INTEGER DEFAULT 3"]) {
+    try { db.exec(`ALTER TABLE user_personas ADD COLUMN ${col}`); } catch {}
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS resources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL DEFAULT 'link' CHECK (type IN ('link','connector','code','skill','nota')),
+      name TEXT NOT NULL,
+      content TEXT NOT NULL,
+      notes TEXT,
+      created_by TEXT DEFAULT 'sb',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
 }
 
 export function query(sql, params = []) {

@@ -183,6 +183,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     Knowledge
   </a>
+  <a href="#" onclick="showPage('recursos',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    Recursos
+  </a>
   <div class="nav-section">Config</div>
   <a href="#" onclick="showPage('config',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07"/><path d="M20.66 16.95A10 10 0 0 0 16.95 3.34"/></svg>
@@ -201,6 +205,14 @@
     <div style="text-align:center">
       <div id="hablar-status" style="font-size:22px;font-weight:700;letter-spacing:-0.01em">Hola, Sebastián</div>
       <div id="hablar-sub" style="font-size:13px;color:var(--muted);margin-top:6px">Tocá el blob y hablá · te respondo con voz</div>
+      <select id="voice-select" onchange="localStorage.setItem('alicia_voice', this.value)" style="margin-top:12px;width:auto;padding:6px 12px;font-size:12px">
+        <option value="diana">Diana — cálida</option>
+        <option value="autumn">Autumn — natural</option>
+        <option value="hannah">Hannah — clara</option>
+        <option value="austin">Austin — masculina</option>
+        <option value="daniel">Daniel — masculina</option>
+        <option value="troy">Troy — masculina</option>
+      </select>
     </div>
     <div id="hablar-exchange" style="max-width:560px;width:100%;display:none;flex-direction:column;gap:8px;max-height:32vh;overflow-y:auto">
       <div id="hablar-user" style="align-self:flex-end;padding:8px 14px;border-radius:12px 12px 2px 12px;background:var(--cobalt);color:#fff;font-size:13px;max-width:85%"></div>
@@ -250,6 +262,21 @@
         <input type="range" id="sl-sarcasm" min="0" max="100" step="5" value="0" oninput="updateSarcasmLabel(this.value)">
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Profesional</span><span>Chispa</span><span>Sin piedad</span></div>
       </div>
+      <div class="control-row"><div class="control-label">Humor <span id="val-humor">5</span>/10</div>
+        <input type="range" id="sl-humor" min="0" max="10" value="5" oninput="document.getElementById('val-humor').textContent=this.value">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Seria</span><span>Juguetona</span></div></div>
+      <div class="control-row"><div class="control-label">Formalidad <span id="val-formal">5</span>/10</div>
+        <input type="range" id="sl-formal" min="0" max="10" value="5" oninput="document.getElementById('val-formal').textContent=this.value">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Coloquial</span><span>Protocolar</span></div></div>
+      <div class="control-row"><div class="control-label">Proactividad <span id="val-pro">7</span>/10</div>
+        <input type="range" id="sl-pro" min="0" max="10" value="7" oninput="document.getElementById('val-pro').textContent=this.value">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Reactiva</span><span>Anticipa todo</span></div></div>
+      <div class="control-row"><div class="control-label">Longitud <span id="val-len">5</span>/10</div>
+        <input type="range" id="sl-len" min="0" max="10" value="5" oninput="document.getElementById('val-len').textContent=this.value">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Telegráfica</span><span>Detallada</span></div></div>
+      <div class="control-row"><div class="control-label">Emojis <span id="val-emoji">3</span>/10</div>
+        <input type="range" id="sl-emoji" min="0" max="10" value="3" oninput="document.getElementById('val-emoji').textContent=this.value">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Ninguno</span><span>Festival</span></div></div>
       <div class="actions">
         <button class="btn btn-primary" onclick="savePersonaReal()">Guardar</button>
         <span id="ft-saved" style="font-size:12px;color:var(--green);display:none">✓ Guardado — activo desde tu próximo mensaje</span>
@@ -320,6 +347,36 @@
   <div id="know-content"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
 </div>
 
+<!-- RECURSOS -->
+<div class="page" id="page-recursos">
+  <div class="eyebrow">Biblioteca</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+    <h2 style="margin:0">Recursos</h2>
+    <button class="btn btn-primary" onclick="newResource()">+ Nuevo recurso</button>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Links, conectores, snippets de código y notas. Alicia puede buscarlos cuando se los pidas ("pasame el link de...").</div>
+  <div class="user-select" id="res-filters"></div>
+  <div id="res-editor" style="display:none;margin-bottom:16px" class="card">
+    <div class="grid grid-2" style="margin-bottom:8px">
+      <select id="res-type">
+        <option value="link">🔗 Link</option>
+        <option value="connector">🔌 Conector / API</option>
+        <option value="code">⌨️ Código</option>
+        <option value="skill">🎓 Skill externa</option>
+        <option value="nota">📝 Nota</option>
+      </select>
+      <input type="text" id="res-name" placeholder="Nombre · ej: Dashboard Railway">
+    </div>
+    <textarea id="res-content" rows="5" placeholder="El contenido: URL, snippet, endpoint, instrucciones..." style="font-family:ui-monospace,monospace;font-size:12px;margin-bottom:8px"></textarea>
+    <input type="text" id="res-notes" placeholder="Notas opcionales" style="margin-bottom:8px">
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-primary" onclick="saveResource()">Guardar</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('res-editor').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+  <div id="res-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+</div>
+
 <!-- CONFIG -->
 <div class="page" id="page-config">
   <div class="eyebrow">Ajustes</div>
@@ -383,6 +440,7 @@ function showPage(name, el) {
   if (name === 'memorias') loadMemUsers();
   if (name === 'knowledge') loadKnowledge();
   if (name === 'personalidad') loadPersonaReal();
+  if (name === 'recursos') loadResources();
   if (name === 'config') loadConfig();
   return false;
 }
@@ -754,6 +812,8 @@ async function loadPersonaReal() {
     document.getElementById('ft-manual').value = d.manual_instructions || '';
     document.getElementById('sl-sarcasm').value = d.sarcasm || 0;
     updateSarcasmLabel(d.sarcasm || 0);
+    const dials = [['humor', d.humor ?? 5], ['formal', d.formality ?? 5], ['pro', d.proactivity ?? 7], ['len', d.length ?? 5], ['emoji', d.emojis ?? 3]];
+    for (const [k, v] of dials) { document.getElementById('sl-' + k).value = v; document.getElementById('val-' + k).textContent = v; }
   } catch {}
   loadSkillsReal();
 }
@@ -764,6 +824,11 @@ async function savePersonaReal() {
     body: JSON.stringify({
       manual_instructions: document.getElementById('ft-manual').value,
       sarcasm: +document.getElementById('sl-sarcasm').value,
+      humor: +document.getElementById('sl-humor').value,
+      formality: +document.getElementById('sl-formal').value,
+      proactivity: +document.getElementById('sl-pro').value,
+      length: +document.getElementById('sl-len').value,
+      emojis: +document.getElementById('sl-emoji').value,
     }),
   }).catch(() => {});
   const el = document.getElementById('ft-saved');
@@ -854,6 +919,74 @@ async function loadInsightsCached(uid) {
     if (d.report) renderInsights(uid, d.report);
   } catch {}
 }
+
+
+// ── RECURSOS ────────────────────────────────────────────────────────────────
+const RES_ICONS = { link: '🔗', connector: '🔌', code: '⌨️', skill: '🎓', nota: '📝' };
+let resFilter = 'todos', resCache = [];
+
+async function loadResources() {
+  try { resCache = await fetch('/api/resources').then(r => r.json()); } catch { resCache = []; }
+  const types = ['todos', ...new Set(resCache.map(r => r.type))];
+  document.getElementById('res-filters').innerHTML = types.map(t =>
+    `<div class="user-chip ${resFilter === t ? 'active' : ''}" onclick="resFilter='${t}';loadResources()">${t === 'todos' ? 'Todos' : (RES_ICONS[t] || '') + ' ' + t}</div>`).join('');
+  const items = resFilter === 'todos' ? resCache : resCache.filter(r => r.type === resFilter);
+  document.getElementById('res-list').innerHTML = !items.length
+    ? '<div style="font-size:12px;color:var(--muted);font-style:italic">Nada guardado todavía. Agregá tu primer recurso.</div>'
+    : items.map(r => `
+      <div style="padding:12px 14px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:var(--card)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;font-weight:600">${RES_ICONS[r.type] || ''} ${r.name}</div>
+            <div style="font-size:12px;color:var(--soft);font-family:${r.type === 'code' ? 'ui-monospace,monospace' : 'inherit'};margin-top:4px;white-space:pre-wrap;word-break:break-all;max-height:80px;overflow:hidden">${r.content.slice(0, 300)}</div>
+            ${r.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">${r.notes}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            ${r.type === 'link' ? `<a class="btn btn-ghost" style="font-size:11px;padding:4px 10px" href="${r.content.split('\n')[0]}" target="_blank">Abrir</a>` : ''}
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick='editResource(${JSON.stringify(r).replace(/'/g, "&#39;")})'>Editar</button>
+            <button class="btn btn-danger" style="font-size:11px;padding:4px 10px" onclick="deleteResource(${r.id})">×</button>
+          </div>
+        </div>
+      </div>`).join('');
+}
+
+let resEditId = null;
+function newResource() {
+  resEditId = null;
+  document.getElementById('res-type').value = 'link';
+  document.getElementById('res-name').value = '';
+  document.getElementById('res-content').value = '';
+  document.getElementById('res-notes').value = '';
+  document.getElementById('res-editor').style.display = 'block';
+}
+function editResource(r) {
+  resEditId = r.id;
+  document.getElementById('res-type').value = r.type;
+  document.getElementById('res-name').value = r.name;
+  document.getElementById('res-content').value = r.content;
+  document.getElementById('res-notes').value = r.notes || '';
+  document.getElementById('res-editor').style.display = 'block';
+}
+async function saveResource() {
+  const body = {
+    id: resEditId,
+    type: document.getElementById('res-type').value,
+    name: document.getElementById('res-name').value.trim(),
+    content: document.getElementById('res-content').value,
+    notes: document.getElementById('res-notes').value.trim(),
+  };
+  if (!body.name || !body.content) return;
+  await fetch('/api/resources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+  document.getElementById('res-editor').style.display = 'none';
+  loadResources();
+}
+async function deleteResource(id) {
+  await fetch('/api/resources/' + id, { method: 'DELETE' }).catch(() => {});
+  loadResources();
+}
+
+// init selector de voz
+document.getElementById('voice-select').value = localStorage.getItem('alicia_voice') || 'diana';
 
 </script>
 </body>
