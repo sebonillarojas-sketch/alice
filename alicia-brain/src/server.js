@@ -423,12 +423,12 @@ async function transcribeAudio(mediaUrl, mediaType) {
 const ttsCache = new Map(); // id → Buffer, cleaned up after 5 min
 
 const ALLOWED_VOICES = new Set([
-  "tara","leah","jess","mia","zoe",  // femeninas
-  "leo","dan","zac",                  // masculinas
+  "autumn","diana","hannah",  // femeninas
+  "austin","daniel","troy",   // masculinas
 ]);
 
-async function generateSpeech(text, voice = "leah") {
-  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "leah";
+async function generateSpeech(text, voice = "diana") {
+  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "diana";
   const limited = text.slice(0, 2000);
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
