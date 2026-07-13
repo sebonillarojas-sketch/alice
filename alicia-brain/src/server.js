@@ -553,7 +553,12 @@ const ALLOWED_VOICES = new Set([
 
 async function generateSpeech(text, voice = "diana") {
   const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "diana";
-  const limited = text.slice(0, 2000);
+  // Cuota Groq free = 3.600 tokens de voz/DÍA — cortamos en frase completa cerca de 600 chars
+  let limited = text.slice(0, 600);
+  if (text.length > 600) {
+    const lastDot = limited.lastIndexOf(". ");
+    if (lastDot > 200) limited = limited.slice(0, lastDot + 1);
+  }
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
