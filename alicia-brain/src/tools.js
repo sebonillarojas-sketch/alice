@@ -136,6 +136,16 @@ export const ALICIA_TOOLS = [
       },
     },
   },
+  {
+    name: "zoom_read_meeting",
+    description: "Lee la TRANSCRIPCIÓN completa de una reunión de Zoom grabada para resumirla, sacar action items o DAR TU OPINIÓN sobre lo que se dijo. Pasá el 'topic' (tema) de la reunión; si no lo pasás, toma la más reciente con transcripción.",
+    input_schema: {
+      type: "object",
+      properties: {
+        topic: { type: "string", description: "Tema/nombre de la reunión a leer (opcional; si se omite, la más reciente)" },
+      },
+    },
+  },
 
   // ── Dropbox ────────────────────────────────────────────────────────────────
   {
@@ -329,6 +339,18 @@ export async function executeTool(toolName, input, userId) {
       return recordings.map(r =>
         `🎥 "${r.topic}" — ${r.startTime?.slice(0,10)} · ${r.duration} min · ${r.recordingFiles?.length || 0} archivos`
       ).join("\n");
+    }
+    case "zoom_read_meeting": {
+      if (!zoomAvailable()) return "Zoom no configurado aún (falta ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET).";
+      const recs = await zoom.listRecordings({});
+      const withT = recs.filter(r => (r.recordingFiles || []).some(f => f.type === "TRANSCRIPT"));
+      if (!withT.length) return "No hay reuniones con transcripción disponible. Activá la transcripción automática (audio transcript) en la configuración de grabación de Zoom.";
+      const target = input.topic
+        ? (withT.find(r => r.topic?.toLowerCase().includes(input.topic.toLowerCase())) || withT[0])
+        : withT[0];
+      const tFile = target.recordingFiles.find(f => f.type === "TRANSCRIPT");
+      const transcript = await zoom.getTranscript(tFile.url);
+      return `Transcripción de "${target.topic}" (${target.startTime?.slice(0,10)}, ${target.duration} min):\n\n${transcript.slice(0, 6000)}`;
     }
 
     // ── Dropbox ───────────────────────────────────────────────────────────────

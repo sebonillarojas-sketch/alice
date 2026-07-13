@@ -53,7 +53,9 @@ export const zoom = {
       topic:        m.topic,
       startTime:    m.start_time,
       duration:     m.duration,
-      recordingFiles: (m.recording_files || []).filter(f => f.file_type === "TRANSCRIPT" || f.file_type === "MP4"),
+      recordingFiles: (m.recording_files || [])
+        .filter(f => f.file_type === "TRANSCRIPT" || f.file_type === "MP4")
+        .map(f => ({ type: f.file_type, url: f.download_url })),
     }));
   },
 
