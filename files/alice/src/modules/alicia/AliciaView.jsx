@@ -607,7 +607,9 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
   // Chequear backend al montar
   useEffect(() => {
-    fetch("http://localhost:3001/health", { signal: AbortSignal.timeout(3000) })
+    // OJO: antes pegaba a localhost hardcodeado → en prod nunca detectaba el backend y pedía API key
+    const base = import.meta.env.VITE_ALICIA_URL || "http://localhost:3001";
+    fetch(`${base}/health`, { signal: AbortSignal.timeout(5000) })
       .then(r => r.ok && setBackendAvailable(true))
       .catch(() => {});
   }, []);

@@ -722,13 +722,12 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
 
     try {
       const BRAIN_URL = "http://localhost:3001";
-      let res = await fetch(`${BRAIN_URL}/api/chat`, {
+      // /api/analyze: one-shot sin memoria — el shape viejo ({messages}) no era el de /api/chat
+      // ({userId, message}) así que siempre caía al fallback directo que pedía key en el browser.
+      let res = await fetch(`${BRAIN_URL}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: prompt }],
-          systemPrompt: "Sos Alicia, asistente ejecutiva de Hygge Holding. Experta en mercado inmobiliario limeño.",
-        }),
+        body: JSON.stringify({ prompt }),
       }).catch(() => null);
 
       if (!res || !res.ok) {
@@ -742,7 +741,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
       }
 
       const data = await res.json();
-      const text = data.content?.[0]?.text || data.choices?.[0]?.message?.content || data.message || "";
+      const text = data.text || data.content?.[0]?.text || data.choices?.[0]?.message?.content || data.message || "";
       setAnalysis(text);
     } catch (err) {
       setAnalysis(`Error al conectar con Alicia: ${err.message}`);

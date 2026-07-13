@@ -35,7 +35,7 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
 //   ⚠️ Deuda consciente (auditoría 13 jul): chat tiene userId falsificable (IDOR) y dropbox
 //   expone browse/delete sin auth. Fix real = ERP manda JWT de Supabase y acá se valida
 //   (sesión supercomputadora). No re-gatear sin resolver eso o se rompe el ERP.
-const PANEL_PUBLIC = ["/login", "/agents", "/calendar/team", "/market-refresh", "/market-import", "/market-data", "/chat", "/tts", "/dropbox"];
+const PANEL_PUBLIC = ["/login", "/agents", "/calendar/team", "/market-refresh", "/market-import", "/market-data", "/chat", "/tts", "/dropbox", "/analyze"];
 
 function signToken(exp) {
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(String(exp)).digest("base64url");
@@ -1266,6 +1266,24 @@ app.post("/api/market-refresh", async (req, res) => {
   res.json({ ok: true, status: "refresh_started" });
   // Run async so response returns immediately
   refreshMarketData().catch(e => console.error("market refresh error:", e.message));
+});
+
+// Análisis one-shot para el ERP (Velocity/Mercado, etc.): sin memoria, sin tools.
+// Existe para que el frontend NUNCA necesite una key de Anthropic en el browser.
+app.post("/api/analyze", async (req, res) => {
+  try {
+    const { prompt, system } = req.body || {};
+    if (!prompt || typeof prompt !== "string") return res.status(400).json({ error: "prompt requerido" });
+    const resp = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1200,
+      system: (system || "Sos Alicia, asistente ejecutiva de Hygge Holding. Experta en mercado inmobiliario limeño.").slice(0, 2000),
+      messages: [{ role: "user", content: String(prompt).slice(0, 20000) }],
+    });
+    res.json({ text: resp.content.find(b => b.type === "text")?.text || "" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/health", async (_, res) => {

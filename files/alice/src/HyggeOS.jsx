@@ -269,7 +269,6 @@ const DEFAULT_SPACES = [
       { id: "pu01", code: "PU01", name: "Paula Ugarriza" },
       { id: "tg01", code: "TG01", name: "De la Torre" },
       { id: "l36", code: "L36", name: "Larco 1036" },
-      { id: "legendre", code: "LEG", name: "Legendre" },
     ]},
   { id: "bam", code: "BM", name: "BAM · Arquitectura", count: 22, dot: "#A89BD9" },
   { id: "finanzas", code: "FZ", name: "Finanzas", count: 9, dot: "#1E2A4A" },
@@ -490,7 +489,6 @@ const SPACE_DROPBOX_PATHS = {
   "pu01":        "/Hygge/02_PROYECTOS/PU01_paula_ugarriza",
   "tg01":        "/Hygge/02_PROYECTOS/TG01_de_la_torre",
   "l36":         "/Hygge/02_PROYECTOS/L36_larco_1036",
-  "legendre":    "/Hygge/02_PROYECTOS/PU01_paula_ugarriza", // PU01 y Legendre son EL MISMO proyecto
 };
 // Carpetas de infra que NUNCA disparan el popup de "crear space" (00_INBOX es bandeja, 09_ALICE
 // es de Alicia, 10_CONTABILIDAD es archivo contable, _* = sistema por convención)
@@ -539,7 +537,7 @@ const _TD = (offset) => { const d = new Date(); d.setDate(d.getDate() + offset);
 const _ct = (id, title, space, checked, assignee, priority, parentId, cuId, due, descExtra = "") => ({
   id, parentId, title,
   description: (descExtra ? descExtra + "\n\n" : "") + `🔗 ClickUp: https://app.clickup.com/t/${cuId}`,
-  project: space === "dc01" ? "DC01" : space === "pu01" ? "PU01" : space === "tg01" ? "TG01" : space === "l36" ? "L36" : space === "legendre" ? "LEG" : space.toUpperCase().slice(0, 3),
+  project: space === "dc01" ? "DC01" : space === "pu01" ? "PU01" : space === "tg01" ? "TG01" : space === "l36" ? "L36" : space.toUpperCase().slice(0, 3),
   priority: priority || "media",
   due: due || _TD(0), startDate: due || _TD(0), endDate: due || _TD(0),
   space, checked, assignee,
@@ -649,7 +647,7 @@ Schema:
   "person": string | null (named person, e.g. "Daniel Yep"),
   "amount": number | null (in soles unless USD mentioned),
   "due": string | null (relative like "hoy", "mañana", "viernes", "lun 02", or YYYY-MM-DD),
-  "project": "DC01" | "PU01" | "TG01" | "L36" | "Legendre" | string | null,
+  "project": "DC01" | "PU01" | "TG01" | "L36" | string | null,
   "space": "finanzas" | "comercial" | "legal" | "marketing" | "bam" | "hq" | string | null,
   "priority": "alta" | "media" | "baja",
   "assignee": "sb" | "aa" | "jm" | "jt" | "vd" | "jmg" | "ac" | null
@@ -2039,7 +2037,7 @@ const SMART_CAPTURE_PLACEHOLDERS = [
   'Llamar a Fit Capital · estados PU01',
   'Pago luz oficina 850 viernes',
   'Brief marketing TG01 · Vanessa',
-  'Escritura Legendre · citar a Galup lunes',
+  'Escritura PU01 · citar a Galup lunes',
 ];
 
 function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmartView, currentSpaceContext }) {
@@ -13194,7 +13192,7 @@ PERSONALIDAD:
 - Sos directo, exigente, sin azúcar; crítico pero justo
 - Usás MUY moderadamente palabras del poema original (callooh, callay, frabjous, manxome, uffish, vorpal, beamish, tulgey) — utilidad primero, color al final
 - Sin emojis salvo los símbolos ✓ ⚠ ✗ ⓘ en los hallazgos
-- Conoces a Hygge: SPVs DC01/PU01/TG01/L36 + Legendre. CEO Sebastián Bonilla. Equipo: Vanessa (admin), Joel (finanzas), Jose (comercial), Ariel (BAM/arquitectura), Andrea (ops), JMG (legal)
+- Conoces a Hygge: SPVs DC01/PU01 (alias Legendre — es el MISMO proyecto)/TG01/L36. CEO Sebastián Bonilla. Equipo: Vanessa (admin), Joel (finanzas), Jose (comercial), Ariel (BAM/arquitectura), Andrea (ops), JMG (legal)
 
 FORMATO DE RESPUESTA (estricto, sin desviarse):
 SCORE: [número 0-100]
@@ -13673,17 +13671,6 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
         </div>
       </div>
 
-      <div>
-        <Eyebrow>Cobertura del import</Eyebrow>
-        <div className="text-[11px] mt-2 space-y-1" style={{ color: C.inkSoft, lineHeight: 1.6 }}>
-          <div>· <strong>Tareas</strong>: 52 ClickUp (Finanzas 18 · Legal 9 · Legendre 16 · Comercial 3 · DC01 2 · BAM 4)</div>
-          <div>· <strong>Drive folders</strong>: Diseño, Hygge, FC, Legal y Campaña por proyecto + BAM root + Brand</div>
-          <div>· <strong>Sheets clave</strong>: Cash Flow 2026, Cap Table Investors, FC Legendre</div>
-          <div>· <strong>Documentos</strong>: Acuerdo Privado Libre 5, Auditoría 2025 Larco</div>
-          <div>· <strong>Miro visors</strong>: placeholder por proyecto · editá la URL desde el (+) tab</div>
-        </div>
-      </div>
-
       <div className="text-[10px] italic" style={{ color: C.muted }}>
         Cada tarea tiene un link a ClickUp en su descripción. Para cambiar la URL de un Miro, andá al proyecto, hacé clic en la pestaña "Miro · …" y edítala desde el ícono de configuración.
       </div>
@@ -13880,7 +13867,7 @@ export default function HyggeOS({ authUser } = {}) {
   const [ceoProjects, setCeoProjects] = useState(INITIAL_CEO_PROJECTS);
   const [spvs, setSpvs] = useState(DEFAULT_SPVS);
   const [hqCifras, setHqCifras] = useState(DEFAULT_HQ_CIFRAS);
-  const [ceoNps, setCeoNps] = useState(72);
+  const [ceoNps, setCeoNps] = useState(0);
   const [whiteboards, setWhiteboards] = useState(INITIAL_WHITEBOARDS);
   const [smartViews, setSmartViews] = useState(INITIAL_SMART_VIEWS);
   const [activeSmartViewId, setActiveSmartViewId] = useState(null);
@@ -14087,7 +14074,7 @@ export default function HyggeOS({ authUser } = {}) {
         loadStored("hygge:rightPanelCollapsed", false),
         loadStored("hygge:activity", []),
         loadStored("hygge:ceoProjects", INITIAL_CEO_PROJECTS),
-        loadStored("hygge:ceoNps", 72),
+        loadStored("hygge:ceoNps", 0),
         loadStored("hygge:features", { whiteboards: false, customViews: false, viewport: false }),
         loadStored("hygge:spaceViewports", {}),
         loadStored("hygge:knowledgeLinks", []),
