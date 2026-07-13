@@ -632,35 +632,49 @@ async function transcribeAudio(mediaUrl, mediaType) {
 
 async function transcribeBuffer(audioBuffer, mediaType) {
   const ext = mediaType.includes("ogg") ? "ogg" : mediaType.includes("mp4") ? "mp4" : "wav";
+  // OpenAI si hay key (Groq se agota); si no, Groq. Ambas APIs son compatibles (multipart Whisper).
+  const useOpenAI = !!process.env.OPENAI_API_KEY;
+  const url = useOpenAI ? "https://api.openai.com/v1/audio/transcriptions" : "https://api.groq.com/openai/v1/audio/transcriptions";
+  const key = useOpenAI ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
   const formData = new FormData();
   formData.append("file", new Blob([audioBuffer], { type: mediaType }), `audio.${ext}`);
-  formData.append("model", "whisper-large-v3-turbo");
+  formData.append("model", useOpenAI ? "whisper-1" : "whisper-large-v3-turbo");
   formData.append("language", "es");
-  const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-    body: formData,
-  });
-  if (!groqRes.ok) throw new Error(`Groq error: ${await groqRes.text()}`);
-  return (await groqRes.json()).text?.trim() || null;
+  const r = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: formData });
+  if (!r.ok) throw new Error(`${useOpenAI ? "OpenAI" : "Groq"} STT error: ${await r.text()}`);
+  return (await r.json()).text?.trim() || null;
 }
 
-// ── TTS (Groq PlayAI) ─────────────────────────────────────────────────────────
+// ── TTS ───────────────────────────────────────────────────────────────────────
 const ttsCache = new Map(); // id → Buffer, cleaned up after 5 min
 
 const ALLOWED_VOICES = new Set([
   "autumn","diana","hannah",  // femeninas
   "austin","daniel","troy",   // masculinas
 ]);
+// Mapeo voces Groq (orpheus) → voces OpenAI (tts-1)
+const OPENAI_VOICE = { diana:"nova", autumn:"shimmer", hannah:"alloy", austin:"onyx", daniel:"echo", troy:"fable" };
 
 async function generateSpeech(text, voice = "diana") {
-  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "diana";
-  // Cuota Groq free = 3.600 tokens de voz/DÍA — cortamos en frase completa cerca de 600 chars
-  let limited = text.slice(0, 600);
-  if (text.length > 600) {
+  const useOpenAI = !!process.env.OPENAI_API_KEY;
+  // OpenAI no tiene cuota diaria absurda (tope 4096 chars); Groq free = 3.600 tokens/día → ~600
+  const cap = useOpenAI ? 3800 : 600;
+  let limited = text.slice(0, cap);
+  if (text.length > cap) {
     const lastDot = limited.lastIndexOf(". ");
     if (lastDot > 200) limited = limited.slice(0, lastDot + 1);
   }
+  if (useOpenAI) {
+    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "tts-1", input: limited, voice: OPENAI_VOICE[voice] || "nova", response_format: "wav" }),
+    });
+    if (!res.ok) throw new Error(`OpenAI TTS error: ${await res.text()}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+  // Fallback Groq (orpheus, cuota diaria)
+  const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "diana";
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
