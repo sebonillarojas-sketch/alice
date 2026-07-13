@@ -31,7 +31,11 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
 // Rutas /api públicas (relativas al mount /api): las que NO son del panel.
 // /agents/* → report|findings usan x-agent-key; status|runs|tea-table los lee el Lab del ERP.
 // /market-refresh|import → tienen su propio bearer (MARKET_REFRESH_TOKEN, los usa scrape.js local).
-const PANEL_PUBLIC = ["/login", "/agents", "/calendar/team", "/market-refresh", "/market-import"];
+// /chat, /tts, /dropbox → los consume el ERP (alice.bam.pe) sin token de panel: estado pre-gate.
+//   ⚠️ Deuda consciente (auditoría 13 jul): chat tiene userId falsificable (IDOR) y dropbox
+//   expone browse/delete sin auth. Fix real = ERP manda JWT de Supabase y acá se valida
+//   (sesión supercomputadora). No re-gatear sin resolver eso o se rompe el ERP.
+const PANEL_PUBLIC = ["/login", "/agents", "/calendar/team", "/market-refresh", "/market-import", "/chat", "/tts", "/dropbox"];
 
 function signToken(exp) {
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(String(exp)).digest("base64url");
