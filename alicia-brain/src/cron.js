@@ -29,6 +29,18 @@ export function startCron() {
     await runWhiteRabbitChecks().catch(e => console.error("White Rabbit error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Mad Hatter 🎩 · performance/costos cada hora
+  cron.schedule("15 * * * *", async () => {
+    const { runMadHatter } = await import("./madhatter.js");
+    await runMadHatter().catch(e => console.error("Mad Hatter error:", e.message));
+  }, { timezone: "America/Lima" });
+
+  // Dark Alice 🖤 · revisión de operaciones diaria 7:15am Lima (WhatsApp solo si hay críticos/mayores)
+  cron.schedule("15 7 * * *", async () => {
+    const { runDarkAlice } = await import("./darkalice.js");
+    await runDarkAlice({ notify: true }).catch(e => console.error("Dark Alice error:", e.message));
+  }, { timezone: "America/Lima" });
+
   // Cerebro → Dropbox · espejo nocturno 3:30am Lima
   cron.schedule("30 3 * * *", async () => {
     console.log("🧠 Cron: export cerebro a Dropbox");
@@ -36,11 +48,15 @@ export function startCron() {
     await exportBrainToDropbox().catch(e => console.error("Brain export error:", e.message));
   }, { timezone: "America/Lima" });
 
-  // Primer chequeo del conejo a los 90s del boot (no esperar 30 min tras cada deploy)
+  // Primer barrido a los 90s del boot: conejo + sombrerero (no esperar al próximo tick)
   setTimeout(async () => {
     const { runWhiteRabbitChecks } = await import("./whiterabbit.js");
     await runWhiteRabbitChecks().catch(e => console.error("White Rabbit boot error:", e.message));
+    const { runMadHatter } = await import("./madhatter.js");
+    await runMadHatter().catch(e => console.error("Mad Hatter boot error:", e.message));
+    const { runDarkAlice } = await import("./darkalice.js");
+    await runDarkAlice({ notify: false }).catch(e => console.error("Dark Alice boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 7:00am + market refresh + White Rabbit c/30min + Tea Table lunes 7:30 + cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 7am · market refresh · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · cerebro→Dropbox 3:30am");
 }
