@@ -54,7 +54,7 @@ export async function runMadHatter() {
   }
   if (dbBytes && dbBytes > 200 * 1024 * 1024) findings.push({ severity: "minor", category: "capacidad", detail: `DB ${(dbBytes / 1048576).toFixed(0)}MB — evaluar limpieza/rotación` });
 
-  const result = findings.some(f => f.severity === "major") ? "issues" : findings.length ? "warnings" : "ok";
+  const result = findings.some(f => f.severity === "major") ? "issues" : findings.length ? "issues" : "ok";
   const dbMB = dbBytes ? (dbBytes / 1048576).toFixed(1) + "MB" : "?";
   const lat = latency.map(l => `${l.id}:${l.ok ? l.p50 + "ms" : "caído"}`).join(" · ");
   const summary = `Latencia ${lat} · DB ${dbMB} · ${msgs24h ?? "?"} msgs/24h · ${volume.messages ?? "?"} msgs total`;

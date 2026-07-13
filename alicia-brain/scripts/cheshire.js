@@ -92,7 +92,7 @@ async function run() {
   await browser.close();
 
   // ── Reporte al Lab (críticos → WhatsApp automático vía pipeline existente) ──
-  const result = findings.some(f => f.severity === "critical") ? "issues" : findings.length ? "warnings" : "ok";
+  const result = findings.some(f => f.severity === "critical") ? "issues" : findings.length ? "issues" : "ok";
   const summary = findings.length ? `${findings.length} hallazgo(s): ${findings.map(f => f.category).join(", ")}` : "Suite E2E completa OK";
   try {
     const r = await fetch(REPORT_URL, {
