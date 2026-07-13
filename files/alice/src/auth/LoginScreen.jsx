@@ -26,8 +26,21 @@ export default function LoginScreen() {
     <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ backgroundColor: "#EEEBE3" }}>
       <div className="w-full max-w-[420px]">
 
+        {/* Blob de Alicia · mismo wobble (morph + float) que el onboarding */}
+        <style>{`
+          @keyframes login-morph { 0%,100%{border-radius:42% 58% 65% 35%/45% 45% 55% 55%} 34%{border-radius:60% 40% 42% 58%/60% 45% 55% 40%} 67%{border-radius:45% 55% 60% 40%/40% 62% 38% 60%} }
+          @keyframes login-float { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-10px) scale(1.02)} }
+        `}</style>
+
         {/* Logo / brand */}
         <div className="mb-8 text-center">
+          <div style={{
+            width: 66, height: 66, margin: "0 auto 20px",
+            background: "linear-gradient(135deg,#a78bfa,#8b5cf6 45%,#6d28d9)",
+            borderRadius: "42% 58% 65% 35%/45% 45% 55% 55%",
+            boxShadow: "0 14px 40px rgba(139,92,246,0.35)",
+            animation: "login-morph 8s ease-in-out infinite, login-float 6s ease-in-out infinite",
+          }} />
           <div style={{ fontSize: 11, color: "#6B6863", letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
             Hygge Holding
           </div>
