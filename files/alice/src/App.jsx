@@ -529,7 +529,28 @@ function Gate() {
   return <HyggeOS authUser={user} />;
 }
 
+// Auto-update: las SPAs viejas quedan en memoria tras cada deploy ("versión anterior"
+// fue fuente constante de bugs fantasma el 13 jul). Chequea el bundle cada 5 min y
+// recarga solo cuando hay uno nuevo.
+function useAutoUpdate() {
+  useEffect(() => {
+    let current = null;
+    const check = async () => {
+      try {
+        const html = await fetch("/", { cache: "no-store" }).then(r => r.text());
+        const m = html.match(/assets\/index-[^"]+\.js/)?.[0] || null;
+        if (current && m && m !== current) { window.location.reload(); return; }
+        if (m) current = m;
+      } catch { /* offline → reintenta en el próximo tick */ }
+    };
+    check();
+    const id = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+}
+
 export default function App() {
+  useAutoUpdate();
   return (
     <AuthProvider>
       <Gate />
