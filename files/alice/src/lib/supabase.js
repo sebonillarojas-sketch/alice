@@ -66,6 +66,8 @@ function toRow(t) {
     end_date: t.endDate ?? "",
     space: t.space ?? "hq",
     checked: !!t.checked,
+    status: t.status ?? "pendiente",   // requiere columna (ALTER TABLE 13 jul 2026) — sin esto el estado volvía a "pendiente" en cada reload
+    archived: !!t.archived,
     assignee: t.assignee ?? "sb",
     tags: t.tags ?? [],
     type: t.type ?? null,
@@ -97,6 +99,8 @@ function fromRow(r) {
     endDate: r.end_date,
     space: r.space,
     checked: r.checked,
+    status: r.status ?? "pendiente",
+    archived: !!r.archived,
     assignee: r.assignee,
     tags: r.tags ?? [],
     type: r.type,

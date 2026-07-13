@@ -14134,10 +14134,12 @@ export default function HyggeOS({ authUser } = {}) {
         ? `Eliminó usuario ${deleteUserTarget.firstName} · ${taskCount} tareas reasignadas`
         : `Eliminó usuario ${deleteUserTarget.firstName} · ${taskCount} tareas sin asignar`;
     recordUndo(label);
-    // Reassign or unassign tasks
+    // Reassign or unassign tasks (persistiendo cada tarea tocada, no solo en memoria)
     setTasks(prev => prev.map(t => {
       if (t.assignee !== id) return t;
-      return { ...t, assignee: mode === "reassign" ? targetUserId : null };
+      const updated = { ...t, assignee: mode === "reassign" ? targetUserId : null };
+      db.upsertTask(updated).catch(console.error);
+      return updated;
     }));
     setUsers(prev => prev.filter(u => u.id !== id));
     setDeleteUserTarget(null);
@@ -14173,6 +14175,7 @@ export default function HyggeOS({ authUser } = {}) {
       activity: [{ when: nowHHMM(), text: targetSpace === "inbox" ? "Capturada · Inbox" : `Creada via Smart Capture · ${targetSpace}` }],
     };
     setTasks(prev => [newTask, ...prev]);
+    db.upsertTask(newTask).catch(console.error); // sin esto lo capturado muere con F5
   }, []);
 
   const saveSmartView = useCallback((pattern) => {
@@ -14319,12 +14322,17 @@ export default function HyggeOS({ authUser } = {}) {
     });
   }, [recordActivity]);
   const setTaskStatus = useCallback((id, status) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      const checked = status === "completada";
-      recordActivity(`cambió estado de "${t.title}" a ${status}`, { taskId: id, space: t.space });
-      return { ...t, status, checked, activity: [...(t.activity || []), { when: nowHHMM(), text: `Estado: ${taskStatusDef(status).label}` }] };
-    }));
+    setTasks(prev => {
+      const next = prev.map(t => {
+        if (t.id !== id) return t;
+        const checked = status === "completada";
+        recordActivity(`cambió estado de "${t.title}" a ${status}`, { taskId: id, space: t.space });
+        return { ...t, status, checked, activity: [...(t.activity || []), { when: nowHHMM(), text: `Estado: ${taskStatusDef(status).label}` }] };
+      });
+      const updated = next.find(t => t.id === id);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
   }, [recordActivity]);
   const toggleExpand = useCallback((id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, expanded: !t.expanded } : t)), []);
   const updateTask = useCallback((id, patch) => {
@@ -14376,6 +14384,7 @@ export default function HyggeOS({ authUser } = {}) {
         activity: [{ when: nowHHMM(), text: "Duplicada de original" }],
       });
       const newTask = next[next.length - 1];
+      db.upsertTask(newTask).catch(console.error); // sin esto la copia se esfuma con F5
       return [newTask, ...next.slice(0, -1)];
     });
   }, [tasks, recordUndo]);
@@ -14385,7 +14394,12 @@ export default function HyggeOS({ authUser } = {}) {
     const t = tasks.find(x => x.id === id);
     if (!t) return;
     recordUndo(t.archived ? `Desarchivó '${t.title}'` : `Archivó '${t.title}'`);
-    setTasks(prev => prev.map(x => x.id === id ? { ...x, archived: !x.archived } : x));
+    setTasks(prev => {
+      const next = prev.map(x => x.id === id ? { ...x, archived: !x.archived } : x);
+      const updated = next.find(x => x.id === id);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
   }, [tasks, recordUndo]);
 
   // Export to CSV — generic helper
@@ -14452,25 +14466,44 @@ export default function HyggeOS({ authUser } = {}) {
         space: parent.space, checked: false, assignee: parent.assignee,
         activity: [{ when: nowHHMM(), text: "Subtarea creada" }],
       });
+      db.upsertTask(next[next.length - 1]).catch(console.error); // persistir la subtarea nueva
       return next.map(t => t.id === parentId ? { ...t, expanded: true } : t);
     });
   }, [tasks]);
   const addComment = useCallback((taskId, text) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? {
-      ...t,
-      comments: [...(t.comments || []), { id: Date.now(), who: "sb", text, when: nowHHMM() }],
-      activity: [...(t.activity || []), { when: nowHHMM(), text: "Sebastián comentó" }],
-    } : t));
-  }, []);
+    // autor real (antes: who "sb" hardcodeado — vd comentaba y firmaba Sebastián)
+    const me = currentUser?.id || "sb";
+    const meName = (currentUser?.name || "").split(" ")[0] || me;
+    setTasks(prev => {
+      const next = prev.map(t => t.id === taskId ? {
+        ...t,
+        comments: [...(t.comments || []), { id: Date.now(), who: me, text, when: nowHHMM() }],
+        activity: [...(t.activity || []), { when: nowHHMM(), text: `${meName} comentó` }],
+      } : t);
+      const updated = next.find(t => t.id === taskId);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
+  }, [currentUser]);
   const addAttachment = useCallback((taskId, attachment) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? {
-      ...t,
-      attachments: [...(t.attachments || []), attachment],
-      activity: [...(t.activity || []), { when: nowHHMM(), text: `Subió ${attachment.name}` }],
-    } : t));
+    setTasks(prev => {
+      const next = prev.map(t => t.id === taskId ? {
+        ...t,
+        attachments: [...(t.attachments || []), attachment],
+        activity: [...(t.activity || []), { when: nowHHMM(), text: `Subió ${attachment.name}` }],
+      } : t);
+      const updated = next.find(t => t.id === taskId);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
   }, []);
   const removeAttachment = useCallback((taskId, attId) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, attachments: (t.attachments || []).filter(a => a.id !== attId) } : t));
+    setTasks(prev => {
+      const next = prev.map(t => t.id === taskId ? { ...t, attachments: (t.attachments || []).filter(a => a.id !== attId) } : t);
+      const updated = next.find(t => t.id === taskId);
+      if (updated) db.upsertTask(updated).catch(console.error);
+      return next;
+    });
   }, []);
 
   const markRead = useCallback((id) => setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m)), []);
@@ -14542,7 +14575,19 @@ export default function HyggeOS({ authUser } = {}) {
       ? `Eliminó space '${spaceName}' · ${(stateRef.current?.tasks || []).filter(t => t.space === id).length} tareas movidas`
       : `Eliminó space '${spaceName}' y sus tareas`;
     recordUndo(label);
-    setTasks(prev => mode === "move" ? prev.map(t => t.space === id ? { ...t, space: targetSpaceId } : t) : prev.filter(t => t.space !== id));
+    setTasks(prev => {
+      if (mode === "move") {
+        return prev.map(t => {
+          if (t.space !== id) return t;
+          const updated = { ...t, space: targetSpaceId };
+          db.upsertTask(updated).catch(console.error); // persistir el traslado
+          return updated;
+        });
+      }
+      // delete-all: borrar también en Supabase (antes quedaban huérfanas y reaparecían al recargar)
+      prev.filter(t => t.space === id).forEach(t => db.deleteTask(t.id).catch(console.error));
+      return prev.filter(t => t.space !== id);
+    });
     setCustomViews(prev => { const next = { ...prev }; delete next[id]; return next; });
     setCustomSpaces(prev => prev.filter(s => s.id !== id));
     const isDefault = DEFAULT_SPACES.some(s => s.id === id) || DEFAULT_SPACES.some(s => (s.children || []).some(c => c.id === id));
@@ -14567,9 +14612,15 @@ export default function HyggeOS({ authUser } = {}) {
       ? `Eliminó tarea '${deleteTaskTarget.task.title}' · ${deleteTaskTarget.subtaskCount} subtareas promovidas`
       : `Eliminó tarea '${deleteTaskTarget.task.title}'${deleteTaskTarget.subtaskCount ? ` + ${deleteTaskTarget.subtaskCount} subtareas` : ""}`;
     recordUndo(label);
+    // promote: en Supabase solo muere el padre; las subtareas se promueven (antes se borraban TODAS → data loss)
     const deletedIds = new Set([id]);
-    tasks.forEach(t => { if (t.parentId && deletedIds.has(t.parentId)) deletedIds.add(t.id); });
+    if (mode !== "promote") {
+      tasks.forEach(t => { if (t.parentId && deletedIds.has(t.parentId)) deletedIds.add(t.id); });
+    }
     setTasks(prev => applyTaskCascadeDelete(prev, id, mode));
+    if (mode === "promote") {
+      tasks.filter(t => t.parentId === id).forEach(t => db.upsertTask({ ...t, parentId: null }).catch(console.error));
+    }
     setActivity(prev => prev.filter(a => !a.relatedTaskId || !deletedIds.has(a.relatedTaskId)));
     deleteTimerTaskSessions([...deletedIds]);
     deletedIds.forEach(did => db.deleteTask(did).catch(console.error));
