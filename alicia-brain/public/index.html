@@ -133,6 +133,17 @@
   ::-webkit-scrollbar{width:4px;height:4px}
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  /* BLOB · Alicia viva */
+  .blob{width:190px;height:190px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 0 80px rgba(139,92,246,.35)}
+  .blob-idle{animation:blob-morph 8s ease-in-out infinite, blob-float 5s ease-in-out infinite}
+  .blob-listening{background:linear-gradient(135deg,#a78bfa,#8b5cf6);animation:blob-morph 3.5s ease-in-out infinite, blob-float 4s ease-in-out infinite;box-shadow:0 0 110px rgba(167,139,250,.55)}
+  .blob-thinking{background:linear-gradient(135deg,#6d28d9,#4c1d95);animation:blob-morph 2.8s ease-in-out infinite, blob-float 5s ease-in-out infinite, blob-dim 1.6s ease-in-out infinite}
+  .blob-speaking{background:linear-gradient(135deg,#c084fc,#8b5cf6);animation:blob-morph 1.8s ease-in-out infinite, blob-bounce .55s cubic-bezier(.36,1.4,.5,1) infinite;box-shadow:0 0 120px rgba(192,132,252,.5)}
+  @keyframes blob-morph{0%,100%{border-radius:42% 58% 65% 35%/45% 45% 55% 55%}34%{border-radius:60% 40% 42% 58%/60% 45% 55% 40%}67%{border-radius:45% 55% 60% 40%/40% 62% 38% 60%}}
+  @keyframes blob-float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-9px) scale(1.01)}}
+  @keyframes blob-dim{0%,100%{opacity:1}50%{opacity:.65}}
+  @keyframes blob-bounce{0%,100%{transform:translateY(0) scale(1)}45%{transform:translateY(-7px) scale(1.04)}}
 </style>
 </head>
 <body>
@@ -142,8 +153,12 @@
     <h1>ALICE</h1>
     <span>Panel de Control</span>
   </div>
+  <a href="#" class="active" onclick="showPage('hablar',this)" style="margin-bottom:4px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
+    ● Hablar
+  </a>
   <div class="nav-section">Sistema</div>
-  <a href="#" class="active" onclick="showPage('sistema',this)">
+  <a href="#" onclick="showPage('sistema',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     Estado
   </a>
@@ -177,8 +192,25 @@
 
 <main>
 
+<!-- HABLAR -->
+<div class="page active" id="page-hablar">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 120px);gap:26px">
+    <button id="blob-btn" onclick="talkOnce()" style="background:none;border:none;cursor:pointer;padding:0">
+      <div id="blob" class="blob blob-idle"></div>
+    </button>
+    <div style="text-align:center">
+      <div id="hablar-status" style="font-size:22px;font-weight:700;letter-spacing:-0.01em">Hola, Sebastián</div>
+      <div id="hablar-sub" style="font-size:13px;color:var(--muted);margin-top:6px">Tocá el blob y hablá · te respondo con voz</div>
+    </div>
+    <div id="hablar-exchange" style="max-width:560px;width:100%;display:none;flex-direction:column;gap:8px;max-height:32vh;overflow-y:auto">
+      <div id="hablar-user" style="align-self:flex-end;padding:8px 14px;border-radius:12px 12px 2px 12px;background:var(--cobalt);color:#fff;font-size:13px;max-width:85%"></div>
+      <div id="hablar-alicia" style="align-self:flex-start;padding:10px 14px;border-radius:12px 12px 12px 2px;background:var(--card);border:1px solid var(--border);font-size:13px;line-height:1.6;max-width:92%"></div>
+    </div>
+  </div>
+</div>
+
 <!-- SISTEMA -->
-<div class="page active" id="page-sistema">
+<div class="page" id="page-sistema">
   <div class="eyebrow">Dashboard</div>
   <h2>Estado del Sistema</h2>
   <div style="margin-bottom:24px"></div>
@@ -204,82 +236,41 @@
 
 <!-- PERSONALIDAD -->
 <div class="page" id="page-personalidad">
-  <div class="eyebrow">Configuración</div>
+  <div class="eyebrow">Fine-tune real</div>
   <h2>Personalidad de Alicia</h2>
   <div style="margin-bottom:24px"></div>
 
   <div class="grid grid-2">
     <div class="card">
-      <h3>Identidad</h3>
-      <div class="control-row">
-        <div class="control-label">Nombre</div>
-        <input type="text" id="p-name" value="Alicia" placeholder="Nombre de la IA">
+      <h3>Mi Alicia · instrucciones directas (sb)</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Alicia sigue esto con máxima prioridad en tus conversaciones — chat, voz y WhatsApp. Activo desde tu próximo mensaje.</div>
+      <textarea id="ft-manual" rows="9" placeholder="Ej:&#10;- Respuestas cortas, máximo 5 líneas salvo que pida detalle&#10;- Números siempre en tablas&#10;- Desafiame cuando veas un riesgo"></textarea>
+      <div class="control-row" style="margin-top:16px">
+        <div class="control-label">😏 Sarcasmo <span id="val-sarcasm">0</span>/100 · <span id="sarcasm-label" style="color:var(--soft)">Profesional pura</span></div>
+        <input type="range" id="sl-sarcasm" min="0" max="100" step="5" value="0" oninput="updateSarcasmLabel(this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Profesional</span><span>Chispa</span><span>Sin piedad</span></div>
       </div>
-      <div class="control-row">
-        <div class="control-label">Rol / Descripción</div>
-        <input type="text" id="p-role" value="Asistente ejecutiva de Hygge Holding" placeholder="Cómo se describe">
-      </div>
-      <div class="control-row">
-        <div class="control-label">Idioma principal</div>
-        <select id="p-lang">
-          <option value="es-rioplatense">Español rioplatense</option>
-          <option value="es-neutral">Español neutro</option>
-          <option value="en">English</option>
-          <option value="mixed">Spanglish (mixto)</option>
-        </select>
-      </div>
-      <div class="control-row">
-        <div class="control-label">Prompt del sistema <span id="sys-len">0 chars</span></div>
-        <textarea id="p-system" rows="6" placeholder="Instrucciones base para Alicia..."></textarea>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="savePersonaReal()">Guardar</button>
+        <span id="ft-saved" style="font-size:12px;color:var(--green);display:none">✓ Guardado — activo desde tu próximo mensaje</span>
       </div>
     </div>
 
     <div class="card">
-      <h3>Carácter</h3>
-      <div class="control-row">
-        <div class="control-label">Humor <span id="val-humor">5</span>/10</div>
-        <input type="range" id="sl-humor" min="0" max="10" value="5" oninput="document.getElementById('val-humor').textContent=this.value">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Serio</span><span>Gracioso</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0">Skills · playbooks enseñables</h3>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="newSkill()">+ Nueva</button>
       </div>
-      <div class="control-row">
-        <div class="control-label">Formalidad <span id="val-formal">5</span>/10</div>
-        <input type="range" id="sl-formal" min="0" max="10" value="5" oninput="document.getElementById('val-formal').textContent=this.value">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Casual</span><span>Formal</span></div>
-      </div>
-      <div class="control-row">
-        <div class="control-label">Proactividad <span id="val-pro">7</span>/10</div>
-        <input type="range" id="sl-pro" min="0" max="10" value="7" oninput="document.getElementById('val-pro').textContent=this.value">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Reactiva</span><span>Proactiva</span></div>
-      </div>
-      <div class="control-row">
-        <div class="control-label">Longitud de respuestas <span id="val-len">5</span>/10</div>
-        <input type="range" id="sl-len" min="0" max="10" value="5" oninput="document.getElementById('val-len').textContent=this.value">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Corta</span><span>Detallada</span></div>
-      </div>
-      <div class="control-row">
-        <div class="control-label">Emojis <span id="val-emoji">3</span>/10</div>
-        <input type="range" id="sl-emoji" min="0" max="10" value="3" oninput="document.getElementById('val-emoji').textContent=this.value">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Sin emojis</span><span>Muchos emojis</span></div>
-      </div>
-    </div>
-
-    <div class="card" style="grid-column:1/-1">
-      <h3>Comportamiento especial</h3>
-      <div class="control-row">
-        <div class="control-label">Temas que debe evitar</div>
-        <input type="text" id="p-avoid" placeholder="ej: política, religión, competencia...">
-      </div>
-      <div class="control-row">
-        <div class="control-label">Frases o muletillas características</div>
-        <input type="text" id="p-catchphrases" placeholder="ej: dale, claro que sí, perfecto...">
-      </div>
-      <div class="control-row">
-        <div class="control-label">Notas adicionales de carácter</div>
-        <textarea id="p-notes" placeholder="Cualquier característica extra de comportamiento..."></textarea>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" onclick="savePersonality()">Guardar cambios</button>
-        <button class="btn btn-ghost" onclick="loadPersonality()">Recargar</button>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Enseñale oficios: cuando la tarea coincida con una skill, Alicia carga el playbook y lo sigue al pie de la letra.</div>
+      <div id="skills-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      <div id="skill-editor" style="display:none;margin-top:12px;padding:12px;border:1px dashed var(--border);border-radius:6px">
+        <input type="text" id="sk-name" placeholder="Nombre corto · ej: brief-reunion" style="margin-bottom:8px">
+        <input type="text" id="sk-desc" placeholder="Cuándo usarla · ej: Cuando pidan preparar un brief" style="margin-bottom:8px">
+        <textarea id="sk-content" rows="7" placeholder="El playbook, paso a paso:&#10;1. ...&#10;2. ..."></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="saveSkill()">Guardar skill</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('skill-editor').style.display='none'">Cancelar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -391,7 +382,7 @@ function showPage(name, el) {
   if (name === 'conversaciones') loadConvUsers();
   if (name === 'memorias') loadMemUsers();
   if (name === 'knowledge') loadKnowledge();
-  if (name === 'personalidad') loadPersonality();
+  if (name === 'personalidad') loadPersonaReal();
   if (name === 'config') loadConfig();
   return false;
 }
@@ -544,7 +535,6 @@ async function loadEquipo() {
   }
   document.getElementById('profiles-grid').innerHTML = profiles.map(p => {
     const skills = [...(p.skills_current||[])].slice(0,4);
-    const score = Math.floor(Math.random()*40+60); // TODO: real engagement score
     return `<div class="profile-card">
       <div class="profile-header">
         <div class="avatar" style="background:${avatarColor(p.user_id)}">${(p.name||p.user_id)[0].toUpperCase()}</div>
@@ -554,18 +544,16 @@ async function loadEquipo() {
         </div>
       </div>
       ${skills.length ? '<div style="margin-bottom:10px">' + skills.map(s=>`<span class="tag">${s}</span>`).join('') + '</div>' : ''}
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Engagement con Alicia</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="relation-bar" style="flex:1"><div class="relation-fill" style="width:${score}%"></div></div>
-        <span style="font-size:12px;color:var(--soft)">${score}%</span>
-      </div>
-      ${p.growth_short ? `<div style="margin-top:12px;font-size:12px;color:var(--soft)">"${p.growth_short}"</div>` : ''}
+      ${p.growth_short ? `<div style="font-size:12px;color:var(--soft)">"${p.growth_short}"</div>` : ''}
       <div class="actions" style="margin-top:12px">
+        <button class="btn btn-primary" style="font-size:12px" onclick="analizarUser('${p.user_id}', this)">Analizar</button>
         <button class="btn btn-ghost" style="font-size:12px" onclick="openUserConv('${p.user_id}')">Ver conversación</button>
         <button class="btn btn-ghost" style="font-size:12px" onclick="openUserMems('${p.user_id}')">Memorias</button>
       </div>
+      <div id="insights-${p.user_id}"></div>
     </div>`;
   }).join('');
+  profiles.forEach(p => loadInsightsCached(p.user_id));
 }
 
 function openUserConv(uid) {
@@ -683,6 +671,190 @@ async function triggerBriefing() {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 loadSistema();
+
+// ── HABLAR · conversación por voz ──────────────────────────────────────────
+let hListening = false, hSending = false, hAudio = null, hRec = null;
+const HABLAR_USER = 'sb';
+
+function setBlob(state, status, sub) {
+  const b = document.getElementById('blob');
+  b.className = 'blob blob-' + state;
+  if (status) document.getElementById('hablar-status').textContent = status;
+  if (sub) document.getElementById('hablar-sub').textContent = sub;
+}
+
+function talkOnce() {
+  if (hListening) { hRec?.stop(); return; }
+  if (hSending) return;
+  if (hAudio) { hAudio.pause(); hAudio = null; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { setBlob('idle', 'Sin micrófono', 'Tu navegador no soporta voz — usá Chrome o Safari'); return; }
+  hRec = new SR();
+  hRec.lang = 'es-PE'; hRec.continuous = false; hRec.interimResults = false;
+  hRec.onresult = e => {
+    const t = e.results[0][0].transcript;
+    hListening = false;
+    if (t && t.trim()) hablarSend(t);
+  };
+  hRec.onerror = () => { hListening = false; setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá · te respondo con voz'); };
+  hRec.onend = () => { if (hListening) { hListening = false; setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá'); } };
+  hRec.start();
+  hListening = true;
+  setBlob('listening', 'Te escucho…', 'Hablá con naturalidad — corto cuando termines');
+}
+
+async function hablarSend(text) {
+  hSending = true;
+  setBlob('thinking', 'Pensando…', '"' + text.slice(0, 80) + '"');
+  document.getElementById('hablar-exchange').style.display = 'flex';
+  document.getElementById('hablar-user').textContent = text;
+  document.getElementById('hablar-alicia').textContent = '…';
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: HABLAR_USER, message: text }),
+    });
+    const d = await res.json();
+    const reply = d.text || d.error || 'Hmm, algo falló.';
+    document.getElementById('hablar-alicia').textContent = reply;
+    hSending = false;
+    // Voz
+    const clean = reply.replace(/[*_`#]/g, '').slice(0, 1900);
+    const tts = await fetch('/api/tts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: clean, voice: localStorage.getItem('alicia_voice') || 'diana' }),
+    });
+    if (tts.ok) {
+      const url = URL.createObjectURL(await tts.blob());
+      hAudio = new Audio(url);
+      hAudio.onplay = () => setBlob('speaking', '…', 'Tocá el blob para interrumpir y hablar');
+      hAudio.onended = () => { setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá'); URL.revokeObjectURL(url); hAudio = null; };
+      await hAudio.play();
+    } else {
+      setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá');
+    }
+  } catch (e) {
+    hSending = false;
+    document.getElementById('hablar-alicia').textContent = 'Error: ' + e.message;
+    setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá');
+  }
+}
+
+// ── PERSONALIDAD REAL · fine-tune + sarcasmo + skills ──────────────────────
+function updateSarcasmLabel(v) {
+  v = +v;
+  document.getElementById('val-sarcasm').textContent = v;
+  const l = v <= 5 ? 'Profesional pura' : v <= 30 ? 'Ironía sutil' : v <= 60 ? 'Con chispa' : v <= 85 ? 'Filosa' : 'Modo Dark Alice 🖤';
+  document.getElementById('sarcasm-label').textContent = l;
+}
+
+async function loadPersonaReal() {
+  try {
+    const d = await fetch('/api/persona/sb').then(r => r.json());
+    document.getElementById('ft-manual').value = d.manual_instructions || '';
+    document.getElementById('sl-sarcasm').value = d.sarcasm || 0;
+    updateSarcasmLabel(d.sarcasm || 0);
+  } catch {}
+  loadSkillsReal();
+}
+
+async function savePersonaReal() {
+  await fetch('/api/persona/sb', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      manual_instructions: document.getElementById('ft-manual').value,
+      sarcasm: +document.getElementById('sl-sarcasm').value,
+    }),
+  }).catch(() => {});
+  const el = document.getElementById('ft-saved');
+  el.style.display = 'inline';
+  setTimeout(() => el.style.display = 'none', 2500);
+}
+
+async function loadSkillsReal() {
+  const list = document.getElementById('skills-list');
+  try {
+    const skills = await fetch('/api/skills').then(r => r.json());
+    if (!skills.length) { list.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Todavía no le enseñaste ninguna skill.</div>'; return; }
+    list.innerHTML = skills.map(sk => `
+      <div style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600">${sk.name}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${sk.description}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick='editSkill(${JSON.stringify(sk).replace(/'/g, "&#39;")})'>Editar</button>
+          <button class="btn btn-danger" style="font-size:11px;padding:4px 10px" onclick="deleteSkillReal(${sk.id})">×</button>
+        </div>
+      </div>`).join('');
+  } catch { list.innerHTML = '<div style="font-size:12px;color:var(--brick)">Error cargando skills</div>'; }
+}
+
+function newSkill() {
+  document.getElementById('sk-name').value = '';
+  document.getElementById('sk-desc').value = '';
+  document.getElementById('sk-content').value = '';
+  document.getElementById('skill-editor').style.display = 'block';
+}
+
+function editSkill(sk) {
+  document.getElementById('sk-name').value = sk.name;
+  document.getElementById('sk-desc').value = sk.description;
+  document.getElementById('sk-content').value = sk.content;
+  document.getElementById('skill-editor').style.display = 'block';
+}
+
+async function saveSkill() {
+  const name = document.getElementById('sk-name').value.trim();
+  const description = document.getElementById('sk-desc').value.trim();
+  const content = document.getElementById('sk-content').value;
+  if (!name || !description || !content) return;
+  await fetch('/api/skills', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, content, created_by: 'sb' }),
+  }).catch(() => {});
+  document.getElementById('skill-editor').style.display = 'none';
+  loadSkillsReal();
+}
+
+async function deleteSkillReal(id) {
+  await fetch('/api/skills/' + id, { method: 'DELETE' }).catch(() => {});
+  loadSkillsReal();
+}
+
+// ── INSIGHTS · coaching por colaborador ─────────────────────────────────────
+async function analizarUser(uid, btn) {
+  btn.textContent = 'Analizando…'; btn.disabled = true;
+  try {
+    const d = await fetch('/api/insights/' + uid + '/refresh', { method: 'POST' }).then(r => r.json());
+    renderInsights(uid, d.report, d.reason);
+  } catch (e) { renderInsights(uid, null, e.message); }
+  btn.textContent = 'Analizar'; btn.disabled = false;
+}
+
+function renderInsights(uid, rep, reason) {
+  const el = document.getElementById('insights-' + uid);
+  if (!el) return;
+  if (!rep) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:10px">' + (reason || 'Sin datos suficientes') + '</div>'; return; }
+  const sec = (title, items, color, icon) => !items || !items.length ? '' :
+    `<div style="margin-top:10px"><div style="font-size:10px;color:${color};text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:4px">${icon} ${title}</div>` +
+    items.map(i => `<div style="font-size:12px;line-height:1.5;padding-left:9px;border-left:2px solid ${color}55;margin-bottom:4px">${i}</div>`).join('') + '</div>';
+  el.innerHTML =
+    (rep.resumen ? `<div style="font-size:12.5px;font-style:italic;color:var(--soft);margin-top:10px;line-height:1.5">${rep.resumen}</div>` : '') +
+    sec('Fortalezas', rep.fortalezas, '#4ade80', '▲') +
+    sec('Áreas de mejora', rep.fallas, '#fbbf24', '◆') +
+    sec('Green flags', rep.green_flags, '#4ade80', '✓') +
+    sec('Red flags', rep.red_flags, '#f87171', '⚑') +
+    sec('Recomendaciones', rep.recomendaciones, '#8b5cf6', '→');
+}
+
+async function loadInsightsCached(uid) {
+  try {
+    const d = await fetch('/api/insights/' + uid).then(r => r.json());
+    if (d.report) renderInsights(uid, d.report);
+  } catch {}
+}
+
 </script>
 </body>
 </html>
