@@ -1157,8 +1157,8 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
           </button>
         </nav>
 
-        {/* LAB · agentes experimentales · sección colapsable, abajo del sidebar */}
-        <div className="mt-7">
+        {/* LAB · agentes experimentales · solo admin (CEO) */}
+        {currentUser?.isAdmin && <div className="mt-7">
           <button onClick={() => setLabExpanded(e => !e)} className="w-full mb-2 flex items-center justify-between hover:opacity-80 px-1">
             <span className="inline-flex items-center gap-1.5">
               <ChevronRight size={11} style={{ color: C.muted, transform: labExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
@@ -1181,7 +1181,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
               })}
             </nav>
           )}
-        </div>
+        </div>}
 
         {smartViews && smartViews.length > 0 && (
           <>
