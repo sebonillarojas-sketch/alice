@@ -1,14 +1,53 @@
-// Dropbox · access token
+// Dropbox · OAuth con refresh token (los access tokens de Dropbox vencen a las 4h)
 import dotenv from "dotenv";
 dotenv.config();
+import { query } from "../db.js";
 
-const ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
+const APP_KEY = process.env.DROPBOX_APP_KEY;
+const APP_SECRET = process.env.DROPBOX_APP_SECRET;
+
+function getDropboxRefreshToken() {
+  if (process.env.DROPBOX_REFRESH_TOKEN) return process.env.DROPBOX_REFRESH_TOKEN;
+  try {
+    const { rows } = query("SELECT value FROM app_settings WHERE key = 'dropbox_refresh_token'");
+    return rows[0]?.value || null;
+  } catch { return null; }
+}
+
+let _dbxToken = null, _dbxExpiry = 0;
+export function clearDropboxTokenCache() { _dbxToken = null; _dbxExpiry = 0; }
+
+async function getToken() {
+  // Refresh token (permanente) → access token fresco
+  const refresh = getDropboxRefreshToken();
+  if (refresh && APP_KEY && APP_SECRET) {
+    if (_dbxToken && Date.now() < _dbxExpiry - 60000) return _dbxToken;
+    const res = await fetch("https://api.dropboxapi.com/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refresh,
+        client_id: APP_KEY,
+        client_secret: APP_SECRET,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Dropbox OAuth error: ${data.error_description || data.error}`);
+    _dbxToken = data.access_token;
+    _dbxExpiry = Date.now() + (data.expires_in || 14400) * 1000;
+    return _dbxToken;
+  }
+  // Legacy: token directo (vence a las 4h — solo como fallback)
+  if (process.env.DROPBOX_ACCESS_TOKEN) return process.env.DROPBOX_ACCESS_TOKEN;
+  throw new Error("Dropbox no conectado — autorizar en https://aliceai.bam.pe/auth/dropbox");
+}
 
 async function dbxFetch(path, body) {
-  if (!ACCESS_TOKEN) throw new Error("Dropbox no configurado (DROPBOX_ACCESS_TOKEN)");
+  const token = await getToken();
   const res = await fetch(`https://api.dropboxapi.com/2${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -34,11 +73,12 @@ export const dropbox = {
   },
 
   getFileContent: async (filePath) => {
+    const token = await getToken();
     if (!ACCESS_TOKEN) throw new Error("Dropbox no configurado");
     const res = await fetch("https://content.dropboxapi.com/2/files/download", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Dropbox-API-Arg": JSON.stringify({ path: filePath }),
       },
     });
@@ -67,10 +107,11 @@ export const dropbox = {
   },
 
   uploadFile: async (path, content) => {
+    const token = await getToken();
     const res = await fetch("https://content.dropboxapi.com/2/files/upload", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", autorename: false, mute: true }),
         "Content-Type": "application/octet-stream",
       },
@@ -84,4 +125,4 @@ export const dropbox = {
   },
 };
 
-export const dropboxAvailable = () => !!ACCESS_TOKEN;
+export const dropboxAvailable = () => !!(process.env.DROPBOX_ACCESS_TOKEN || (APP_KEY && APP_SECRET && getDropboxRefreshToken()));

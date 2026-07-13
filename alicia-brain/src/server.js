@@ -901,6 +901,52 @@ app.patch("/api/agents/findings/:id", requireAgentKey, (req, res) => {
   }
 });
 
+// ── Dropbox OAuth · obtener refresh token permanente ──────────────────────────
+
+app.get("/auth/dropbox", (req, res) => {
+  if (!process.env.DROPBOX_APP_KEY) return res.status(500).send("DROPBOX_APP_KEY no configurado en Railway");
+  const params = new URLSearchParams({
+    client_id: process.env.DROPBOX_APP_KEY,
+    response_type: "code",
+    token_access_type: "offline",
+    redirect_uri: `${OAUTH_BASE}/auth/dropbox/callback`,
+  });
+  res.redirect(`https://www.dropbox.com/oauth2/authorize?${params}`);
+});
+
+app.get("/auth/dropbox/callback", async (req, res) => {
+  try {
+    const { code, error_description } = req.query;
+    if (!code) return res.status(400).send(`Dropbox error: ${error_description || "sin código"}`);
+    const tokenRes = await fetch("https://api.dropboxapi.com/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        grant_type: "authorization_code",
+        client_id: process.env.DROPBOX_APP_KEY,
+        client_secret: process.env.DROPBOX_APP_SECRET,
+        redirect_uri: `${OAUTH_BASE}/auth/dropbox/callback`,
+      }),
+    });
+    const data = await tokenRes.json();
+    if (!tokenRes.ok) return res.status(500).send(`Error: ${data.error_description || data.error}`);
+    if (!data.refresh_token) return res.status(500).send("Dropbox no devolvió refresh_token");
+    query(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES ('dropbox_refresh_token', ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+      [data.refresh_token]
+    );
+    const { clearDropboxTokenCache } = await import("./integrations/dropbox.js");
+    clearDropboxTokenCache();
+    console.log("🔑 Dropbox refresh token guardado — conexión permanente");
+    res.send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center">
+      <h2>✅ Dropbox conectado (permanente)</h2>
+      <p>El cerebro de Alicia ya puede sincronizarse. Podés cerrar esta pestaña.</p>
+    </body></html>`);
+  } catch (e) { res.status(500).send(`Error: ${e.message}`); }
+});
+
 // ── Cerebro → Dropbox · export on demand ──────────────────────────────────────
 
 app.post("/api/brain/export", async (req, res) => {
