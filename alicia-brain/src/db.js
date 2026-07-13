@@ -90,6 +90,7 @@ function initSchema(db) {
       result TEXT DEFAULT 'ok' CHECK (result IN ('ok','issues','error')),
       summary TEXT,
       actions_taken TEXT DEFAULT '[]',
+      report TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_agent_runs ON agent_runs(agent, created_at DESC);
@@ -108,6 +109,8 @@ function initSchema(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_agent_findings ON agent_findings(status, severity, created_at DESC);
   `);
+  // Migración: DBs creadas antes de que agent_runs tuviera columna report
+  try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
 }
 
 export function query(sql, params = []) {

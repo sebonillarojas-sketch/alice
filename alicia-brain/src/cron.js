@@ -16,5 +16,12 @@ export function startCron() {
     await refreshMarketData().catch(e => console.error("Market refresh error:", e.message));
   }, { timezone: "America/Lima" });
 
-  console.log("⏰ Cron activo · briefing 7:00am + market refresh cada hora");
+  // Tea Table semanal — lunes 7:30am Lima · reporte de sistema + WhatsApp a Sebastián
+  cron.schedule("30 7 * * 1", async () => {
+    console.log("🫖 Cron: Tea Table semanal");
+    const { runTeaTableReport } = await import("./teatable.js");
+    await runTeaTableReport({ notify: true }).catch(e => console.error("Tea Table error:", e.message));
+  }, { timezone: "America/Lima" });
+
+  console.log("⏰ Cron activo · briefing 7:00am + market refresh cada hora + Tea Table lunes 7:30am");
 }

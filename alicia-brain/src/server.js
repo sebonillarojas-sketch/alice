@@ -638,11 +638,49 @@ app.get("/api/agents/status", (req, res) => {
         CASE severity WHEN 'critical' THEN 0 WHEN 'major' THEN 1 WHEN 'minor' THEN 2 ELSE 3 END,
         created_at DESC LIMIT 100`
     );
+    const { rows: activity } = query(
+      `SELECT agent, result, created_at FROM agent_runs WHERE created_at >= datetime('now','-14 days') ORDER BY created_at`
+    );
+    const { rows: resolvedRecent } = query(
+      `SELECT * FROM agent_findings WHERE status IN ('auto-fixed','resolved') AND updated_at >= datetime('now','-7 days') ORDER BY updated_at DESC LIMIT 50`
+    );
     res.json({
-      agents: lastRuns.map(r => ({ ...r, actions_taken: parseArr(r.actions_taken) })),
+      agents: lastRuns.map(r => ({ ...r, actions_taken: parseArr(r.actions_taken), report: undefined })),
       findings: openFindings,
+      resolved: resolvedRecent,
+      activity,
       quarantine: process.env.QUARANTINE === "true",
     });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Tea Table: generar reporte on demand (desde el cockpit) o vía cron semanal
+let teaTableRunning = false;
+app.post("/api/agents/tea-table/run", async (req, res) => {
+  if (teaTableRunning) return res.status(429).json({ error: "Tea Table ya está en sesión, esperá" });
+  teaTableRunning = true;
+  try {
+    const { runTeaTableReport } = await import("./teatable.js");
+    const result = await runTeaTableReport({ notify: false });
+    res.json({ ok: true, runId: result.runId, report: result.report, summary: result.summary, result: result.result });
+  } catch (e) {
+    console.error("Tea Table error:", e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    teaTableRunning = false;
+  }
+});
+
+app.get("/api/agents/tea-table/reports", (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const { rows } = query(
+      `SELECT id, result, summary, report, created_at FROM agent_runs WHERE agent = 'tea-table' AND report IS NOT NULL ORDER BY id DESC LIMIT ?`,
+      [limit]
+    );
+    res.json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
