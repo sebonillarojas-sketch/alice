@@ -630,19 +630,28 @@ async function transcribeAudio(mediaUrl, mediaType) {
   return transcribeBuffer(Buffer.from(await audioRes.arrayBuffer()), mediaType);
 }
 
-async function transcribeBuffer(audioBuffer, mediaType) {
+async function sttWith(provider, audioBuffer, mediaType) {
   const ext = mediaType.includes("ogg") ? "ogg" : mediaType.includes("mp4") ? "mp4" : "wav";
-  // OpenAI si hay key (Groq se agota); si no, Groq. Ambas APIs son compatibles (multipart Whisper).
-  const useOpenAI = !!process.env.OPENAI_API_KEY;
-  const url = useOpenAI ? "https://api.openai.com/v1/audio/transcriptions" : "https://api.groq.com/openai/v1/audio/transcriptions";
-  const key = useOpenAI ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
+  const cfg = provider === "openai"
+    ? { url: "https://api.openai.com/v1/audio/transcriptions", key: process.env.OPENAI_API_KEY, model: "whisper-1" }
+    : { url: "https://api.groq.com/openai/v1/audio/transcriptions", key: process.env.GROQ_API_KEY, model: "whisper-large-v3-turbo" };
+  if (!cfg.key) return null;
   const formData = new FormData();
   formData.append("file", new Blob([audioBuffer], { type: mediaType }), `audio.${ext}`);
-  formData.append("model", useOpenAI ? "whisper-1" : "whisper-large-v3-turbo");
+  formData.append("model", cfg.model);
   formData.append("language", "es");
-  const r = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: formData });
-  if (!r.ok) throw new Error(`${useOpenAI ? "OpenAI" : "Groq"} STT error: ${await r.text()}`);
+  const r = await fetch(cfg.url, { method: "POST", headers: { Authorization: `Bearer ${cfg.key}` }, body: formData });
+  if (!r.ok) throw new Error(`${provider} STT ${r.status}: ${(await r.text()).slice(0, 150)}`);
   return (await r.json()).text?.trim() || null;
+}
+
+// Whisper con fallback real: OpenAI primero, si falla cae a Groq (nunca queda sordo)
+async function transcribeBuffer(audioBuffer, mediaType) {
+  if (process.env.OPENAI_API_KEY) {
+    try { return await sttWith("openai", audioBuffer, mediaType); }
+    catch (e) { console.error("OpenAI STT falló, cae a Groq:", e.message); }
+  }
+  return sttWith("groq", audioBuffer, mediaType);
 }
 
 // ── TTS ───────────────────────────────────────────────────────────────────────
@@ -655,33 +664,41 @@ const ALLOWED_VOICES = new Set([
 // Mapeo voces Groq (orpheus) → voces OpenAI (tts-1)
 const OPENAI_VOICE = { diana:"nova", autumn:"shimmer", hannah:"alloy", austin:"onyx", daniel:"echo", troy:"fable" };
 
-async function generateSpeech(text, voice = "diana") {
-  const useOpenAI = !!process.env.OPENAI_API_KEY;
-  // OpenAI no tiene cuota diaria absurda (tope 4096 chars); Groq free = 3.600 tokens/día → ~600
-  const cap = useOpenAI ? 3800 : 600;
+const trimSpeech = (text, cap) => {
   let limited = text.slice(0, cap);
-  if (text.length > cap) {
-    const lastDot = limited.lastIndexOf(". ");
-    if (lastDot > 200) limited = limited.slice(0, lastDot + 1);
-  }
-  if (useOpenAI) {
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "tts-1", input: limited, voice: OPENAI_VOICE[voice] || "nova", response_format: "wav" }),
-    });
-    if (!res.ok) throw new Error(`OpenAI TTS error: ${await res.text()}`);
-    return Buffer.from(await res.arrayBuffer());
-  }
-  // Fallback Groq (orpheus, cuota diaria)
+  if (text.length > cap) { const d = limited.lastIndexOf(". "); if (d > 200) limited = limited.slice(0, d + 1); }
+  return limited;
+};
+
+async function ttsOpenAI(text, voice) {
+  const res = await fetch("https://api.openai.com/v1/audio/speech", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "tts-1", input: trimSpeech(text, 3800), voice: OPENAI_VOICE[voice] || "nova", response_format: "wav" }),
+  });
+  if (!res.ok) throw new Error(`OpenAI TTS ${res.status}: ${(await res.text()).slice(0, 150)}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function ttsGroq(text, voice) {
   const safeVoice = ALLOWED_VOICES.has(voice) ? voice : "diana";
   const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "canopylabs/orpheus-v1-english", input: limited, voice: safeVoice, response_format: "wav" }),
+    body: JSON.stringify({ model: "canopylabs/orpheus-v1-english", input: trimSpeech(text, 600), voice: safeVoice, response_format: "wav" }),
   });
-  if (!res.ok) throw new Error(`Groq TTS error: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Groq TTS ${res.status}: ${(await res.text()).slice(0, 150)}`);
   return Buffer.from(await res.arrayBuffer());
+}
+
+// Voz con fallback real: OpenAI primero; si falla o no hay crédito, cae a Groq (nunca queda muda)
+async function generateSpeech(text, voice = "diana") {
+  if (process.env.OPENAI_API_KEY) {
+    try { return await ttsOpenAI(text, voice); }
+    catch (e) { console.error("OpenAI TTS falló, cae a Groq:", e.message); }
+  }
+  if (process.env.GROQ_API_KEY) return ttsGroq(text, voice);
+  throw new Error("Sin proveedor de voz configurado (ni OpenAI ni Groq)");
 }
 
 app.post("/api/tts", async (req, res) => {
