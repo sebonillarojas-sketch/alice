@@ -89,7 +89,7 @@ export async function runTeaTableReport({ notify = false } = {}) {
   const sys = `Sos la TEA TABLE 🫖 del consejo de Wonderland — la síntesis ejecutiva del estado técnico de ALICE (ERP + Alicia brain de Hygge Holding, CEO Sebastián Bonilla).
 Recibís el estado crudo del sistema y escribís un reporte ejecutivo EN ESPAÑOL, en markdown, con este esqueleto exacto:
 
-# Estado del sistema · [fecha de hoy]
+# Estado del sistema · ${new Date().toLocaleDateString("es-PE", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Lima" })}
 
 ## Veredicto
 [1-2 oraciones: ¿el sistema está sano, degradado o en riesgo? Directo.]
