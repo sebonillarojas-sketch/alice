@@ -439,20 +439,27 @@ const VIEWS = [
 ];
 
 // Mapeo Space → carpeta Dropbox
+// Rutas REALES del Dropbox Hygge (convención de _SISTEMA/convenciones.md: carpetas numeradas,
+// proyectos = CODIGO_nombre). Verificadas contra el Dropbox el 13 jul 2026 — NO inventar rutas:
+// si esto no coincide con la realidad, el sync propone crear spaces duplicados.
 const SPACE_DROPBOX_PATHS = {
-  "hq":          "/Hygge",
-  "finanzas":    "/Hygge/Finanzas",
-  "legal":       "/Hygge/Legal",
-  "comercial":   "/Hygge/Comercial",
-  "marketing":   "/Hygge/Marketing",
-  "growth":      "/Hygge/Growth",
-  "bam":         "/Hygge/BAM",
-  "dc01":        "/Hygge/Proyectos/DC01",
-  "pu01":        "/Hygge/Proyectos/PU01",
-  "tg01":        "/Hygge/Proyectos/TG01",
-  "l36":         "/Hygge/Proyectos/L36",
-  "legendre":    "/Hygge/Proyectos/Legendre",
+  "hq":          "/Hygge/01_HQ",
+  "proyectos":   "/Hygge/02_PROYECTOS",
+  "bam":         "/Hygge/03_BAM",
+  "finanzas":    "/Hygge/04_FINANZAS",
+  "legal":       "/Hygge/05_LEGAL",
+  "comercial":   "/Hygge/06_COMERCIAL",
+  "marketing":   "/Hygge/07_MARKETING",
+  "growth":      "/Hygge/08_GROWTH",
+  "dc01":        "/Hygge/02_PROYECTOS/DC01_del_castillo",
+  "pu01":        "/Hygge/02_PROYECTOS/PU01_paula_ugarriza",
+  "tg01":        "/Hygge/02_PROYECTOS/TG01_de_la_torre",
+  "l36":         "/Hygge/02_PROYECTOS/L36_larco_1036",
+  "legendre":    "/Hygge/02_PROYECTOS/PU01_paula_ugarriza", // PU01 y Legendre son EL MISMO proyecto
 };
+// Carpetas de infra que NUNCA disparan el popup de "crear space" (00_INBOX es bandeja, 09_ALICE
+// es de Alicia, 10_CONTABILIDAD es archivo contable, _* = sistema por convención)
+const DROPBOX_SYSTEM_FOLDERS = new Set(["00_inbox", "09_alice", "10_contabilidad"]);
 
 const SPV_TIPOS = [
   { id: "spv_propio",    label: "SPV propio",       hint: "Hygge como developer" },
@@ -7302,7 +7309,8 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
     }
   }, []);
 
-  useEffect(() => { if (activeTab === "drive") fetchFolder(currentPath); }, [activeTab]);
+  // "drive" era el tab de la época Google Drive — el tab real es "dropbox" (con "drive" nunca cargaba nada)
+  useEffect(() => { if (activeTab === "dropbox") fetchFolder(currentPath); }, [activeTab]);
 
   const navigateTo = (name, path) => {
     setCurrentPath(path);
@@ -14000,7 +14008,15 @@ export default function HyggeOS({ authUser } = {}) {
             .map(p => p.split("/")[2].toLowerCase())
         );
         knownNames.add(".alice");
+        // carpetas de sistema + carpetas ya vinculadas a spaces por el admin
+        DROPBOX_SYSTEM_FOLDERS.forEach(n => knownNames.add(n));
+        const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
+        Object.values(customPaths).forEach(p => {
+          const parts = String(p).split("/");
+          if (parts.length === 3) knownNames.add(parts[2].toLowerCase());
+        });
         const newFolders = folders.filter(f =>
+          !f.name.startsWith("_") && // _sistema, _template, etc: infra por convención
           !knownNames.has(f.name.toLowerCase()) && !ignored.includes(f.path)
         );
         if (newFolders.length > 0) {
