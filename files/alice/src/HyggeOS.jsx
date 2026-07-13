@@ -180,11 +180,46 @@ const UsersContext = React.createContext([]);
 
 const lookupUser = (id, users) => users?.find(u => u.id === id) || null;
 
+// ── Persistencia compartida (13 jul 2026) ──────────────────────────────────
+// Las claves de SYNCED_KEYS viven en Supabase (app_state) y se comparten entre
+// usuarios/dispositivos; localStorage queda como caché local y fallback offline.
+// Lo cosmético/per-device (vista activa, timer, colapsos) sigue siendo solo local.
+const SYNCED_KEYS = new Set([
+  "hygge:messages", "hygge:activity", "hygge:customSpaces", "hygge:deletedDefaultSpaces",
+  "hygge:smartViews", "hygge:users", "hygge:spaceAccess", "hygge:customViews",
+  "hygge:spvs", "hygge:hq:cifras", "hygge:whiteboards", "hygge:knowledgeLinks",
+  "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:hqWidgets",
+  "hygge:hqSummaries", "hygge:finanzas:source", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
+]);
+
 async function loadStored(key, fallback) {
-  try { const raw = localStorage.getItem(key); if (raw) return JSON.parse(raw); } catch (e) {}
-  return fallback;
+  let local;
+  try { const raw = localStorage.getItem(key); if (raw != null) local = JSON.parse(raw); } catch (e) {}
+  if (SYNCED_KEYS.has(key)) {
+    try {
+      const remote = await db.getState(key);
+      if (remote !== null && remote !== undefined) {
+        try { localStorage.setItem(key, JSON.stringify(remote)); } catch (e) {}
+        return remote;
+      }
+      // El server no tiene nada pero este browser sí → seed (migración one-time del admin)
+      if (local !== undefined) db.setState(key, local).catch(() => {});
+    } catch (e) { /* sin red o sin sesión → usar caché local */ }
+  }
+  return local !== undefined ? local : fallback;
 }
-async function saveStored(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
+
+const _syncTimers = {};
+async function saveStored(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  if (SYNCED_KEYS.has(key)) {
+    // debounce: no martillar Supabase en cada tecla; last-write-wins por clave
+    clearTimeout(_syncTimers[key]);
+    _syncTimers[key] = setTimeout(() => {
+      db.setState(key, value).catch(e => console.error(`sync ${key}:`, e.message));
+    }, 800);
+  }
+}
 
 // ═══ DEFAULT SPACES ══════════════════════════════════════════════════════
 // ═══ PURE DATA HELPERS · safe ops compartidos entre handlers UI y tests ═══
@@ -9728,8 +9763,8 @@ function HQWidgetsBlock({ tasks, terrenos, allSpaces, users, customSpaces, navig
   const [summaryLoading, setSummaryLoading] = useState({}); // area → bool
   const [addOpen, setAddOpen] = useState(false);
 
-  useEffect(() => { try { localStorage.setItem("hygge:hqWidgets", JSON.stringify(widgets)); } catch {} }, [widgets]);
-  useEffect(() => { try { localStorage.setItem("hygge:hqSummaries", JSON.stringify(summaries)); } catch {} }, [summaries]);
+  useEffect(() => { saveStored("hygge:hqWidgets", widgets); }, [widgets]);
+  useEffect(() => { saveStored("hygge:hqSummaries", summaries); }, [summaries]);
 
   // Compute metrics for KPI widgets
   const metrics = useMemo(() => {
@@ -14032,6 +14067,13 @@ export default function HyggeOS({ authUser } = {}) {
 
   useEffect(() => {
     (async () => {
+      // Hidratar (server→localStorage) claves compartidas que otros componentes leen
+      // directo de localStorage al montar — fire-and-forget, loadStored cachea solo.
+      loadStored("hygge:dropbox:custom_paths", {});
+      loadStored("hygge:dropbox:ignored", []);
+      loadStored("hygge:hqWidgets", null);
+      loadStored("hygge:hqSummaries", null);
+      loadStored("hygge:finanzas:source", null);
       const [t, m, wb, tm, sp, vw, cs, sv, us, sa, tr, cv, rpc, act, cp, cn, ft, vp, kl, spv, hqcf, dds] = await Promise.all([
         db.getTasks().catch(() => loadStored("hygge:tasks", INITIAL_TASKS)), loadStored("hygge:messages", INITIAL_MESSAGES),
         loadStored("hygge:whiteboards", INITIAL_WHITEBOARDS), loadStored("hygge:timer", timer),
@@ -14311,7 +14353,7 @@ export default function HyggeOS({ authUser } = {}) {
       });
       const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
       delete customPaths[notif.spaceId];
-      localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+      saveStored("hygge:dropbox:custom_paths", customPaths);
     } catch (_) { /* silent */ }
     setActivity(prev => prev.map(a =>
       a.id === notif.id ? { ...a, pending: false, approved: true, read: true, what: `solicitó eliminar "${notif.dropboxPath}" en Dropbox · aprobado por Sebastián` } : a
@@ -15019,13 +15061,13 @@ REGLAS:
           setCustomSpaces(prev => [...prev, { id, name: item.name, count: 0, dot: C.cobalt, custom: true, code: item.name.slice(0,2).toUpperCase(), parentId: null }]);
           const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
           customPaths[id] = item.path;
-          localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+          saveStored("hygge:dropbox:custom_paths", customPaths);
           setDropboxSyncItems(prev => prev.filter(i => i.path !== item.path));
         }}
         onIgnore={(item) => {
           const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:ignored") || "[]");
           ignored.push(item.path);
-          localStorage.setItem("hygge:dropbox:ignored", JSON.stringify(ignored));
+          saveStored("hygge:dropbox:ignored", ignored);
           setDropboxSyncItems(prev => prev.filter(i => i.path !== item.path));
         }}
         onClose={() => setDropboxSyncItems([])}
@@ -15042,14 +15084,14 @@ REGLAS:
               await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/create_folder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
               const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
               customPaths[spaceId] = path;
-              localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+              saveStored("hygge:dropbox:custom_paths", customPaths);
             } else {
               if (authUser?.isCEO) {
                 // CEO ejecuta directo
                 await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/delete_folder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
                 const customPaths = JSON.parse(localStorage.getItem("hygge:dropbox:custom_paths") || "{}");
                 delete customPaths[spaceId];
-                localStorage.setItem("hygge:dropbox:custom_paths", JSON.stringify(customPaths));
+                saveStored("hygge:dropbox:custom_paths", customPaths);
               } else {
                 // Admin no-CEO → queda en aprobación pendiente de Sebastián
                 setActivity(prev => [{
