@@ -53,9 +53,10 @@ Repos git (dueño: sebonillarojas-sketch):
 4. **Gate de acceso para aliceai.bam.pe** — ⚠️ HOY ES PÚBLICO con data sensible (conversaciones, insights del equipo). Prioridad alta.
 5. **Vista de calendario integral en el ERP** (frontend): consumir `GET /api/calendar/team?days=7` (devuelve busy blocks por persona).
 6. **Twilio upgrade** (tarjeta) — sandbox tiene límite diario de WhatsApp.
-7. **Borrar skill de prueba**: `DELETE /api/skills/<id>` del `__marcador-persistencia` (era test del volumen).
-8. **Supercomputadora (llega ~14 jul)**: Wonderland IT (agentes IT autónomos — spec en `alicia-brain/docs/WONDERLAND_IT.md`, backend ya listo: agent_runs, /api/agents/*, AGENTS_API_KEY), memoria semántica RAG, White Rabbit con checks REALES (no presencia de env vars — lección: Dropbox estuvo roto en silencio), migración cerebro al NAS Synology.
-9. **Fase A del ERP**: Cmd+K search v2; migración localStorage→Supabase (~34 usos en HyggeOS.jsx).
+7. **Groq upgrade** (tarjeta, console.groq.com/settings/billing) — free tier = 3.600 tokens de VOZ/día (~10 respuestas). La voz "se muere" cada día al agotarse; ya capamos a 600 chars por respuesta como mitigación.
+8. **Borrar skill de prueba**: `DELETE /api/skills/<id>` del `__marcador-persistencia` (era test del volumen).
+9. **Supercomputadora (llega ~14 jul)**: Wonderland IT (agentes IT autónomos — spec en `alicia-brain/docs/WONDERLAND_IT.md`, backend ya listo: agent_runs, /api/agents/*, AGENTS_API_KEY), memoria semántica RAG, White Rabbit con checks REALES (no presencia de env vars — lección: Dropbox estuvo roto en silencio), migración cerebro al NAS Synology.
+10. **Fase A del ERP**: Cmd+K search v2; migración localStorage→Supabase (~34 usos en HyggeOS.jsx).
 
 ## 5. IDENTIDADES Y CUENTAS (fuente de bugs — respetar)
 
