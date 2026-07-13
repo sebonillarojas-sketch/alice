@@ -29,7 +29,9 @@ const PANEL_PASSWORD = process.env.PANEL_PASSWORD || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || PANEL_PASSWORD;
 const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
 // Rutas /api públicas (relativas al mount /api): las que NO son del panel.
-const PANEL_PUBLIC = ["/login", "/agents/report", "/agents/findings", "/calendar/team"];
+// /agents/* → report|findings usan x-agent-key; status|runs|tea-table los lee el Lab del ERP.
+// /market-refresh|import → tienen su propio bearer (MARKET_REFRESH_TOKEN, los usa scrape.js local).
+const PANEL_PUBLIC = ["/login", "/agents", "/calendar/team", "/market-refresh", "/market-import"];
 
 function signToken(exp) {
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(String(exp)).digest("base64url");

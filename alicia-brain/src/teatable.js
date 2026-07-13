@@ -38,11 +38,23 @@ async function liveChecks() {
   }
 
   checks.push({ id: "anthropic", label: "Claude API key", ok: !!process.env.ANTHROPIC_API_KEY });
-  checks.push({ id: "google", label: "Google (Calendar/Gmail)", ok: !!process.env.GOOGLE_REFRESH_TOKEN });
-  checks.push({ id: "dropbox", label: "Dropbox", ok: !!process.env.DROPBOX_ACCESS_TOKEN });
+
+  // Google: tokens por usuario en app_settings (env var es legacy de sb) — no mentir chequeando solo env
+  try {
+    const { rows } = query("SELECT COUNT(*) c FROM app_settings WHERE key LIKE 'google_refresh_token%'");
+    checks.push({ id: "google", label: "Google (Calendar/Gmail)", ok: rows[0].c > 0 || !!process.env.GOOGLE_REFRESH_TOKEN });
+  } catch { checks.push({ id: "google", label: "Google (Calendar/Gmail)", ok: !!process.env.GOOGLE_REFRESH_TOKEN }); }
+
+  // Dropbox: refresh token en DB (el env DROPBOX_ACCESS_TOKEN legacy ya no existe)
+  try {
+    const { dropboxAvailable } = await import("./integrations/dropbox.js");
+    checks.push({ id: "dropbox", label: "Dropbox", ok: dropboxAvailable() });
+  } catch { checks.push({ id: "dropbox", label: "Dropbox", ok: false }); }
+
   checks.push({ id: "zoom", label: "Zoom", ok: !!(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID) });
   checks.push({ id: "tavily", label: "Búsqueda web (Tavily)", ok: !!process.env.TAVILY_API_KEY });
-  checks.push({ id: "whatsapp", label: "WhatsApp Cloud API", ok: !!(process.env.WA_PHONE_NUMBER_ID && process.env.WA_ACCESS_TOKEN) });
+  // WhatsApp: el canal real es Twilio (WA Cloud API nunca se configuró)
+  checks.push({ id: "whatsapp", label: "WhatsApp (Twilio)", ok: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) });
   return checks;
 }
 
