@@ -84,6 +84,20 @@ export const ALICIA_TOOLS = [
     },
   },
 
+  {
+    name: "check_availability",
+    description: "Chequea la disponibilidad (libre/ocupado) de una o varias personas del equipo en un rango de fechas. ÚSALA SIEMPRE antes de agendar una reunión con otra persona: si el horario pedido está ocupado, sugerí alternativas libres y aclarás que lo confirmás con esa persona. Solo muestra bloques ocupados, nunca el detalle de los eventos ajenos.",
+    input_schema: {
+      type: "object",
+      properties: {
+        user_ids: { type: "array", items: { type: "string" }, description: "IDs del equipo a consultar: sb · vd · jt · jm · aa · ac · jmg" },
+        date:     { type: "string", description: "Día a consultar YYYY-MM-DD" },
+        days:     { type: "number", description: "Cuántos días desde esa fecha (default 1)" },
+      },
+      required: ["user_ids", "date"],
+    },
+  },
+
   // ── Gmail ──────────────────────────────────────────────────────────────────
   {
     name: "gmail_search",
@@ -240,37 +254,63 @@ export async function executeTool(toolName, input, userId) {
 
     // ── Google Calendar ───────────────────────────────────────────────────────
     case "calendar_list": {
-      if (!googleAvailable()) return "Google Calendar no configurado aún (falta GOOGLE_CLIENT_ID y credenciales OAuth).";
+      const calUser = googleAvailable(userId) ? userId : "sb";
+      if (!googleAvailable(calUser)) return `Google Calendar no conectado. Autorizar en https://aliceai.bam.pe/auth/google?user=${userId}`;
       const days = input.days_ahead || 7;
       const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-      const events = await googleCalendar.listEvents({ timeMax: to });
+      const events = await googleCalendar.listEvents({ timeMax: to }, calUser);
       if (!events.length) return "No hay eventos en ese período.";
       return events.map(e =>
         `• ${e.start?.slice(0,16).replace("T"," ")} — ${e.title}${e.attendees?.length ? ` (${e.attendees.join(", ")})` : ""}${e.meetLink ? ` 🔗` : ""}`
       ).join("\n");
     }
     case "calendar_create": {
-      if (!googleAvailable()) return "Google Calendar no configurado aún.";
+      const evUser = googleAvailable(userId) ? userId : "sb";
+      if (!googleAvailable(evUser)) return `Google Calendar no conectado. Autorizar en https://aliceai.bam.pe/auth/google?user=${userId}`;
       const event = await googleCalendar.createEvent({
         title: input.title, date: input.date, time: input.time,
         endTime: input.end_time, attendees: input.attendees || [],
         description: input.description, location: input.location,
-      });
+      }, evUser);
       return `Evento creado en Google Calendar ✓: "${event.summary}" el ${input.date}${input.time ? " a las " + input.time : ""}${event.hangoutLink ? " · Meet: " + event.hangoutLink : ""}`;
+    }
+
+    case "check_availability": {
+      const { freeBusy } = await import("./integrations/google.js");
+      const ids = input.user_ids || [];
+      const { rows: profs } = query(
+        `SELECT user_id, name, email FROM profiles WHERE user_id IN (${ids.map(() => "?").join(",")})`, ids
+      );
+      const withEmail = profs.filter(p => p.email);
+      const missing = ids.filter(id => !withEmail.find(p => p.user_id === id));
+      if (!withEmail.length) return `No tengo el email de ${ids.join(", ")} — pedile a Sebastián que los cargue en los perfiles.`;
+      const timeMin = new Date(`${input.date}T00:00:00-05:00`).toISOString();
+      const timeMax = new Date(new Date(`${input.date}T00:00:00-05:00`).getTime() + (input.days || 1) * 86400000).toISOString();
+      const cal = await freeBusy({ emails: withEmail.map(p => p.email), timeMin, timeMax }, userId);
+      const fmt = (iso) => new Date(iso).toLocaleString("es-PE", { timeZone: "America/Lima", weekday: "short", hour: "2-digit", minute: "2-digit" });
+      let out = withEmail.map(p => {
+        const busy = cal[p.email]?.busy || [];
+        const errs = cal[p.email]?.errors;
+        if (errs) return `• ${p.name}: no pude consultar su calendario (${errs[0]?.reason || "error"})`;
+        if (!busy.length) return `• ${p.name}: LIBRE todo el período ✓`;
+        return `• ${p.name} ocupado en: ${busy.map(b => `${fmt(b.start)}–${fmt(b.end).split(" ").pop()}`).join(" · ")}`;
+      }).join("\n");
+      if (missing.length) out += `\n(Sin email registrado: ${missing.join(", ")})`;
+      return out;
     }
 
     // ── Gmail ─────────────────────────────────────────────────────────────────
     case "gmail_search": {
-      if (!googleAvailable()) return "Gmail no configurado aún.";
-      const emails = await gmail.searchEmails({ query: input.query, maxResults: input.max_results || 5 });
+      if (!googleAvailable(userId)) return `Tu Gmail no está conectado. Autorizar en https://aliceai.bam.pe/auth/google?user=${userId}`;
+      const emails = await gmail.searchEmails({ query: input.query, maxResults: input.max_results || 5 }, userId);
       if (!emails.length) return "No encontré emails con esa búsqueda.";
       return emails.map(e =>
         `📧 De: ${e.from}\n   Asunto: ${e.subject}\n   Fecha: ${e.date}\n   ${e.body?.slice(0, 200)}...`
       ).join("\n\n");
     }
     case "gmail_draft": {
-      if (!googleAvailable()) return "Gmail no configurado aún.";
-      await gmail.createDraft({ to: input.to, subject: input.subject, body: input.body });
+      if (!googleAvailable(userId)) return `Tu Gmail no está conectado. Autorizar en https://aliceai.bam.pe/auth/google?user=${userId}`;
+      await gmail.createDraft({ to: input.to, subject: input.subject, body: input.body }, userId);
       return `Borrador creado ✓ en Gmail — Para: ${input.to} · Asunto: "${input.subject}". Revisalo antes de enviar.`;
     }
 

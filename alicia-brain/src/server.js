@@ -307,6 +307,11 @@ hq · dc01 · pu01 · tg01 · l36 · legendre · bam · finanzas · legal · com
 ## IDs del equipo
 sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (Andrea) · jmg (Galup)
 
+## Coordinación de reuniones (proactiva)
+- Antes de agendar una reunión que involucre a OTRA persona, chequeá su disponibilidad con check_availability.
+- Si el horario pedido está ocupado: avisá ("X está ocupado a esa hora"), sugerí 1-2 alternativas libres concretas, y aclarás que confirmás el horario con esa persona antes de fijarlo.
+- Los emails del equipo salen de sus perfiles. Gmail y detalle de calendario: cada uno solo ve LO SUYO — de otros solo libre/ocupado.
+
 ## Reglas inamovibles
 - SIEMPRE respondé en español
 - Reuniones: pedí propósito si no está claro, armá un brief con contexto
@@ -320,7 +325,8 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 // Gmail, recursos y knowledge-write quedan exclusivos del sub-CEO.
 const COLLAB_TOOLS = new Set([
   "create_task", "update_task", "get_tasks",
-  "calendar_list", "calendar_create",
+  "calendar_list", "calendar_create", "check_availability",
+  "gmail_search", "gmail_draft",
   "dropbox_search", "dropbox_read",
   "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
@@ -713,6 +719,7 @@ const GOOGLE_SCOPES = [
 
 app.get("/auth/google", (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID) return res.status(500).send("GOOGLE_CLIENT_ID no configurado");
+  const userId = (req.query.user || "sb").toLowerCase().replace(/[^a-z]/g, "").slice(0, 10) || "sb";
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${OAUTH_BASE}/auth/google/callback`,
@@ -720,15 +727,17 @@ app.get("/auth/google", (req, res) => {
     access_type: "offline",
     prompt: "consent",
     scope: GOOGLE_SCOPES,
+    state: userId,
   });
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 });
 
 app.get("/auth/google/callback", async (req, res) => {
   try {
-    const { code, error } = req.query;
+    const { code, error, state } = req.query;
     if (error) return res.status(400).send(`Google devolvió error: ${error}`);
     if (!code) return res.status(400).send("Falta el código de autorización");
+    const tokenUser = (state || "sb").toLowerCase().replace(/[^a-z]/g, "").slice(0, 10) || "sb";
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -744,16 +753,16 @@ app.get("/auth/google/callback", async (req, res) => {
     if (!tokenRes.ok) return res.status(500).send(`Error intercambiando código: ${data.error_description || data.error}`);
     if (!data.refresh_token) return res.status(500).send("Google no devolvió refresh_token — revocá el acceso en myaccount.google.com/permissions y volvé a intentar");
     query(
-      `INSERT INTO app_settings (key, value, updated_at) VALUES ('google_refresh_token', ?, datetime('now'))
+      `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
-      [data.refresh_token]
+      [`google_refresh_token_${tokenUser}`, data.refresh_token]
     );
     const { clearTokenCache } = await import("./integrations/google.js");
     clearTokenCache();
-    console.log("🔑 Google refresh token guardado vía OAuth");
+    console.log(`🔑 Google refresh token guardado para ${tokenUser}`);
     res.send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center">
-      <h2>✅ Google conectado</h2>
-      <p>Alicia ya puede usar tu Calendar y Gmail. Podés cerrar esta pestaña.</p>
+      <h2>✅ Google conectado (${tokenUser})</h2>
+      <p>Alicia ya puede usar el Calendar y Gmail de esta cuenta. Podés cerrar esta pestaña.</p>
     </body></html>`);
   } catch (e) {
     console.error("OAuth callback error:", e.message);
@@ -890,6 +899,37 @@ app.patch("/api/agents/findings/:id", requireAgentKey, (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Calendario integral del equipo (para el ERP) ──────────────────────────────
+
+app.get("/api/calendar/team", async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 7, 30);
+    const { rows: profs } = query("SELECT user_id, name, email FROM profiles WHERE email IS NOT NULL AND email != ''");
+    if (!profs.length) return res.json({ users: [], note: "Sin emails registrados en perfiles" });
+    const { freeBusy } = await import("./integrations/google.js");
+    const timeMin = new Date().toISOString();
+    const timeMax = new Date(Date.now() + days * 86400000).toISOString();
+    const cal = await freeBusy({ emails: profs.map(p => p.email), timeMin, timeMax }, "sb");
+    res.json({
+      timeMin, timeMax,
+      users: profs.map(p => ({
+        userId: p.user_id, name: p.name, email: p.email,
+        busy: cal[p.email]?.busy || [],
+        error: cal[p.email]?.errors?.[0]?.reason || null,
+      })),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Actualizar email de un perfil (para el mapeo de calendarios)
+app.patch("/api/profile/:userId/email", (req, res) => {
+  try {
+    const { email } = req.body || {};
+    query("UPDATE profiles SET email = ?, updated_at = datetime('now') WHERE user_id = ?", [email || null, req.params.userId]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── Persona · fine-tune manual + lectura ──────────────────────────────────────

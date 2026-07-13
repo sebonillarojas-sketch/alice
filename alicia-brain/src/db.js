@@ -140,6 +140,8 @@ function initSchema(db) {
   `);
   // Migración: DBs creadas antes de que agent_runs tuviera columna report
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
+  try { db.exec("ALTER TABLE profiles ADD COLUMN email TEXT"); } catch {}
+  try { db.exec("UPDATE profiles SET email = 'sebastian@hygge.pe' WHERE user_id = 'sb' AND (email IS NULL OR email = '')"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN sarcasm INTEGER DEFAULT 0"); } catch {}
   for (const col of ["humor INTEGER DEFAULT 5", "formality INTEGER DEFAULT 5", "proactivity INTEGER DEFAULT 7", "length INTEGER DEFAULT 5", "emojis INTEGER DEFAULT 3"]) {
