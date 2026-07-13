@@ -612,21 +612,19 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   }, []);
 
   const VOICE_OPTIONS = [
-    { value: "leah", label: "Leah — cálida" },
-    { value: "tara", label: "Tara — clara" },
-    { value: "jess", label: "Jess — natural" },
-    { value: "mia",  label: "Mia — suave" },
-    { value: "zoe",  label: "Zoe — enérgica" },
-    { value: "leo",  label: "Leo — masculina" },
-    { value: "dan",  label: "Dan — masculina" },
-    { value: "zac",  label: "Zac — masculina" },
+    { value: "diana",  label: "Diana — cálida" },
+    { value: "autumn", label: "Autumn — natural" },
+    { value: "hannah", label: "Hannah — clara" },
+    { value: "austin", label: "Austin — masculina" },
+    { value: "daniel", label: "Daniel — masculina" },
+    { value: "troy",   label: "Troy — masculina" },
   ];
 
   const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem("alicia_voice_enabled") !== "false");
-  const VALID_VOICES = new Set(["leah","tara","jess","mia","zoe","leo","dan","zac"]);
+  const VALID_VOICES = new Set(["diana","autumn","hannah","austin","daniel","troy"]);
   const [selectedVoice, setSelectedVoice] = useState(() => {
     const saved = localStorage.getItem("alicia_voice");
-    return (saved && VALID_VOICES.has(saved)) ? saved : "leah";
+    return (saved && VALID_VOICES.has(saved)) ? saved : "diana";
   });
   const [isSpeaking, setIsSpeaking] = useState(false);
 
