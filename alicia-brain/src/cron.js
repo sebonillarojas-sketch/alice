@@ -23,6 +23,12 @@ export function startCron() {
     await runTeaTableReport({ notify: true }).catch(e => console.error("Tea Table error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // White Rabbit 🐰 · guardia de infra pública cada 30 min (TLS estricto desde afuera)
+  cron.schedule("*/30 * * * *", async () => {
+    const { runWhiteRabbitChecks } = await import("./whiterabbit.js");
+    await runWhiteRabbitChecks().catch(e => console.error("White Rabbit error:", e.message));
+  }, { timezone: "America/Lima" });
+
   // Cerebro → Dropbox · espejo nocturno 3:30am Lima
   cron.schedule("30 3 * * *", async () => {
     console.log("🧠 Cron: export cerebro a Dropbox");
@@ -30,5 +36,11 @@ export function startCron() {
     await exportBrainToDropbox().catch(e => console.error("Brain export error:", e.message));
   }, { timezone: "America/Lima" });
 
-  console.log("⏰ Cron activo · briefing 7:00am + market refresh + Tea Table lunes 7:30 + cerebro→Dropbox 3:30am");
+  // Primer chequeo del conejo a los 90s del boot (no esperar 30 min tras cada deploy)
+  setTimeout(async () => {
+    const { runWhiteRabbitChecks } = await import("./whiterabbit.js");
+    await runWhiteRabbitChecks().catch(e => console.error("White Rabbit boot error:", e.message));
+  }, 90000);
+
+  console.log("⏰ Cron activo · briefing 7:00am + market refresh + White Rabbit c/30min + Tea Table lunes 7:30 + cerebro→Dropbox 3:30am");
 }
