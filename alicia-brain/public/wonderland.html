@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wonderland · Sala de Operaciones</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0A0B0F;--card:#141821;--card2:#181C24;--border:#232833;--ink:#F4F1EA;--muted:#7A828F;--soft:#9CA3AF;
+    --ok:#5F8A6A;--warn:#C2A45A;--err:#C86B6B;--violet:#8b5cf6}
+  body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;padding:24px 16px 60px}
+  .wrap{max-width:920px;margin:0 auto}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .blob{width:34px;height:34px;border-radius:50% 48% 52% 50%;background:linear-gradient(135deg,#a78bfa,#6d28d9);box-shadow:0 0 24px rgba(139,92,246,.4);animation:float 5s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(6deg)}}
+  h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 22px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;flex:1;min-width:120px}
+  .stat b{font-size:22px;font-weight:700;display:block}
+  .stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+  .agent{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+  .agent .dot{position:absolute;top:16px;right:16px;width:9px;height:9px;border-radius:50%}
+  .agent h3{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .agent .role{font-size:11px;color:var(--muted);margin:3px 0 10px}
+  .agent .sum{font-size:12px;color:var(--soft);line-height:1.5;min-height:34px}
+  .agent .when{font-size:10px;color:var(--muted);margin-top:10px;text-transform:uppercase;letter-spacing:.08em}
+  .badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:2px 7px;border-radius:20px;margin-top:8px}
+  .sleeping{opacity:.5}
+  .findings{margin-top:26px}
+  .findings h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:10px}
+  .f{background:var(--card2);border:1px solid var(--border);border-left-width:3px;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px}
+  .f .fa{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .empty{color:var(--ok);font-size:13px;padding:14px;background:var(--card2);border:1px solid var(--border);border-radius:8px}
+  .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:28px}
+  .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:5px;animation:p 2s infinite}
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="blob"></div>
+    <div><h1>Wonderland · Sala de Operaciones</h1><div class="sub"><span class="pulse"></span>El equipo de IT autónomo de Alicia · se actualiza solo cada 30s</div></div>
+  </header>
+
+  <div class="bar" id="stats"></div>
+  <div class="grid" id="agents"></div>
+  <div class="findings"><h2>Hallazgos abiertos</h2><div id="findings"></div></div>
+  <div class="foot" id="foot">Cargando…</div>
+</div>
+
+<script>
+const META = {
+  "white-rabbit": { emoji:"🐰", name:"White Rabbit", role:"Médico de guardia · infra cada 30 min" },
+  "cheshire":     { emoji:"😺", name:"Cheshire", role:"Tester E2E · Chromium real cada 30 min" },
+  "mad-hatter":   { emoji:"🎩", name:"Mad Hatter", role:"Performance y costos · cada hora" },
+  "dark-alice":   { emoji:"🖤", name:"Dark Alice", role:"Jefa de operaciones · 7:15am" },
+  "tea-table":    { emoji:"🫖", name:"Tea Table", role:"Consejo · lunes 7:30am" },
+  "bandersnatch": { emoji:"⚔️", name:"Bandersnatch", role:"Chaos tester · llega con la supercomputadora", sleeping:true },
+  "jabberwocky":  { emoji:"⚡", name:"Jabberwocky", role:"Fuzzer · llega con la supercomputadora", sleeping:true },
+};
+const COL = { ok:"var(--ok)", issues:"var(--warn)", error:"var(--err)" };
+const SEVC = { critical:"var(--err)", major:"var(--warn)", minor:"var(--muted)" };
+
+function ago(ts){ if(!ts) return "nunca"; const d=(Date.now()-new Date(ts.replace(" ","T")+"Z").getTime())/1000;
+  if(d<90) return "hace instantes"; if(d<3600) return `hace ${Math.round(d/60)} min`; if(d<86400) return `hace ${Math.round(d/3600)} h`; return `hace ${Math.round(d/86400)} d`; }
+
+async function load(){
+  let d;
+  try { d = await fetch("/api/agents/status",{cache:"no-store"}).then(r=>r.json()); }
+  catch(e){ document.getElementById("foot").textContent="No pude leer el estado…"; return; }
+  const byAgent = {}; (d.agents||[]).forEach(a=>byAgent[a.agent]=a);
+  const open = d.findings||[];
+
+  const activos = (d.agents||[]).length;
+  const crit = open.filter(f=>f.severity==="critical").length;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><b>${activos}<span style="font-size:13px;color:var(--muted)">/7</span></b><span>Agentes activos</span></div>
+    <div class="stat"><b style="color:${open.length?'var(--warn)':'var(--ok)'}">${open.length}</b><span>Hallazgos abiertos</span></div>
+    <div class="stat"><b style="color:${crit?'var(--err)':'var(--ok)'}">${crit}</b><span>Críticos</span></div>
+    <div class="stat"><b style="color:${d.quarantine?'var(--err)':'var(--ok)'}">${d.quarantine?'SÍ':'NO'}</b><span>Cuarentena</span></div>`;
+
+  document.getElementById("agents").innerHTML = Object.entries(META).map(([id,m])=>{
+    const a = byAgent[id];
+    const res = a?.result;
+    const color = a? (COL[res]||"var(--muted)") : "var(--muted)";
+    return `<div class="agent ${m.sleeping?'sleeping':''}">
+      <span class="dot" style="background:${color};box-shadow:0 0 10px ${color}"></span>
+      <h3>${m.emoji} ${m.name}</h3>
+      <div class="role">${m.role}</div>
+      <div class="sum">${a? (a.summary||"—") : (m.sleeping?"Dormido — se activa con la supercomputadora":"Sin correr aún")}</div>
+      ${a?`<span class="badge" style="background:${color}22;color:${color}">${res}</span>`:""}
+      <div class="when">${a?ago(a.created_at):""}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("findings").innerHTML = open.length ? open.map(f=>`
+    <div class="f" style="border-left-color:${SEVC[f.severity]||'var(--muted)'}">
+      <div>${f.detail}</div>
+      <div class="fa">${(META[f.agent]?.emoji||"")} ${f.agent} · ${f.severity} · ${f.category} · ${ago(f.created_at)}</div>
+    </div>`).join("") : `<div class="empty">✅ Sin hallazgos abiertos — todo en orden.</div>`;
+
+  document.getElementById("foot").innerHTML = `<span class="pulse"></span>Actualizado ${new Date().toLocaleTimeString("es-PE")} · Hygge Holding`;
+}
+load(); setInterval(load, 30000);
+</script>
+</body>
+</html>

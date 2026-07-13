@@ -1287,6 +1287,9 @@ app.post("/api/market-refresh", async (req, res) => {
   refreshMarketData().catch(e => console.error("market refresh error:", e.message));
 });
 
+// Sala de operaciones de Wonderland (pública, solo lectura del estado de agentes)
+app.get("/wonderland", (_, res) => res.sendFile(join(__dirname, "../public/wonderland.html")));
+
 // Análisis one-shot para el ERP (Velocity/Mercado, etc.): sin memoria, sin tools.
 // Existe para que el frontend NUNCA necesite una key de Anthropic en el browser.
 app.post("/api/analyze", async (req, res) => {
