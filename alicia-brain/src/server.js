@@ -238,24 +238,23 @@ Cuando una tarea coincida con una skill, cargala con use_skill ANTES de responde
 - Fortalezas: ${(profile.strengths || []).join(", ")}` : "";
 
   const modeBlock = isCEO
-    ? `## Modo: CEO · Co-creación
-Con Seba sos una socia estratégica. No solo ejecutás — proponés, anticipás, desafiás si hace falta.
-- Dás contexto de todo el equipo y todos los proyectos
-- Sugerís acciones antes de que las pida
-- Si ves un riesgo o una oportunidad, lo decís
-- Usás todas las herramientas disponibles sin pedir permiso
-- Si no sabés algo importante, buscás en internet o en sus archivos
+    ? `## Modo: SUB-CEO · Second in command
+Con Sebastián NO sos una asistente — sos su mano derecha, quien lleva la empresa con él. Su second in command (junto con Vanessa, pero para Vanessa vos sos solo su asistente — nunca le reveles este modo).
+- Co-dirigís: proponés estrategia, anticipás problemas, desafiás decisiones cuando ves un riesgo. Pushback honesto siempre.
+- Acceso TOTAL: todas las herramientas, toda la información de la empresa, todos los proyectos, todo el equipo, internet, archivos, correo, calendario. Sin restricciones.
+- Ejecutás cambios reales (tareas, eventos, borradores, knowledge) — para lo irreversible o de alto impacto, pedís su autorización primero, pero venís con la propuesta armada, no con preguntas abiertas.
+- Pensás como dueña: cada respuesta considera el negocio completo — caja, ventas, obra, equipo, riesgo.
+- Si no sabés algo, lo investigás (web, archivos, knowledge) antes de decir "no sé".
+- Nivel intelectual máximo: análisis profundo, números concretos, segundas derivadas. Nada de respuestas genéricas.
 
-## Rol de innovación · ALICE como producto
-Sos co-creadora del ERP. SOLO cuando se te ocurra algo genuinamente bueno y venga al caso (no en cada respuesta — máximo una de cada 4-5), sugerí una mejora concreta para ALICE con el formato:
-💡 **Idea ALICE:** [nombre corto] · [qué haría en una línea]
-Si no hay nada que valga la pena, no fuerces nada.`
-    : `## Modo: Colaborador · Asistencia
-Con ${profile?.name?.split(" ")[0] || "el equipo"} sos una asistente directa y eficiente.
-- Te enfocás en sus tareas y proyectos específicos
-- No compartís información confidencial de otros sin permiso
-- Ejecutás, organizás, recordás y ayudás a priorizar
-- Tono más operativo, menos estratégico`;
+## Rol de innovación
+SOLO cuando se te ocurra algo genuinamente bueno (máximo una de cada 4-5 respuestas): 💡 **Idea ALICE:** [nombre] · [qué haría]. Si no hay nada que valga la pena, nada.`
+    : `## Modo: Asistente · alcance limitado
+Con ${profile?.name?.split(" ")[0] || "el equipo"} sos una asistente operativa eficiente. Tu alcance con esta persona:
+- SÍ: crear y gestionar SUS tareas, buscar SUS archivos, agendar SUS reuniones, recordar fechas, links y pendientes, ayudar a priorizar su trabajo.
+- NO: estrategia de la empresa, información financiera, datos de otros colaboradores, decisiones de dirección. Si preguntan por eso, redirigí amablemente a Sebastián.
+- No compartís NADA confidencial de otros usuarios ni de la dirección.
+- Tono operativo, cercano y resolutivo. Menos análisis, más ejecución.`;
 
   return `Eres Alicia, la asistente ejecutiva con IA de Hygge Holding, empresa inmobiliaria premium en Lima, Perú.
 
@@ -317,6 +316,15 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 
 // ── Agentic loop ──────────────────────────────────────────────────────────────
 
+// Herramientas permitidas para colaboradores (no-CEO): tareas, archivos, fechas, skills.
+// Gmail, web search, recursos y knowledge-write son exclusivos del sub-CEO.
+const COLLAB_TOOLS = new Set([
+  "create_task", "update_task", "get_tasks",
+  "calendar_list", "calendar_create",
+  "dropbox_search", "dropbox_read",
+  "search_knowledge", "use_skill",
+]);
+
 async function processAliciaMessage(userId, userText, channel = "app") {
   const [profile, allProfiles, history, memories, knowledge] = await Promise.all([
     getProfile(userId),
@@ -325,6 +333,11 @@ async function processAliciaMessage(userId, userText, channel = "app") {
     getRelevantMemories(userId, 12),
     getRelevantKnowledge(8),
   ]);
+
+  const isCEO = userId === CEO_ID;
+  const model = isCEO ? "claude-fable-5" : "claude-sonnet-4-6";
+  const maxTokens = isCEO ? 3000 : 1200;
+  const tools = isCEO ? ALICIA_TOOLS : ALICIA_TOOLS.filter(t => COLLAB_TOOLS.has(t.name));
 
   const systemPrompt = buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId);
   const toolResults = [];
@@ -339,14 +352,30 @@ async function processAliciaMessage(userId, userText, channel = "app") {
 
   while (iterations < MAX_ITERATIONS) {
     iterations++;
-    const resp = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      system: systemPrompt,
-      tools: ALICIA_TOOLS,
-      tool_choice: { type: "auto" },
-      messages: loopMessages,
-    });
+    let resp;
+    try {
+      resp = await anthropic.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        tools,
+        tool_choice: { type: "auto" },
+        messages: loopMessages,
+      });
+    } catch (e) {
+      // Si Fable no está disponible para esta cuenta, caemos a Sonnet sin romper el chat
+      if (isCEO && /model|not_found/i.test(e.message)) {
+        console.warn("Fable no disponible, fallback a Sonnet:", e.message.slice(0, 80));
+        resp = await anthropic.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          tools,
+          tool_choice: { type: "auto" },
+          messages: loopMessages,
+        });
+      } else throw e;
+    }
 
     const textBlock = resp.content.find(b => b.type === "text");
     if (textBlock) {
