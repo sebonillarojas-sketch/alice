@@ -217,6 +217,11 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "agents_status",
+    description: "Estado de TUS agentes Wonderland (tu equipo de IT autónomo): White Rabbit 🐰 (guardia de infraestructura), Cheshire 😺 (tester E2E), Tea Table 🫖 (síntesis semanal). Devuelve la última corrida de cada uno y los hallazgos abiertos. Usala cuando pregunten por el conejo, el gato, los agentes, el monitoreo, bugs del sistema o el estado de la infraestructura.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -377,6 +382,15 @@ export async function executeTool(toolName, input, userId) {
       const { rows } = query(sql + ` LIMIT 10`, params);
       if (!rows.length) return `No encontré recursos para "${input.query}".`;
       return rows.map(r => `[${r.type}] ${r.name}\n${r.content}${r.notes ? `\nNota: ${r.notes}` : ""}`).join("\n\n");
+    }
+
+    case "agents_status": {
+      const { rows: lastRuns } = query(`SELECT r.agent, r.result, r.summary, r.created_at FROM agent_runs r
+        INNER JOIN (SELECT agent, MAX(id) mx FROM agent_runs GROUP BY agent) m ON r.agent = m.agent AND r.id = m.mx`);
+      const { rows: open } = query(`SELECT agent, severity, category, detail, created_at FROM agent_findings
+        WHERE status IN ('open','escalated') ORDER BY created_at DESC LIMIT 20`);
+      if (!lastRuns.length) return "Ningún agente ha corrido todavía.";
+      return JSON.stringify({ ultima_corrida_por_agente: lastRuns, hallazgos_abiertos: open });
     }
 
     case "use_skill": {
