@@ -1357,6 +1357,8 @@ app.get("/health", async (_, res) => {
       zoom:    !!(process.env.ZOOM_ACCOUNT_ID),
       dropbox,  // chequeo real: env legacy O (app key+secret + refresh token en DB)
       tavily:  !!(process.env.TAVILY_API_KEY),
+      openai:  !!(process.env.OPENAI_API_KEY),  // voz TTS/Whisper primaria
+      groq:    !!(process.env.GROQ_API_KEY),    // fallback de voz
     }
   });
 });
