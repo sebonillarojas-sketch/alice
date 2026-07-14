@@ -8924,10 +8924,19 @@ function FilterPopover({ open, onClose, filters, setFilters, users, allSpaces, c
   );
 }
 // ═══ CALENDAR TOOL · month view across all spaces ═══════════════════════
-function CalendarToolView({ tasks, openDetail, onCreate }) {
+function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
   const [refDate, setRefDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [quickText, setQuickText] = useState("");
+  const [events, setEvents] = useState([]);
+  // Eventos reales de Google Calendar del usuario (los que Alicia también ve)
+  useEffect(() => {
+    let alive = true;
+    fetch(`${ALICIA_BRAIN_URL}/api/calendar/events?user=${encodeURIComponent(userId)}&days=45`)
+      .then(r => r.json()).then(d => { if (alive && Array.isArray(d.events)) setEvents(d.events); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [userId]);
 
   const year = refDate.getFullYear();
   const month = refDate.getMonth();
@@ -8955,6 +8964,15 @@ function CalendarToolView({ tasks, openDetail, onCreate }) {
     return map;
   }, [tasks]);
 
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    events.forEach(e => {
+      const key = String(e.start || "").slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key)) (map[key] ||= []).push(e);
+    });
+    return map;
+  }, [events]);
+
   const cells = [];
   for (let i = 0; i < 42; i++) {
     const dayNum = i - startWeekday + 1;
@@ -8962,9 +8980,10 @@ function CalendarToolView({ tasks, openDetail, onCreate }) {
     else {
       const d = new Date(year, month, dayNum);
       const key = d.toISOString().slice(0, 10);
-      cells.push({ day: dayNum, date: d, key, tasks: tasksByDate[key] || [], isToday: key === todayKey });
+      cells.push({ day: dayNum, date: d, key, tasks: tasksByDate[key] || [], events: eventsByDate[key] || [], isToday: key === todayKey });
     }
   }
+  const hhmm = (iso) => /T\d{2}:\d{2}/.test(iso || "") ? String(iso).slice(11, 16) : "";
 
   const goToday = () => setRefDate(new Date());
   const prevMonth = () => setRefDate(new Date(year, month - 1, 1));
@@ -9006,13 +9025,16 @@ function CalendarToolView({ tasks, openDetail, onCreate }) {
               style={{ backgroundColor: isSelected ? C.cobalt + "11" : C.bg, minHeight: 80, outline: isSelected ? `2px solid ${C.cobalt}` : "none", outlineOffset: -2 }}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[12px]" style={{ color: cell.isToday ? C.cobalt : C.ink, fontWeight: cell.isToday ? 700 : 500 }}>{cell.day}</span>
-                {cell.tasks.length > 0 && <span className="text-[8px] px-1" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 999, fontWeight: 700 }}>{cell.tasks.length}</span>}
+                {(cell.tasks.length + cell.events.length) > 0 && <span className="text-[8px] px-1" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 999, fontWeight: 700 }}>{cell.tasks.length + cell.events.length}</span>}
               </div>
               <div className="space-y-0.5">
-                {cell.tasks.slice(0, 3).map(t => (
+                {cell.events.slice(0, 2).map(ev => (
+                  <div key={ev.id} title={ev.title} className="text-[9px] px-1 py-0.5 truncate" style={{ backgroundColor: C.cobalt + "1A", color: C.cobalt, borderLeft: `2px solid ${C.cobalt}`, borderRadius: 1, fontWeight: 500 }}>{hhmm(ev.start) && `${hhmm(ev.start)} `}{ev.title}</div>
+                ))}
+                {cell.tasks.slice(0, 3 - Math.min(cell.events.length, 2)).map(t => (
                   <div key={t.id} onClick={(e) => { e.stopPropagation(); openDetail(t.id); }} className="text-[9px] px-1 py-0.5 truncate hover:opacity-80" style={{ backgroundColor: C.surface, color: C.ink, borderLeft: `2px solid ${t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}`, borderRadius: 1 }}>{t.title}</div>
                 ))}
-                {cell.tasks.length > 3 && <div className="text-[8px] px-1" style={{ color: C.muted, fontWeight: 500 }}>+{cell.tasks.length - 3} más</div>}
+                {(cell.tasks.length + cell.events.length) > 3 && <div className="text-[8px] px-1" style={{ color: C.muted, fontWeight: 500 }}>+{cell.tasks.length + cell.events.length - 3} más</div>}
               </div>
             </button>
           );
@@ -9038,6 +9060,19 @@ function CalendarToolView({ tasks, openDetail, onCreate }) {
               <Plus size={11} className="inline mr-1" /> Crear
             </button>
           </form>
+          {(eventsByDate[selectedDate] || []).length > 0 && (
+            <div className="space-y-1.5 mb-4">
+              <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.cobalt, fontWeight: 600 }}>Calendario · {(eventsByDate[selectedDate] || []).length}</div>
+              {(eventsByDate[selectedDate] || []).map(ev => (
+                <div key={ev.id} className="flex items-center gap-2 p-2" style={{ backgroundColor: C.cobalt + "0D", border: `1px solid ${C.cobalt}33`, borderRadius: 2 }}>
+                  <CalIcon size={12} style={{ color: C.cobalt, flexShrink: 0 }} />
+                  <span className="text-[11px]" style={{ color: C.cobalt, fontWeight: 600, minWidth: 34 }}>{hhmm(ev.start) || "—"}</span>
+                  <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500 }}>{ev.title}</span>
+                  {ev.meetLink && <a href={ev.meetLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[10px] hover:opacity-70" style={{ color: C.cobalt, fontWeight: 600 }}>Unirse</a>}
+                </div>
+              ))}
+            </div>
+          )}
           {(tasksByDate[selectedDate] || []).length > 0 && (
             <div className="space-y-1.5">
               <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.muted, fontWeight: 600 }}>Tareas de este día · {(tasksByDate[selectedDate] || []).length}</div>
@@ -14757,7 +14792,7 @@ REGLAS:
       );
     }
     if (currentSpace === "calendar-tool") {
-      return <CalendarToolView tasks={tasks} openDetail={openDetail} onCreate={createFromSmartCapture} />;
+      return <CalendarToolView tasks={tasks} openDetail={openDetail} onCreate={createFromSmartCapture} userId={currentUser?.id || authUser?.id || "sb"} />;
     }
     if (currentSpace === "wikihygge") {
       return <WikiHyggeView openDetail={openDetail} allSpaces={allSpaces} spaceViewports={spaceViewports} setSpaceViewports={setSpaceViewports} knowledgeLinks={knowledgeLinks} setKnowledgeLinks={setKnowledgeLinks} navigate={navigate} />;
