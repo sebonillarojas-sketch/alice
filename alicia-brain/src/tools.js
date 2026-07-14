@@ -186,6 +186,18 @@ export const ALICIA_TOOLS = [
       required: ["file_path"],
     },
   },
+  {
+    name: "dropbox_upload",
+    description: "Sube a Dropbox el ÚLTIMO archivo que el usuario mandó por WhatsApp (PDF, imagen, Excel, etc.). Dropbox se espeja en la tab Archivos del ERP: subirlo ahí = ponerlo en el ERP. Usala cuando te pidan guardar/subir/archivar un archivo que acaban de mandar (el buzón lo retiene 30 minutos).",
+    input_schema: {
+      type: "object",
+      properties: {
+        folder_path: { type: "string", description: "Carpeta destino bajo /Hygge (ej. /Hygge/08_GROWTH, /Hygge/03_PROYECTOS)" },
+        filename:    { type: "string", description: "Nombre para el archivo (opcional; default: nombre original)" },
+      },
+      required: ["folder_path"],
+    },
+  },
 
   // ── Web Search ─────────────────────────────────────────────────────────────
   {
@@ -383,6 +395,18 @@ export async function executeTool(toolName, input, userId) {
       if (!dropboxAvailable()) return "Dropbox no configurado aún.";
       const content = await dropbox.getFileContent(input.file_path);
       return `Contenido de ${input.file_path}:\n\n${content.slice(0, 4000)}`;
+    }
+    case "dropbox_upload": {
+      if (!dropboxAvailable()) return "Dropbox no configurado aún.";
+      const { getLastFile, clearLastFile } = await import("./inbox-files.js");
+      const f = getLastFile(userId);
+      if (!f) return "No tengo ningún archivo tuyo en el buzón (retiene 30 min). Mandámelo por WhatsApp de nuevo y repetime el pedido.";
+      const folder = String(input.folder_path || "").trim().replace(/\/+$/, "");
+      if (!/^\/Hygge(\/|$)/i.test(folder)) return "La carpeta debe estar bajo /Hygge (ej. /Hygge/08_GROWTH).";
+      const name = String(input.filename || f.filename).replace(/[\\/:*?"<>|]/g, "-").trim();
+      const result = await dropbox.uploadFile(`${folder}/${name}`, f.buffer, { mode: "add", autorename: true });
+      clearLastFile(userId);
+      return `📎 Subido: ${result.path_display || `${folder}/${name}`} (${Math.round(f.buffer.length / 1024)} KB). Ya se espeja en la tab Archivos del ERP.`;
     }
 
     // ── Web Search ────────────────────────────────────────────────────────────

@@ -128,17 +128,18 @@ export const dropbox = {
     return dbxFetch("/files/delete_v2", { path });
   },
 
-  uploadFile: async (path, content) => {
+  // content: string UTF-8 o Buffer binario (PDFs/imágenes de WhatsApp)
+  uploadFile: async (path, content, { mode = "overwrite", autorename = false } = {}) => {
     const token = await getToken();
     const res = await fetch("https://content.dropboxapi.com/2/files/upload", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", autorename: false, mute: true }),
+        "Dropbox-API-Arg": JSON.stringify({ path, mode, autorename, mute: true }),
         "Content-Type": "application/octet-stream",
         ...(await pathRootHeader(token)),
       },
-      body: Buffer.from(content, "utf8"),
+      body: Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8"),
     });
     if (!res.ok) {
       const txt = await res.text();

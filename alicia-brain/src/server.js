@@ -389,7 +389,7 @@ const COLLAB_TOOLS = new Set([
   "create_task", "update_task", "get_tasks",
   "calendar_list", "calendar_create", "check_availability",
   "gmail_search", "gmail_draft",
-  "dropbox_search", "dropbox_read",
+  "dropbox_search", "dropbox_read", "dropbox_upload",
   "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
 ]);
@@ -552,7 +552,7 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
   try {
     const message = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    if (!message || !["text", "audio"].includes(message.type)) return;
+    if (!message || !["text", "audio", "document", "image"].includes(message.type)) return;
     const fromPhone = message.from;
     const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, ""));
     if (!allowed.includes(fromPhone.replace(/\D/g, ""))) return;
@@ -567,6 +567,16 @@ app.post("/webhook", async (req, res) => {
       userText = await transcribeBuffer(buffer, mediaType) || "[audio no entendido]";
       inputWasAudio = true;
       console.log(`📝 Transcripción: ${userText}`);
+    } else if (message.type === "document" || message.type === "image") {
+      // Documento/imagen → al buzón; Alicia lo sube a Dropbox con dropbox_upload
+      const media = message.document || message.image;
+      const { buffer, mediaType } = await downloadWACloudMedia(media.id);
+      const { setLastFile, extForMime } = await import("./inbox-files.js");
+      const filename = media.filename || `whatsapp-${Date.now()}.${extForMime(mediaType)}`;
+      setLastFile(userId, { buffer, mediaType, filename });
+      const caption = media.caption || message.caption || "";
+      userText = `[Adjunté un archivo: ${filename} · ${mediaType} · ${Math.round(buffer.length / 1024)} KB]${caption ? ` ${caption}` : " ¿Qué hacés con esto?"}`;
+      console.log(`📎 WA Cloud archivo [${userId}]: ${filename} (${Math.round(buffer.length / 1024)} KB)`);
     } else {
       userText = message.text.body;
     }
@@ -640,6 +650,18 @@ app.post("/webhook/twilio", async (req, res) => {
       if (numMedia > 0 && mediaType.startsWith("audio/")) {
         userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
         inputWasAudio = true;
+      } else if (numMedia > 0 && mediaUrl) {
+        // Documento/imagen → al buzón; Alicia lo sube a Dropbox con dropbox_upload
+        const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+        const fRes = await fetch(mediaUrl, { headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64") } });
+        if (fRes.ok) {
+          const buffer = Buffer.from(await fRes.arrayBuffer());
+          const { setLastFile, extForMime } = await import("./inbox-files.js");
+          const filename = `whatsapp-${Date.now()}.${extForMime(mediaType)}`;
+          setLastFile(userId, { buffer, mediaType, filename });
+          userText = `[Adjunté un archivo: ${filename} · ${mediaType} · ${Math.round(buffer.length / 1024)} KB]${body ? ` ${body}` : " ¿Qué hacés con esto?"}`;
+          console.log(`📎 Twilio archivo [${userId}]: ${filename} (${Math.round(buffer.length / 1024)} KB)`);
+        }
       }
       if (!userText) return;
       console.log(`📱 Twilio [${userId}] ${userText}`);
