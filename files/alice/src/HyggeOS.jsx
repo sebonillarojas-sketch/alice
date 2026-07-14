@@ -8071,11 +8071,12 @@ function LabView({ labId, ...allProps }) {
   );
 }
 
-function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate, openDetail, onEditProject, onEditNps, onResetSeed }) {
+function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate, openDetail, onEditProject, onAddProject, onDeleteProject, onEditNps, onResetSeed }) {
   const [activeProject, setActiveProject] = useState(null);
   const [audience, setAudience] = useState("internal");
   const [shareOpen, setShareOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [creatingProject, setCreatingProject] = useState(false);
   const [editingNps, setEditingNps] = useState(false);
   const visible = CEO_AUDIENCE_PRESETS[audience].sections;
 
@@ -8222,8 +8223,25 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
             <div style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 4, overflow: "hidden" }}>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: "-0.01em", color: C.ink }}>Proyectos Activos · SPVs</span>
-                <span style={{ fontSize: 10, color: C.muted }}>{projects.length} proyectos</span>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: 10, color: C.muted }}>{projects.length} proyectos</span>
+                  {audience === "internal" && (
+                    <button onClick={() => setCreatingProject(true)} className="flex items-center gap-1 px-2 py-1 text-[10px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }} title="Agregar proyecto">
+                      <Plus size={10} /> Agregar
+                    </button>
+                  )}
+                </div>
               </div>
+              {projects.length === 0 && (
+                <div className="px-4 py-8 text-center" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Sin proyectos todavía · los KPIs de arriba se calculan de acá</div>
+                  {audience === "internal" && (
+                    <button onClick={() => setCreatingProject(true)} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>
+                      + Agregar tu primer proyecto
+                    </button>
+                  )}
+                </div>
+              )}
               {projects.map((p, i) => {
                 const faseColors = { "Construcción": { bg: `${C.cobalt}15`, fg: C.cobalt }, "Pre-venta": { bg: `${C.ochre}25`, fg: C.ochre }, "Fee mensual": { bg: `${C.green}20`, fg: C.green }, "Permisos": { bg: `${C.brick}15`, fg: C.brick } };
                 const fc = faseColors[p.fase] || { bg: C.lineSoft, fg: C.muted };
@@ -8301,7 +8319,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
                 {projects.map((p) => (
                   <div key={p.id}>
                     <div className="flex justify-between mb-1">
-                      <span style={{ fontSize: 10, color: C.muted }}>{p.name.replace(" · " + p.spvCode.replace("SPV-", ""), "")}</span>
+                      <span style={{ fontSize: 10, color: C.muted }}>{p.spvCode ? p.name.replace(" · " + p.spvCode.replace("SPV-", ""), "") : p.name}</span>
                       <span style={{ fontSize: 10, fontWeight: 600, color: C.ink }}>
                         {_fmtM(p.revenue.captado)} <span style={{ color: C.muted, fontWeight: 400 }}>/ {_fmtM(p.revenue.proyectado)}</span>
                       </span>
@@ -8421,7 +8439,14 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
       {shareOpen && <CEOShareModal kpis={kpis} projects={projects} audience={audience} criticalTasks={criticalTasks} onClose={() => setShareOpen(false)} />}
 
       {/* Project edit modal */}
-      {editingProject && <CEOProjectEditModal project={editingProject} onSave={(patch) => { onEditProject(editingProject.id, patch); setEditingProject(null); }} onClose={() => setEditingProject(null)} />}
+      {editingProject && <CEOProjectEditModal project={editingProject} onSave={(patch) => { onEditProject(editingProject.id, patch); setEditingProject(null); }} onDelete={() => { onDeleteProject(editingProject.id); setEditingProject(null); }} onClose={() => setEditingProject(null)} />}
+
+      {/* Crear proyecto · mismo modal con template vacío */}
+      {creatingProject && <CEOProjectEditModal
+        project={{ name: "", fase: "Pre-venta", progreso: 0, vencimiento: "", unidades: { total: 0, vendidas: 0, reservadas: 0, disponibles: 0 }, revenue: { proyectado: 0, captado: 0 }, fc: { estado: "neutro", saldo: 0 } }}
+        isNew
+        onSave={(form) => { onAddProject(form); setCreatingProject(false); }}
+        onClose={() => setCreatingProject(false)} />}
 
       {/* NPS edit modal */}
       {editingNps && <CEONpsEditModal currentNps={nps} onSave={(v) => { onEditNps(v); setEditingNps(false); }} onClose={() => setEditingNps(false)} />}
@@ -8437,7 +8462,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
   );
 }
 
-function CEOProjectEditModal({ project, onSave, onClose }) {
+function CEOProjectEditModal({ project, isNew = false, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     name: project.name,
     fase: project.fase,
@@ -8470,8 +8495,8 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
       <div className="w-full max-w-[560px] max-h-[90vh] overflow-y-auto" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div>
-            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Editar proyecto</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, marginTop: 2 }}>{project.name}</div>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>{isNew ? "Nuevo proyecto" : "Editar proyecto"}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, marginTop: 2 }}>{isNew ? (form.name || "Proyecto sin nombre") : project.name}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ModalBlob state={blob.state} />
@@ -8551,9 +8576,15 @@ function CEOProjectEditModal({ project, onSave, onClose }) {
           </div>
         </div>
 
-        <div className="px-5 py-3 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
+        <div className="px-5 py-3 flex items-center gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
+          {!isNew && onDelete && (
+            <button onClick={() => { if (confirm(`¿Eliminar "${project.name}" del portafolio? Sus números salen de los KPIs.`)) onDelete(); }} className="px-3 py-1.5 text-[11px] hover:opacity-80" style={{ color: C.brick, border: `1px solid ${C.brick}40`, borderRadius: 2, fontWeight: 600 }}>
+              Eliminar
+            </button>
+          )}
+          <div className="flex-1" />
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted }}>Cancelar</button>
-          <button onClick={() => blob.onHappy(() => onSave(form))} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>Guardar</button>
+          <button onClick={() => { if (!form.name.trim()) { blob.onError(); return; } blob.onHappy(() => onSave(form)); }} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>{isNew ? "Crear proyecto" : "Guardar"}</button>
         </div>
       </div>
     </div>
@@ -14832,6 +14863,11 @@ REGLAS:
         projects={ceoProjects} nps={ceoNps}
         navigate={navigate} openDetail={openDetail}
         onEditProject={(id, patch) => setCeoProjects(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
+        onAddProject={(form) => setCeoProjects(prev => {
+          const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
+          return [...prev, { ...form, id: Date.now(), color: palette[prev.length % palette.length] }];
+        })}
+        onDeleteProject={(id) => setCeoProjects(prev => prev.filter(p => p.id !== id))}
         onEditNps={setCeoNps}
         onResetSeed={() => { setCeoProjects(INITIAL_CEO_PROJECTS); setCeoNps(0); }}
       />;
