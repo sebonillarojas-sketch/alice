@@ -14371,9 +14371,18 @@ export default function HyggeOS({ authUser } = {}) {
       recordActivity(`creó "${newTask.title}"`, { taskId: newTask.id, space: newTask.space });
       pushNewTask(newTask);
       db.upsertTask(newTask).catch(console.error);
+      // Reflejar en Google Calendar si la tarea tiene fecha (evento all-day)
+      const dt = [newTask.due, newTask.endDate, newTask.startDate]
+        .map(d => (String(d || "").match(/^\d{4}-\d{2}-\d{2}$/) || [])[0]).find(Boolean);
+      if (dt) {
+        fetch(`${ALICIA_BRAIN_URL}/api/calendar/event`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user: currentUser?.id || "sb", title: `📋 ${newTask.title}`, date: dt, description: `Tarea de ALICE · space ${newTask.space || "—"}` }),
+        }).catch(() => {});
+      }
     }
     return newTask;
-  }, [recordActivity, pushNewTask]);
+  }, [recordActivity, pushNewTask, currentUser]);
 
   // Duplicate task — preserves fields, generates new ID, resets subtasks/comments/attachments
   const duplicateTask = useCallback((id) => {

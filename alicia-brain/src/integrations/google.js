@@ -157,12 +157,27 @@ export const gmail = {
     return results;
   },
 
-  createDraft: async ({ to, subject, body }, userId = "sb") => {
-    const raw = btoa(`To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`)
-      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  // Base64url UTF-8 seguro (btoa rompe con tildes/ñ; el asunto va RFC 2047)
+  _buildRaw: ({ to, subject, body, cc }) => {
+    const encSubj = `=?UTF-8?B?${Buffer.from(subject || "", "utf8").toString("base64")}?=`;
+    const headers = [
+      `To: ${to}`, cc ? `Cc: ${cc}` : null,
+      `Subject: ${encSubj}`, "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8",
+    ].filter(Boolean).join("\r\n");
+    return Buffer.from(`${headers}\r\n\r\n${body || ""}`, "utf8").toString("base64url");
+  },
+
+  createDraft: async ({ to, subject, body, cc }, userId = "sb") => {
+    const raw = gmail._buildRaw({ to, subject, body, cc });
     return gFetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
-      method: "POST",
-      body: JSON.stringify({ message: { raw } }),
+      method: "POST", body: JSON.stringify({ message: { raw } }),
+    }, userId);
+  },
+
+  send: async ({ to, subject, body, cc }, userId = "sb") => {
+    const raw = gmail._buildRaw({ to, subject, body, cc });
+    return gFetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST", body: JSON.stringify({ raw }),
     }, userId);
   },
 };

@@ -1190,6 +1190,20 @@ app.get("/api/calendar/events", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Crear evento en Google Calendar — lo llama el ERP cuando se crea una tarea con fecha
+app.post("/api/calendar/event", async (req, res) => {
+  try {
+    const { user = "sb", title, date, time, endTime, description } = req.body || {};
+    if (!title || !date) return res.status(400).json({ error: "title y date requeridos" });
+    const u = String(user).toLowerCase().replace(/[^a-z]/g, "") || "sb";
+    const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
+    const calUser = googleAvailable(u) ? u : (googleAvailable("sb") ? "sb" : null);
+    if (!calUser) return res.json({ ok: false, note: "Google Calendar no conectado" });
+    const ev = await googleCalendar.createEvent({ title, date, time, endTime, description }, calUser);
+    res.json({ ok: true, eventId: ev.id, link: ev.htmlLink });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Actualizar email de un perfil (para el mapeo de calendarios)
 app.patch("/api/profile/:userId/email", (req, res) => {
   try {

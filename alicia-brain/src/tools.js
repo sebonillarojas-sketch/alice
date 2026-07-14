@@ -113,13 +113,27 @@ export const ALICIA_TOOLS = [
   },
   {
     name: "gmail_draft",
-    description: "Redacta un borrador de email en Gmail. NO lo envía — solo crea el borrador para que Sebastián lo revise.",
+    description: "Redacta un borrador de email en Gmail. NO lo envía — solo crea el borrador para revisar.",
     input_schema: {
       type: "object",
       properties: {
         to:      { type: "string", description: "Email del destinatario" },
         subject: { type: "string" },
         body:    { type: "string", description: "Cuerpo del email en texto plano" },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "gmail_send",
+    description: "ENVÍA un email de verdad desde el Gmail del usuario. Es una acción irreversible: antes de enviar, confirmá con la persona el destinatario, asunto y cuerpo (salvo que ya te lo haya confirmado explícitamente). Usala cuando te pidan mandar/enviar un correo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        to:      { type: "string", description: "Email del destinatario" },
+        subject: { type: "string" },
+        body:    { type: "string", description: "Cuerpo del email en texto plano" },
+        cc:      { type: "string", description: "Copia (opcional)" },
       },
       required: ["to", "subject", "body"],
     },
@@ -327,6 +341,11 @@ export async function executeTool(toolName, input, userId) {
       if (!googleAvailable(userId)) return `Tu Gmail no está conectado. Autorizar en https://aliceai.bam.pe/auth/google?user=${userId}`;
       await gmail.createDraft({ to: input.to, subject: input.subject, body: input.body }, userId);
       return `Borrador creado ✓ en Gmail — Para: ${input.to} · Asunto: "${input.subject}". Revisalo antes de enviar.`;
+    }
+    case "gmail_send": {
+      if (!googleAvailable(userId)) return `Tu Gmail no está conectado. Autorizar en https://aliceai.bam.pe/auth/google?user=${userId}`;
+      await gmail.send({ to: input.to, subject: input.subject, body: input.body, cc: input.cc }, userId);
+      return `📧 Email ENVIADO ✓ — Para: ${input.to}${input.cc ? " · CC: " + input.cc : ""} · Asunto: "${input.subject}"`;
     }
 
     // ── Zoom ──────────────────────────────────────────────────────────────────
