@@ -446,8 +446,12 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     : tools;
   const toolResults = [];
   let finalText = "";
+  // Cache breakpoint al final del historial: el prefijo (system+tools+historial)
+  // se re-usa entre turnos → el grueso del input no se re-procesa en cada mensaje.
   let loopMessages = [
-    ...history.map(m => ({ role: m.role, content: m.content })),
+    ...history.map((m, i) => i === history.length - 1
+      ? { role: m.role, content: [{ type: "text", text: String(m.content || " "), cache_control: { type: "ephemeral" } }] }
+      : { role: m.role, content: m.content }),
     { role: "user", content: userText },
   ];
 
