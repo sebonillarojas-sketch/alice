@@ -14186,7 +14186,16 @@ export default function HyggeOS({ authUser } = {}) {
     };
     setTasks(prev => [newTask, ...prev]);
     db.upsertTask(newTask).catch(console.error); // sin esto lo capturado muere con F5
-  }, []);
+    // Reflejar en Google Calendar si tiene fecha (mismo criterio que addTask)
+    const dt = [newTask.due, newTask.endDate, newTask.startDate]
+      .map(d => (String(d || "").match(/^\d{4}-\d{2}-\d{2}$/) || [])[0]).find(Boolean);
+    if (dt) {
+      fetch(`${ALICIA_BRAIN_URL}/api/calendar/event`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: currentUser?.id || "sb", title: `📋 ${newTask.title}`, date: dt, description: `Tarea de ALICE · space ${newTask.space || "—"}` }),
+      }).catch(() => {});
+    }
+  }, [currentUser]);
 
   const saveSmartView = useCallback((pattern) => {
     setSmartViews(prev => {
