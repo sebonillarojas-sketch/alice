@@ -1328,6 +1328,23 @@ app.post("/api/market-refresh", async (req, res) => {
 // Sala de operaciones de Wonderland (pública, solo lectura del estado de agentes)
 app.get("/wonderland", (_, res) => res.sendFile(join(__dirname, "../public/wonderland.html")));
 
+// Diagnóstico de voz temporal — intenta OpenAI TTS y devuelve el error crudo (sin exponer la key)
+app.get("/voice-diag", async (_, res) => {
+  const out = { openai_key: !!process.env.OPENAI_API_KEY, groq_key: !!process.env.GROQ_API_KEY };
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const r = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "tts-1", input: "test", voice: "nova", response_format: "wav" }),
+      });
+      out.openai_status = r.status;
+      if (r.ok) out.openai_ok = true; else out.openai_error = (await r.text()).slice(0, 400);
+    } catch (e) { out.openai_error = e.message; }
+  }
+  res.json(out);
+});
+
 // Análisis one-shot para el ERP (Velocity/Mercado, etc.): sin memoria, sin tools.
 // Existe para que el frontend NUNCA necesite una key de Anthropic en el browser.
 app.post("/api/analyze", async (req, res) => {
