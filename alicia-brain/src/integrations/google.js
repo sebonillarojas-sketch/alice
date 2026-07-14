@@ -106,6 +106,55 @@ export const googleCalendar = {
       userId
     );
   },
+
+  // Evento derivado de una tarea del ERP · id determinístico → crear/editar/borrar
+  // apuntan siempre al mismo evento sin tener que guardar el eventId en Supabase.
+  // Google exige base32hex (a-v, 0-9); los ids de tarea son timestamps (dígitos).
+  upsertTaskEvent: async ({ taskId, title, date, time, endTime, description, location }, userId = "sb") => {
+    const id = ("alicetask" + String(taskId)).toLowerCase().replace(/[^a-v0-9]/g, "").slice(0, 200);
+    const start = time ? `${date}T${time}:00` : date;
+    const end   = endTime ? `${date}T${endTime}:00` : (time ? `${date}T${time.replace(/(\d+):/, m => String(parseInt(m)+1)+':')}:00` : date);
+    const body = {
+      id,
+      summary:     title,
+      description: description || null,
+      location:    location || null,
+      start: time ? { dateTime: start, timeZone: "America/Lima" } : { date },
+      end:   time ? { dateTime: end,   timeZone: "America/Lima" } : { date },
+    };
+    // PUT = update; si el evento no existe (404) lo insertamos con ese id fijo.
+    try {
+      return await gFetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`,
+        { method: "PUT", body: JSON.stringify(body) },
+        userId
+      );
+    } catch (e) {
+      if (/\b404\b/.test(e.message)) {
+        return await gFetch(
+          "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+          { method: "POST", body: JSON.stringify(body) },
+          userId
+        );
+      }
+      throw e;
+    }
+  },
+
+  deleteTaskEvent: async (taskId, userId = "sb") => {
+    const id = ("alicetask" + String(taskId)).toLowerCase().replace(/[^a-v0-9]/g, "").slice(0, 200);
+    const token = await getAccessToken(userId);
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // 404/410 = ya no existe → lo tratamos como borrado exitoso (idempotente)
+    if (!res.ok && res.status !== 404 && res.status !== 410) {
+      const err = await res.text().catch(() => "");
+      throw new Error(`Calendar delete error ${res.status}: ${err.slice(0, 120)}`);
+    }
+    return { ok: true };
+  },
 };
 
 // Disponibilidad (free/busy) de una o varias personas — solo bloques ocupados, sin detalles.
