@@ -292,7 +292,7 @@ const LAB_TOOLS = [
 
 const TOOLS = [
   { id: "alicia", label: "Alicia", icon: Bot, dot: "#A855F7" },
-  { id: "inbox", label: "Sin asignar", icon: InboxIcon, dot: "#3D52D5" },
+  { id: "inbox", label: "Smart Capture", icon: InboxIcon, dot: "#3D52D5" },
   { id: "messages", label: "Mensajes", icon: MessageSquare, dot: "#A89BD9" },
   { id: "calendar-tool", label: "Calendario", icon: CalIcon, dot: "#5F8A6A" },
   { id: "wikihygge", label: "WikiHygge", icon: FileText, dot: "#C2A45A" },
@@ -597,7 +597,8 @@ Context: ${context || "default"}. Map type to space: pago/detraccion/estados →
 }
 
 
-const pen = (n) => n >= 1_000_000 ? "S/ " + (n/1_000_000).toFixed(2) + "M" : "S/ " + (n/1_000).toFixed(0) + "K";
+// n < 1000 va literal: "S/ 0K" se leía "S/ OK" en los dashboards financieros
+const pen = (n) => n >= 1_000_000 ? "S/ " + (n/1_000_000).toFixed(2) + "M" : n >= 1_000 ? "S/ " + (n/1_000).toFixed(0) + "K" : "S/ " + Math.round(n || 0);
 const fmtTime = (s) => { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return [h,m,sec].map(n => String(n).padStart(2,"0")).join(":"); };
 const nowHHMM = () => { const d = new Date(); return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"); };
 
@@ -1002,7 +1003,8 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
 }
 
 // ═══ SIDEBAR ═════════════════════════════════════════════════════════════
-function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, toggleSpaceExpansion, onCreateSpace, onCreateSubSpace, onDeleteSpace, onEditSpace, smartViews, activeSmartViewId, onSelectSmartView, onClearSmartView, onDeleteSmartView, mobileOpen, onMobileClose, currentUser, onOpenSettings, onClickUser, users, inboxCount, notifCount, messagesCount, tasks }) {
+function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, toggleSpaceExpansion, onCreateSpace, onCreateSubSpace, onDeleteSpace, onEditSpace, smartViews, activeSmartViewId, onSelectSmartView, onClearSmartView, onDeleteSmartView, mobileOpen, onMobileClose, currentUser, onOpenSettings, onClickUser, users, inboxCount, notifCount, messagesCount, tasks, features = {} }) {
+  const visibleApps = APPS.filter(a => a.id !== "app-games" || features.juegos); // Juegos vive en Features opt-in
   const taskCountBySpace = useMemo(() => {
     const counts = {};
     (tasks || []).filter(t => !t.checked && !t.parentId).forEach(t => {
@@ -1049,14 +1051,13 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
         </nav>
 
         {/* APPS · artifacts externos embebidos · cada uno vive en su propio repo/deploy */}
-        {APPS.length > 0 && (
+        {visibleApps.length > 0 && (
           <>
             <div className="mb-3 flex items-center justify-between">
               <Eyebrow>Apps</Eyebrow>
-              <span style={{ fontSize: 8, color: C.muted, letterSpacing: "0.08em", fontStyle: "italic" }}>externas</span>
             </div>
             <nav className="space-y-0.5 mb-6">
-              {APPS.map(a => {
+              {visibleApps.map(a => {
                 const Icon = a.icon;
                 const isActive = a.id === currentSpace;
                 return (
@@ -1067,10 +1068,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
                     style={{ backgroundColor: isActive ? C.surface : "transparent", border: `1px solid ${isActive ? C.lineSoft : "transparent"}`, borderRadius: 2 }}>
                     <Icon size={12} style={{ color: a.blocked ? C.muted : isActive ? a.dot : C.muted, flexShrink: 0 }} />
                     <span className="text-[12px] flex-1 text-left" style={{ color: isActive ? C.ink : C.inkSoft, fontWeight: isActive ? 600 : 500 }}>{a.label}</span>
-                    {a.blocked
-                      ? <ExternalLink size={10} style={{ color: C.muted, flexShrink: 0 }} />
-                      : a.badge && <span className="text-[8px] px-1.5 py-0.5" style={{ backgroundColor: C.lineSoft, color: C.muted, borderRadius: 2, fontWeight: 700, fontFamily: "ui-monospace, monospace", letterSpacing: "0.04em" }}>{a.badge}</span>
-                    }
+                    {a.blocked && <ExternalLink size={10} style={{ color: C.muted, flexShrink: 0 }} />}
                   </button>
                 );
               })}
@@ -2368,7 +2366,8 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startWeekday = (firstDay.getDay() + 6) % 7;
-  const monthName = refDate.toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+  const _mn = refDate.toLocaleDateString("es-PE", { month: "long", year: "numeric" }); // "julio de 2026"
+  const monthName = _mn.charAt(0).toUpperCase() + _mn.slice(1); // solo la inicial — capitalize por CSS daba "Julio De 2026"
 
   const tasksByDate = useMemo(() => {
     const map = {};
@@ -2411,7 +2410,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
       <div className="mb-8">
         <NavyRule />
         <div className="mt-4"><Eyebrow>{spaceName} · calendario</Eyebrow></div>
-        <h1 className="text-[32px] lg:text-[36px] mt-3 capitalize" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>{monthName}</h1>
+        <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>{monthName}</h1>
         <div className="text-[12px] mt-2" style={{ color: C.muted }}>{totalThisMonth} {totalThisMonth === 1 ? "tarea programada" : "tareas programadas"} en este mes</div>
       </div>
 
@@ -5606,7 +5605,7 @@ function ProjectDashboard({ projectId }) {
             </div>
             <section className="mb-14"><SectionHead title="Estado" />
               <KpiBar items={[
-                { label: "Obra", value: construccionPct + "%", sub: obraProgress !== null ? "actualizado via PDF" : "seed" },
+                { label: "Obra", value: construccionPct + "%", sub: obraProgress !== null ? "actualizado via PDF" : "sin reporte de obra aún" },
                 { label: "Ventas", value: `${p.sold}/${p.totalUnits}`, sub: soldPct.toFixed(0) + "%" },
                 { label: "Cobrado", value: pen(p.salesPEN), sub: `/ ${pen(p.targetPEN)}` },
                 { label: "Margen", value: p.margin.toFixed(1) + "%" },
@@ -9155,7 +9154,8 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startWeekday = (firstDay.getDay() + 6) % 7;
-  const monthName = refDate.toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+  const _mn = refDate.toLocaleDateString("es-PE", { month: "long", year: "numeric" }); // "julio de 2026"
+  const monthName = _mn.charAt(0).toUpperCase() + _mn.slice(1); // solo la inicial — capitalize por CSS daba "Julio De 2026"
 
   const tasksByDate = useMemo(() => {
     const map = {};
@@ -9210,7 +9210,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
       <div className="mb-8">
         <NavyRule />
         <div className="mt-4"><Eyebrow>Calendario · todos los spaces</Eyebrow></div>
-        <h1 className="text-[32px] lg:text-[36px] mt-3 capitalize" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>{monthName}</h1>
+        <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>{monthName}</h1>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
@@ -9753,6 +9753,7 @@ function FeaturesAdminPanel({ features, setFeatures }) {
     { id: "customViews", label: "Custom Views", description: "Chips de vistas custom (Chart, KPI, Embed, etc.) en la barra de vistas de cada space", reason: "Oculto por default · feature avanzado, agregalo si querés crear gráficos custom" },
     { id: "whiteboards", label: "Whiteboards", description: "Tab de pizarra · stickies, shapes, flechas, iconos + lápiz con variantes (lápiz / plumón / fine pen / resaltador / borrador) y presión Apple Pencil", reason: "Oculto por default · ideal para sketches, mapas mentales, planos. Funciona con Apple Pencil." },
     { id: "viewport", label: "Viewport Externo", description: "Tab adicional en cada space que muestra un iframe a una URL externa · ideal para embebar Cash Flow sheets, Miro boards, sitios de Bronca, etc. URL configurable por space.", reason: "Oculto por default · útil para mantener fuentes externas a un click de distancia sin salir de ALICE" },
+    { id: "juegos", label: "Juegos", description: "Helicopter BAM Edition en el sidebar de Apps · esquivá obstáculos, modo salvo", reason: "Oculto por default · el ERP es serio, el recreo es opt-in" },
   ];
   return (
     <div className="space-y-4">
@@ -14014,7 +14015,7 @@ export default function HyggeOS({ authUser } = {}) {
   const [spaceAccess, setSpaceAccess] = useState({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
-  const [features, setFeatures] = useState({ whiteboards: false, customViews: false, viewport: false });
+  const [features, setFeatures] = useState({ whiteboards: false, customViews: false, viewport: false, juegos: false });
   const [spaceViewports, setSpaceViewports] = useState({}); // { spaceId: { url, label } }
   const [knowledgeLinks, setKnowledgeLinks] = useState([]);
   const [filters, setFilters] = useState({ priorities: [], assignees: [], statuses: [], includeSubspaces: true });
@@ -14250,14 +14251,14 @@ export default function HyggeOS({ authUser } = {}) {
         loadStored("hygge:activity", []),
         loadStored("hygge:ceoProjects", INITIAL_CEO_PROJECTS),
         loadStored("hygge:ceoNps", 0),
-        loadStored("hygge:features", { whiteboards: false, customViews: false, viewport: false }),
+        loadStored("hygge:features", { whiteboards: false, customViews: false, viewport: false, juegos: false }),
         loadStored("hygge:spaceViewports", {}),
         loadStored("hygge:knowledgeLinks", []),
         loadStored("hygge:spvs", DEFAULT_SPVS),
         loadStored("hygge:hq:cifras", DEFAULT_HQ_CIFRAS),
         loadStored("hygge:deletedDefaultSpaces", []),
       ]);
-      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(Array.isArray(us) ? us.map(u => ({ ...u, online: false })) : us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length > 0 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 0); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport } : { whiteboards: false, customViews: false, viewport: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
+      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(Array.isArray(us) ? us.map(u => ({ ...u, online: false })) : us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length > 0 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 0); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport, juegos: !!ft.juegos } : { whiteboards: false, customViews: false, viewport: false, juegos: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
     })();
   }, []);
 
@@ -15130,7 +15131,7 @@ REGLAS:
         {(mobileSidebarOpen || mobileRightPanelOpen) && (
           <div className="fixed inset-0 z-30 lg:hidden" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => { setMobileSidebarOpen(false); setMobileRightPanelOpen(false); }} />
         )}
-        <Sidebar allSpaces={visibleSpaces} tools={visibleTools} currentSpace={currentSpace} setSpace={navigate}
+        <Sidebar allSpaces={visibleSpaces} tools={visibleTools} currentSpace={currentSpace} setSpace={navigate} features={features}
           expandedSpaces={expandedSpaces} toggleSpaceExpansion={toggleSpaceExpansion}
           onCreateSpace={() => { setCreateSpaceParent(null); setCreateSpaceOpen(true); }}
           onCreateSubSpace={(parent) => { setCreateSpaceParent(parent); setCreateSpaceOpen(true); }}
