@@ -458,9 +458,6 @@ const DEFAULT_SPVS = [
   { code: "L36",  name: "Larco 1036",           district: "Miraflores", tipo: "administracion", rol: "Administración + fee", totalUnits: 0, sold: 0, construction: 0, salesPEN: 0, targetPEN: 0, margin: 0, status: "Supervisión",  statusTone: "muted",   nextMilestone: "—" },
 ];
 
-const OPS_BY_AREA = [{ area: "BAM", open: 14, overdue: 2 }, { area: "Finanzas", open: 9, overdue: 0 }, { area: "Comercial", open: 12, overdue: 3 }, { area: "Legal", open: 6, overdue: 1 }, { area: "Operaciones", open: 11, overdue: 0 }, { area: "Marketing", open: 7, overdue: 1 }];
-const LAND_PIPELINE = [{ stage: "Identificación", count: 14 }, { stage: "Análisis", count: 8 }, { stage: "Negociación", count: 4 }, { stage: "Due Diligence", count: 2 }, { stage: "Cierre", count: 1 }];
-
 // Growth · terrenos en evaluación para nuevos proyectos
 const TERRENO_STATUSES = [
   { id: "scouting",      label: "Scouting",      color: "#8C8F96" },
@@ -628,7 +625,7 @@ const Hero = ({ eyebrow, code, intro }) => (
   </div>
 );
 const KpiBar = ({ items }) => (
-  <div className="grid" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
+  <div className="grid" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 120px), 1fr))` }}>
     {items.map((k, i) => (
       <div key={i} className="px-6 py-6" style={{ borderRight: i < items.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
         <Eyebrow>{k.label}</Eyebrow>
@@ -800,7 +797,7 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
                 {assignee ? <><Avatar personId={assignee.id} size={20} /><span style={{ color: C.ink, fontWeight: 500 }}>{assignee.name.split(" ")[0]}</span></> : <><UserIcon size={13} style={{ color: C.muted }} /><span style={{ color: C.muted }}>Sin asignar</span></>}
               </button>
               {showAssigneePicker && (
-                <div className="absolute top-full left-0 mt-1 w-[240px] z-10" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }}>
+                <div className="absolute top-full left-0 mt-1 w-[240px] max-w-[calc(100vw-32px)] z-10" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }}>
                   {PEOPLE.map(p => (
                     <button key={p.id} onClick={() => { onUpdate(task.id, { assignee: p.id }); setShowAssigneePicker(false); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:opacity-90"
@@ -1906,8 +1903,8 @@ function ViewTabs({ active, setActive, onAdd, onFilterClick, activeFilterCount, 
 
       {/* Popover de Agregar · position:fixed para escapar overflow del scroll container */}
       {addOpen && popoverPos && (
-        <div ref={popoverRef} className="w-[280px]"
-          style={{ position: "fixed", top: popoverPos.top, left: popoverPos.left, zIndex: 1000, backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(10,11,15,0.18)" }}>
+        <div ref={popoverRef} className="w-[280px] max-w-[calc(100vw-16px)]"
+          style={{ position: "fixed", top: popoverPos.top, left: Math.min(popoverPos.left, Math.max(8, window.innerWidth - 288)), zIndex: 1000, backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(10,11,15,0.18)" }}>
           <div className="px-3 py-2" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
             <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>Features opt-in</div>
             <div style={{ fontSize: 10, color: C.muted, fontStyle: "italic", marginTop: 2 }}>Activá y aparece el tab acá mismo</div>
@@ -2500,7 +2497,8 @@ function TableView({ tasks, currentSpace, openDetail, allSpaces }) {
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1280px] mx-auto">
       <div className="mb-10"><NavyRule /><div className="mt-4"><Eyebrow>{spaceName} · tabla</Eyebrow></div><h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Vista tabular</h1><div className="text-[12px] mt-2" style={{ color: C.muted }}>{filtered.length} {filtered.length === 1 ? "tarea" : "tareas"}</div></div>
       <Panel>
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full" style={{ minWidth: 640 }}>
           <thead><tr className="text-[10px] tracking-[0.15em] uppercase" style={{ color: C.muted, fontWeight: 500 }}>{["Tarea","Asignado","Proyecto","Prioridad","Vence","Estado"].map(h => <th key={h} className="text-left pb-3 px-3" style={{ borderBottom: `1px solid ${C.line}` }}>{h}</th>)}</tr></thead>
           <tbody>
             {filtered.map((t, i) => (
@@ -2515,6 +2513,7 @@ function TableView({ tasks, currentSpace, openDetail, allSpaces }) {
             ))}
           </tbody>
         </table>
+        </div>
       </Panel>
     </div>
   );
@@ -3722,7 +3721,7 @@ function HQDashboard({ totalSales, totalTarget, totalSold, totalUnits, onOpenSpa
             </button>
           )}
         </div>
-        <div style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, display: "grid", gridTemplateColumns: `repeat(${Math.max(cifras.length, 1)}, 1fr)` }}>
+        <div style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 140px), 1fr))` }}>
           {cifras.map((item, i) => (
             <div key={item.id} className="relative group/kpi px-6 py-6" style={{ borderRight: i < cifras.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
               {isAdmin && (
@@ -4012,7 +4011,7 @@ function FinanzasDashboard() {
           {kpis.length > 0 && (
             <section className="mb-10">
               <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Métricas · última fila</div>
-              <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(kpis.length, 4)}, 1fr)`, gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 180px), 1fr))`, gap: 12 }}>
                 {kpis.map(w => {
                   const isPos = w.delta === null ? null : w.delta >= 0;
                   return (
@@ -4098,7 +4097,7 @@ function FinanzasDashboard() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 12, marginBottom: 24 }}>
           {[1,2,3].map(i => (
             <div key={i} style={{ height: 90, backgroundColor: C.surface, borderRadius: 3, opacity: 0.5, animation: "pulse 1.5s ease-in-out infinite" }} />
           ))}
@@ -5199,7 +5198,7 @@ Concisa. Sin genérico. Lima 2025.`;
       {/* ── 1. KPIs del distrito ── */}
       <div>
         <SectionLabel>Reporte · {terreno.district} · {TREND_LABEL[d.trend]}</SectionLabel>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: 8, marginBottom: 8 }}>
           {[
             { label: "Absorción sector",  value: `${d.base} u/mes`,        sub: "promedio distrito" },
             { label: "Precio/m² rango",   value: `$${(d.priceRange[0]/1000).toFixed(1)}k–${(d.priceRange[1]/1000).toFixed(1)}k`, sub: "USD/m²" },
@@ -5213,7 +5212,7 @@ Concisa. Sin genérico. Lima 2025.`;
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: 8, marginBottom: 10 }}>
           {[
             { label: "NSE objetivo",     value: d.nse },
             { label: "Stock disponible", value: `${d.stock} u`,              sub: "en el mercado" },
@@ -5243,7 +5242,7 @@ Concisa. Sin genérico. Lima 2025.`;
       {/* ── 2. Controles Velocity ── */}
       <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "14px 16px" }}>
         <SectionLabel>Parámetros · jugá con las métricas</SectionLabel>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: 12, marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Tipología</div>
             <select value={tipologia} onChange={e => setTipologia(e.target.value)} style={{ width: "100%", padding: "6px 8px", fontSize: 12, background: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink, outline: "none" }}>
@@ -5281,7 +5280,7 @@ Concisa. Sin genérico. Lima 2025.`;
           <input type="range" min={0} max={100} value={storytelling} onChange={e => setStorytelling(Number(e.target.value))} style={{ width: "100%", accentColor: C.ink }} />
         </div>
         {/* Live output */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, padding: "12px", background: C.surface, borderRadius: 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 6, padding: "12px", background: C.surface, borderRadius: 2 }}>
           {[
             { label: "Absorción est.", value: `${absorptionFmt} u/mes`, color: parseFloat(absorptionFmt) >= d.base ? C.green : C.ochre },
             { label: "Unidades",       value: `${units} u` },
@@ -5363,7 +5362,7 @@ Concisa. Sin genérico. Lima 2025.`;
       </div>
 
       {/* ── 5. Gráficos ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16 }}>
 
         {/* Scatter posicionamiento */}
         <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
@@ -5461,7 +5460,7 @@ Concisa. Sin genérico. Lima 2025.`;
         const myM2 = { "Estudio": 48, "Departamento": 80, "Mix tipologías": 75, "Flat premium": 110, "Penthouse": 160, "Oficinas": 90, "Retail": 120 }[tipologia] || 80;
         const myPrecioTotal = myM2 * precioM2;
         return (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16 }}>
             {/* Absorción por metraje */}
             <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "12px 14px" }}>
               <SectionLabel>Absorción por metraje · {terreno.district}</SectionLabel>
@@ -5615,7 +5614,7 @@ function ProjectDashboard({ projectId }) {
             </section>
             <section className="mb-14"><SectionHead title="Mapa de unidades" />
               <Panel>
-                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(p.units.length, 6)}, 1fr)` }}>
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 90px), 1fr))` }}>
                   {p.units.map((u) => (
                     <div key={u.num} className="p-3" style={{ backgroundColor: statusColors[u.status] + "18", border: `1px solid ${statusColors[u.status]}44`, borderLeft: `3px solid ${statusColors[u.status]}`, borderRadius: 2 }}>
                       <div className="text-[10px] tracking-[0.1em] uppercase" style={{ color: C.muted }}>Piso {u.floor}</div>
@@ -6435,8 +6434,8 @@ function CreateSpaceModal({ open, onClose, onCreate, parentSpace }) {
     blob.onHappy(() => { onCreate(name.trim(), SPACE_COLORS[colorIdx]); onClose(); });
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
-      <div className="w-[440px]" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={onClose}>
+      <div className="w-[440px] max-w-full" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div>
             <Eyebrow>{parentSpace ? `Sub-space en ${parentSpace.name}` : "Crear · space"}</Eyebrow>
@@ -6911,7 +6910,7 @@ function WikiCreateMenu({ currentFolder, setActiveTab }) {
         <Plus size={11} /> Crear
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-30 w-[280px]" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(10,11,15,0.18)" }}>
+        <div className="absolute right-0 top-full mt-1 z-30 w-[280px] max-w-[calc(100vw-32px)]" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(10,11,15,0.18)" }}>
           <div className="px-3 py-2" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
             <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>Crear contenido</div>
           </div>
@@ -7228,6 +7227,29 @@ function WikiLinkEditModal({ initial, onSave, onClose }) {
 }
 
 const ALICIA_BRAIN_URL = "https://aliceai.bam.pe";
+
+// ── Sync tarea ↔ Google Calendar (bidireccional) ────────────────────────────
+// Primera fecha válida YYYY-MM-DD de la tarea (due > endDate > startDate).
+function taskCalendarDate(t) {
+  return [t?.due, t?.endDate, t?.startDate]
+    .map(d => (String(d || "").match(/^\d{4}-\d{2}-\d{2}$/) || [])[0]).find(Boolean) || null;
+}
+// Crea o actualiza el evento (idempotente por taskId). Si la tarea no tiene fecha, borra el evento.
+function syncTaskToCalendar(task, userId = "sb") {
+  if (!task?.id) return;
+  const dt = taskCalendarDate(task);
+  if (!dt) return removeTaskFromCalendar(task.id, userId);
+  fetch(`${ALICIA_BRAIN_URL}/api/calendar/event`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user: userId || "sb", taskId: task.id, title: `📋 ${task.title}`, date: dt, description: `Tarea de ALICE · space ${task.space || "—"}` }),
+  }).catch(() => {});
+}
+function removeTaskFromCalendar(taskId, userId = "sb") {
+  if (taskId == null) return;
+  fetch(`${ALICIA_BRAIN_URL}/api/calendar/event/${encodeURIComponent(taskId)}?user=${encodeURIComponent(userId || "sb")}`, {
+    method: "DELETE",
+  }).catch(() => {});
+}
 
 const dbxFileType = (name = "") => {
   const ext = name.split(".").pop().toLowerCase();
@@ -8872,7 +8894,7 @@ function FilterPopover({ open, onClose, filters, setFilters, users, allSpaces, c
   return (
     <div className="fixed inset-0 z-40" onClick={onClose}>
       <div className="absolute" style={{ top: 152, right: 16 }} onClick={e => e.stopPropagation()}>
-        <div className="w-[300px] py-3" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}>
+        <div className="w-[300px] max-w-[calc(100vw-32px)] py-3" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}>
           <div className="px-4 pb-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
             <Eyebrow>Filtros</Eyebrow>
             <button onClick={clearAll} className="text-[10px] hover:opacity-70" style={{ color: C.muted, fontWeight: 500 }}>Limpiar</button>
@@ -11312,7 +11334,6 @@ function DarkAlicePanel({ agentStatus, recordAgentRun, tasks, customViews, terre
 }
 
 // ─── TEA TABLE CHAT · ver implementación abajo · v48 ───
-function CheshirePanel_OLD_PLACEHOLDER_NEVER_USED() { return null; }
 
 
 // ─── TEA TABLE CHAT · vos charlás con Dark Alice y ella consulta a los demás agentes ───
@@ -14187,14 +14208,7 @@ export default function HyggeOS({ authUser } = {}) {
     setTasks(prev => [newTask, ...prev]);
     db.upsertTask(newTask).catch(console.error); // sin esto lo capturado muere con F5
     // Reflejar en Google Calendar si tiene fecha (mismo criterio que addTask)
-    const dt = [newTask.due, newTask.endDate, newTask.startDate]
-      .map(d => (String(d || "").match(/^\d{4}-\d{2}-\d{2}$/) || [])[0]).find(Boolean);
-    if (dt) {
-      fetch(`${ALICIA_BRAIN_URL}/api/calendar/event`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: currentUser?.id || "sb", title: `📋 ${newTask.title}`, date: dt, description: `Tarea de ALICE · space ${newTask.space || "—"}` }),
-      }).catch(() => {});
-    }
+    syncTaskToCalendar(newTask, currentUser?.id);
   }, [currentUser]);
 
   const saveSmartView = useCallback((pattern) => {
@@ -14365,10 +14379,14 @@ export default function HyggeOS({ authUser } = {}) {
         return { ...t, ...patch, activity };
       });
       const updated = next.find(t => t.id === id);
-      if (updated) db.upsertTask(updated).catch(console.error);
+      if (updated) {
+        db.upsertTask(updated).catch(console.error);
+        // Reflejar cambios de fecha/título en Google Calendar (o borrar si perdió la fecha)
+        if (["due", "startDate", "endDate", "title"].some(k => k in patch)) syncTaskToCalendar(updated, currentUser?.id);
+      }
       return next;
     });
-  }, [recordActivity]);
+  }, [recordActivity, currentUser]);
   const addTask = useCallback((task) => {
     let newTask;
     setTasks(prev => {
@@ -14380,15 +14398,8 @@ export default function HyggeOS({ authUser } = {}) {
       recordActivity(`creó "${newTask.title}"`, { taskId: newTask.id, space: newTask.space });
       pushNewTask(newTask);
       db.upsertTask(newTask).catch(console.error);
-      // Reflejar en Google Calendar si la tarea tiene fecha (evento all-day)
-      const dt = [newTask.due, newTask.endDate, newTask.startDate]
-        .map(d => (String(d || "").match(/^\d{4}-\d{2}-\d{2}$/) || [])[0]).find(Boolean);
-      if (dt) {
-        fetch(`${ALICIA_BRAIN_URL}/api/calendar/event`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user: currentUser?.id || "sb", title: `📋 ${newTask.title}`, date: dt, description: `Tarea de ALICE · space ${newTask.space || "—"}` }),
-        }).catch(() => {});
-      }
+      // Reflejar en Google Calendar si la tarea tiene fecha (evento all-day, idempotente)
+      syncTaskToCalendar(newTask, currentUser?.id);
     }
     return newTask;
   }, [recordActivity, pushNewTask, currentUser]);
@@ -14613,7 +14624,7 @@ export default function HyggeOS({ authUser } = {}) {
         });
       }
       // delete-all: borrar también en Supabase (antes quedaban huérfanas y reaparecían al recargar)
-      prev.filter(t => t.space === id).forEach(t => db.deleteTask(t.id).catch(console.error));
+      prev.filter(t => t.space === id).forEach(t => { db.deleteTask(t.id).catch(console.error); removeTaskFromCalendar(t.id, currentUser?.id); });
       return prev.filter(t => t.space !== id);
     });
     setCustomViews(prev => { const next = { ...prev }; delete next[id]; return next; });
@@ -14651,9 +14662,9 @@ export default function HyggeOS({ authUser } = {}) {
     }
     setActivity(prev => prev.filter(a => !a.relatedTaskId || !deletedIds.has(a.relatedTaskId)));
     deleteTimerTaskSessions([...deletedIds]);
-    deletedIds.forEach(did => db.deleteTask(did).catch(console.error));
+    deletedIds.forEach(did => { db.deleteTask(did).catch(console.error); removeTaskFromCalendar(did, currentUser?.id); });
     setDeleteTaskTarget(null);
-  }, [deleteTaskTarget, recordUndo, tasks, setActivity, deleteTimerTaskSessions]);
+  }, [deleteTaskTarget, recordUndo, tasks, setActivity, deleteTimerTaskSessions, currentUser]);
 
   const deleteTaskCascade = useCallback((id) => {
     const task = tasks.find(t => t.id === id);

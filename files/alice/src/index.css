@@ -17,3 +17,12 @@ html, body, #root {
 button {
   font-family: inherit;
 }
+
+/* Onboarding modals responsive: en celular el modal se APILA (banda oscura con
+   el blob arriba, contenido abajo) — mismo diseño de dos paneles, sin desbordar. */
+.ob-right { min-width: 0; }
+@media (max-width: 640px) {
+  .ob-modal { flex-direction: column !important; max-height: calc(100dvh - 48px); overflow-y: auto; }
+  .ob-left  { width: 100% !important; padding: 24px 24px 22px !important; gap: 14px; }
+  .ob-right { padding: 28px 22px !important; }
+}

@@ -13,14 +13,15 @@ const API_KEY_KEY = "alicia_api_key";
 const chatKey = (uid) => `alicia_chat_${uid}_v1`;
 
 const SPV_CONTEXT = `
-SPVs activos:
-- DC01 Del Castillo (San Isidro) · obra al 67% · mixto comercial-residencial
-- PU01 Paula Ugarriza (Miraflores) · obra al 42% · residencial premium
-- TG01 De la Torre (Barranco) · obra al 89% · casi terminado, 100% vendido
-- L36 Larco 1036 (Miraflores) · en supervisión post-venta
-- Legendre (San Isidro) · post-handover · cierre de expedientes
+SPVs / proyectos de Hygge:
+- DC01 Del Castillo · mixto comercial-residencial
+- PU01 Paula Ugarriza · residencial premium · también llamado "Legendre" (es EL MISMO proyecto, nunca los trates como dos)
+- TG01 De la Torre · residencial
+- L36 Larco 1036 · supervisión post-venta
 
 Sub-entidades: Hygge Inmobiliaria (ventas), BAM (arquitectura in-house), Fit Capital (financiera externa)
+
+No inventes cifras de avance de obra, unidades vendidas ni montos. Si no tenés el dato real (del tracker de obra o que te lo pase el usuario), decí que no lo tenés a mano en vez de estimar.
 `.trim();
 
 // Keys match auth user IDs: sb, vd, jt, jm, aa, ac, jmg
@@ -798,52 +799,18 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     setSending(true);
 
     try {
-      // Intentar backend local primero
-      let responseText = null;
-      let actions = [];
-
-      try {
-        const res = await fetch(`${BRAIN_URL}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: selectedUserId, message: text.trim() }),
-          signal: AbortSignal.timeout(15000),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          responseText = data.text;
-          actions = data.actions || [];
-        }
-      } catch {
-        // Backend no disponible — fallback directo a Anthropic
-      }
-
-      if (!responseText) {
-        if (!apiKey) throw new Error("No hay API key. Configurala en el panel de Alicia.");
-        const systemPrompt = buildSystemPrompt(currentProfile, profiles, tasks, allSpaces, knowledgeLinks);
-        const apiMessages = newHistory.map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-          },
-          body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1500, system: systemPrompt, messages: apiMessages }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error?.message || `HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        const rawText = data.content.filter(b => b.type === "text").map(b => b.text).join("");
-        const clean = rawText.replace(/```json[\s\S]*?```/g, "").trim();
-        let parsed = { message: clean, actions: [] };
-        try { parsed = JSON.parse(clean); } catch {}
-        responseText = parsed.message || rawText;
-        actions = parsed.actions || [];
-      }
+      // Alicia vive en el backend (aliceai): cerebro Claude, memoria y herramientas.
+      // Sin fallback a Anthropic-directo (sacamos la key del browser por seguridad).
+      const res = await fetch(`${BRAIN_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, message: text.trim() }),
+        signal: AbortSignal.timeout(60000),  // respuestas con tools pueden tardar ~20s
+      });
+      if (!res.ok) throw new Error(`El servidor de Alicia respondió ${res.status}`);
+      const data = await res.json();
+      const responseText = data.text || "";
+      const actions = data.actions || [];
 
       const aliciaMsg = { role: "assistant", content: responseText, actions, ts: Date.now() };
       const finalHistory = [...newHistory, aliciaMsg];
@@ -854,7 +821,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     } catch (err) {
       const errMsg = {
         role: "assistant",
-        content: `Tuve un problema de conexión: ${err.message}. Verificá tu API key.`,
+        content: `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`,
         actions: [], ts: Date.now(), isError: true,
       };
       const finalHistory = [...newHistory, errMsg];
@@ -908,8 +875,8 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
       {/* ── Left: Profiles panel ── */}
       <div style={{
-        width: profilesOpen ? 300 : 0,
-        minWidth: profilesOpen ? 300 : 0,
+        width: profilesOpen ? "min(300px, 85vw)" : 0,
+        minWidth: profilesOpen ? "min(300px, 85vw)" : 0,
         borderRight: `1px solid ${C.line}`,
         backgroundColor: C.paper,
         display: "flex", flexDirection: "column",

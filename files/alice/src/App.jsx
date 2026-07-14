@@ -93,7 +93,7 @@ function AliceBlob({ size = 100, state = "idle" }) {
 
 function ModalLeft({ step, title, sub, blobState = "idle" }) {
   return (
-    <div style={{
+    <div className="ob-left" style={{
       width: 200, flexShrink: 0,
       backgroundColor: C.ink,
       padding: "32px 24px 28px",
@@ -175,7 +175,7 @@ function CalendarConsentModal({ user, onGrant }) {
 
   return (
     <OnboardingOverlay>
-      <div style={{
+      <div className="ob-modal" style={{
         display: "flex",
         width: "100%", maxWidth: 560,
         borderRadius: 2,
@@ -184,7 +184,7 @@ function CalendarConsentModal({ user, onGrant }) {
       }}>
         <ModalLeft step="01 · Onboarding" title="Calendario" sub={"Brief diario · reuniones · sync con el equipo"} blobState={blobState} />
 
-        <div style={{ flex: 1, backgroundColor: C.bg, padding: "40px 32px" }}>
+        <div className="ob-right" style={{ flex: 1, backgroundColor: C.bg, padding: "40px 32px" }}>
           <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 28 }}>
             Paso 1 de 3
           </div>
@@ -247,9 +247,6 @@ function CalendarConsentModal({ user, onGrant }) {
             Solo lectura · ALICE nunca crea ni borra eventos sin confirmación explícita.
           </p>
 
-          <button onClick={onGrant} style={{ background: "none", border: "none", color: C.muted, fontSize: 10.5, cursor: "pointer", marginTop: 14, textDecoration: "underline", fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.02em" }}>
-            Saltar por ahora · lo conecto después
-          </button>
         </div>
       </div>
     </OnboardingOverlay>
@@ -300,14 +297,14 @@ function WhatsAppModal({ user, onDone }) {
 
   return (
     <OnboardingOverlay>
-      <div style={{
+      <div className="ob-modal" style={{
         display: "flex", width: "100%", maxWidth: 560,
         borderRadius: 2, overflow: "hidden",
         boxShadow: "0 40px 100px rgba(10,11,15,0.5)",
       }}>
         <ModalLeft step="02 · Onboarding" title="WhatsApp" sub={"Brief diario · alertas · comandos por voz"} blobState={blobState} />
 
-        <div style={{ flex: 1, backgroundColor: C.bg, padding: "38px 32px" }}>
+        <div className="ob-right" style={{ flex: 1, backgroundColor: C.bg, padding: "38px 32px" }}>
           <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 500, marginBottom: 26 }}>
             Paso 2 de 3
           </div>
@@ -435,7 +432,7 @@ function SetPasswordModal({ user, onDone }) {
 
   return (
     <OnboardingOverlay>
-      <div style={{
+      <div className="ob-modal" style={{
         display: "flex",
         width: "100%", maxWidth: 560,
         borderRadius: 2,
@@ -444,7 +441,7 @@ function SetPasswordModal({ user, onDone }) {
       }}>
         <ModalLeft step="03 · Onboarding" title="Contraseña" sub={"Reemplaza la temporal · solo vos la sabés"} blobState={blobState} />
 
-        <div style={{ flex: 1, backgroundColor: C.bg, padding: "40px 32px" }}>
+        <div className="ob-right" style={{ flex: 1, backgroundColor: C.bg, padding: "40px 32px" }}>
           <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 28 }}>
             Paso 3 de 3
           </div>

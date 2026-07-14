@@ -7,6 +7,15 @@ const AuthContext = createContext(null);
 // Map username → email for login form (keeps username-based UX)
 const USERNAME_TO_EMAIL = Object.fromEntries(USERS.map(u => [u.username.toLowerCase(), u.email]));
 
+// ── DEV bypass ──────────────────────────────────────────────────────────────
+// Solo activo en `vite dev` (import.meta.env.DEV). En el build de producción DEV
+// es false ⇒ este bloque queda muerto y jamás llega al bundle público. Permite
+// abrir el ERP en local sin credenciales para revisar UI (popups, responsive).
+const DEV_BYPASS = import.meta.env.DEV;
+const DEV_USER = DEV_BYPASS
+  ? (() => { const u = USERS[0]; return { ...u, initials: (u.firstName[0] + u.lastName[0]).toUpperCase() }; })()
+  : null;
+
 async function fetchProfile(supabaseUser) {
   const { data, error } = await supabase
     .from("user_profiles")
@@ -29,11 +38,12 @@ async function fetchProfile(supabaseUser) {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [pwSetMeta, setPwSetMeta] = useState(false); // user_metadata.pw_set — vive en Supabase, cross-device
-  const [loaded, setLoaded] = useState(false);
+  const [user, setUser] = useState(DEV_USER);
+  const [pwSetMeta, setPwSetMeta] = useState(DEV_BYPASS); // dev: salta onboarding de password
+  const [loaded, setLoaded] = useState(DEV_BYPASS);       // dev: cargado sin esperar a Supabase
 
   useEffect(() => {
+    if (DEV_BYPASS) return; // dev: sin Supabase Auth, ya estamos logueados como sb
     // Restore existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
