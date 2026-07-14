@@ -817,11 +817,22 @@ async function hablarSend(text) {
   document.getElementById('hablar-user').textContent = text;
   document.getElementById('hablar-alicia').textContent = '…';
   try {
-    const res = await fetch('/api/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: HABLAR_USER, message: text }),
-    });
-    const d = await res.json();
+    // Reintento ante corte de red (redeploy / conexión inestable): 2 intentos
+    const postChat = async () => {
+      const res = await fetch('/api/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: HABLAR_USER, message: text }),
+        signal: AbortSignal.timeout(60000),
+      });
+      return res.json();
+    };
+    let d;
+    try { d = await postChat(); }
+    catch (netErr) {
+      setBlob('thinking', 'Reintentando…', 'La conexión se cortó, un segundo');
+      await new Promise(r => setTimeout(r, 1500));
+      d = await postChat();
+    }
     const reply = d.text || d.error || 'Hmm, algo falló.';
     document.getElementById('hablar-alicia').textContent = reply;
     hSending = false;
@@ -842,7 +853,10 @@ async function hablarSend(text) {
     }
   } catch (e) {
     hSending = false;
-    document.getElementById('hablar-alicia').textContent = 'Error: ' + e.message;
+    const friendly = /fetch|network|timeout|aborted/i.test(e.message)
+      ? 'Se cortó la conexión con el servidor. Tocá el blob y probá de nuevo.'
+      : 'Tuve un problema: ' + e.message;
+    document.getElementById('hablar-alicia').textContent = friendly;
     setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá');
   }
 }
