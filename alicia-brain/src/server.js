@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "30mb" })); // /api/analyze recibe PDFs base64 (reportes de obra)
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(join(__dirname, "../public")));
 
@@ -1436,10 +1436,17 @@ app.get("/wonderland", (_, res) => res.sendFile(join(__dirname, "../public/wonde
 // Tea Table, Jabberwocky, Ask Alice) — el browser jamás toca Anthropic directo.
 app.post("/api/analyze", async (req, res) => {
   try {
-    const { prompt, system, messages, max_tokens } = req.body || {};
-    const msgs = Array.isArray(messages) && messages.length
+    const { prompt, system, messages, max_tokens, pdf_base64 } = req.body || {};
+    let msgs = Array.isArray(messages) && messages.length
       ? messages.slice(-20).map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content ?? "").slice(0, 8000) })).filter(m => m.content)
       : (prompt && typeof prompt === "string" ? [{ role: "user", content: String(prompt).slice(0, 20000) }] : null);
+    // PDF adjunto (reportes de obra): documento + prompt en un solo turno
+    if (pdf_base64 && typeof pdf_base64 === "string") {
+      msgs = [{ role: "user", content: [
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf_base64 } },
+        { type: "text", text: (typeof prompt === "string" && prompt) || "Procesá este documento." },
+      ] }];
+    }
     if (!msgs || !msgs.length) return res.status(400).json({ error: "prompt o messages requerido" });
     const resp = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
