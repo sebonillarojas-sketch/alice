@@ -1335,13 +1335,12 @@ function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, onMenu, onRi
           <Menu size={18} style={{ color: C.ink }} />
         </button>
         <div className="flex items-center gap-2 text-[12px] min-w-0">
-          <span className="hidden sm:inline" style={{ color: C.muted, fontWeight: 500 }}>Hygge Holding</span>
-          {parent && <><ChevronRight size={11} className="hidden sm:inline flex-shrink-0" style={{ color: C.mutedSoft }} /><span className="hidden md:inline truncate" style={{ color: C.muted, fontWeight: 500 }}>{parent.name}</span></>}
-          <ChevronRight size={11} className="hidden sm:inline flex-shrink-0" style={{ color: C.mutedSoft }} />
+          {parent && <><span className="hidden md:inline truncate" style={{ color: C.muted, fontWeight: 500 }}>{parent.name}</span><ChevronRight size={11} className="hidden md:inline flex-shrink-0" style={{ color: C.mutedSoft }} /></>}
           <span className="truncate" style={{ color: C.ink, fontWeight: 600 }}>{spaceObj?.name || spaceObj?.code}</span>
         </div>
       </div>
       <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
+        <TopClock />
         <button onClick={onCmd} className="hidden md:flex items-center gap-2 px-3 py-1.5 text-[12px] md:w-[200px] lg:w-[280px] hover:opacity-90" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.muted }}>
           <Search size={13} /><span className="flex-1 text-left">Buscar o comando…</span>
           <span className="text-[10px] px-1.5 py-0.5" style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontFamily: "monospace" }}>⌘K</span>
@@ -1360,6 +1359,23 @@ function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, onMenu, onRi
         </button>
       </div>
     </header>
+  );
+}
+
+// Reloj digital minimalista del TopBar · HH:MM + fecha corta, hora de Lima
+function TopClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  const hhmm = now.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const fecha = now.toLocaleDateString("es-PE", { weekday: "short", day: "numeric", month: "short" }).replace(/\.,?/g, "");
+  return (
+    <div className="hidden sm:flex items-baseline gap-1.5 pr-1 select-none" title={now.toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}>
+      <span style={{ fontSize: 12, fontFamily: "ui-monospace, monospace", color: C.ink, fontWeight: 600, letterSpacing: "0.05em", fontVariantNumeric: "tabular-nums" }}>{hhmm}</span>
+      <span style={{ fontSize: 10, color: C.muted, letterSpacing: "0.02em" }}>{fecha}</span>
+    </div>
   );
 }
 
