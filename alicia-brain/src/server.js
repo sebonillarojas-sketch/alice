@@ -394,6 +394,27 @@ const COLLAB_TOOLS = new Set([
   "search_knowledge", "use_skill",
 ]);
 
+// Warm-up de contexto: Alicia entra "briefeada". Junta agenda + tareas UNA vez (cache 5 min
+// por usuario) y conversa fluido desde eso, sin loop de herramientas por mensaje para lo común.
+const _ctxCache = new Map();
+async function buildLiveContext(userId) {
+  const c = _ctxCache.get(userId);
+  if (c && Date.now() - c.t < 5 * 60 * 1000) return c.text;
+  let text = "";
+  try {
+    const [cal, tasks] = await Promise.all([
+      executeTool("calendar_list", { days_ahead: 2 }, userId).catch(() => null),
+      executeTool("get_tasks", {}, userId).catch(() => null),
+    ]);
+    const parts = [];
+    if (cal && !/no conectado|No hay eventos/i.test(cal)) parts.push(`## Agenda (próximos 2 días)\n${cal.slice(0, 1500)}`);
+    if (tasks && !/No hay tareas/i.test(tasks)) parts.push(`## Tareas abiertas\n${tasks.slice(0, 1500)}`);
+    if (parts.length) text = `# CONTEXTO ACTUAL (ya cargado — respondé desde acá directo; NO vuelvas a consultar agenda/tareas con herramientas salvo que necesites algo puntual que no esté acá):\n\n${parts.join("\n\n")}`;
+  } catch { /* si falla, seguimos sin contexto precargado */ }
+  _ctxCache.set(userId, { t: Date.now(), text });
+  return text;
+}
+
 async function processAliciaMessage(userId, userText, channel = "app") {
   const [profile, allProfiles, history, memories, knowledge] = await Promise.all([
     getProfile(userId),
@@ -412,6 +433,9 @@ async function processAliciaMessage(userId, userText, channel = "app") {
   // Prompt caching: el system prompt y las tools son idénticos en cada iteración del loop
   // y entre mensajes → cachearlos hace las iteraciones 2+ mucho más rápidas y baratas.
   const systemBlocks = [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }];
+  // Contexto vivo precargado (fresco, después del bloque cacheado) — Alicia ya sabe agenda/tareas
+  const liveContext = await buildLiveContext(userId);
+  if (liveContext) systemBlocks.push({ type: "text", text: liveContext });
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
