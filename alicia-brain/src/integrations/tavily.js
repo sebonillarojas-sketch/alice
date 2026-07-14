@@ -2,16 +2,19 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const API_KEY = process.env.TAVILY_API_KEY;
+const API_KEY = (process.env.TAVILY_API_KEY || "").trim();
 
 export const tavily = {
   search: async ({ query, maxResults = 5, includeAnswer = true }) => {
     if (!API_KEY) throw new Error("Tavily no configurado (TAVILY_API_KEY)");
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,   // método actual de Tavily
+      },
       body: JSON.stringify({
-        api_key: API_KEY,
+        api_key: API_KEY,                       // compat con endpoint viejo
         query,
         max_results: maxResults,
         include_answer: includeAnswer,
@@ -19,7 +22,10 @@ export const tavily = {
         search_depth: "basic",
       }),
     });
-    if (!res.ok) throw new Error(`Tavily error ${res.status}`);
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Tavily error ${res.status}${detail ? ` — ${detail.slice(0, 160)}` : ""}`);
+    }
     const data = await res.json();
     return {
       answer:  data.answer || null,
