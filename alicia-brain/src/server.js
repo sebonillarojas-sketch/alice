@@ -35,7 +35,7 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
 //   ⚠️ Deuda consciente (auditoría 13 jul): chat tiene userId falsificable (IDOR) y dropbox
 //   expone browse/delete sin auth. Fix real = ERP manda JWT de Supabase y acá se valida
 //   (sesión supercomputadora). No re-gatear sin resolver eso o se rompe el ERP.
-const PANEL_PUBLIC = ["/login", "/agents", "/calendar/team", "/market-refresh", "/market-import", "/market-data", "/chat", "/tts", "/dropbox", "/analyze"];
+const PANEL_PUBLIC = ["/login", "/agents", "/calendar", "/market-refresh", "/market-import", "/market-data", "/chat", "/tts", "/dropbox", "/analyze"];
 
 function signToken(exp) {
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(String(exp)).digest("base64url");
@@ -1169,6 +1169,22 @@ app.get("/api/calendar/team", async (req, res) => {
         error: cal[p.email]?.errors?.[0]?.reason || null,
       })),
     });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Eventos de Google Calendar de un usuario, para la vista Calendario del cockpit.
+// ⚠️ Deuda (auditoría #9): público como /api/calendar/team porque el ERP no manda JWT aún.
+app.get("/api/calendar/events", async (req, res) => {
+  try {
+    const user = (req.query.user || "sb").toLowerCase().replace(/[^a-z]/g, "") || "sb";
+    const days = Math.min(parseInt(req.query.days) || 21, 60);
+    const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
+    const calUser = googleAvailable(user) ? user : (googleAvailable("sb") ? "sb" : null);
+    if (!calUser) return res.json({ events: [], note: "Google Calendar no conectado" });
+    const timeMin = new Date(Date.now() - 1 * 86400000).toISOString();  // desde ayer
+    const timeMax = new Date(Date.now() + days * 86400000).toISOString();
+    const events = await googleCalendar.listEvents({ timeMin, timeMax, maxResults: 100 }, calUser);
+    res.json({ events, source: calUser });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
