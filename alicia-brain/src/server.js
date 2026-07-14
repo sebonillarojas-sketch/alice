@@ -1420,15 +1420,20 @@ app.get("/wonderland", (_, res) => res.sendFile(join(__dirname, "../public/wonde
 
 // Análisis one-shot para el ERP (Velocity/Mercado, etc.): sin memoria, sin tools.
 // Existe para que el frontend NUNCA necesite una key de Anthropic en el browser.
+// One-shot o multi-turno corto. Lo usan las vistas AI del ERP (Velocity, resúmenes,
+// Tea Table, Jabberwocky, Ask Alice) — el browser jamás toca Anthropic directo.
 app.post("/api/analyze", async (req, res) => {
   try {
-    const { prompt, system } = req.body || {};
-    if (!prompt || typeof prompt !== "string") return res.status(400).json({ error: "prompt requerido" });
+    const { prompt, system, messages, max_tokens } = req.body || {};
+    const msgs = Array.isArray(messages) && messages.length
+      ? messages.slice(-20).map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content ?? "").slice(0, 8000) })).filter(m => m.content)
+      : (prompt && typeof prompt === "string" ? [{ role: "user", content: String(prompt).slice(0, 20000) }] : null);
+    if (!msgs || !msgs.length) return res.status(400).json({ error: "prompt o messages requerido" });
     const resp = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 1200,
-      system: (system || "Sos Alicia, asistente ejecutiva de Hygge Holding. Experta en mercado inmobiliario limeño.").slice(0, 2000),
-      messages: [{ role: "user", content: String(prompt).slice(0, 20000) }],
+      max_tokens: Math.min(parseInt(max_tokens) || 1200, 2500),
+      system: (system || "Sos Alicia, asistente ejecutiva de Hygge Holding. Experta en mercado inmobiliario limeño.").slice(0, 6000),
+      messages: msgs,
     });
     res.json({ text: resp.content.find(b => b.type === "text")?.text || "" });
   } catch (e) {
