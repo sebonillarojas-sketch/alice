@@ -905,7 +905,7 @@ app.get("/auth/google", (req, res) => {
     redirect_uri: `${OAUTH_BASE}/auth/google/callback`,
     response_type: "code",
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account consent",  // deja elegir la cuenta (personal vs corporativa)
     scope: GOOGLE_SCOPES,
     state: userId,
   });
