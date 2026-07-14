@@ -409,6 +409,12 @@ async function processAliciaMessage(userId, userText, channel = "app") {
   const tools = isCEO ? ALICIA_TOOLS : ALICIA_TOOLS.filter(t => COLLAB_TOOLS.has(t.name));
 
   const systemPrompt = buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId);
+  // Prompt caching: el system prompt y las tools son idénticos en cada iteración del loop
+  // y entre mensajes → cachearlos hace las iteraciones 2+ mucho más rápidas y baratas.
+  const systemBlocks = [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }];
+  const cachedTools = tools.length
+    ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
+    : tools;
   const toolResults = [];
   let finalText = "";
   let loopMessages = [
@@ -426,8 +432,8 @@ async function processAliciaMessage(userId, userText, channel = "app") {
       resp = await anthropic.messages.create({
         model,
         max_tokens: maxTokens,
-        system: systemPrompt,
-        tools,
+        system: systemBlocks,
+        tools: cachedTools,
         tool_choice: { type: "auto" },
         messages: loopMessages,
       });
@@ -438,8 +444,8 @@ async function processAliciaMessage(userId, userText, channel = "app") {
         resp = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
           max_tokens: maxTokens,
-          system: systemPrompt,
-          tools,
+          system: systemBlocks,
+          tools: cachedTools,
           tool_choice: { type: "auto" },
           messages: loopMessages,
         });
