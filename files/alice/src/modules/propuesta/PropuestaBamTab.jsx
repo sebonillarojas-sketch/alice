@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { aliciaAnalyze } from "../../lib/alicia";
 
 // ─── brand ───────────────────────────────────────────────────
 const C = {
@@ -52,24 +53,8 @@ function computeCabida(areaM2) {
 // ─── AI call ─────────────────────────────────────────────────
 async function callAlicia(prompt) {
   try {
-    const res = await fetch("http://localhost:3001/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
-    }).catch(() => null);
-    if (res?.ok) {
-      const d = await res.json();
-      return d.content || d.message || d.choices?.[0]?.message?.content || "";
-    }
-  } catch (_) {}
-  const k = localStorage.getItem("alicia_api_key");
-  if (!k) return null;
-  const r2 = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": k, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: "claude-opus-4-8", max_tokens: 1200, messages: [{ role: "user", content: prompt }] }),
-  });
-  const d2 = await r2.json();
-  return d2.content?.[0]?.text || "";
+    return await aliciaAnalyze({ prompt, max_tokens: 1200 });
+  } catch (_) { return null; }
 }
 
 // ─── PDF generator ───────────────────────────────────────────

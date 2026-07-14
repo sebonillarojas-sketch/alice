@@ -721,28 +721,15 @@ Dame:
 Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este tipo de proyecto.`;
 
     try {
-      const BRAIN_URL = "http://localhost:3001";
-      // /api/analyze: one-shot sin memoria — el shape viejo ({messages}) no era el de /api/chat
-      // ({userId, message}) así que siempre caía al fallback directo que pedía key en el browser.
-      let res = await fetch(`${BRAIN_URL}/api/analyze`, {
+      // Una sola puerta: el backend de Alicia (la key jamás vive en el browser)
+      const res = await fetch("https://aliceai.bam.pe/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      }).catch(() => null);
-
-      if (!res || !res.ok) {
-        const apiKey = localStorage.getItem("alicia_api_key");
-        if (!apiKey) throw new Error("No hay API key configurada — ve a Alicia > Settings para configurarla.");
-        res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-          body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1200, messages: [{ role: "user", content: prompt }] }),
-        });
-      }
-
-      const data = await res.json();
-      const text = data.text || data.content?.[0]?.text || data.choices?.[0]?.message?.content || data.message || "";
-      setAnalysis(text);
+        body: JSON.stringify({ prompt, max_tokens: 1200 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `analyze ${res.status}`);
+      setAnalysis(data.text || "");
     } catch (err) {
       setAnalysis(`Error al conectar con Alicia: ${err.message}`);
     } finally {

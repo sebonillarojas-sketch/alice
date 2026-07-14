@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { aliciaAnalyze } from "../../lib/alicia";
 
 const C = {
   bg: "#EEEBE3", paper: "#F4F1EA", ink: "#0A0B0F", inkSoft: "#2E2E33",
@@ -37,25 +38,8 @@ function ProgressBar({ pct, target, color }) {
   );
 }
 
-async function callClaude(systemPrompt, userPrompt, apiKey) {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-use": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    }),
-  });
-  if (!r.ok) throw new Error(`API error ${r.status}`);
-  const d = await r.json();
-  return d.content[0].text;
+async function callClaude(systemPrompt, userPrompt) {
+  return aliciaAnalyze({ system: systemPrompt, prompt: userPrompt, max_tokens: 2048 });
 }
 
 async function readPdfAsBase64(file) {
@@ -70,35 +54,14 @@ async function readPdfAsBase64(file) {
   });
 }
 
-async function parsePdfWithClaude(file, systemPrompt, apiKey) {
+async function parsePdfWithClaude(file, systemPrompt) {
   const base64 = await readPdfAsBase64(file);
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-use": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{
-        role: "user",
-        content: [{
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: base64 },
-        }, {
-          type: "text",
-          text: "Procesá este documento y devolvé SOLO el JSON solicitado, sin texto adicional.",
-        }],
-      }],
-    }),
+  return aliciaAnalyze({
+    system: systemPrompt,
+    prompt: "Procesá este documento y devolvé SOLO el JSON solicitado, sin texto adicional.",
+    pdf_base64: base64,
+    max_tokens: 2500,
   });
-  if (!r.ok) throw new Error(`API error ${r.status}`);
-  const d = await r.json();
-  return d.content[0].text;
 }
 
 const BASELINE_PROMPT = `Sos un experto en gestión de obras de construcción en Perú.
@@ -141,12 +104,11 @@ function LoadBaseline({ projectId, projectName, onLoaded }) {
   const [error, setError] = useState(null);
 
   const processFile = useCallback(async (file) => {
-    const apiKey = localStorage.getItem("alice:anthropic-key");
-    if (!apiKey) { setError("Configurá tu API Key de Anthropic en localStorage('alice:anthropic-key')"); return; }
+    // Sin key en el browser — el PDF viaja al backend (aliceai) que tiene la key
     if (!file || file.type !== "application/pdf") { setError("Solo se aceptan archivos PDF"); return; }
     setLoading(true); setError(null);
     try {
-      const raw = await parsePdfWithClaude(file, BASELINE_PROMPT, apiKey);
+      const raw = await parsePdfWithClaude(file, BASELINE_PROMPT);
       const clean = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
       const baseline = JSON.parse(clean);
       baseline.parsedAt = new Date().toISOString();
@@ -291,12 +253,11 @@ export default function ObraTracker({ projectId, projectName, onProgressUpdate }
   };
 
   const processWeeklyReport = useCallback(async (file) => {
-    const apiKey = localStorage.getItem("alice:anthropic-key");
-    if (!apiKey) { setUploadError("Configurá tu API Key de Anthropic"); return; }
+    // Sin key en el browser — el PDF viaja al backend (aliceai) que tiene la key
     if (!file || file.type !== "application/pdf") { setUploadError("Solo se aceptan PDFs"); return; }
     setUploading(true); setUploadError(null);
     try {
-      const raw = await parsePdfWithClaude(file, REPORT_PROMPT(state.baseline), apiKey);
+      const raw = await parsePdfWithClaude(file, REPORT_PROMPT(state.baseline));
       const clean = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
       const report = JSON.parse(clean);
       report.fileName = file.name;
