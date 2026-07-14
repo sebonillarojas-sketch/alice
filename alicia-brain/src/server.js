@@ -402,9 +402,11 @@ async function buildLiveContext(userId) {
   if (c && Date.now() - c.t < 5 * 60 * 1000) return c.text;
   let text = "";
   try {
+    // Timeout duro: el warm-up debe ser "unos segundos", no colgarse si el ERP/calendar tardan
+    const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
     const [cal, tasks] = await Promise.all([
-      executeTool("calendar_list", { days_ahead: 2 }, userId).catch(() => null),
-      executeTool("get_tasks", {}, userId).catch(() => null),
+      withTimeout(executeTool("calendar_list", { days_ahead: 2 }, userId).catch(() => null), 6000),
+      withTimeout(executeTool("get_tasks", {}, userId).catch(() => null), 6000),
     ]);
     const parts = [];
     if (cal && !/no conectado|No hay eventos/i.test(cal)) parts.push(`## Agenda (próximos 2 días)\n${cal.slice(0, 1500)}`);
@@ -415,7 +417,7 @@ async function buildLiveContext(userId) {
   return text;
 }
 
-async function processAliciaMessage(userId, userText, channel = "app") {
+async function processAliciaMessage(userId, userText, channel = "app", opts = {}) {
   const [profile, allProfiles, history, memories, knowledge] = await Promise.all([
     getProfile(userId),
     getAllProfiles(),
@@ -493,6 +495,9 @@ async function processAliciaMessage(userId, userText, channel = "app") {
     const toolUseBlocks = resp.content.filter(b => b.type === "tool_use");
     if (!toolUseBlocks.length || resp.stop_reason === "end_turn") break;
 
+    // Primera vez que va a usar herramientas → avisar "dame un segundo" (para no dejar esperando)
+    if (iterations === 1 && opts.onThinking) { try { opts.onThinking(); } catch {} }
+
     const toolResultContents = [];
     for (const block of toolUseBlocks) {
       let result;
@@ -560,7 +565,10 @@ app.post("/webhook", async (req, res) => {
     }
 
     console.log(`📱 [${userId}] ${userText}`);
-    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
+    const { sendWA } = await import("./wa.js");
+    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
+      onThinking: () => sendWA(fromPhone, pickAck()).catch(() => {}),
+    });
 
     // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
     // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza,
@@ -584,7 +592,6 @@ app.post("/webhook", async (req, res) => {
       }
     }
 
-    const { sendWA } = await import("./wa.js");
     await sendWA(fromPhone, reply);
   } catch (e) {
     console.error("Webhook error:", e.message);
@@ -604,49 +611,52 @@ async function downloadWACloudMedia(mediaId) {
 
 // ── Twilio webhook ────────────────────────────────────────────────────────────
 
+// Acks naturales cuando Alicia sale a buscar/hacer algo (no dejar al usuario esperando)
+const ALICIA_ACKS = ["Dale, dejame revisar 👀", "Ya, un toque que reviso y te digo.", "Ahí lo miro, un segundo.", "Dame un segundo que junto la info.", "Ok, reviso y te confirmo enseguida."];
+const pickAck = () => ALICIA_ACKS[Math.floor(Math.random() * ALICIA_ACKS.length)];
+
 app.post("/webhook/twilio", async (req, res) => {
-  try {
-    const from = req.body.From || "";
-    const body = (req.body.Body || "").trim();
-    const numMedia = parseInt(req.body.NumMedia || "0");
-    const mediaUrl = req.body.MediaUrl0 || "";
-    const mediaType = req.body.MediaContentType0 || "";
-    const phone = from.replace("whatsapp:", "");
-    const userId = phoneToUserId(phone) || "sb";
-    let userText = body;
-    let inputWasAudio = false;
-    if (numMedia > 0 && mediaType.startsWith("audio/")) {
-      console.log(`🎤 Audio [${userId}] tipo: ${mediaType}`);
-      userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
-      inputWasAudio = true;
-      console.log(`📝 Transcripción: ${userText}`);
-    }
-    if (!userText) return res.set("Content-Type", "text/xml").send("<Response/>");
-    console.log(`📱 Twilio [${userId}] ${userText}`);
-    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
+  const from = req.body.From || "";
+  const body = (req.body.Body || "").trim();
+  const numMedia = parseInt(req.body.NumMedia || "0");
+  const mediaUrl = req.body.MediaUrl0 || "";
+  const mediaType = req.body.MediaContentType0 || "";
+  const phone = from.replace("whatsapp:", "");
+  // Responder al webhook YA — Twilio corta a los ~15s. La respuesta real va async por REST.
+  res.set("Content-Type", "text/xml").send("<Response/>");
 
-    if (inputWasAudio) {
-      // Respond with voice note
-      try {
-        const audioBuf = await generateSpeech(reply);
-        const id = Math.random().toString(36).slice(2);
-        ttsCache.set(id, audioBuf);
-        setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
-        const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`;
-        res.set("Content-Type", "text/xml").send(`<Response><Message><Media>${audioUrl}</Media></Message></Response>`);
-        return;
-      } catch (ttsErr) {
-        console.error("TTS falló, respondiendo texto:", ttsErr.message);
+  (async () => {
+    const { sendWA, sendWAMedia } = await import("./wa.js");
+    try {
+      const userId = phoneToUserId(phone) || "sb";
+      let userText = body, inputWasAudio = false;
+      if (numMedia > 0 && mediaType.startsWith("audio/")) {
+        userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
+        inputWasAudio = true;
       }
-    }
+      if (!userText) return;
+      console.log(`📱 Twilio [${userId}] ${userText}`);
 
-    const chunks = reply.length <= 1500 ? [reply] : reply.match(/[\s\S]{1,1500}/g) || [reply];
-    const msgs = chunks.map(c => `<Message>${escapeXml(c)}</Message>`).join("");
-    res.set("Content-Type", "text/xml").send(`<Response>${msgs}</Response>`);
-  } catch (e) {
-    console.error("Twilio error:", e.message);
-    res.set("Content-Type", "text/xml").send("<Response><Message>Tuve un problema, intentá de nuevo.</Message></Response>");
-  }
+      const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
+        onThinking: () => sendWA(phone, pickAck()).catch(() => {}),
+      });
+
+      if (inputWasAudio) {
+        try {
+          const audioBuf = await generateSpeech(reply);
+          const id = Math.random().toString(36).slice(2);
+          ttsCache.set(id, audioBuf);
+          setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
+          await sendWAMedia(phone, `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`);
+          return;
+        } catch (ttsErr) { console.error("TTS async falló, respondiendo texto:", ttsErr.message); }
+      }
+      await sendWA(phone, reply);
+    } catch (e) {
+      console.error("Twilio async error:", e.message);
+      sendWA(phone, "Tuve un problema, probá de nuevo.").catch(() => {});
+    }
+  })();
 });
 
 async function transcribeAudio(mediaUrl, mediaType) {
