@@ -378,7 +378,7 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 - SIEMPRE respondé en español
 - Reuniones: pedí propósito si no está claro, armá un brief con contexto
 - Gmail: solo creás borradores, nunca enviás sin confirmación
-- Hoy es ${new Date().toLocaleDateString("es-PE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`;
+- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"`;
 }
 
 // ── Agentic loop ──────────────────────────────────────────────────────────────
@@ -437,7 +437,10 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   const systemBlocks = [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }];
   // Contexto vivo precargado (fresco, después del bloque cacheado) — Alicia ya sabe agenda/tareas
   const liveContext = await buildLiveContext(userId);
-  if (liveContext) systemBlocks.push({ type: "text", text: liveContext });
+  // Fecha+hora SIEMPRE acá (no en el bloque cacheado: la hora rompería el cache cada minuto,
+  // y sin timeZone el server UTC hacía que Alicia viviera en el día siguiente desde las 7pm).
+  const nowLima = new Date().toLocaleString("es-PE", { timeZone: "America/Lima", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+  systemBlocks.push({ type: "text", text: `Ahora en Lima: ${nowLima}.${liveContext ? `\n\n${liveContext}` : ""}` });
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
