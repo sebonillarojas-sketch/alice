@@ -715,11 +715,11 @@ const trimSpeech = (text, cap) => {
   return limited;
 };
 
-async function ttsOpenAI(text, voice) {
+async function ttsOpenAI(text, voice, format = "wav") {
   const res = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "tts-1", input: trimSpeech(text, 3800), voice: toOpenAIVoice(voice), response_format: "wav" }),
+    body: JSON.stringify({ model: "tts-1", input: trimSpeech(text, 3800), voice: toOpenAIVoice(voice), response_format: format }),
   });
   if (!res.ok) throw new Error(`OpenAI TTS ${res.status}: ${(await res.text()).slice(0, 150)}`);
   return Buffer.from(await res.arrayBuffer());
@@ -750,6 +750,14 @@ app.post("/api/tts", async (req, res) => {
   const { text, voice } = req.body;
   if (!text) return res.status(400).json({ error: "No text" });
   try {
+    // Panel del browser: mp3 (~10x más liviano que wav → llega mucho antes en 4G).
+    // Twilio/WA siguen usando generateSpeech() wav vía ttsCache — no se tocan.
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const buf = await ttsOpenAI(text, voice, "mp3");
+        return res.set("Content-Type", "audio/mpeg").send(buf);
+      } catch (e) { console.error("OpenAI TTS mp3 falló, cae a wav/Groq:", e.message); }
+    }
     const buf = await generateSpeech(text, voice);
     res.set("Content-Type", "audio/wav").send(buf);
   } catch (e) {
