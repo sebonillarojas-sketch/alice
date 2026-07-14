@@ -909,6 +909,8 @@ app.get("/auth/google", (req, res) => {
     scope: GOOGLE_SCOPES,
     state: userId,
   });
+  // ?hint=email → apunta el login a esa cuenta (evita que agarre la sesión activa equivocada)
+  if (req.query.hint && /@/.test(req.query.hint)) params.set("login_hint", String(req.query.hint));
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 });
 
