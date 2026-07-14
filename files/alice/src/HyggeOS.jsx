@@ -188,7 +188,7 @@ const SYNCED_KEYS = new Set([
   "hygge:messages", "hygge:activity", "hygge:customSpaces", "hygge:deletedDefaultSpaces",
   "hygge:smartViews", "hygge:users", "hygge:spaceAccess", "hygge:customViews",
   "hygge:spvs", "hygge:hq:cifras", "hygge:whiteboards", "hygge:knowledgeLinks",
-  "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:hqWidgets",
+  "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:ceoBlocks", "hygge:hqWidgets",
   "hygge:hqSummaries", "hygge:finanzas:source", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
 ]);
 
@@ -8071,13 +8071,14 @@ function LabView({ labId, ...allProps }) {
   );
 }
 
-function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate, openDetail, onEditProject, onAddProject, onDeleteProject, onEditNps, onResetSeed }) {
+function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, navigate, openDetail, onEditProject, onAddProject, onDeleteProject, onEditNps, onAddBlock, onEditBlock, onDeleteBlock, onMoveBlock, onResetSeed }) {
   const [activeProject, setActiveProject] = useState(null);
   const [audience, setAudience] = useState("internal");
   const [shareOpen, setShareOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const [editingNps, setEditingNps] = useState(false);
+  const [blockModal, setBlockModal] = useState(null); // null | { block?, isNew }
   const visible = CEO_AUDIENCE_PRESETS[audience].sections;
 
   // Fuentes externas · Drive sheets que respaldan los KPIs
@@ -8140,6 +8141,11 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
               </button>
             ))}
           </div>
+          {audience === "internal" && (
+            <button onClick={() => setBlockModal({ isNew: true })} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.inkSoft, border: `1px solid ${C.line}`, borderRadius: 2, fontWeight: 600 }} title="Agregar bloque personalizado: KPI, nota o viewport">
+              <Plus size={11} /> Bloque
+            </button>
+          )}
           <button onClick={() => setShareOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600, letterSpacing: "0.04em" }}>
             <Send size={11} /> Compartir
           </button>
@@ -8435,8 +8441,64 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, navigate,
         </div>
       </div>
 
+      {/* Bloques personalizados · KPIs manuales, notas y viewports que el CEO agrega a gusto */}
+      {(() => {
+        const vis = (blocks || []).filter(b => (b.audiences || ["internal"]).includes(audience));
+        if (!vis.length) return null;
+        return (
+          <div className="mt-3" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: 12 }}>
+            {vis.map((b) => {
+              const idx = blocks.indexOf(b);
+              const controls = audience === "internal" && (
+                <div className="flex items-center gap-1 opacity-0 group-hover/blk:opacity-100 transition-opacity">
+                  <button onClick={() => onMoveBlock(idx, -1)} className="p-0.5 hover:opacity-70" title="Subir" style={{ color: C.muted, fontSize: 11 }}>↑</button>
+                  <button onClick={() => onMoveBlock(idx, 1)} className="p-0.5 hover:opacity-70" title="Bajar" style={{ color: C.muted, fontSize: 11 }}>↓</button>
+                  <button onClick={() => setBlockModal({ block: b })} className="p-0.5 hover:opacity-70" title="Editar bloque"><PenSquare size={11} style={{ color: C.muted }} /></button>
+                  <button onClick={() => { if (confirm(`¿Eliminar bloque "${b.title || b.label || "sin título"}"?`)) onDeleteBlock(b.id); }} className="p-0.5 hover:opacity-70" title="Eliminar bloque"><X size={12} style={{ color: C.brick }} /></button>
+                </div>
+              );
+              if (b.type === "kpi") return (
+                <div key={b.id} className="group/blk" style={{ backgroundColor: b.dark ? C.ink : C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 4, padding: "14px 16px" }}>
+                  <div className="flex items-center justify-between">
+                    <div style={{ fontSize: 9, color: b.dark ? "rgba(255,255,255,0.5)" : C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>{b.label}</div>
+                    {controls}
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: b.dark ? C.bg : C.ink, marginTop: 6, letterSpacing: "-0.02em" }}>{b.value}</div>
+                  {b.sub && <div style={{ fontSize: 10, color: b.dark ? "rgba(255,255,255,0.45)" : C.muted, marginTop: 2 }}>{b.sub}</div>}
+                </div>
+              );
+              if (b.type === "nota") return (
+                <div key={b.id} className="group/blk" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 4, padding: "14px 16px" }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{b.title}</div>
+                    {controls}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{b.text}</div>
+                </div>
+              );
+              if (b.type === "embed") return (
+                <div key={b.id} className="group/blk" style={{ gridColumn: "1 / -1", backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{b.title}</div>
+                    <div className="flex items-center gap-2">
+                      <a href={b.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 9, color: C.cobalt, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }} className="hover:opacity-80">Abrir ↗</a>
+                      {controls}
+                    </div>
+                  </div>
+                  <iframe src={b.url} title={b.title} style={{ width: "100%", height: b.height || 380, border: "none", display: "block", backgroundColor: C.bg }} />
+                </div>
+              );
+              return null;
+            })}
+          </div>
+        );
+      })()}
+
       {/* Share modal */}
       {shareOpen && <CEOShareModal kpis={kpis} projects={projects} audience={audience} criticalTasks={criticalTasks} onClose={() => setShareOpen(false)} />}
+
+      {/* Block modal · crear/editar bloque personalizado */}
+      {blockModal && <CEOBlockModal block={blockModal.block} onSave={(data) => { blockModal.block ? onEditBlock(blockModal.block.id, data) : onAddBlock(data); setBlockModal(null); }} onClose={() => setBlockModal(null)} />}
 
       {/* Project edit modal */}
       {editingProject && <CEOProjectEditModal project={editingProject} onSave={(patch) => { onEditProject(editingProject.id, patch); setEditingProject(null); }} onDelete={() => { onDeleteProject(editingProject.id); setEditingProject(null); }} onClose={() => setEditingProject(null)} />}
@@ -8614,6 +8676,100 @@ function CEONpsEditModal({ currentNps, onSave, onClose }) {
         <div className="px-5 py-3 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
           <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted }}>Cancelar</button>
           <button onClick={() => blob.onHappy(() => onSave(val))} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bloque personalizado del CEO Dashboard · KPI manual, nota o viewport (iframe)
+function CEOBlockModal({ block, onSave, onClose }) {
+  const isNew = !block;
+  const [form, setForm] = useState({
+    type: block?.type || "kpi",
+    label: block?.label || "", value: block?.value || "", sub: block?.sub || "", dark: !!block?.dark,
+    title: block?.title || "", text: block?.text || "",
+    url: block?.url || "", height: block?.height || 380,
+    audiences: block?.audiences || ["internal"],
+  });
+  const blob = useModalBlob();
+  const set = (k, v) => { setForm(prev => ({ ...prev, [k]: v })); blob.onType(); };
+  const toggleAud = (a) => set("audiences", form.audiences.includes(a) ? form.audiences.filter(x => x !== a) : [...form.audiences, a]);
+  const valid = form.type === "kpi" ? form.label.trim() && String(form.value).trim()
+    : form.type === "nota" ? form.title.trim()
+    : form.title.trim() && /^https:\/\//.test(form.url.trim());
+  const inputStyle = { backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 };
+  const TYPES = [{ id: "kpi", l: "KPI manual" }, { id: "nota", l: "Nota" }, { id: "embed", l: "Viewport / Embed" }];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(10,11,15,0.5)" }} onClick={onClose}>
+      <div className="w-full max-w-[480px] max-h-[90vh] overflow-y-auto" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>{isNew ? "Nuevo bloque" : "Editar bloque"}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: C.ink, marginTop: 2 }}>{form.title || form.label || "Bloque del dashboard"}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ModalBlob state={blob.state} />
+            <button onClick={onClose}><X size={14} style={{ color: C.muted }} /></button>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* Tipo */}
+          <div className="flex items-center gap-1" style={{ border: `1px solid ${C.line}`, borderRadius: 4, padding: 2, backgroundColor: C.paper, width: "fit-content" }}>
+            {TYPES.map(t => (
+              <button key={t.id} onClick={() => set("type", t.id)} className="px-2.5 py-1 text-[10px]" style={{ backgroundColor: form.type === t.id ? C.ink : "transparent", color: form.type === t.id ? C.bg : C.muted, borderRadius: 2, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.l}</button>
+            ))}
+          </div>
+
+          {form.type === "kpi" && (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Etiqueta</span>
+                <input value={form.label} onChange={(e) => set("label", e.target.value)} placeholder="ej. Deuda bancaria" className="w-full px-2 py-1.5 outline-none" style={inputStyle} /></label>
+              <label className="block"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Valor</span>
+                <input value={form.value} onChange={(e) => set("value", e.target.value)} placeholder="ej. $1.2M · 8.5% · 42" className="w-full px-2 py-1.5 outline-none" style={inputStyle} /></label>
+              <label className="block col-span-2"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Subtítulo (opcional)</span>
+                <input value={form.sub} onChange={(e) => set("sub", e.target.value)} placeholder="ej. BCP + Interbank · corte junio" className="w-full px-2 py-1.5 outline-none" style={inputStyle} /></label>
+              <label className="flex items-center gap-2 col-span-2" style={{ fontSize: 11, color: C.inkSoft, cursor: "pointer" }}>
+                <input type="checkbox" checked={form.dark} onChange={(e) => set("dark", e.target.checked)} /> Tarjeta oscura (destacada)</label>
+            </div>
+          )}
+
+          {form.type === "nota" && (
+            <div className="space-y-2">
+              <label className="block"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Título</span>
+                <input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="ej. Foco del trimestre" className="w-full px-2 py-1.5 outline-none" style={inputStyle} /></label>
+              <label className="block"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Texto</span>
+                <textarea value={form.text} onChange={(e) => set("text", e.target.value)} rows={5} placeholder="Notas, contexto, decisiones…" className="w-full px-2 py-1.5 outline-none resize-y" style={inputStyle} /></label>
+            </div>
+          )}
+
+          {form.type === "embed" && (
+            <div className="space-y-2">
+              <label className="block"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Título</span>
+                <input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="ej. Radar Lima Moderna" className="w-full px-2 py-1.5 outline-none" style={inputStyle} /></label>
+              <label className="block"><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>URL (https)</span>
+                <input value={form.url} onChange={(e) => set("url", e.target.value)} placeholder="https://…" className="w-full px-2 py-1.5 outline-none" style={inputStyle} /></label>
+              <label className="block" style={{ width: 140 }}><span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Alto (px)</span>
+                <input type="number" min="120" max="1200" value={form.height} onChange={(e) => set("height", Number(e.target.value) || 380)} className="w-full px-2 py-1.5 outline-none" style={{ ...inputStyle, fontFamily: "ui-monospace, monospace" }} /></label>
+            </div>
+          )}
+
+          {/* Audiencias */}
+          <div>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>Visible para</div>
+            <div className="flex items-center gap-4">
+              {[{ id: "internal", l: "Equipo interno" }, { id: "investors", l: "Inversionistas" }, { id: "buyers", l: "Compradores" }].map(a => (
+                <label key={a.id} className="flex items-center gap-1.5" style={{ fontSize: 11, color: C.inkSoft, cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.audiences.includes(a.id)} onChange={() => toggleAud(a.id)} /> {a.l}</label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 py-3 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${C.lineSoft}`, backgroundColor: C.paper }}>
+          <button onClick={onClose} className="px-3 py-1.5 text-[11px] hover:opacity-70" style={{ color: C.muted }}>Cancelar</button>
+          <button onClick={() => { if (!valid || !form.audiences.length) { blob.onError(); return; } blob.onHappy(() => onSave(form)); }} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>{isNew ? "Crear bloque" : "Guardar"}</button>
         </div>
       </div>
     </div>
@@ -13882,6 +14038,8 @@ export default function HyggeOS({ authUser } = {}) {
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [activity, setActivity] = useState([]);
   const [ceoProjects, setCeoProjects] = useState(INITIAL_CEO_PROJECTS);
+  const [ceoBlocks, setCeoBlocks] = useState([]);
+  const [ceoBlocksLoaded, setCeoBlocksLoaded] = useState(false); // flag propio: no pisar el remoto con [] antes de cargar
   const [spvs, setSpvs] = useState(DEFAULT_SPVS);
   const [hqCifras, setHqCifras] = useState(DEFAULT_HQ_CIFRAS);
   const [ceoNps, setCeoNps] = useState(0);
@@ -14107,6 +14265,9 @@ export default function HyggeOS({ authUser } = {}) {
   useEffect(() => { if (loaded) saveStored("hygge:messages", messages); }, [messages, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:activity", activity); }, [activity, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:ceoProjects", ceoProjects); }, [ceoProjects, loaded]);
+  // Bloques del CEO Dashboard · carga propia + guardado gateado por su flag
+  useEffect(() => { loadStored("hygge:ceoBlocks", []).then(v => { setCeoBlocks(Array.isArray(v) ? v : []); setCeoBlocksLoaded(true); }); }, []);
+  useEffect(() => { if (ceoBlocksLoaded) saveStored("hygge:ceoBlocks", ceoBlocks); }, [ceoBlocks, ceoBlocksLoaded]);
   useEffect(() => { if (loaded) saveStored("hygge:ceoNps", ceoNps); }, [ceoNps, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:features", features); }, [features, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:spaceViewports", spaceViewports); }, [spaceViewports, loaded]);
@@ -14868,6 +15029,16 @@ REGLAS:
           return [...prev, { ...form, id: Date.now(), color: palette[prev.length % palette.length] }];
         })}
         onDeleteProject={(id) => setCeoProjects(prev => prev.filter(p => p.id !== id))}
+        blocks={ceoBlocks}
+        onAddBlock={(data) => setCeoBlocks(prev => [...prev, { ...data, id: Date.now() }])}
+        onEditBlock={(id, data) => setCeoBlocks(prev => prev.map(b => b.id === id ? { ...b, ...data, id } : b))}
+        onDeleteBlock={(id) => setCeoBlocks(prev => prev.filter(b => b.id !== id))}
+        onMoveBlock={(idx, dir) => setCeoBlocks(prev => {
+          const next = [...prev]; const j = idx + dir;
+          if (j < 0 || j >= next.length) return prev;
+          [next[idx], next[j]] = [next[j], next[idx]];
+          return next;
+        })}
         onEditNps={setCeoNps}
         onResetSeed={() => { setCeoProjects(INITIAL_CEO_PROJECTS); setCeoNps(0); }}
       />;
