@@ -12,15 +12,19 @@ import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 import { db } from "./lib/supabase";
 
-// Key SOLO desde localStorage (el admin la pega en su browser si quiere paneles Lab con Claude).
-// NUNCA desde env: VITE_* se hornea en el bundle público — así se filtró la key el 13 jul 2026.
-const ANTHROPIC_KEY = (() => { try { return localStorage.getItem("alicia_api_key") || ""; } catch { return ""; } })();
-const anthropicHeaders = () => ({
-  "Content-Type": "application/json",
-  "x-api-key": ANTHROPIC_KEY,
-  "anthropic-version": "2023-06-01",
-  "anthropic-dangerous-direct-browser-access": "true",
-});
+// Toda llamada AI del ERP pasa por el backend (aliceai) — el browser JAMÁS toca
+// Anthropic directo ni guarda keys (así se filtró la key el 13 jul 2026).
+// Devuelve el texto de la respuesta o lanza Error con el mensaje del server.
+async function aliciaAnalyze({ system, prompt, messages, max_tokens }) {
+  const res = await fetch("https://aliceai.bam.pe/api/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system, prompt, messages, max_tokens }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `analyze ${res.status}`);
+  return data.text || "";
+}
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip, Cell,
@@ -560,11 +564,7 @@ async function parseSmartCapture(text, context) {
     return { title: t, type, person: null, amount, due: null, project: null, space: type === "pago" ? "finanzas" : type === "prospecto" ? "comercial" : type === "estados" ? "finanzas" : null, priority: "media", assignee: "sb" };
   };
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: anthropicHeaders(),
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+    const raw = await aliciaAnalyze({
         max_tokens: 400,
         system: `You parse Spanish natural-language quick-capture inputs from a Peruvian real-estate developer (Hygge) into a structured task. Respond ONLY with raw JSON, no markdown, no explanation.
 
@@ -582,12 +582,8 @@ Schema:
 }
 
 Context: ${context || "default"}. Map type to space: pago/detraccion/estados → finanzas; prospecto → comercial; reunion → hq; conformidad/planos → bam; decision → hq; revision → keep null unless clear.`,
-        messages: [{ role: "user", content: text }],
-      })
+        prompt: text,
     });
-    if (!response.ok) return heuristic();
-    const data = await response.json();
-    const raw = data.content?.[0]?.text || "";
     const clean = raw.replace(/```json\n?|```/g, "").trim();
     const parsed = JSON.parse(clean);
     return { ...heuristic(), ...parsed }; // merge with heuristic as fallback
@@ -5191,14 +5187,8 @@ Dame:
 Concisa. Sin genérico. Lima 2025.`;
 
     try {
-      let res = await fetch("http://localhost:3001/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }) }).catch(() => null);
-      if (!res || !res.ok) {
-        const k = localStorage.getItem("alicia_api_key");
-        if (!k) throw new Error("Sin API key · configurala en Alicia > Settings.");
-        res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": k, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 700, messages: [{ role: "user", content: prompt }] }) });
-      }
-      const json = await res.json();
-      setAliciaText(json.choices?.[0]?.message?.content || json.content?.[0]?.text || "Sin respuesta");
+      const text = await aliciaAnalyze({ prompt, max_tokens: 700 });
+      setAliciaText(text || "Sin respuesta");
     } catch (err) { setAliciaText(`Error: ${err.message}`); }
     finally { setAliciaLoading(false); }
   };
@@ -6586,7 +6576,7 @@ function AIChatPanel({ open, onClose, conversation, sending, sendMessage }) {
         <div className="px-6 py-5 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: C.ink, borderRadius: 999 }}><Sparkles size={14} style={{ color: C.bg }} /></div>
-            <div><div className="text-[14px]" style={{ color: C.ink, fontWeight: 600 }}>Ask Alice</div><div className="text-[10px]" style={{ color: C.muted, fontWeight: 500 }}>Agente IA · Claude Sonnet 4</div></div>
+            <div><div className="text-[14px]" style={{ color: C.ink, fontWeight: 600 }}>Ask Alice</div><div className="text-[10px]" style={{ color: C.muted, fontWeight: 500 }}>Agente IA · vía Alicia</div></div>
           </div>
           <button onClick={onClose}><X size={16} style={{ color: C.muted }} /></button>
         </div>
@@ -10001,23 +9991,17 @@ function HQWidgetsBlock({ tasks, terrenos, allSpaces, users, customSpaces, navig
 
   // Internal call with rate-limit detection
   const tryGenerate = async (space, ctx) => {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: anthropicHeaders(),
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+    try {
+      const text = await aliciaAnalyze({
         max_tokens: 300,
         system: `Sos un asistente ejecutivo para Sebastián Bonilla (CEO de Hygge Holding, desarrolladora inmobiliaria peruana). Escribís resúmenes breves del estado de un área. Tono: directo, ejecutivo, rioplatense. 2-3 oraciones máx. Sin listas, sin viñetas. Centrate en lo que importa: tareas críticas, riesgos, próximo paso. Si el área no tiene tareas o está calma, decilo en una sola oración.`,
-        messages: [{ role: "user", content: `Área: ${space.name}\nTareas:\n${ctx || "(sin tareas)"}\n\nResumen ejecutivo:` }],
-      }),
-    });
-    if (!resp.ok) {
-      const err = await resp.text();
-      const isRateLimit = resp.status === 429 || /rate.?limit/i.test(err);
-      throw Object.assign(new Error(isRateLimit ? "rate_limit" : `http_${resp.status}`), { isRateLimit, raw: err });
+        prompt: `Área: ${space.name}\nTareas:\n${ctx || "(sin tareas)"}\n\nResumen ejecutivo:`,
+      });
+      return text || "Sin lectura disponible.";
+    } catch (e) {
+      const isRateLimit = /rate.?limit|429/i.test(e.message);
+      throw Object.assign(new Error(isRateLimit ? "rate_limit" : e.message), { isRateLimit, raw: e.message });
     }
-    const data = await resp.json();
-    return data.content?.find(c => c.type === "text")?.text || "Sin lectura disponible.";
   };
 
   const generateSummary = async (area) => {
@@ -10734,7 +10718,7 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
       { id: "leaflet-css", label: "Leaflet CSS (unpkg.com)", url: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
       { id: "carto-tile", label: "Map tiles (basemaps.cartocdn.com)", url: "https://a.basemaps.cartocdn.com/light_all/13/2336/3759.png", isImage: true },
       { id: "openstreetmap", label: "OSM tiles (tile.openstreetmap.org)", url: "https://tile.openstreetmap.org/13/2336/3759.png", isImage: true },
-      { id: "anthropic-api", label: "Claude API (api.anthropic.com)", url: "https://api.anthropic.com/v1/messages" },
+      { id: "alicia-brain", label: "Alicia backend (aliceai.bam.pe)", url: "https://aliceai.bam.pe/health" },
       { id: "google-fonts", label: "Google Fonts (fonts.googleapis.com)", url: "https://fonts.googleapis.com/css2?family=DM+Sans" },
     ];
 
@@ -11105,18 +11089,11 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
       };
       const sys = `Sos el Mad Hatter de Alicia · análisis de performance en una desarrolladora inmobiliaria peruana (Hygge Holding · CEO Sebastián Bonilla). Tono: rioplatense, ligeramente excéntrico (vivís una tea party permanente), pero con observaciones agudas. Las áreas y personas son reales. Devolvé un párrafo corto (3-4 oraciones máx) con tu lectura general del estado del equipo. Sin viñetas. Empezá con algo como "Sebastián, dejame servirte un té y contarte..." o variante. Si todo está bien, decilo. Si hay problemas, mostrá empatía + dirección concreta.`;
 
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: anthropicHeaders(),
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 600,
-          system: sys,
-          messages: [{ role: "user", content: `Datos:\n${JSON.stringify(ctx, null, 2)}\n\nTu lectura:` }],
-        }),
+      const text = await aliciaAnalyze({
+        max_tokens: 600,
+        system: sys,
+        prompt: `Datos:\n${JSON.stringify(ctx, null, 2)}\n\nTu lectura:`,
       });
-      const data = await resp.json();
-      const text = data.content?.find(c => c.type === "text")?.text || "";
       setAiText(text);
     } catch (e) {
       setAiText(`El Mad Hatter prefirió té al WiFi · análisis local solamente. (${e.message?.slice(0, 60) || "fail"})`);
@@ -11973,13 +11950,7 @@ JSON estricto sin markdown:
 {"intro": "...", "route_to": [...]}`;
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: anthropicHeaders(),
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 300, system: sys, messages: [...history, { role: "user", content: userMsg }] }),
-      });
-      const data = await resp.json();
-      const raw = data.content?.find(c => c.type === "text")?.text || "";
+      const raw = await aliciaAnalyze({ max_tokens: 300, system: sys, messages: [...history, { role: "user", content: userMsg }] });
       return JSON.parse(raw.replace(/```json|```/g, "").trim());
     } catch (e) {
       return { intro: `(No pude rutear: ${e.message?.slice(0, 40) || "error"})`, route_to: [] };
@@ -11997,13 +11968,8 @@ ESTADO ACTUAL: ${JSON.stringify(hyggeContext)}
 Respondé EN PERSONAJE, breve (2-3 oraciones), desde tu lente específica. NO te presentes. NO uses markdown. NO uses emojis.`;
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: anthropicHeaders(),
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 250, system: sys, messages: [...history, { role: "user", content: userMsg }] }),
-      });
-      const data = await resp.json();
-      return data.content?.find(c => c.type === "text")?.text || "(silencio)";
+      const text = await aliciaAnalyze({ max_tokens: 250, system: sys, messages: [...history, { role: "user", content: userMsg }] });
+      return text || "(silencio)";
     } catch (e) {
       return `(${agent.name} no respondió: ${e.message?.slice(0, 30) || "error"})`;
     }
@@ -12013,13 +11979,7 @@ Respondé EN PERSONAJE, breve (2-3 oraciones), desde tu lente específica. NO te
     const ctx = responses.map(r => `${TT_AGENTS[r.role].name}: ${r.content}`).join("\n\n");
     const sys = `Sos DARK ALICE. Los demás agentes hablaron. Cerrá con síntesis BREVE (2 oraciones max). ¿Consenso? ¿Disenso? ¿Qué debe HACER el usuario? Directa, militar. Sin markdown.`;
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: anthropicHeaders(),
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200, system: sys, messages: [...history, { role: "user", content: userMsg }, { role: "assistant", content: `Los agentes:\n\n${ctx}` }, { role: "user", content: "Tu síntesis ejecutiva." }] }),
-      });
-      const data = await resp.json();
-      return data.content?.find(c => c.type === "text")?.text || "";
+      return await aliciaAnalyze({ max_tokens: 200, system: sys, messages: [...history, { role: "user", content: userMsg }, { role: "assistant", content: `Los agentes:\n\n${ctx}` }, { role: "user", content: "Tu síntesis ejecutiva." }] });
     } catch { return ""; }
   };
 
@@ -13369,11 +13329,7 @@ function JabberwockyPanel({ tasks, customViews, terrenos, customSpaces, allSpace
     const inspection = collectFullInspection();
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: anthropicHeaders(),
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+      const text = await aliciaAnalyze({
           max_tokens: 2000,
           system: `Eres el Jabberwocky — la criatura feroz del poema de Lewis Carroll, reencarnada como agente auditor de ALICE, el ERP a medida de Hygge Holding (real estate developer peruano).
 
@@ -13398,20 +13354,8 @@ RECOMENDACIONES:
 (3-5 puntos)
 
 CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
-          messages: [{
-            role: "user",
-            content: `Inspecciono el estado actual de ALICE. Datos:\n\n${JSON.stringify(inspection, null, 2)}\n\nEmití veredicto.`
-          }]
-        })
+          prompt: `Inspecciono el estado actual de ALICE. Datos:\n\n${JSON.stringify(inspection, null, 2)}\n\nEmití veredicto.`,
       });
-
-      if (!response.ok) {
-        const errBody = await response.text();
-        throw new Error(`API ${response.status}: ${errBody.slice(0, 200)}`);
-      }
-
-      const data = await response.json();
-      const text = (data.content || []).map(b => b.type === "text" ? b.text : "").join("");
       if (!text) throw new Error("Respuesta vacía del Jabberwocky");
 
       // Parse
@@ -13547,7 +13491,7 @@ CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
     const today = new Date().toISOString().slice(0, 10);
     let md = `# Veredicto del Jabberwocky · ALICE\n\n`;
     md += `**Fecha:** ${today}\n`;
-    md += `**Fuente:** ${verdict.source === "ai" ? "Claude Sonnet 4 vía Anthropic API" : "Jabberwocky local (heurísticas)"}\n\n`;
+    md += `**Fuente:** ${verdict.source === "ai" ? "Claude vía Alicia (backend)" : "Jabberwocky local (heurísticas)"}\n\n`;
     md += `## ${verdict.result} · Score ${verdict.score}/100\n\n`;
     if (verdict.sentencia) md += `> _"${verdict.sentencia}"_\n\n`;
     if (verdict.hallazgos?.length > 0) {
@@ -13707,7 +13651,7 @@ CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
           {verdict.source === "ai" && (
             <div className="px-3 py-2 flex items-center gap-2 text-[10px]" style={{ backgroundColor: `${C.cobalt}10`, border: `1px solid ${C.cobalt}30`, borderRadius: 2, color: C.inkSoft }}>
               <Sparkles size={11} style={{ color: C.cobalt, flexShrink: 0 }} />
-              <span>Veredicto generado por Claude Sonnet 4 vía Anthropic API</span>
+              <span>Veredicto generado por Claude vía Alicia (backend)</span>
             </div>
           )}
 
@@ -14923,19 +14867,11 @@ REGLAS:
 - Sé directo, no preámbulos. Hablás con confianza con Sebastián.`;
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: anthropicHeaders(),
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1500,
-          system: systemPrompt,
-          messages: [...conversation.map(c => ({ role: c.role, content: c.content })), userTurn],
-        }),
+      const textContent = await aliciaAnalyze({
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [...conversation.map(c => ({ role: c.role, content: c.content })), userTurn],
       });
-      if (!response.ok) throw new Error("API error");
-      const data = await response.json();
-      const textContent = data.content.filter(b => b.type === "text").map(b => b.text).join("");
       const cleaned = textContent.replace(/```json|```/g, "").trim();
       let parsed;
       try { parsed = JSON.parse(cleaned); }
