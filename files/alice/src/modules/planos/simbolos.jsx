@@ -1,19 +1,18 @@
 // símbolos 2D de mobiliario en planta (vista superior), calidad CAD, paramétricos a w×d (m).
 // marco local centrado en (0,0); el caller aplica translate/rotate/scale. líneas non-scaling.
-// REGLA DE COLOR BAM: todo en una sola tinta; solo vegetación (y anotaciones del plano)
-// van en morado BAM. Aberturas (puertas/ventanas) se tratan como anotación → morado.
+// REGLA DE COLOR BAM: TODO en una sola tinta (muros, carpintería, mobiliario);
+// morado BAM únicamente para vegetación y anotaciones (textos/cotas del plano).
 import { porId } from "./mobiliario.js";
 
 const PAPER = "#FFFFFF";
 const INK = "#373737";          // única tinta del plano
-const MORADO = "#95ABE8";       // morado BAM: vegetación + anotaciones
+const MORADO = "#95ABE8";       // morado BAM: solo vegetación + anotaciones
 const SEL = "#F7643B";
 
 export function Simbolo({ it: t, px, py, k, selected }) {
   const w = t.w, d = t.d, id = t.ref;
-  const abertura = id.startsWith("puerta") || id.startsWith("ventana") || id.startsWith("vano");
   const vegetal = id === "jardinera" || id === "maceta";
-  const s = selected ? SEL : (abertura || vegetal) ? MORADO : INK;
+  const s = selected ? SEL : vegetal ? MORADO : INK;
   // estilos base
   const SB = { fill: PAPER, stroke: s, strokeWidth: 1.1, vectorEffect: "non-scaling-stroke" };   // cuerpo
   const LN = { fill: "none", stroke: s, strokeWidth: 0.9, vectorEffect: "non-scaling-stroke" };  // línea

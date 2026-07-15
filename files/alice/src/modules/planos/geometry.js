@@ -108,6 +108,33 @@ function lineIntersect(p1, d1, p2, d2) {
 
 // offset hacia adentro de un polígono simple por `d` metros (retiros).
 // devuelve el polígono reducido o null si colapsa.
+// offset con distancia POR BORDE (retiros normativos: solo frente en medianera,
+// frente + calle lateral en esquina). dists[i] aplica al borde pts[i]→pts[i+1].
+export function offsetEdges(pts, dists) {
+  const n = pts.length;
+  if (n < 3) return null;
+  if (!dists.some((d) => d > 0)) return pts.map((p) => ({ ...p }));
+  const s = signedArea(pts) > 0 ? 1 : -1;
+  const lines = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    const ex = b.x - a.x, ey = b.y - a.y;
+    const len = Math.hypot(ex, ey) || 1;
+    const nx = (-ey / len) * s, ny = (ex / len) * s;
+    const d = dists[i] || 0;
+    lines.push({ p: { x: a.x + nx * d, y: a.y + ny * d }, dir: { x: ex, y: ey } });
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const prev = lines[(i - 1 + n) % n], cur = lines[i];
+    const hit = lineIntersect(prev.p, prev.dir, cur.p, cur.dir);
+    if (!hit) return null;
+    out.push(hit);
+  }
+  if (Math.sign(signedArea(out)) !== Math.sign(signedArea(pts)) || area(out) < 0.5) return null;
+  return out;
+}
+
 export function offsetPolygon(pts, d) {
   const n = pts.length;
   if (n < 3 || d <= 0) return pts.map((p) => ({ ...p }));
