@@ -159,6 +159,9 @@ function initSchema(db) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
   `);
+  // Higiene: un turno de assistant vacío en el historial contamina los turnos
+  // siguientes (el modelo tiende a repetir el silencio). Se borran al arrancar.
+  db.exec(`DELETE FROM messages WHERE role = 'assistant' AND trim(content) = ''`);
 }
 
 export function query(sql, params = []) {

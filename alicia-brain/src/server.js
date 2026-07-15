@@ -553,6 +553,13 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
 
   // Guardar conversación
   await saveMessage(userId, "user", userText, channel);
+  if (!finalText.trim()) {
+    // El modelo cerró el turno sin texto (pasa con mensajes muy cortos o ambiguos).
+    // NO se guarda el turno vacío — un assistant en blanco contamina el historial
+    // y hace que los turnos siguientes también salgan vacíos.
+    console.warn(`⚠️ [${userId}] respuesta vacía del modelo (${iterations} iter, ${toolResults.length} tools)`);
+    return { text: "Me quedé en blanco con ese mensaje 😅 ¿Me lo repetís con un poco más de contexto?", actions: toolResults };
+  }
   const msgId = await saveMessage(userId, "assistant", finalText, channel, toolResults);
 
   // Extraer memorias + actualizar persona en background

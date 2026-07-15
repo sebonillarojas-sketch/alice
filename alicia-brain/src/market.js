@@ -12,13 +12,23 @@
 import { query } from "./db.js";
 
 const BCRP_API = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api";
+const NEXO_API_URL = process.env.NEXO_API_URL || "";
 
 // Returns { period, value } for the latest non-null observation of a BCRP series
 async function fetchBCRP(seriesCode) {
   const url = `${BCRP_API}/${seriesCode}/json/2025-1/2026-12/ing`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`BCRP ${seriesCode} HTTP ${res.status}`);
-  const d = await res.json();
+  // La API del BCRP a veces adjunta basura después del JSON válido — parse
+  // tolerante: se corta en la posición del error y se rescata el objeto.
+  const body = await res.text();
+  let d;
+  try { d = JSON.parse(body); }
+  catch (e) {
+    const pos = Number((e.message.match(/position (\d+)/) || [])[1]);
+    try { d = JSON.parse(body.slice(0, pos || body.lastIndexOf("}") + 1)); }
+    catch { throw new Error(`BCRP ${seriesCode}: JSON inválido (${e.message.slice(0, 60)})`); }
+  }
   const name = d.config?.series?.[0]?.name || seriesCode;
   for (let i = d.periods.length - 1; i >= 0; i--) {
     const v = d.periods[i].values[0];
@@ -94,7 +104,7 @@ async function fetchNexoProjects() {
 
   // Strategy 1: try their JSON API endpoint (common SPA pattern)
   const apiEndpoints = [
-    `${NEXO_API_URL}?limit=1000&page=1`,
+    ...(NEXO_API_URL ? [`${NEXO_API_URL}?limit=1000&page=1`] : []),
     `https://nexoinmobiliario.pe/api/proyectos?limit=1000`,
     `https://nexoinmobiliario.pe/api/v1/projects?limit=1000`,
     `https://nexoinmobiliario.pe/api/search?type=proyecto&limit=1000`,
