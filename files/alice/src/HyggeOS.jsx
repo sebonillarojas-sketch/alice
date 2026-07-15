@@ -3,6 +3,8 @@ import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
 import MercadoView from "./modules/mercado/MercadoView";
 import CabidaView from "./modules/cabida/CabidaView";
+import EditorPlanos from "./modules/planos/EditorPlanos";
+import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { useTimer } from "./modules/timer/useTimer";
 import { TimerButton } from "./modules/timer/TimerButton";
@@ -385,6 +387,26 @@ const APPS = [
     dot: "#F7643B",
     url: null,
     description: "Calculadora de cabida preliminar · áreas, unidades, sótanos, margen bruto",
+    badge: "v1.0",
+    native: true,
+  },
+  {
+    id: "app-editor",
+    label: "Editor de Planos",
+    icon: Pencil,
+    dot: "#95ABE8",
+    url: null,
+    description: "Editor interactivo de plantas · dibuja muros y ambientes · cotas, áreas, export SVG",
+    badge: "v1.0",
+    native: true,
+  },
+  {
+    id: "app-mesa",
+    label: "Mesa de Trabajo",
+    icon: StickyNote,
+    dot: "#373737",
+    url: null,
+    description: "Tablero colaborativo BAM · concepto, inspo, croquis, planos y votación",
     badge: "v1.0",
     native: true,
   },
@@ -14939,6 +14961,8 @@ REGLAS:
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
         if (app.id === "app-velocity") return <MercadoView />;
         if (app.id === "app-cabida")   return <CabidaView />;
+        if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos /></div>;
+        if (app.id === "app-mesa")     return <MesaDeTrabajo />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
             <iframe

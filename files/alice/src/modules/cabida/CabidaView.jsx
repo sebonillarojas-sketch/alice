@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import EsquemaPlanta from "./EsquemaPlanta.jsx";
 
 const C = {
   ink: "#373737",
@@ -304,6 +305,15 @@ export default function CabidaView({ initialTerreno, compact }) {
             </p>
           </div>
         </div>
+
+        {/* distribución esquemática — ancho completo */}
+        <Card n="07" title="distribución esquemática" style={{ gridColumn: "1 / -1" }}>
+          <EsquemaPlanta
+            terreno={terreno} huella={r.huella} pisos={pisos} dptos={r.dptos}
+            mix1={mix1} mix2={mix2} areaDpto={areaDpto} circulacion={circulacion}
+            pisosSot={r.pisosSot} azoteaTechada={azoteaTechada}
+          />
+        </Card>
       </div>
     </div>
   );

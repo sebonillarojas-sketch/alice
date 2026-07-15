@@ -1,0 +1,1500 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 28.2.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
+	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
+	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
+	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
+	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
+	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
+	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
+	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
+]>
+<svg version="1.1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1000px" height="675px"
+	 viewBox="0 0 1000 675" enable-background="new 0 0 1000 675" xml:space="preserve">
+<metadata>
+	<sfw  xmlns="&ns_sfw;">
+		<slices></slices>
+		<sliceSourceBounds  bottomLeftOrigin="true" height="7841.073" width="12485.089" x="-4558.089" y="-958"></sliceSourceBounds>
+	</sfw>
+</metadata>
+<g id="FILL-BACKGROUND">
+</g>
+<g id="N-DIMENSIONS">
+</g>
+<g id="N-TEXT">
+</g>
+<g id="_x32_D_x24_AG-GUIDES">
+</g>
+<g id="_x32_D_x24_AG-DIAGRAM">
+	<g id="POLYLINE_00000049192454907617640250000005902883175693571209_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					836.918,471.482 835.918,471.482 835.918,470.482 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="835.918" y1="467.478" x2="835.918" y2="293.697"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					835.918,292.194 835.918,291.194 836.918,291.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="839.924" y1="291.194" x2="923.561" y2="291.194"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					925.063,291.194 926.063,291.194 926.063,292.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="926.063" y1="295.199" x2="926.063" y2="468.98"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					926.063,470.482 926.063,471.482 925.063,471.482 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="922.058" y1="471.482" x2="838.421" y2="471.482"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000173128342759166493850000003776174571947655321_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					721.074,471.482 720.074,471.482 720.074,470.482 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="720.074" y1="467.478" x2="720.074" y2="293.697"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					720.074,292.194 720.074,291.194 721.074,291.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="724.031" y1="291.194" x2="796.472" y2="291.194"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					797.95,291.194 798.95,291.194 798.95,292.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="798.95" y1="295.199" x2="798.95" y2="468.98"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					798.95,470.482 798.95,471.482 797.95,471.482 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="794.993" y1="471.482" x2="722.552" y2="471.482"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000080923163940205933350000008196040456204996535_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					616.497,471.482 615.497,471.482 615.497,470.482 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="615.497" y1="467.478" x2="615.497" y2="293.697"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					615.497,292.194 615.497,291.194 616.497,291.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="619.392" y1="291.194" x2="680.658" y2="291.194"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					682.105,291.194 683.105,291.194 683.105,292.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="683.105" y1="295.199" x2="683.105" y2="468.98"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					683.105,470.482 683.105,471.482 682.105,471.482 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="679.211" y1="471.482" x2="617.944" y2="471.482"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000072979477750786932990000007664844518285996732_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					836.918,254.226 835.918,254.226 835.918,253.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="835.918" y1="250.221" x2="835.918" y2="76.44"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					835.918,74.937 835.918,73.937 836.918,73.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="839.924" y1="73.937" x2="923.561" y2="73.937"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					925.063,73.937 926.063,73.937 926.063,74.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="926.063" y1="77.942" x2="926.063" y2="251.723"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					926.063,253.226 926.063,254.226 925.063,254.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="922.058" y1="254.226" x2="838.421" y2="254.226"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000013191138570443643600000013205150852970952881_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					721.074,254.226 720.074,254.226 720.074,253.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="720.074" y1="250.221" x2="720.074" y2="76.44"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					720.074,74.937 720.074,73.937 721.074,73.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="724.031" y1="73.937" x2="796.472" y2="73.937"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					797.95,73.937 798.95,73.937 798.95,74.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="798.95" y1="77.942" x2="798.95" y2="251.723"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					798.95,253.226 798.95,254.226 797.95,254.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="794.993" y1="254.226" x2="722.552" y2="254.226"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000029011731374281335450000002578473122662281374_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					616.497,254.226 615.497,254.226 615.497,253.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="615.497" y1="250.221" x2="615.497" y2="76.44"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					615.497,74.937 615.497,73.937 616.497,73.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="619.392" y1="73.937" x2="680.658" y2="73.937"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					682.105,73.937 683.105,73.937 683.105,74.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="683.105" y1="77.942" x2="683.105" y2="251.723"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					683.105,253.226 683.105,254.226 682.105,254.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="679.211" y1="254.226" x2="617.944" y2="254.226"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000183956446682095130100000015908585236926027428_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					302.115,74.937 302.115,73.937 301.115,73.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" x1="298.139" y1="73.937" x2="76.425" y2="73.937"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					74.937,73.937 73.937,73.937 73.937,74.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="73.937" y1="77.942" x2="73.937" y2="251.723"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					73.937,253.226 73.937,254.226 74.937,254.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" x1="77.913" y1="254.226" x2="299.626" y2="254.226"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					301.115,254.226 302.115,254.226 302.115,253.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="302.115" y1="250.221" x2="302.115" y2="76.44"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000163773481230757372340000016952121694802704778_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					578.529,74.937 578.529,73.937 577.529,73.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" x1="574.536" y1="73.937" x2="341.58" y2="73.937"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					340.083,73.937 339.083,73.937 339.083,74.937 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="339.083" y1="77.942" x2="339.083" y2="251.723"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					339.083,253.226 339.083,254.226 340.083,254.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" x1="343.076" y1="254.226" x2="576.032" y2="254.226"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					577.529,254.226 578.529,254.226 578.529,253.226 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0032,3.0049" x1="578.529" y1="250.221" x2="578.529" y2="76.44"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000112630535878616895780000003408261040025667487_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					340.083,601.76 339.083,601.76 339.083,600.76 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="339.083" y1="597.755" x2="339.083" y2="514.118"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					339.083,512.615 339.083,511.615 340.083,511.615 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" x1="343.076" y1="511.615" x2="576.032" y2="511.615"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					577.529,511.615 578.529,511.615 578.529,512.615 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="578.529" y1="515.62" x2="578.529" y2="599.257"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					578.529,600.76 578.529,601.76 577.529,601.76 				"/>
+				
+					<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" points="
+					574.536,601.76 471.482,601.76 341.58,601.76 				"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000023258164059918245120000000689773027860469120_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					340.083,474.647 339.083,474.647 339.083,473.647 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="339.083" y1="470.69" x2="339.083" y2="398.249"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					339.083,396.771 339.083,395.771 340.083,395.771 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" x1="343.076" y1="395.771" x2="576.032" y2="395.771"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					577.529,395.771 578.529,395.771 578.529,396.771 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="578.529" y1="399.728" x2="578.529" y2="472.168"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					578.529,473.647 578.529,474.647 577.529,474.647 				"/>
+				
+					<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" points="
+					574.536,474.647 471.482,474.647 341.58,474.647 				"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000110458639946781066610000006406787586609826468_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					340.083,358.802 339.083,358.802 339.083,357.802 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="339.083" y1="354.908" x2="339.083" y2="293.641"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					339.083,292.194 339.083,291.194 340.083,291.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" x1="343.076" y1="291.194" x2="576.032" y2="291.194"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					577.529,291.194 578.529,291.194 578.529,292.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="578.529" y1="295.089" x2="578.529" y2="356.355"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					578.529,357.802 578.529,358.802 577.529,358.802 				"/>
+				
+					<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9953,2.993" points="
+					574.536,358.802 471.482,358.802 341.58,358.802 				"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000024709674879409675710000011338631774712732599_">
+		<g>
+			<g>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="467.257" y1="596.126" x2="467.257" y2="595.126"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0506,3.0759" x1="467.257" y1="592.05" x2="467.257" y2="542.323"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="467.257" y1="540.786" x2="467.257" y2="539.786"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000150802028697707665690000013553085553054489226_">
+		<g>
+			<g>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="467.257" y1="469.013" x2="467.257" y2="468.013"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0506,3.0759" x1="467.257" y1="464.937" x2="467.257" y2="415.211"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="467.257" y1="413.673" x2="467.257" y2="412.673"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000037665039104881944590000016873687262032212393_">
+		<g>
+			<g>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="467.257" y1="353.168" x2="467.257" y2="352.168"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0506,3.0759" x1="467.257" y1="349.092" x2="467.257" y2="299.366"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="467.257" y1="297.828" x2="467.257" y2="296.828"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000108279893964771940650000008140262606806164141_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					74.937,601.76 73.937,601.76 73.937,600.76 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="73.937" y1="597.755" x2="73.937" y2="514.118"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					73.937,512.615 73.937,511.615 74.937,511.615 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" x1="77.913" y1="511.615" x2="299.626" y2="511.615"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					301.115,511.615 302.115,511.615 302.115,512.615 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0033,3.0049" x1="302.115" y1="515.62" x2="302.115" y2="599.257"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					302.115,600.76 302.115,601.76 301.115,601.76 				"/>
+				
+					<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" points="
+					298.139,601.76 206.336,601.76 76.425,601.76 				"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000027578491941448058720000000972016696408732561_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					74.937,474.647 73.937,474.647 73.937,473.647 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="73.937" y1="470.69" x2="73.937" y2="398.249"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					73.937,396.771 73.937,395.771 74.937,395.771 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" x1="77.913" y1="395.771" x2="299.626" y2="395.771"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					301.115,395.771 302.115,395.771 302.115,396.771 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9712,2.9568" x1="302.115" y1="399.728" x2="302.115" y2="472.168"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					302.115,473.647 302.115,474.647 301.115,474.647 				"/>
+				
+					<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" points="
+					298.139,474.647 206.336,474.647 76.425,474.647 				"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000031207179869544460150000013663630939757214090_">
+		<g>
+			<g>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					74.937,358.802 73.937,358.802 73.937,357.802 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="73.937" y1="354.908" x2="73.937" y2="293.641"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					73.937,292.194 73.937,291.194 74.937,291.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" x1="77.913" y1="291.194" x2="299.626" y2="291.194"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					301.115,291.194 302.115,291.194 302.115,292.194 				"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.9297,2.8945" x1="302.115" y1="295.089" x2="302.115" y2="356.355"/>
+				<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="
+					302.115,357.802 302.115,358.802 301.115,358.802 				"/>
+				
+					<polyline fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.984,2.976" points="
+					298.139,358.802 206.336,358.802 76.425,358.802 				"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000160904745688603440000000007657224540499163805_">
+		<g>
+			<g>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="202.111" y1="596.126" x2="202.111" y2="595.126"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0506,3.0759" x1="202.111" y1="592.05" x2="202.111" y2="542.323"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="202.111" y1="540.786" x2="202.111" y2="539.786"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000142135097587531011230000005546513026092398991_">
+		<g>
+			<g>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="202.111" y1="469.013" x2="202.111" y2="468.013"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0506,3.0759" x1="202.111" y1="464.937" x2="202.111" y2="415.211"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="202.111" y1="413.673" x2="202.111" y2="412.673"/>
+			</g>
+		</g>
+	</g>
+	<g id="POLYLINE_00000176733581174684016370000005519701362148952722_">
+		<g>
+			<g>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="202.111" y1="353.168" x2="202.111" y2="352.168"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.0506,3.0759" x1="202.111" y1="349.092" x2="202.111" y2="299.366"/>
+				
+					<line fill="none" stroke="#3A54F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" x1="202.111" y1="297.828" x2="202.111" y2="296.828"/>
+			</g>
+		</g>
+	</g>
+</g>
+<g id="_x32_D_x24_AG-DETAILS-DIAGRAM">
+</g>
+<g id="_x32_D_x24_AG-FIXTURES">
+	<g id="POLYLINE_00000115501528891474492730000004663690827646621863_">
+		
+			<rect x="621.131" y="330.632" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="56.34" height="56.34"/>
+	</g>
+	<g id="POLYLINE_00000026862027513533676710000002084435274542739387_">
+		
+			<rect x="647.406" y="394.954" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="0.704"/>
+	</g>
+	<g id="POLYLINE_00000183244498780152509510000011821079108851153320_">
+		
+			<rect x="647.406" y="395.658" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="2.582"/>
+	</g>
+	<g id="POLYLINE_00000073719595575870065710000010440463014719212187_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			648.119,398.24 648.119,398.71 650.466,398.71 650.466,398.24 		"/>
+	</g>
+	<g id="POLYLINE_00000175318713881461642360000005269585835137339282_">
+		
+			<rect x="647.406" y="398.71" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="1.878"/>
+	</g>
+	<g id="POLYLINE_00000183239278578007173660000016777984648298707364_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			647.406,400.588 647.406,407.63 651.197,407.63 651.197,400.588 		"/>
+	</g>
+	<g id="POLYLINE_00000100349127531872866950000005379746283454079141_">
+		
+			<rect x="615.497" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="67.608" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000012444488228236554330000005360635984395180424_">
+		
+			<rect x="615.497" y="434.04" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="67.608" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000150092427980612623840000016259163227677859743_">
+		
+			<rect x="615.497" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="67.608" height="42.959"/>
+	</g>
+	<g id="POLYLINE_00000100367486747784296640000015019754979261117607_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="683.105" y1="434.04" x2="615.497" y2="434.04"/>
+	</g>
+	<g id="POLYLINE_00000010304719949382845820000009567741044758415256_">
+		
+			<rect x="615.497" y="407.63" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="67.608" height="4.93"/>
+	</g>
+	<g id="POLYLINE_00000155853392470948492430000014436442953061579440_">
+		
+			<rect x="841.553" y="330.632" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="78.876" height="56.34"/>
+	</g>
+	<g id="POLYLINE_00000133522691718620978300000009579181938467606933_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="880.991" y1="434.04" x2="835.919" y2="434.04"/>
+	</g>
+	<g id="POLYLINE_00000082368610755324999970000014918332253520298655_">
+		
+			<rect x="835.919" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="45.072" height="42.959"/>
+	</g>
+	<g id="POLYLINE_00000065790005771747240450000009363830903725213328_">
+		
+			<rect x="835.919" y="434.04" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="45.072" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000111170533857806790330000017030075914616291516_">
+		
+			<rect x="835.919" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="45.072" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000147904793242831244370000002387665452646945209_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="926.063" y1="434.04" x2="880.991" y2="434.04"/>
+	</g>
+	<g id="POLYLINE_00000183948219961182171180000012246138634656726155_">
+		
+			<rect x="880.991" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="45.072" height="42.959"/>
+	</g>
+	<g id="POLYLINE_00000110468887450368485630000010944194303919519626_">
+		
+			<rect x="880.991" y="434.04" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="45.072" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000098204115317519915370000004111354215005724555_">
+		
+			<rect x="880.991" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="45.072" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000142165890573750472710000007049626706785317031_">
+		
+			<rect x="835.919" y="407.63" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="90.144" height="4.93"/>
+	</g>
+	<g id="POLYLINE_00000072983100942423346910000007117557970739523484_">
+		
+			<rect x="879.096" y="394.954" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="0.704"/>
+	</g>
+	<g id="POLYLINE_00000141419232296263706130000013589157346636851597_">
+		
+			<rect x="879.096" y="395.658" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="2.582"/>
+	</g>
+	<g id="POLYLINE_00000174587283023425086530000012434623968716186294_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			879.808,398.24 879.808,398.71 882.156,398.71 882.156,398.24 		"/>
+	</g>
+	<g id="POLYLINE_00000143601323371495882450000002555643438477875118_">
+		
+			<rect x="879.096" y="398.71" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="1.878"/>
+	</g>
+	<g id="POLYLINE_00000078760620267603758240000011363514389927215005_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			879.096,400.588 879.096,407.63 882.886,407.63 882.886,400.588 		"/>
+	</g>
+	<g id="POLYLINE_00000082367804323864329370000002136421962857701028_">
+		
+			<rect x="725.708" y="330.632" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="67.608" height="56.34"/>
+	</g>
+	<g id="POLYLINE_00000048489948162954426940000010867624120333486486_">
+		
+			<rect x="720.074" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="78.876" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000150067133123081756350000004446747737646962315_">
+		
+			<rect x="720.074" y="434.04" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="78.876" height="2.348"/>
+	</g>
+	<g id="POLYLINE_00000054949840534997238430000017187137072169848507_">
+		
+			<rect x="720.074" y="412.56" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="78.876" height="42.959"/>
+	</g>
+	<g id="POLYLINE_00000065069298627363927610000016982449003861852089_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="798.95" y1="434.04" x2="720.074" y2="434.04"/>
+	</g>
+	<g id="POLYLINE_00000049218355480406559480000002589615287893513627_">
+		
+			<rect x="720.074" y="407.63" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="78.876" height="4.93"/>
+	</g>
+	<g id="POLYLINE_00000088816753797099560370000009752249094250920615_">
+		
+			<rect x="757.617" y="394.954" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="0.704"/>
+	</g>
+	<g id="POLYLINE_00000034074348683327726810000014116257101942139566_">
+		
+			<rect x="757.617" y="395.658" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="2.582"/>
+	</g>
+	<g id="POLYLINE_00000049209184591045388770000002702158224362990218_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			758.33,398.24 758.33,398.71 760.677,398.71 760.677,398.24 		"/>
+	</g>
+	<g id="POLYLINE_00000046308472527407794500000012744885875587759803_">
+		
+			<rect x="757.617" y="398.71" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="3.791" height="1.878"/>
+	</g>
+	<g id="POLYLINE_00000173158074904912106820000003977515713588471950_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			757.617,400.588 757.617,407.63 761.407,407.63 761.407,400.588 		"/>
+	</g>
+	<g id="POLYLINE_00000138547115432362608140000012532889298028320670_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M889.271,239.038c-0.199,0.224-0.388,0.462-0.523,0.73c-0.144,0.28-0.234,0.587-0.278,0.897c-0.045,0.311-0.046,0.63-0.024,0.942
+			c0.016,0.149,0.027,0.347,0.047,0.498c0,0,1.263,11.6,1.263,11.6c0.01,0.089-0.007,0.181-0.047,0.26
+			c-0.071,0.144-0.219,0.246-0.38,0.258c-0.007,0.033-16.617-0.02-16.636,0.002c-0.038,0-0.076-0.005-0.113-0.014
+			c-0.127-0.031-0.238-0.117-0.3-0.232c-0.045-0.083-0.065-0.181-0.054-0.275l1.262-11.6c0.029-0.189,0.042-0.461,0.056-0.651
+			c0.016-0.351-0.003-0.707-0.082-1.05c-0.076-0.335-0.215-0.657-0.411-0.939c-0.204-0.298-0.786-0.923-1.018-1.198
+			c-0.632-0.729-1.267-1.519-1.802-2.321c-1.536-2.257-2.48-4.924-2.462-7.67c0.011-0.349,0.027-0.712,0.161-1.039
+			c0.081-0.194,0.223-0.348,0.427-0.41c0.098-0.032,0.203-0.044,0.306-0.049c0.033-0.006,24.515,0.001,24.568-0.002
+			c0.132,0,0.267,0.01,0.393,0.051c0.101,0.032,0.195,0.087,0.268,0.164c0.079,0.082,0.136,0.184,0.176,0.29
+			c0.117,0.316,0.134,0.662,0.143,0.996c0.01,2.223-0.602,4.43-1.673,6.373C891.677,236.249,890.479,237.687,889.271,239.038z"/>
+	</g>
+	<g id="POLYLINE_00000009561524982823356910000000300245601794330803_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M867.769,223.8c-0.001-0.241,0.124-0.463,0.285-0.635c0.46-0.475,1.147-0.714,1.774-0.88c0.552-0.139,1.124-0.217,1.692-0.249
+			c0.191-0.011,0.397-0.017,0.589-0.016h17.762c0.121,0,0.269,0.003,0.39,0.007c1.004,0.045,2.03,0.198,2.944,0.633
+			c0.341,0.171,0.683,0.39,0.885,0.723c0.049,0.083,0.086,0.173,0.105,0.267c0.03,0.122,0.01,0.339,0.014,0.463
+			c-0.011,0.208-0.106,0.41-0.26,0.552c-0.148,0.138-0.35,0.217-0.552,0.216c-0.012,0.001-24.83,0-24.844,0
+			c-0.063-0.002-0.126-0.012-0.187-0.028c-0.105-0.029-0.205-0.079-0.29-0.147c-0.133-0.105-0.231-0.252-0.277-0.414
+			C867.753,224.156,867.774,223.941,867.769,223.8z"/>
+	</g>
+	<g id="POLYLINE_00000167362588105172127610000003680554175672349321_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M867.769,225.695c-0.003-0.312,0.191-0.614,0.477-0.74c0.086-0.039,0.179-0.063,0.273-0.07c0.014-0.012,24.856,0.003,24.889-0.002
+			c0.113,0.001,0.225,0.026,0.328,0.073c0.196,0.088,0.353,0.258,0.427,0.46c0.021,0.058,0.036,0.118,0.044,0.18
+			c0.003,0.024,0.005,0.05,0.006,0.074c0.001,0.008,0,0.019,0,0.027v0.268c0.001,0.206-0.081,0.411-0.224,0.56
+			c-0.092,0.098-0.21,0.172-0.338,0.213c-0.076,0.025-0.155,0.038-0.234,0.04c-0.057,0-24.803,0.001-24.862,0
+			c-0.034-0.001-0.069-0.004-0.102-0.01c-0.272-0.042-0.514-0.231-0.619-0.485C867.749,226.094,867.772,225.892,867.769,225.695z"/>
+	</g>
+	<g id="POLYLINE_00000005965523189375795170000010813374900649142435_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="868.411" y1="224.9" x2="868.395" y2="224.86"/>
+	</g>
+	<g id="POLYLINE_00000116939759190491736570000014425402145995263114_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="893.57" y1="224.9" x2="893.586" y2="224.86"/>
+	</g>
+	<g id="POLYLINE_00000016773521855101313360000003899015069163254681_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M899.173,204.042c-9.064,0-27.303,0-36.364,0"/>
+	</g>
+	<g id="POLYLINE_00000053527404616371496780000004249363848355449022_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M894.212,225.921c0.315-0.014,0.7,0.001,1.015-0.035c0.106-0.011,0.213-0.033,0.315-0.067c0.301-0.099,0.571-0.289,0.771-0.534
+			c0.237-0.278,0.341-0.63,0.43-0.977c0.454-1.928,0.977-4.16,1.274-6.111c0.545-3.451,0.83-7.077,1.017-10.565
+			c0.082-1.78,0.175-3.815,0.156-5.594c-0.007-0.114-0.029-0.228-0.069-0.336c-0.074-0.208-0.212-0.399-0.403-0.513
+			c-0.118-0.071-0.253-0.111-0.388-0.134c-4.852-0.246-12.42-0.257-17.34-0.299c-4.936,0.043-12.466,0.052-17.34,0.299
+			c-0.138,0.023-0.276,0.064-0.395,0.138c-0.192,0.117-0.329,0.311-0.401,0.522c-0.039,0.111-0.06,0.229-0.065,0.347
+			c-0.014,1.77,0.072,3.799,0.158,5.57c0.189,3.489,0.471,7.114,1.017,10.565c0.303,1.976,0.813,4.163,1.274,6.111
+			c0.089,0.346,0.193,0.7,0.43,0.977c0.205,0.251,0.482,0.443,0.791,0.541c0.355,0.113,0.925,0.081,1.309,0.096"/>
+	</g>
+	<g id="POLYLINE_00000153686385671061239870000016186342930711850886_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M657.581,239.038c-0.199,0.224-0.388,0.462-0.523,0.73c-0.144,0.28-0.234,0.587-0.278,0.897c-0.045,0.311-0.046,0.63-0.024,0.942
+			c0.016,0.149,0.027,0.347,0.047,0.498c0,0,1.262,11.6,1.262,11.6c0.01,0.089-0.007,0.181-0.047,0.26
+			c-0.071,0.144-0.219,0.246-0.38,0.258c-0.007,0.033-16.617-0.02-16.636,0.002c-0.038,0-0.076-0.005-0.113-0.014
+			c-0.127-0.031-0.238-0.117-0.3-0.232c-0.045-0.083-0.065-0.181-0.054-0.275l1.263-11.6c0.029-0.189,0.042-0.461,0.056-0.651
+			c0.016-0.351-0.003-0.707-0.082-1.05c-0.076-0.335-0.215-0.657-0.411-0.939c-0.204-0.298-0.786-0.923-1.018-1.198
+			c-0.632-0.729-1.267-1.519-1.802-2.321c-1.536-2.257-2.48-4.924-2.462-7.67c0.011-0.349,0.027-0.712,0.161-1.039
+			c0.081-0.194,0.223-0.348,0.427-0.41c0.098-0.032,0.203-0.044,0.306-0.049c0.033-0.006,24.515,0.001,24.568-0.002
+			c0.132,0,0.267,0.01,0.393,0.051c0.101,0.032,0.195,0.087,0.268,0.164c0.079,0.082,0.136,0.184,0.176,0.29
+			c0.117,0.316,0.134,0.662,0.143,0.996c0.01,2.223-0.602,4.43-1.673,6.373C659.987,236.249,658.79,237.687,657.581,239.038z"/>
+	</g>
+	<g id="POLYLINE_00000178189245686492657120000011984145551519955345_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M636.08,223.8c-0.001-0.241,0.124-0.463,0.285-0.635c0.46-0.475,1.147-0.714,1.774-0.88c0.552-0.139,1.124-0.217,1.693-0.249
+			c0.191-0.011,0.397-0.017,0.589-0.016h17.762c0.121,0,0.269,0.003,0.39,0.007c1.004,0.045,2.03,0.198,2.944,0.633
+			c0.341,0.171,0.683,0.39,0.885,0.723c0.049,0.083,0.086,0.173,0.105,0.267c0.03,0.122,0.01,0.339,0.014,0.463
+			c-0.011,0.208-0.106,0.41-0.26,0.552c-0.148,0.138-0.35,0.217-0.552,0.216c-0.012,0.001-24.83,0-24.844,0
+			c-0.063-0.002-0.126-0.012-0.187-0.028c-0.105-0.029-0.205-0.079-0.29-0.147c-0.133-0.105-0.231-0.252-0.277-0.414
+			C636.063,224.156,636.084,223.941,636.08,223.8z"/>
+	</g>
+	<g id="POLYLINE_00000147196089804535426940000011017798766175888788_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M636.08,225.695c-0.003-0.312,0.191-0.614,0.477-0.74c0.086-0.039,0.179-0.063,0.273-0.07c0.014-0.012,24.856,0.003,24.889-0.002
+			c0.113,0.001,0.225,0.026,0.328,0.073c0.196,0.088,0.353,0.258,0.427,0.46c0.021,0.058,0.036,0.118,0.044,0.18
+			c0.003,0.024,0.005,0.05,0.006,0.074c0.001,0.008,0,0.019,0,0.027v0.268c0.001,0.206-0.081,0.411-0.224,0.56
+			c-0.092,0.098-0.21,0.172-0.338,0.213c-0.075,0.025-0.155,0.038-0.234,0.04c-0.057,0-24.803,0.001-24.862,0
+			c-0.034-0.001-0.069-0.004-0.102-0.01c-0.272-0.042-0.514-0.231-0.619-0.485C636.059,226.094,636.082,225.892,636.08,225.695z"/>
+	</g>
+	<g id="POLYLINE_00000153705999856125285180000002354835729275591575_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="636.722" y1="224.9" x2="636.706" y2="224.86"/>
+	</g>
+	<g id="POLYLINE_00000028323347320840892650000001410254321814638269_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="661.881" y1="224.9" x2="661.897" y2="224.86"/>
+	</g>
+	<g id="POLYLINE_00000176011198458011197950000002564943866567364759_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M667.483,204.042c-9.064,0-27.303,0-36.364,0"/>
+	</g>
+	<g id="POLYLINE_00000089545920808324158920000004187553168894075792_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M662.523,225.921c0.315-0.014,0.7,0.001,1.015-0.035c0.106-0.011,0.213-0.033,0.315-0.067c0.301-0.099,0.571-0.289,0.771-0.534
+			c0.237-0.278,0.341-0.63,0.43-0.977c0.454-1.928,0.977-4.16,1.274-6.111c0.545-3.451,0.83-7.077,1.017-10.565
+			c0.082-1.78,0.175-3.815,0.156-5.594c-0.007-0.114-0.029-0.228-0.069-0.336c-0.074-0.208-0.212-0.399-0.403-0.513
+			c-0.118-0.071-0.253-0.111-0.388-0.134c-4.852-0.246-12.42-0.257-17.34-0.299c-4.935,0.043-12.465,0.052-17.34,0.299
+			c-0.138,0.023-0.276,0.064-0.395,0.138c-0.192,0.117-0.329,0.311-0.401,0.522c-0.039,0.111-0.06,0.229-0.065,0.347
+			c-0.014,1.77,0.072,3.799,0.158,5.57c0.189,3.489,0.471,7.114,1.017,10.565c0.303,1.976,0.813,4.163,1.274,6.111
+			c0.089,0.346,0.193,0.7,0.43,0.977c0.205,0.251,0.482,0.443,0.791,0.541c0.355,0.113,0.925,0.081,1.309,0.096"/>
+	</g>
+	<g id="POLYLINE_00000176020122692090718230000014037762249654337184_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M767.792,239.038c-0.199,0.224-0.388,0.462-0.523,0.73c-0.144,0.28-0.234,0.587-0.278,0.897c-0.045,0.311-0.046,0.63-0.024,0.942
+			c0.016,0.149,0.027,0.347,0.047,0.498c0,0,1.262,11.6,1.262,11.6c0.01,0.089-0.007,0.181-0.047,0.26
+			c-0.071,0.144-0.219,0.246-0.38,0.258c-0.007,0.033-16.617-0.02-16.636,0.002c-0.038,0-0.076-0.005-0.113-0.014
+			c-0.127-0.031-0.238-0.117-0.3-0.232c-0.045-0.083-0.065-0.181-0.054-0.275l1.262-11.6c0.029-0.189,0.042-0.461,0.056-0.651
+			c0.016-0.351-0.003-0.707-0.082-1.05c-0.076-0.335-0.215-0.657-0.411-0.939c-0.204-0.298-0.786-0.923-1.018-1.198
+			c-0.632-0.729-1.266-1.519-1.802-2.321c-1.536-2.257-2.48-4.924-2.462-7.67c0.011-0.349,0.027-0.712,0.161-1.039
+			c0.081-0.194,0.223-0.348,0.427-0.41c0.098-0.032,0.203-0.044,0.306-0.049c0.033-0.006,24.515,0.001,24.568-0.002
+			c0.132,0,0.267,0.01,0.393,0.051c0.101,0.032,0.195,0.087,0.268,0.164c0.079,0.082,0.136,0.184,0.176,0.29
+			c0.117,0.316,0.134,0.662,0.143,0.996c0.01,2.223-0.602,4.43-1.673,6.373C770.198,236.249,769,237.687,767.792,239.038z"/>
+	</g>
+	<g id="POLYLINE_00000162344267601428298490000004888088452097569968_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M746.29,223.8c-0.001-0.241,0.124-0.463,0.285-0.635c0.46-0.475,1.147-0.714,1.774-0.88c0.552-0.139,1.124-0.217,1.692-0.249
+			c0.191-0.011,0.397-0.017,0.589-0.016h17.762c0.121,0,0.269,0.003,0.39,0.007c1.004,0.045,2.03,0.198,2.944,0.633
+			c0.341,0.171,0.683,0.39,0.885,0.723c0.049,0.083,0.086,0.173,0.105,0.267c0.03,0.122,0.01,0.339,0.014,0.463
+			c-0.011,0.208-0.106,0.41-0.26,0.552c-0.148,0.138-0.35,0.217-0.552,0.216c-0.012,0.001-24.83,0-24.844,0
+			c-0.063-0.002-0.126-0.012-0.187-0.028c-0.105-0.029-0.205-0.079-0.29-0.147c-0.133-0.105-0.231-0.252-0.278-0.414
+			C746.274,224.156,746.295,223.941,746.29,223.8z"/>
+	</g>
+	<g id="POLYLINE_00000110432430785747157380000015332247176838149043_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M746.29,225.695c-0.003-0.312,0.191-0.614,0.477-0.74c0.086-0.039,0.179-0.063,0.273-0.07c0.014-0.012,24.856,0.003,24.889-0.002
+			c0.113,0.001,0.225,0.026,0.328,0.073c0.196,0.088,0.353,0.258,0.427,0.46c0.021,0.058,0.036,0.118,0.044,0.18
+			c0.003,0.024,0.005,0.05,0.006,0.074c0.001,0.008,0,0.019,0,0.027v0.268c0.001,0.206-0.081,0.411-0.224,0.56
+			c-0.093,0.098-0.21,0.172-0.338,0.213c-0.076,0.025-0.155,0.038-0.234,0.04c-0.057,0-24.803,0.001-24.862,0
+			c-0.034-0.001-0.069-0.004-0.102-0.01c-0.272-0.042-0.514-0.231-0.619-0.485C746.27,226.094,746.293,225.892,746.29,225.695z"/>
+	</g>
+	<g id="POLYLINE_00000145048737355080280020000011791875272886708905_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="746.932" y1="224.9" x2="746.917" y2="224.86"/>
+	</g>
+	<g id="POLYLINE_00000151533048732958649630000008372506184232861833_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="772.092" y1="224.9" x2="772.107" y2="224.86"/>
+	</g>
+	<g id="POLYLINE_00000145758098264357540650000005413517135229437091_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M777.694,204.042c-9.064,0-27.303,0-36.364,0"/>
+	</g>
+	<g id="POLYLINE_00000158714319711464655350000010352909924376975242_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M772.734,225.921c0.315-0.014,0.7,0.001,1.015-0.035c0.106-0.011,0.214-0.033,0.315-0.067c0.301-0.099,0.571-0.289,0.771-0.534
+			c0.237-0.278,0.341-0.63,0.43-0.977c0.454-1.928,0.977-4.16,1.274-6.111c0.545-3.451,0.83-7.077,1.017-10.565
+			c0.082-1.78,0.175-3.815,0.156-5.594c-0.007-0.114-0.029-0.228-0.069-0.336c-0.074-0.208-0.212-0.399-0.403-0.513
+			c-0.118-0.071-0.253-0.111-0.388-0.134c-4.852-0.246-12.42-0.257-17.34-0.299c-4.936,0.043-12.466,0.052-17.34,0.299
+			c-0.138,0.023-0.276,0.064-0.395,0.138c-0.192,0.117-0.329,0.311-0.401,0.522c-0.039,0.111-0.06,0.229-0.065,0.347
+			c-0.014,1.77,0.072,3.799,0.158,5.57c0.189,3.489,0.471,7.114,1.017,10.565c0.303,1.976,0.813,4.163,1.274,6.111
+			c0.089,0.346,0.193,0.7,0.43,0.977c0.205,0.251,0.482,0.443,0.791,0.541c0.355,0.113,0.925,0.081,1.309,0.096"/>
+	</g>
+	<g id="POLYLINE_00000154383530539671762590000017170316209971719076_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			298.602,180.365 298.602,181.453 296.254,181.453 296.254,180.983 		"/>
+	</g>
+	<g id="POLYLINE_00000112617943293271793450000007110408778295435400_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M299.315,179.747l-1.426,1.236h-2.365v-2.582h-4.695v-0.704c2.1,0,6.406,0,8.486,0V179.747z"/>
+	</g>
+	<g id="POLYLINE_00000152961348724525354170000001170102873274573752_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M295.524,183.331h-7.478v-1.878c2.506,0,8.844,0,11.268,0v8.921h-3.791V183.331z"/>
+	</g>
+	<g id="POLYLINE_00000155106386376163698850000008213074042468614060_">
+		
+			<rect x="264.555" y="195.303" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="37.56" height="42.959"/>
+	</g>
+	<g id="POLYLINE_00000163055840546288738210000010893565130533114001_">
+		
+			<polygon fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			262.677,219.13 263.315,219.13 263.315,219.714 263.935,219.714 263.935,216.783 264.555,216.783 264.555,238.262 
+			262.677,238.262 		"/>
+	</g>
+	<g id="POLYLINE_00000083808449332277789640000004746857007421910164_">
+		
+			<polygon fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			262.677,197.651 263.315,197.651 263.315,198.235 263.935,198.235 263.935,195.303 264.555,195.303 264.555,216.783 
+			262.677,216.783 		"/>
+	</g>
+	<g id="POLYLINE_00000001651314564964392290000010608671717651773570_">
+		
+			<rect x="262.677" y="190.373" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="4.93"/>
+	</g>
+	<g id="POLYLINE_00000087389579868447920010000014028087836932193701_">
+		
+			<rect x="301.645" y="113.375" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="0.47" height="56.34"/>
+	</g>
+	<g id="POLYLINE_00000069386677827762600890000006238760866590346894_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M77.229,227.712v-1.872v3.97c0.077,0.214,0.176,0.43,0.35,0.582c0.365,1.803,0.545,3.657,0.533,5.497
+			c-0.005,1.305-0.104,2.636-0.376,3.914c-0.169,0.603-0.249,1.234-0.283,1.859v10.233c0,0.039-0.001,0.093-0.003,0.132
+			c-0.008,0.173-0.026,0.349-0.075,0.516c-0.012,0.04-0.027,0.082-0.044,0.12c-0.057,0.126-0.133,0.254-0.174,0.387
+			c-0.097,0.306-0.134,0.631-0.134,0.951c0.002,0.035,0.006,0.07,0.017,0.103c0.009,0.027,0.021,0.054,0.041,0.075
+			c0.018,0.019,0.041,0.033,0.066,0.04c0.068,0.021,43.888-0.001,43.955,0.005c0.051-0.003,0.103-0.014,0.151-0.035
+			c0.057-0.026,0.106-0.068,0.141-0.121c0.066-0.102,0.084-0.226,0.088-0.345c0.02-0.337-1.902-12.753-1.882-12.857
+			c-0.056-0.491-0.085-0.998-0.055-1.492c0.035-0.702,0.247-1.39,0.656-1.966c0.802-1.135,2.083-1.859,3.172-2.683
+			c0.843-0.626,1.595-1.377,2.247-2.2c1.167-1.46,2.067-3.22,2.161-5.114c0.002-0.169-0.017-0.353-0.13-0.487
+			c-0.092-0.111-0.242-0.151-0.382-0.149"/>
+	</g>
+	<g id="POLYLINE_00000083053019054521901990000011366532773610372493_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.617,203.95c-0.051,5.223-0.096,15.662-0.327,20.925c-0.033,0.156-0.083,0.311-0.162,0.45
+			c-0.092,0.163-0.228,0.301-0.395,0.387c-0.183,0.095-0.391,0.129-0.596,0.129v0.936h9.523"/>
+	</g>
+	<g id="POLYLINE_00000168119213734197283810000009038594422836266903_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M75.777,203.944l0.409,20.572c0,0.064,0.003,0.135,0.007,0.199c0.015,0.208,0.053,0.418,0.142,0.608
+			c0.078,0.167,0.204,0.314,0.368,0.401c0.123,0.066,0.261,0.1,0.399,0.112c0.036,0.003,0.074,0.005,0.109,0.005
+			c0.022,0.002,9.904-0.002,9.925,0h-9.909"/>
+	</g>
+	<g id="POLYLINE_00000178172001232486293950000002676978104984149436_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M127.771,224.573c-0.053,0.141-0.162,0.245-0.308,0.284c-0.059,0.017-0.121,0.024-0.183,0.024
+			c-0.152-0.006-31.053,0.01-31.187-0.005c-0.084-0.009-0.17-0.03-0.24-0.078c-0.052-0.035-0.093-0.086-0.116-0.144
+			c-0.042-0.104-0.039-0.22-0.022-0.329c0.027-0.285,0.595-1.506,0.7-1.795c0.045-0.107,0.105-0.208,0.187-0.29
+			c0.144-0.15,0.353-0.218,0.557-0.221c9.696,0.065,20.118,0.353,29.754,1.255c0.17,0.025,0.341,0.075,0.482,0.177
+			c0.164,0.116,0.301,0.278,0.369,0.468C127.837,224.13,127.825,224.361,127.771,224.573z"/>
+	</g>
+	<g id="POLYLINE_00000157275644646978215550000003436129862828087947_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M95.407,225.963c0.003-0.152-0.015-0.371,0.039-0.517c0.054-0.169,0.166-0.32,0.312-0.421c0.135-0.093,0.298-0.144,0.462-0.144
+			c0.189,0.014,31.015-0.022,31.173,0.01c0.148,0.023,0.289,0.088,0.403,0.186c0.125,0.106,0.216,0.251,0.257,0.41
+			c0.009,0.036,0.017,0.074,0.021,0.11c0.002,0.027,0.006,0.057,0.006,0.084l0,0.014v0.268c-0.001,0.032-0.002,0.066-0.006,0.098
+			c-0.034,0.3-0.247,0.568-0.532,0.667c-0.084,0.03-0.172,0.046-0.261,0.048c-0.248-0.015-30.988,0.029-31.215-0.014
+			c-0.115-0.022-0.225-0.069-0.32-0.137C95.536,226.475,95.406,226.221,95.407,225.963z"/>
+	</g>
+	<g id="POLYLINE_00000016035947378215536470000006613066624815496064_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M75.511,203.45v-2.097c0-0.016,0-0.035,0.002-0.051c0.005-0.061,0.02-0.122,0.044-0.179c0.087-0.211,0.302-0.358,0.53-0.361
+			c3.894,0.02,8.477,0.015,12.319,0.488c0.142,0.025,0.273,0.105,0.361,0.219c0.061,0.078,0.102,0.173,0.117,0.271
+			c0.004,0.027,0.007,0.055,0.007,0.082c0.003,0.008-0.002,1.62,0,1.629c0,0.126-0.041,0.252-0.117,0.353
+			c-0.109,0.149-0.29,0.24-0.475,0.239c-0.031-0.001-12.2,0.002-12.228-0.001c-0.068-0.004-0.136-0.019-0.198-0.045
+			C75.658,203.908,75.508,203.684,75.511,203.45z"/>
+	</g>
+	<g id="POLYLINE_00000134939149139505315190000006956768124023178127_">
+		
+			<polyline fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			575.016,180.365 575.016,181.453 572.669,181.453 572.669,180.983 		"/>
+	</g>
+	<g id="POLYLINE_00000005954301063254501910000002278365605702708649_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M575.729,179.747l-1.426,1.236h-2.365v-2.582h-4.695v-0.704c2.1,0,6.406,0,8.486,0V179.747z"/>
+	</g>
+	<g id="POLYLINE_00000129174185708813696450000004896903244365552061_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M571.938,183.331h-7.477v-1.878c2.506,0,8.844,0,11.268,0v8.921h-3.791V183.331z"/>
+	</g>
+	<g id="POLYLINE_00000145060703385832527330000011969298794635369112_">
+		
+			<rect x="540.969" y="195.303" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="37.56" height="42.959"/>
+	</g>
+	<g id="POLYLINE_00000016790342796895216670000002628061467445491854_">
+		
+			<polygon fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			539.091,219.13 539.729,219.13 539.729,219.714 540.349,219.714 540.349,216.783 540.969,216.783 540.969,238.262 
+			539.091,238.262 		"/>
+	</g>
+	<g id="POLYLINE_00000070106025271109334740000001586610006545688238_">
+		
+			<polygon fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="
+			539.091,197.651 539.729,197.651 539.729,198.235 540.349,198.235 540.349,195.303 540.969,195.303 540.969,216.783 
+			539.091,216.783 		"/>
+	</g>
+	<g id="POLYLINE_00000144307990398440540790000003831068513242296971_">
+		
+			<rect x="539.091" y="190.373" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="4.93"/>
+	</g>
+	<g id="POLYLINE_00000038404612988703607140000016880439391466073252_">
+		
+			<rect x="578.059" y="113.375" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="0.47" height="56.34"/>
+	</g>
+	<g id="POLYLINE_00000021819783916922644510000014568455679198859667_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M342.375,227.712v-1.872v3.97c0.077,0.214,0.176,0.43,0.35,0.582c0.365,1.803,0.545,3.657,0.533,5.497
+			c-0.005,1.305-0.104,2.636-0.376,3.914c-0.169,0.603-0.249,1.234-0.283,1.859v10.233c0,0.039-0.001,0.093-0.003,0.132
+			c-0.008,0.173-0.026,0.349-0.075,0.516c-0.012,0.04-0.027,0.082-0.044,0.12c-0.057,0.126-0.133,0.254-0.174,0.387
+			c-0.096,0.306-0.134,0.631-0.134,0.951c0.002,0.035,0.006,0.07,0.017,0.103c0.009,0.027,0.021,0.054,0.041,0.075
+			c0.018,0.019,0.041,0.033,0.066,0.04c0.068,0.021,43.888-0.001,43.955,0.005c0.051-0.003,0.103-0.014,0.151-0.035
+			c0.057-0.026,0.106-0.068,0.141-0.121c0.066-0.102,0.084-0.226,0.088-0.345c0.02-0.337-1.902-12.753-1.882-12.857
+			c-0.056-0.491-0.085-0.998-0.055-1.492c0.035-0.702,0.247-1.39,0.656-1.966c0.802-1.135,2.083-1.859,3.172-2.683
+			c0.843-0.626,1.595-1.377,2.247-2.2c1.167-1.46,2.067-3.22,2.161-5.114c0.002-0.169-0.017-0.353-0.13-0.487
+			c-0.092-0.111-0.242-0.151-0.382-0.149"/>
+	</g>
+	<g id="POLYLINE_00000062900743923891956780000003057617496508738473_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.763,203.95c-0.051,5.223-0.096,15.662-0.327,20.925c-0.033,0.156-0.083,0.311-0.162,0.45
+			c-0.092,0.163-0.228,0.301-0.395,0.387c-0.183,0.095-0.391,0.129-0.596,0.129v0.936h9.523"/>
+	</g>
+	<g id="POLYLINE_00000163040659071039889420000014342824501159849652_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M340.923,203.944l0.409,20.572c0,0.064,0.003,0.135,0.007,0.199c0.015,0.208,0.053,0.418,0.142,0.608
+			c0.078,0.167,0.204,0.314,0.368,0.401c0.123,0.066,0.261,0.1,0.399,0.112c0.036,0.003,0.074,0.005,0.109,0.005
+			c0.022,0.002,9.904-0.002,9.925,0h-9.909"/>
+	</g>
+	<g id="POLYLINE_00000181773881952206647050000004435449957096943294_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M392.917,224.573c-0.053,0.141-0.162,0.245-0.308,0.284c-0.059,0.017-0.121,0.024-0.183,0.024
+			c-0.152-0.006-31.053,0.01-31.187-0.005c-0.084-0.009-0.17-0.03-0.24-0.078c-0.052-0.035-0.093-0.086-0.116-0.144
+			c-0.042-0.104-0.039-0.22-0.022-0.329c0.027-0.285,0.595-1.506,0.7-1.795c0.045-0.107,0.105-0.208,0.187-0.29
+			c0.144-0.15,0.353-0.218,0.557-0.221c9.696,0.065,20.118,0.353,29.754,1.255c0.17,0.025,0.341,0.075,0.482,0.177
+			c0.164,0.116,0.301,0.278,0.369,0.468C392.983,224.13,392.971,224.361,392.917,224.573z"/>
+	</g>
+	<g id="POLYLINE_00000093163148740462228240000015862269195448040099_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M360.553,225.963c0.003-0.152-0.015-0.371,0.039-0.517c0.054-0.169,0.166-0.32,0.312-0.421c0.135-0.093,0.298-0.144,0.462-0.144
+			c0.189,0.014,31.015-0.022,31.173,0.01c0.148,0.023,0.289,0.088,0.403,0.186c0.125,0.106,0.216,0.251,0.257,0.41
+			c0.009,0.036,0.017,0.074,0.021,0.11c0.002,0.027,0.006,0.057,0.006,0.084l0,0.014v0.268c-0.001,0.032-0.002,0.066-0.006,0.098
+			c-0.034,0.3-0.247,0.568-0.532,0.667c-0.084,0.03-0.172,0.046-0.261,0.048c-0.248-0.015-30.988,0.029-31.215-0.014
+			c-0.115-0.022-0.225-0.069-0.32-0.137C360.682,226.475,360.552,226.221,360.553,225.963z"/>
+	</g>
+	<g id="POLYLINE_00000065794009832378496170000008523004899787876533_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M340.657,203.45v-2.097c0-0.016,0-0.035,0.002-0.051c0.005-0.061,0.02-0.122,0.044-0.179c0.087-0.211,0.302-0.358,0.53-0.361
+			c3.894,0.02,8.477,0.015,12.319,0.488c0.142,0.025,0.273,0.105,0.361,0.219c0.061,0.078,0.102,0.173,0.117,0.271
+			c0.004,0.027,0.007,0.055,0.007,0.082c0.003,0.008-0.002,1.62,0,1.629c0,0.126-0.041,0.252-0.117,0.353
+			c-0.109,0.149-0.29,0.24-0.475,0.239c-0.031-0.001-12.2,0.002-12.228-0.001c-0.068-0.004-0.136-0.019-0.198-0.045
+			C340.804,203.908,340.654,203.684,340.657,203.45z"/>
+	</g>
+	<g id="POLYLINE_00000046299659669772478720000015036938781166639013_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M352.575,572.163c0.252-0.136,0.463-0.352,0.57-0.619c0.042-0.102,0.071-0.209,0.088-0.318c0.005-0.036,0.011-0.073,0.014-0.109
+			l0.184-1.892c0.364-4.089,0.55-8.433,0.506-12.537c0.036-3.455-0.092-7.191-0.35-10.638c-0.092-1.035-0.231-2.954-0.369-3.984
+			c-0.028-0.131-0.075-0.259-0.142-0.375c-0.109-0.191-0.274-0.347-0.464-0.457c-1.657-0.966-3.498-1.582-5.346-2.066
+			c-0.69-0.178-1.418-0.353-2.121-0.469c-0.326-0.05-0.663-0.096-0.993-0.078c-0.406,0.017-0.802,0.153-1.146,0.369
+			c-0.254,0.16-0.488,0.361-0.663,0.606c-0.223,0.312-0.314,0.695-0.38,1.067c-0.262,1.641-0.401,3.725-0.542,5.391
+			c-0.223,3.073-0.41,6.576-0.453,9.654c-0.038,3.054,0.128,6.475,0.31,9.529c0.159,2.273,0.334,4.946,0.641,7.198
+			c0.081,0.539,0.182,1.119,0.573,1.527c0.316,0.34,0.729,0.591,1.176,0.716c0.296,0.082,0.609,0.092,0.914,0.069
+			c1.119-0.114,2.231-0.419,3.314-0.711C349.515,573.586,351.117,573.007,352.575,572.163z"/>
+	</g>
+	<g id="POLYLINE_00000168824574094018400620000006492005716749418377_">
+		
+			<rect x="358.89" y="547.9" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000051371863413246268510000008049514557583144882_">
+		
+			<rect x="358.89" y="563.129" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000173120205778972678150000007489488797804575109_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M360.227,563.129c-0.123-0.003-2.588,0.01-2.646-0.009c-0.128-0.012-0.256-0.041-0.373-0.093
+			c-0.373-0.162-0.664-0.512-0.729-0.917c-0.082-0.432,0.056-0.903,0.15-1.323c0.121-0.562,0.18-1.161,0.222-1.735
+			c0.046-0.733,0.113-1.632,0.113-2.364c0-0.731-0.067-1.632-0.113-2.364c-0.042-0.573-0.101-1.172-0.222-1.735
+			c-0.094-0.422-0.232-0.89-0.15-1.323c0.065-0.405,0.356-0.755,0.729-0.917c0.118-0.052,0.245-0.081,0.373-0.093
+			c0.053-0.018,2.532-0.006,2.646-0.009V563.129z"/>
+	</g>
+	<g id="POLYLINE_00000101081566440599102050000003422046984185502597_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.598,546.206c3.81-0.824,10.437-1.794,14.355-2.411"/>
+	</g>
+	<g id="POLYLINE_00000157989487695336001860000003642654429473959614_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.598,567.169c3.81,0.824,10.437,1.794,14.355,2.411"/>
+	</g>
+	<g id="POLYLINE_00000112629651081469183420000007515976661211806107_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M393.237,556.688c0.003-1.829-0.552-3.653-1.566-5.174c-0.764-1.135-1.771-2.106-2.807-2.992c-1.232-1.03-2.61-1.908-4.063-2.592
+			c-2.363-1.091-4.922-1.756-7.478-2.208c-2.067-0.202-4.255-0.442-6.325-0.28c-1.897,0.118-3.802,0.435-5.643,0.904
+			c-1.685,0.44-3.365,1.015-4.919,1.805c-0.088,0.06-0.155,0.15-0.186,0.252c-0.06,0.75-0.002,9.289-0.022,10.285
+			c0,0,0,10.144,0,10.144c0,0.024,0.002,0.049,0.006,0.072c0.006,0.04,0.018,0.079,0.034,0.116c0.035,0.082,0.095,0.154,0.168,0.204
+			c1.554,0.79,3.234,1.365,4.919,1.805c1.841,0.469,3.747,0.786,5.643,0.904c0.712,0.043,1.476,0.064,2.189,0.048
+			c1.235-0.015,2.897-0.227,4.136-0.328c2.557-0.452,5.115-1.117,7.478-2.208c1.453-0.684,2.831-1.562,4.063-2.592
+			c1.036-0.886,2.043-1.857,2.807-2.992C392.685,560.341,393.24,558.517,393.237,556.688z"/>
+	</g>
+	<g id="POLYLINE_00000033341930489390974090000011649797132577011627_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M352.575,340.473c0.252-0.136,0.463-0.352,0.57-0.619c0.042-0.102,0.071-0.209,0.088-0.318c0.005-0.036,0.011-0.073,0.014-0.109
+			c0,0,0.184-1.892,0.184-1.892c0.364-4.089,0.55-8.433,0.506-12.537c0.036-3.455-0.092-7.191-0.35-10.638
+			c-0.092-1.035-0.231-2.954-0.369-3.984c-0.028-0.131-0.075-0.259-0.142-0.375c-0.109-0.191-0.274-0.347-0.464-0.457
+			c-1.657-0.966-3.498-1.582-5.346-2.066c-0.69-0.178-1.418-0.353-2.121-0.469c-0.326-0.05-0.663-0.096-0.993-0.078
+			c-0.406,0.017-0.802,0.153-1.146,0.369c-0.254,0.16-0.488,0.361-0.663,0.606c-0.223,0.312-0.314,0.695-0.38,1.067
+			c-0.262,1.64-0.401,3.725-0.542,5.391c-0.223,3.073-0.41,6.576-0.453,9.654c-0.038,3.054,0.128,6.475,0.31,9.529
+			c0.159,2.273,0.334,4.946,0.641,7.198c0.081,0.539,0.182,1.119,0.573,1.527c0.316,0.34,0.729,0.591,1.176,0.716
+			c0.296,0.082,0.609,0.092,0.914,0.069c1.119-0.114,2.231-0.419,3.314-0.711C349.515,341.897,351.117,341.318,352.575,340.473z"/>
+	</g>
+	<g id="POLYLINE_00000082346311288913209920000009769327424839783866_">
+		
+			<rect x="358.89" y="316.211" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000168819441652620595800000008745871089346279572_">
+		
+			<rect x="358.89" y="331.44" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000051380710159740544560000012938398300416445361_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M360.227,331.44c-0.123-0.003-2.588,0.01-2.646-0.009c-0.128-0.012-0.256-0.041-0.373-0.093c-0.373-0.162-0.664-0.512-0.729-0.917
+			c-0.082-0.432,0.056-0.903,0.15-1.323c0.121-0.562,0.18-1.161,0.222-1.735c0.046-0.733,0.113-1.632,0.113-2.364
+			c0-0.731-0.067-1.632-0.113-2.364c-0.042-0.573-0.101-1.172-0.222-1.735c-0.094-0.422-0.232-0.89-0.15-1.323
+			c0.065-0.405,0.356-0.755,0.729-0.917c0.118-0.052,0.245-0.081,0.373-0.093c0.053-0.018,2.532-0.006,2.646-0.009V331.44z"/>
+	</g>
+	<g id="POLYLINE_00000023263786583295104470000002774757046312677545_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.598,314.517c3.81-0.824,10.437-1.794,14.355-2.411"/>
+	</g>
+	<g id="POLYLINE_00000035509294341577347350000008900645631142864317_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.598,335.479c3.81,0.824,10.437,1.794,14.355,2.411"/>
+	</g>
+	<g id="POLYLINE_00000103951488648693468340000017579754269776396684_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M393.237,324.998c0.003-1.829-0.552-3.653-1.566-5.174c-0.764-1.135-1.771-2.106-2.807-2.992c-1.232-1.03-2.61-1.908-4.063-2.592
+			c-2.363-1.091-4.922-1.756-7.478-2.208c-2.067-0.202-4.255-0.442-6.325-0.28c-1.897,0.118-3.802,0.435-5.643,0.904
+			c-1.685,0.44-3.365,1.015-4.919,1.805c-0.088,0.06-0.155,0.15-0.186,0.252c-0.06,0.75-0.002,9.289-0.022,10.285l0,10.144
+			c0,0.024,0.002,0.049,0.006,0.072c0.006,0.04,0.018,0.079,0.034,0.116c0.035,0.082,0.095,0.154,0.168,0.204
+			c1.554,0.79,3.234,1.365,4.919,1.805c1.841,0.469,3.747,0.786,5.643,0.904c0.712,0.043,1.476,0.064,2.189,0.048
+			c1.235-0.015,2.897-0.227,4.136-0.328c2.557-0.452,5.115-1.117,7.478-2.208c1.453-0.684,2.831-1.562,4.063-2.592
+			c1.036-0.886,2.043-1.857,2.807-2.992C392.685,328.651,393.24,326.827,393.237,324.998z"/>
+	</g>
+	<g id="POLYLINE_00000062901918707570426070000003570145903442218681_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M352.575,450.684c0.252-0.136,0.463-0.352,0.57-0.619c0.042-0.102,0.071-0.209,0.088-0.318c0.005-0.036,0.011-0.073,0.014-0.109
+			l0.184-1.892c0.364-4.089,0.55-8.433,0.506-12.537c0.036-3.455-0.092-7.191-0.35-10.638c-0.092-1.035-0.231-2.954-0.369-3.984
+			c-0.028-0.131-0.075-0.259-0.142-0.375c-0.109-0.191-0.274-0.347-0.464-0.457c-1.657-0.966-3.498-1.582-5.346-2.066
+			c-0.69-0.178-1.418-0.353-2.121-0.469c-0.326-0.05-0.663-0.096-0.993-0.078c-0.406,0.017-0.802,0.153-1.146,0.369
+			c-0.254,0.16-0.488,0.361-0.663,0.606c-0.223,0.312-0.314,0.695-0.38,1.067c-0.262,1.64-0.401,3.725-0.542,5.391
+			c-0.223,3.073-0.41,6.576-0.453,9.654c-0.038,3.054,0.128,6.475,0.31,9.529c0.159,2.273,0.334,4.946,0.641,7.198
+			c0.081,0.539,0.182,1.119,0.573,1.527c0.316,0.34,0.729,0.591,1.176,0.716c0.296,0.082,0.609,0.092,0.914,0.069
+			c1.119-0.114,2.231-0.419,3.314-0.711C349.515,452.107,351.117,451.528,352.575,450.684z"/>
+	</g>
+	<g id="POLYLINE_00000170974446477562618610000003295319661127542948_">
+		
+			<rect x="358.89" y="426.421" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000032641960981912946980000010396972192395139220_">
+		
+			<rect x="358.89" y="441.651" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000137119595708672024900000017222603035043500177_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M360.227,441.651c-0.123-0.003-2.588,0.01-2.646-0.009c-0.128-0.012-0.256-0.041-0.373-0.093
+			c-0.373-0.162-0.664-0.512-0.729-0.917c-0.082-0.432,0.056-0.903,0.15-1.323c0.121-0.562,0.18-1.161,0.222-1.735
+			c0.046-0.733,0.113-1.632,0.113-2.364c0-0.731-0.067-1.632-0.113-2.364c-0.042-0.573-0.101-1.172-0.222-1.735
+			c-0.094-0.422-0.232-0.89-0.15-1.323c0.065-0.405,0.356-0.755,0.729-0.917c0.118-0.052,0.245-0.081,0.373-0.093
+			c0.053-0.018,2.532-0.006,2.646-0.009V441.651z"/>
+	</g>
+	<g id="POLYLINE_00000108272664898376775310000005880989682479549579_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.598,424.728c3.81-0.824,10.437-1.794,14.355-2.411"/>
+	</g>
+	<g id="POLYLINE_00000128454098645470038190000014637201322518906004_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M353.598,445.69c3.81,0.824,10.437,1.794,14.355,2.411"/>
+	</g>
+	<g id="POLYLINE_00000085219702335405959910000007753015342150744246_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M393.237,435.209c0.003-1.829-0.552-3.653-1.566-5.174c-0.764-1.135-1.771-2.106-2.807-2.992c-1.232-1.03-2.61-1.908-4.063-2.592
+			c-2.363-1.091-4.922-1.756-7.478-2.208c-2.067-0.202-4.255-0.442-6.325-0.28c-1.897,0.118-3.802,0.435-5.643,0.904
+			c-1.685,0.44-3.365,1.015-4.919,1.805c-0.088,0.06-0.155,0.15-0.186,0.252c-0.06,0.75-0.002,9.289-0.022,10.285l0,10.144
+			c0,0.024,0.002,0.049,0.006,0.072c0.006,0.04,0.018,0.079,0.034,0.116c0.035,0.082,0.095,0.154,0.168,0.204
+			c1.554,0.79,3.234,1.365,4.919,1.805c1.841,0.469,3.747,0.786,5.643,0.904c0.712,0.043,1.476,0.064,2.189,0.048
+			c1.235-0.015,2.897-0.227,4.136-0.328c2.557-0.452,5.115-1.117,7.478-2.208c1.453-0.684,2.831-1.562,4.063-2.592
+			c1.036-0.886,2.043-1.857,2.807-2.992C392.685,438.862,393.24,437.038,393.237,435.209z"/>
+	</g>
+	<g id="POLYLINE_00000036220611363957416660000002258271634283582884_">
+		
+			<rect x="539.091" y="511.616" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="90.144"/>
+	</g>
+	<g id="POLYLINE_00000023274053504068008430000010922952478408479371_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M556.902,554.81c0.46-0.001,0.917,0.174,1.257,0.483c0.349,0.312,0.572,0.76,0.613,1.226c0.049,0.514-0.128,1.044-0.476,1.426
+			c-0.35,0.392-0.87,0.623-1.395,0.621c-0.517,0.002-1.029-0.222-1.378-0.603c-0.353-0.378-0.536-0.907-0.494-1.423
+			c0.035-0.466,0.253-0.915,0.597-1.231C555.969,554.99,556.434,554.808,556.902,554.81z"/>
+	</g>
+	<g id="POLYLINE_00000151513318584556893500000002380511195105680807_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M570.019,554.792v-17.434c-0.001-0.056-0.001-0.123-0.005-0.179c-0.012-0.211-0.045-0.424-0.098-0.629
+			c-0.193-0.751-0.67-1.423-1.314-1.854c-0.485-0.327-1.062-0.517-1.646-0.542c-0.046,0.001-0.097-0.005-0.143-0.003
+			c-0.075,0.009-19.822-0.007-19.89,0.001c-0.146,0.003-0.294,0.017-0.438,0.04c-0.579,0.092-1.131,0.348-1.576,0.73
+			c-0.592,0.504-0.989,1.23-1.092,2.001c-0.016,0.12-0.026,0.243-0.029,0.364c-0.041,0.018,0.028,38.693-0.001,38.73
+			c0,0.17,0.014,0.342,0.041,0.509c0.118,0.743,0.508,1.44,1.081,1.927c0.464,0.398,1.044,0.659,1.65,0.741
+			c0.143,0.019,0.291,0.03,0.435,0.03h19.819c0.082-0.001,0.17-0.003,0.252-0.01c0.52-0.04,1.029-0.211,1.469-0.491
+			c0.668-0.422,1.167-1.099,1.373-1.861c0.059-0.217,0.096-0.442,0.108-0.666c0.001-0.047,0.005-0.097,0.005-0.144
+			c0.025,0.001-0.017-17.458,0-17.469"/>
+	</g>
+	<g id="POLYLINE_00000113326987067786583260000002052879752262668976_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M573.834,558.583c0.613,0.004,1.215-0.312,1.56-0.819c0.287-0.412,0.398-0.941,0.301-1.434c-0.093-0.494-0.392-0.944-0.812-1.22
+			c-0.236-0.157-0.508-0.26-0.789-0.299c-0.085-0.012-0.175-0.018-0.261-0.018h-6.59v3.791H573.834z"/>
+	</g>
+	<g id="POLYLINE_00000100379336656514600500000010912811459160629666_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M573.834,558.583c0.58,0.003,1.151-0.278,1.502-0.739c0.308-0.397,0.446-0.919,0.375-1.417c-0.067-0.498-0.343-0.963-0.747-1.261
+			c-0.245-0.182-0.535-0.304-0.837-0.351c-0.096-0.015-0.196-0.023-0.293-0.023h-9.373v3.791H573.834z"/>
+	</g>
+	<g id="POLYLINE_00000088844688346507351920000014000415116474998913_">
+		
+			<rect x="539.091" y="395.771" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="78.876"/>
+	</g>
+	<g id="POLYLINE_00000126320876766026842100000005063606205622575291_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M556.902,433.331c0.46-0.001,0.917,0.174,1.257,0.483c0.349,0.312,0.572,0.76,0.613,1.226c0.049,0.514-0.128,1.044-0.476,1.426
+			c-0.35,0.392-0.87,0.623-1.395,0.621c-0.517,0.002-1.029-0.222-1.378-0.603c-0.353-0.378-0.536-0.907-0.494-1.423
+			c0.035-0.466,0.253-0.915,0.597-1.231C555.969,433.512,556.434,433.329,556.902,433.331z"/>
+	</g>
+	<g id="POLYLINE_00000047744940590544020060000016523862019525309569_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M570.019,433.314V415.88c-0.001-0.056-0.001-0.123-0.005-0.179c-0.012-0.211-0.045-0.424-0.098-0.628
+			c-0.193-0.751-0.67-1.423-1.314-1.854c-0.485-0.327-1.062-0.517-1.646-0.542c-0.046,0.001-0.097-0.005-0.143-0.003
+			c-0.075,0.009-19.822-0.007-19.89,0.001c-0.146,0.003-0.294,0.017-0.438,0.04c-0.579,0.092-1.131,0.348-1.576,0.73
+			c-0.592,0.504-0.989,1.23-1.092,2.001c-0.016,0.12-0.026,0.243-0.029,0.364c-0.041,0.018,0.028,38.693-0.001,38.73
+			c0,0.17,0.014,0.342,0.041,0.509c0.118,0.743,0.508,1.44,1.081,1.927c0.464,0.398,1.044,0.659,1.65,0.741
+			c0.143,0.019,0.291,0.03,0.435,0.03h19.819c0.082-0.001,0.17-0.003,0.252-0.01c0.52-0.04,1.029-0.211,1.469-0.491
+			c0.668-0.422,1.167-1.099,1.373-1.861c0.059-0.217,0.096-0.442,0.108-0.666c0.001-0.047,0.005-0.097,0.005-0.144
+			c0.025,0.001-0.017-17.458,0-17.469"/>
+	</g>
+	<g id="POLYLINE_00000075863795255739007140000004727930468342260897_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M573.834,437.104c0.613,0.004,1.215-0.312,1.56-0.819c0.287-0.412,0.398-0.941,0.301-1.434c-0.093-0.494-0.392-0.944-0.812-1.22
+			c-0.236-0.157-0.508-0.26-0.789-0.299c-0.085-0.012-0.175-0.018-0.261-0.018h-6.59v3.79H573.834z"/>
+	</g>
+	<g id="POLYLINE_00000140706189658987346290000016695398081380563388_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M573.834,437.104c0.58,0.003,1.151-0.278,1.502-0.739c0.308-0.397,0.446-0.919,0.375-1.417c-0.067-0.498-0.343-0.963-0.747-1.261
+			c-0.245-0.182-0.535-0.304-0.837-0.351c-0.096-0.015-0.196-0.023-0.293-0.023h-9.373v3.79H573.834z"/>
+	</g>
+	<g id="POLYLINE_00000039124068340836979890000016366076368964548488_">
+		
+			<rect x="539.091" y="291.194" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="67.608"/>
+	</g>
+	<g id="POLYLINE_00000170256281282031270230000011697706925584121479_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M556.902,323.12c0.46-0.001,0.917,0.174,1.257,0.483c0.349,0.312,0.572,0.76,0.613,1.226c0.049,0.514-0.128,1.044-0.476,1.426
+			c-0.35,0.392-0.87,0.623-1.395,0.621c-0.517,0.002-1.029-0.222-1.378-0.603c-0.353-0.378-0.536-0.907-0.494-1.423
+			c0.035-0.466,0.253-0.915,0.597-1.231C555.969,323.301,556.434,323.119,556.902,323.12z"/>
+	</g>
+	<g id="POLYLINE_00000178900766420141494110000010042845033147513235_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M570.019,323.103v-15.556c-0.002-0.028,0.001-0.078-0.002-0.107c-0.006-0.184-0.029-0.371-0.066-0.551
+			c-0.129-0.619-0.447-1.198-0.901-1.639c-0.59-0.579-1.411-0.913-2.238-0.91c-0.114,0.029-19.828-0.023-19.926,0.002
+			c-0.184,0.006-0.371,0.028-0.551,0.066c-0.619,0.129-1.198,0.447-1.639,0.901c-0.423,0.433-0.719,0.988-0.842,1.58
+			c-0.038,0.181-0.06,0.367-0.066,0.551c-0.054,0.039,0.035,34.945-0.002,35.009c-0.003,0.841,0.343,1.675,0.939,2.268
+			c0.437,0.438,1.004,0.745,1.609,0.871c0.181,0.038,0.367,0.06,0.551,0.066c0.067,0.038,19.841-0.024,19.927,0.002
+			c0.827,0.003,1.648-0.331,2.238-0.91c0.454-0.441,0.772-1.019,0.901-1.639c0.038-0.181,0.06-0.367,0.066-0.551
+			c-0.002-0.035,0.004-0.073,0.002-0.107c0,0,0-15.556,0-15.556"/>
+	</g>
+	<g id="POLYLINE_00000103958000861482823920000014062352575576528008_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M573.834,326.893c0.613,0.004,1.215-0.312,1.56-0.819c0.287-0.412,0.398-0.941,0.301-1.434c-0.093-0.494-0.392-0.944-0.812-1.22
+			c-0.236-0.157-0.508-0.26-0.789-0.299c-0.085-0.012-0.175-0.018-0.261-0.018h-6.59v3.79H573.834z"/>
+	</g>
+	<g id="POLYLINE_00000036934580439348116990000001356896171697264802_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M573.834,326.893c0.58,0.003,1.151-0.278,1.502-0.739c0.308-0.397,0.446-0.919,0.375-1.417c-0.067-0.498-0.343-0.963-0.747-1.261
+			c-0.245-0.182-0.535-0.304-0.837-0.351c-0.096-0.015-0.196-0.023-0.293-0.023h-9.373v3.79H573.834z"/>
+	</g>
+	<g id="POLYLINE_00000067213765356424373940000011375191883845131435_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M87.429,572.163c0.252-0.136,0.463-0.352,0.57-0.619c0.042-0.102,0.071-0.209,0.088-0.318c0.005-0.036,0.011-0.073,0.014-0.109
+			l0.184-1.892c0.364-4.089,0.55-8.433,0.506-12.537c0.036-3.455-0.092-7.191-0.35-10.638c-0.092-1.035-0.231-2.954-0.369-3.984
+			c-0.028-0.131-0.075-0.259-0.142-0.375c-0.109-0.191-0.274-0.347-0.464-0.457c-1.657-0.966-3.498-1.582-5.346-2.066
+			c-0.69-0.178-1.418-0.353-2.121-0.469c-0.326-0.05-0.663-0.096-0.993-0.078c-0.406,0.017-0.802,0.153-1.146,0.369
+			c-0.254,0.16-0.488,0.361-0.663,0.606c-0.223,0.312-0.314,0.695-0.38,1.067c-0.262,1.641-0.401,3.725-0.542,5.391
+			c-0.223,3.073-0.41,6.576-0.453,9.654c-0.038,3.054,0.127,6.475,0.31,9.529c0.159,2.273,0.334,4.946,0.641,7.198
+			c0.081,0.539,0.182,1.119,0.573,1.527c0.316,0.34,0.729,0.591,1.176,0.716c0.296,0.082,0.609,0.092,0.914,0.069
+			c1.119-0.114,2.231-0.419,3.314-0.711C84.369,573.586,85.971,573.007,87.429,572.163z"/>
+	</g>
+	<g id="POLYLINE_00000152233953361295729310000001217092496045086365_">
+		
+			<rect x="93.744" y="547.9" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000054972341032671876980000015768797950470308510_">
+		
+			<rect x="93.744" y="563.129" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000075877693475241277000000012536037187313086125_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M95.081,563.129c-0.123-0.003-2.588,0.01-2.646-0.009c-0.128-0.012-0.256-0.041-0.373-0.093c-0.373-0.162-0.664-0.512-0.729-0.917
+			c-0.082-0.432,0.056-0.903,0.15-1.323c0.121-0.562,0.18-1.161,0.222-1.735c0.046-0.733,0.113-1.632,0.113-2.364
+			c0-0.731-0.067-1.632-0.113-2.364c-0.042-0.573-0.101-1.172-0.222-1.735c-0.094-0.422-0.232-0.89-0.15-1.323
+			c0.065-0.405,0.356-0.755,0.729-0.917c0.118-0.052,0.245-0.081,0.373-0.093c0.053-0.018,2.532-0.006,2.646-0.009V563.129z"/>
+	</g>
+	<g id="POLYLINE_00000042712459258283524880000010992478654041925035_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.452,546.206c3.81-0.824,10.437-1.794,14.355-2.411"/>
+	</g>
+	<g id="POLYLINE_00000042711671886254497270000006934619036791652235_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.452,567.169c3.81,0.824,10.437,1.794,14.355,2.411"/>
+	</g>
+	<g id="POLYLINE_00000014592565654500605250000011541142714812816299_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M128.091,556.688c0.003-1.829-0.552-3.653-1.566-5.174c-0.764-1.135-1.771-2.106-2.807-2.992c-1.232-1.03-2.61-1.908-4.063-2.592
+			c-2.363-1.091-4.922-1.756-7.478-2.208c-2.067-0.202-4.255-0.442-6.325-0.28c-1.897,0.118-3.802,0.435-5.643,0.904
+			c-1.685,0.44-3.365,1.015-4.919,1.805c-0.088,0.06-0.155,0.15-0.186,0.252c-0.06,0.75-0.002,9.289-0.022,10.285
+			c0,0,0,10.144,0,10.144c0,0.024,0.002,0.049,0.006,0.072c0.006,0.04,0.018,0.079,0.034,0.116c0.035,0.082,0.095,0.154,0.168,0.204
+			c1.554,0.79,3.234,1.365,4.919,1.805c1.841,0.469,3.747,0.786,5.643,0.904c0.712,0.043,1.476,0.064,2.189,0.048
+			c1.235-0.015,2.897-0.227,4.136-0.328c2.557-0.452,5.115-1.117,7.478-2.208c1.453-0.684,2.831-1.562,4.063-2.592
+			c1.037-0.886,2.043-1.857,2.807-2.992C127.539,560.341,128.094,558.517,128.091,556.688z"/>
+	</g>
+	<g id="POLYLINE_00000127737156323373988330000002986739330333990787_">
+		
+			<rect x="262.677" y="511.616" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="90.144"/>
+	</g>
+	<g id="POLYLINE_00000003077855478668563210000010316986181332442252_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M280.488,554.81c0.46-0.001,0.917,0.174,1.257,0.483c0.349,0.312,0.572,0.76,0.613,1.226c0.049,0.514-0.128,1.044-0.476,1.426
+			c-0.35,0.392-0.87,0.623-1.395,0.621c-0.517,0.002-1.029-0.222-1.378-0.603c-0.353-0.378-0.537-0.907-0.494-1.423
+			c0.035-0.466,0.253-0.915,0.597-1.231C279.555,554.99,280.02,554.808,280.488,554.81z"/>
+	</g>
+	<g id="POLYLINE_00000052798547561655130460000013144719039210880404_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M293.605,554.792v-17.434c-0.001-0.056-0.001-0.123-0.005-0.179c-0.012-0.211-0.045-0.424-0.098-0.629
+			c-0.193-0.751-0.67-1.423-1.314-1.854c-0.485-0.327-1.062-0.517-1.646-0.542c-0.046,0.001-0.097-0.005-0.143-0.003
+			c-0.075,0.009-19.822-0.007-19.89,0.001c-0.146,0.003-0.294,0.017-0.438,0.04c-0.579,0.092-1.131,0.348-1.576,0.73
+			c-0.592,0.504-0.989,1.23-1.092,2.001c-0.016,0.12-0.026,0.243-0.029,0.364c-0.041,0.018,0.028,38.693-0.001,38.73
+			c0,0.17,0.014,0.342,0.041,0.509c0.118,0.743,0.508,1.44,1.081,1.927c0.464,0.398,1.044,0.659,1.65,0.741
+			c0.143,0.019,0.291,0.03,0.435,0.03h19.819c0.082-0.001,0.17-0.003,0.252-0.01c0.52-0.04,1.029-0.211,1.469-0.491
+			c0.668-0.422,1.167-1.099,1.373-1.861c0.059-0.217,0.096-0.442,0.108-0.666c0.001-0.047,0.005-0.097,0.005-0.144
+			c0.025,0.001-0.017-17.458,0-17.469"/>
+	</g>
+	<g id="POLYLINE_00000151522612275409439590000007377177855847638673_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M297.42,558.583c0.613,0.004,1.215-0.312,1.56-0.819c0.287-0.412,0.398-0.941,0.301-1.434c-0.093-0.494-0.392-0.944-0.812-1.22
+			c-0.236-0.157-0.508-0.26-0.789-0.299c-0.085-0.012-0.175-0.018-0.261-0.018h-6.59v3.791H297.42z"/>
+	</g>
+	<g id="POLYLINE_00000086666365242636133740000016356865443674411695_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M297.42,558.583c0.58,0.003,1.151-0.278,1.502-0.739c0.308-0.397,0.446-0.919,0.375-1.417c-0.067-0.498-0.343-0.963-0.747-1.261
+			c-0.245-0.182-0.535-0.304-0.837-0.351c-0.096-0.015-0.196-0.023-0.293-0.023h-9.373v3.791H297.42z"/>
+	</g>
+	<g id="POLYLINE_00000047738825674531017980000003469761288513334679_">
+		
+			<rect x="262.677" y="395.771" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="78.876"/>
+	</g>
+	<g id="POLYLINE_00000038392957453293240870000014552685793322964389_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M280.488,433.331c0.46-0.001,0.917,0.174,1.257,0.483c0.349,0.312,0.572,0.76,0.613,1.226c0.049,0.514-0.128,1.044-0.476,1.426
+			c-0.35,0.392-0.87,0.623-1.395,0.621c-0.517,0.002-1.029-0.222-1.378-0.603c-0.353-0.378-0.537-0.907-0.494-1.423
+			c0.035-0.466,0.253-0.915,0.597-1.231C279.555,433.512,280.02,433.329,280.488,433.331z"/>
+	</g>
+	<g id="POLYLINE_00000073703568935153171180000002464451042441892497_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M293.605,433.314V415.88c-0.001-0.056-0.001-0.123-0.005-0.179c-0.012-0.211-0.045-0.424-0.098-0.628
+			c-0.193-0.751-0.67-1.423-1.314-1.854c-0.485-0.327-1.062-0.517-1.646-0.542c-0.046,0.001-0.097-0.005-0.143-0.003
+			c-0.075,0.009-19.822-0.007-19.89,0.001c-0.146,0.003-0.294,0.017-0.438,0.04c-0.579,0.092-1.131,0.348-1.576,0.73
+			c-0.592,0.504-0.989,1.23-1.092,2.001c-0.016,0.12-0.026,0.243-0.029,0.364c-0.041,0.018,0.028,38.693-0.001,38.73
+			c0,0.17,0.014,0.342,0.041,0.509c0.118,0.743,0.508,1.44,1.081,1.927c0.464,0.398,1.044,0.659,1.65,0.741
+			c0.143,0.019,0.291,0.03,0.435,0.03h19.819c0.082-0.001,0.17-0.003,0.252-0.01c0.52-0.04,1.029-0.211,1.469-0.491
+			c0.668-0.422,1.167-1.099,1.373-1.861c0.059-0.217,0.096-0.442,0.108-0.666c0.001-0.047,0.005-0.097,0.005-0.144
+			c0.025,0.001-0.017-17.458,0-17.469"/>
+	</g>
+	<g id="POLYLINE_00000067933783919426244220000011003175526000557464_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M297.42,437.104c0.613,0.004,1.215-0.312,1.56-0.819c0.287-0.412,0.398-0.941,0.301-1.434c-0.093-0.494-0.392-0.944-0.812-1.22
+			c-0.236-0.157-0.508-0.26-0.789-0.299c-0.085-0.012-0.175-0.018-0.261-0.018h-6.59v3.79H297.42z"/>
+	</g>
+	<g id="POLYLINE_00000157300757241028858160000007242824792299596675_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M297.42,437.104c0.58,0.003,1.151-0.278,1.502-0.739c0.308-0.397,0.446-0.919,0.375-1.417c-0.067-0.498-0.343-0.963-0.747-1.261
+			c-0.245-0.182-0.535-0.304-0.837-0.351c-0.096-0.015-0.196-0.023-0.293-0.023h-9.373v3.79H297.42z"/>
+	</g>
+	<g id="POLYLINE_00000164510361111661816420000001042924560787802806_">
+		
+			<rect x="262.677" y="291.194" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="39.438" height="67.608"/>
+	</g>
+	<g id="POLYLINE_00000034069684460829260240000004696505809715347102_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M280.488,323.12c0.46-0.001,0.917,0.174,1.257,0.483c0.349,0.312,0.572,0.76,0.613,1.226c0.049,0.514-0.128,1.044-0.476,1.426
+			c-0.35,0.392-0.87,0.623-1.395,0.621c-0.517,0.002-1.029-0.222-1.378-0.603c-0.353-0.378-0.537-0.907-0.494-1.423
+			c0.035-0.466,0.253-0.915,0.597-1.231C279.555,323.301,280.02,323.119,280.488,323.12z"/>
+	</g>
+	<g id="POLYLINE_00000039094297206794208050000008964685049293375111_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M293.605,323.103v-15.556c-0.002-0.028,0.001-0.078-0.002-0.107c-0.006-0.184-0.029-0.371-0.066-0.551
+			c-0.129-0.619-0.447-1.198-0.901-1.639c-0.59-0.579-1.411-0.913-2.238-0.91c-0.114,0.029-19.828-0.023-19.926,0.002
+			c-0.184,0.006-0.371,0.028-0.551,0.066c-0.619,0.129-1.198,0.447-1.639,0.901c-0.423,0.433-0.719,0.988-0.842,1.58
+			c-0.038,0.181-0.06,0.367-0.066,0.551c-0.054,0.039,0.035,34.945-0.002,35.009c-0.003,0.841,0.343,1.675,0.939,2.268
+			c0.437,0.438,1.004,0.745,1.609,0.871c0.181,0.038,0.367,0.06,0.551,0.066c0.067,0.038,19.841-0.024,19.926,0.002
+			c0.827,0.003,1.648-0.331,2.238-0.91c0.454-0.441,0.772-1.019,0.901-1.639c0.038-0.181,0.06-0.367,0.066-0.551
+			c-0.002-0.035,0.004-0.073,0.002-0.107c0,0,0-15.556,0-15.556"/>
+	</g>
+	<g id="POLYLINE_00000106144329463363605330000006104118710334985356_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M297.42,326.893c0.613,0.004,1.215-0.312,1.56-0.819c0.287-0.412,0.398-0.941,0.301-1.434c-0.093-0.494-0.392-0.944-0.812-1.22
+			c-0.236-0.157-0.508-0.26-0.789-0.299c-0.085-0.012-0.175-0.018-0.261-0.018h-6.59v3.79H297.42z"/>
+	</g>
+	<g id="POLYLINE_00000092455549502863185260000002455804870859830946_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M297.42,326.893c0.58,0.003,1.151-0.278,1.502-0.739c0.308-0.397,0.446-0.919,0.375-1.417c-0.067-0.498-0.343-0.963-0.747-1.261
+			c-0.245-0.182-0.535-0.304-0.837-0.351c-0.096-0.015-0.196-0.023-0.293-0.023h-9.373v3.79H297.42z"/>
+	</g>
+	<g id="POLYLINE_00000183949576891838551790000018060702120004710591_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M87.429,340.473c0.252-0.136,0.463-0.352,0.57-0.619c0.042-0.102,0.071-0.209,0.088-0.318c0.005-0.036,0.011-0.073,0.014-0.109
+			c0,0,0.184-1.892,0.184-1.892c0.364-4.089,0.55-8.433,0.506-12.537c0.036-3.455-0.092-7.191-0.35-10.638
+			c-0.092-1.035-0.231-2.954-0.369-3.984c-0.028-0.131-0.075-0.259-0.142-0.375c-0.109-0.191-0.274-0.347-0.464-0.457
+			c-1.657-0.966-3.498-1.582-5.346-2.066c-0.69-0.178-1.418-0.353-2.121-0.469c-0.326-0.05-0.663-0.096-0.993-0.078
+			c-0.406,0.017-0.802,0.153-1.146,0.369c-0.254,0.16-0.488,0.361-0.663,0.606c-0.223,0.312-0.314,0.695-0.38,1.067
+			c-0.262,1.64-0.401,3.725-0.542,5.391c-0.223,3.073-0.41,6.576-0.453,9.654c-0.038,3.054,0.127,6.475,0.31,9.529
+			c0.159,2.273,0.334,4.946,0.641,7.198c0.081,0.539,0.182,1.119,0.573,1.527c0.316,0.34,0.729,0.591,1.176,0.716
+			c0.296,0.082,0.609,0.092,0.914,0.069c1.119-0.114,2.231-0.419,3.314-0.711C84.369,341.897,85.971,341.318,87.429,340.473z"/>
+	</g>
+	<g id="POLYLINE_00000036220700604692644620000003118271971823532417_">
+		
+			<rect x="93.744" y="316.211" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000037650252799809129920000018248273360535477126_">
+		
+			<rect x="93.744" y="331.44" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000088821420305315935680000013774215119909840548_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M95.081,331.44c-0.123-0.003-2.588,0.01-2.646-0.009c-0.128-0.012-0.256-0.041-0.373-0.093c-0.373-0.162-0.664-0.512-0.729-0.917
+			c-0.082-0.432,0.056-0.903,0.15-1.323c0.121-0.562,0.18-1.161,0.222-1.735c0.046-0.733,0.113-1.632,0.113-2.364
+			c0-0.731-0.067-1.632-0.113-2.364c-0.042-0.573-0.101-1.172-0.222-1.735c-0.094-0.422-0.232-0.89-0.15-1.323
+			c0.065-0.405,0.356-0.755,0.729-0.917c0.118-0.052,0.245-0.081,0.373-0.093c0.053-0.018,2.532-0.006,2.646-0.009V331.44z"/>
+	</g>
+	<g id="POLYLINE_00000093894807252163197920000008186890148201973437_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.452,314.517c3.81-0.824,10.437-1.794,14.355-2.411"/>
+	</g>
+	<g id="POLYLINE_00000178909826774814667360000007790471138980800685_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.452,335.479c3.81,0.824,10.437,1.794,14.355,2.411"/>
+	</g>
+	<g id="POLYLINE_00000172419709150622802920000016927033123918589579_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M128.091,324.998c0.003-1.829-0.552-3.653-1.566-5.174c-0.764-1.135-1.771-2.106-2.807-2.992c-1.232-1.03-2.61-1.908-4.063-2.592
+			c-2.363-1.091-4.922-1.756-7.478-2.208c-2.067-0.202-4.255-0.442-6.325-0.28c-1.897,0.118-3.802,0.435-5.643,0.904
+			c-1.685,0.44-3.365,1.015-4.919,1.805c-0.088,0.06-0.155,0.15-0.186,0.252c-0.06,0.75-0.002,9.289-0.022,10.285l0,10.144
+			c0,0.024,0.002,0.049,0.006,0.072c0.006,0.04,0.018,0.079,0.034,0.116c0.035,0.082,0.095,0.154,0.168,0.204
+			c1.554,0.79,3.234,1.365,4.919,1.805c1.841,0.469,3.747,0.786,5.643,0.904c0.712,0.043,1.476,0.064,2.189,0.048
+			c1.235-0.015,2.897-0.227,4.136-0.328c2.557-0.452,5.115-1.117,7.478-2.208c1.453-0.684,2.831-1.562,4.063-2.592
+			c1.037-0.886,2.043-1.857,2.807-2.992C127.539,328.651,128.094,326.827,128.091,324.998z"/>
+	</g>
+	<g id="POLYLINE_00000044858089830528278400000007410567834224517556_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M87.429,450.684c0.252-0.136,0.463-0.352,0.57-0.619c0.042-0.102,0.071-0.209,0.088-0.318c0.005-0.036,0.011-0.073,0.014-0.109
+			l0.184-1.892c0.364-4.089,0.55-8.433,0.506-12.537c0.036-3.455-0.092-7.191-0.35-10.638c-0.092-1.035-0.231-2.954-0.369-3.984
+			c-0.028-0.131-0.075-0.259-0.142-0.375c-0.109-0.191-0.274-0.347-0.464-0.457c-1.657-0.966-3.498-1.582-5.346-2.066
+			c-0.69-0.178-1.418-0.353-2.121-0.469c-0.326-0.05-0.663-0.096-0.993-0.078c-0.406,0.017-0.802,0.153-1.146,0.369
+			c-0.254,0.16-0.488,0.361-0.663,0.606c-0.223,0.312-0.314,0.695-0.38,1.067c-0.262,1.64-0.401,3.725-0.542,5.391
+			c-0.223,3.073-0.41,6.576-0.453,9.654c-0.038,3.054,0.127,6.475,0.31,9.529c0.159,2.273,0.334,4.946,0.641,7.198
+			c0.081,0.539,0.182,1.119,0.573,1.527c0.316,0.34,0.729,0.591,1.176,0.716c0.296,0.082,0.609,0.092,0.914,0.069
+			c1.119-0.114,2.231-0.419,3.314-0.711C84.369,452.107,85.971,451.528,87.429,450.684z"/>
+	</g>
+	<g id="POLYLINE_00000165942459856814983390000010174372199593316493_">
+		
+			<rect x="93.744" y="426.421" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000146473840183028236240000010554802992407204533_">
+		
+			<rect x="93.744" y="441.651" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="1.337" height="2.346"/>
+	</g>
+	<g id="POLYLINE_00000104668059542278528620000001955694962688729487_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M95.081,441.651c-0.123-0.003-2.588,0.01-2.646-0.009c-0.128-0.012-0.256-0.041-0.373-0.093c-0.373-0.162-0.664-0.512-0.729-0.917
+			c-0.082-0.432,0.056-0.903,0.15-1.323c0.121-0.562,0.18-1.161,0.222-1.735c0.046-0.733,0.113-1.632,0.113-2.364
+			c0-0.731-0.067-1.632-0.113-2.364c-0.042-0.573-0.101-1.172-0.222-1.735c-0.094-0.422-0.232-0.89-0.15-1.323
+			c0.065-0.405,0.356-0.755,0.729-0.917c0.118-0.052,0.245-0.081,0.373-0.093c0.053-0.018,2.532-0.006,2.646-0.009V441.651z"/>
+	</g>
+	<g id="POLYLINE_00000173151394794874082480000011149502551678756507_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.452,424.728c3.81-0.824,10.437-1.794,14.355-2.411"/>
+	</g>
+	<g id="POLYLINE_00000148654407035862234090000008076226456486951296_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M88.452,445.69c3.81,0.824,10.437,1.794,14.355,2.411"/>
+	</g>
+	<g id="POLYLINE_00000000905539783025309930000015241837631480066206_">
+		
+			<path fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="
+			M128.091,435.209c0.003-1.829-0.552-3.653-1.566-5.174c-0.764-1.135-1.771-2.106-2.807-2.992c-1.232-1.03-2.61-1.908-4.063-2.592
+			c-2.363-1.091-4.922-1.756-7.478-2.208c-2.067-0.202-4.255-0.442-6.325-0.28c-1.897,0.118-3.802,0.435-5.643,0.904
+			c-1.685,0.44-3.365,1.015-4.919,1.805c-0.088,0.06-0.155,0.15-0.186,0.252c-0.06,0.75-0.002,9.289-0.022,10.285l0,10.144
+			c0,0.024,0.002,0.049,0.006,0.072c0.006,0.04,0.018,0.079,0.034,0.116c0.035,0.082,0.095,0.154,0.168,0.204
+			c1.554,0.79,3.234,1.365,4.919,1.805c1.841,0.469,3.747,0.786,5.643,0.904c0.712,0.043,1.476,0.064,2.189,0.048
+			c1.235-0.015,2.897-0.227,4.136-0.328c2.557-0.452,5.115-1.117,7.478-2.208c1.453-0.684,2.831-1.562,4.063-2.592
+			c1.037-0.886,2.043-1.857,2.807-2.992C127.539,438.862,128.094,437.038,128.091,435.209z"/>
+	</g>
+</g>
+<g id="_x32_D_x24_AG-BUILDINGS">
+	<g id="POLYLINE_00000046330833784736118810000007611579481845279929_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="186.617" y1="103.985" x2="195.068" y2="103.985"/>
+	</g>
+	<g id="POLYLINE_00000125595258855271249270000009499699028794507685_">
+		
+			<rect x="186.617" y="73.937" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="180.288"/>
+	</g>
+	<g id="POLYLINE_00000054968885568908961690000001120726178294976897_">
+		
+			<line fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" x1="463.031" y1="103.985" x2="471.482" y2="103.985"/>
+	</g>
+	<g id="POLYLINE_00000069360874846038045300000014845743914178328225_">
+		
+			<rect x="463.031" y="73.937" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="180.288"/>
+	</g>
+	<g id="POLYLINE_00000175312859217060900650000007412659025464838293_">
+		
+			<rect x="463.031" y="511.616" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="28.17"/>
+	</g>
+	<g id="POLYLINE_00000125568030101983006850000011288395137849561519_">
+		
+			<rect x="463.031" y="596.126" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000005965091106628058350000014677640634219062181_">
+		
+			<rect x="463.031" y="395.771" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="16.902"/>
+	</g>
+	<g id="POLYLINE_00000042006711415267387020000003118019649664154786_">
+		
+			<rect x="463.031" y="469.013" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000103238361975876837050000011107778814501517193_">
+		
+			<rect x="463.031" y="291.194" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000107585997373635091250000016332718795174824850_">
+		
+			<rect x="463.031" y="353.168" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000162316837028147048110000017723954537412793771_">
+		
+			<rect x="197.885" y="511.616" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="28.17"/>
+	</g>
+	<g id="POLYLINE_00000031209905273386252810000007791235232084612262_">
+		
+			<rect x="197.885" y="596.126" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000055679839355970835660000017612801852488781463_">
+		
+			<rect x="197.885" y="395.771" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="16.902"/>
+	</g>
+	<g id="POLYLINE_00000137109085456707207340000011735563028367720606_">
+		
+			<rect x="197.885" y="469.013" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000172427890915082511890000002963279520104781200_">
+		
+			<rect x="197.885" y="291.194" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+	<g id="POLYLINE_00000148630276401775381850000017159762192266419846_">
+		
+			<rect x="197.885" y="353.168" fill="none" stroke="#3A54F5" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" width="8.451" height="5.634"/>
+	</g>
+</g>
+<g id="_x32_D_x24_AG-OUTLINE">
+</g>
+</svg>
