@@ -2,9 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, Layers, RefreshCw, BookOpen,
+  Upload, Crosshair, RefreshCw, MessageCircle,
 } from "lucide-react";
-import { LAYOUTS, ROOMS as LAYOUT_ROOMS, TOTAL as LAYOUT_TOTAL } from "./assets/layouts/index.js";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
   pointInPolygon, nearestVertex, bbox,
@@ -13,17 +12,16 @@ import {
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { generarDistribuciones } from "./distribucion.js";
-import { packFloor } from "./lote.js";
+import { generarOpciones } from "./plantas.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
+import { aliciaAnalyze } from "../../lib/alicia.js";
 
 const FICHA_DEF = {
   proyecto: "Nuevo proyecto", tipo: "Edificio Multifamiliar", ubicacion: "", cliente: "",
-  responsable: "", desarrollo: "Hygge · BAM", plano: "Planta de distribución", escala: "1:75",
-  fecha: "", lamina: "A-01",
+  observaciones: "", responsable: "", cap: "", desarrollo: "Hygge · BAM",
+  plano: "Planta de distribución", escala: "1:75", fecha: "", lamina: "A-01",
 };
-
-const TIPO_UNIDAD = { "1D": "#D8E0F7", "2D": "#95ABE8", "3D": "#F7936F" };
 
 const C = {
   ink: "#373737",
@@ -42,15 +40,8 @@ const BRIEF_KEY = "hygge:planBrief";
 const fmt = (n, d = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-const ROOM_FILL = ["#D8E0F7", "#F7D9CE", "#DCEBDD", "#F3E7C9", "#E7DDF2", "#D6ECEF"];
-const TIPO_FILL = {
-  dormitorio: "#D8E0F7", social: "#F7D9CE", cocina: "#F3E7C9",
-  "baño": "#D6ECEF", pasillo: "#EFEDE8", servicio: "#E7DDF2",
-};
-const roomFill = (r, i) =>
-  r.tipo === "core" ? "#4A4A4A"
-    : r.tipo === "unidad" ? (TIPO_UNIDAD[r.subtipo] || "#D8E0F7")
-      : TIPO_FILL[r.tipo] || ROOM_FILL[i % ROOM_FILL.length];
+// estilo de plano BAM: ambientes en blanco, solo el core en poché oscuro
+const roomFill = (r) => (r.tipo === "core" ? "#4A4A4A" : C.card);
 
 let _id = 1;
 const uid = () => `r${_id++}`;
@@ -194,40 +185,72 @@ function LibPanel({ onAdd, onClose }) {
   );
 }
 
-// ── librería de layouts dimensionados (dimensions.com) ────────
-function LayoutsPanel({ onPick, onClose }) {
-  const [room, setRoom] = useState(LAYOUT_ROOMS[0]?.key || "bathrooms");
-  const list = LAYOUTS[room] || [];
+// ── modal de opciones de planta (paso 3: cabida + lote → 5 opciones) ──
+function OpcionesModal({ opciones, onUse, onRegen, onClose, loteInfo, brief }) {
+  const [alicia, setAlicia] = useState(null);   // null | "cargando" | texto
+  const consultar = async () => {
+    setAlicia("cargando");
+    try {
+      const resumen = opciones.map((o, i) => `${i + 1}. ${o.nombre}: ${o.notas.join(" | ")}`).join("\n");
+      const text = await aliciaAnalyze({
+        system: "Sos Alicia, arquitecta senior de BAM (vivienda multifamiliar en Lima). Evaluás opciones de planta típica con criterio de diseño, RNE A.010/A.020 y mercado limeño (lo que más se vende: 2D 50-60 m², 3D 60-70 m²). Respondé en máx. 8 líneas: cuál opción elegirías y por qué, y un ajuste concreto por opción si aplica.",
+        prompt: `Lote: ${loteInfo}. Brief: ${brief.udsPiso} uds/piso · NSE ${brief.nse} · área objetivo ${brief.areaObjetivo} m² · mix 1D ${brief.pct1}% / 2D ${brief.pct2}% / 3D ${Math.max(0, 100 - brief.pct1 - brief.pct2)}%.\nOpciones generadas:\n${resumen}`,
+        max_tokens: 700,
+      });
+      setAlicia(text || "sin respuesta");
+    } catch (e) { setAlicia(`no se pudo consultar: ${e.message}`); }
+  };
   return (
-    <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 300, background: C.paper, borderLeft: `1px solid ${C.line}`, display: "flex", flexDirection: "column", zIndex: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
-        <BamLogo height={13} />
-        <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 800, textTransform: "lowercase", color: C.ink }}>layouts · referencia</span>
-        <span style={{ fontFamily: mono, fontSize: 9, color: C.soft }}>{LAYOUT_TOTAL}</span>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}><X size={13} color={C.soft} /></button>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "8px 12px", borderBottom: `1px solid ${C.line}` }}>
-        {LAYOUT_ROOMS.map((r) => (
-          <button key={r.key} onClick={() => setRoom(r.key)}
-            style={{ fontFamily: mono, fontSize: 10, padding: "3px 8px", borderRadius: 2, cursor: "pointer",
-              color: room === r.key ? C.card : C.ink, background: room === r.key ? C.ink : C.card, border: `1px solid ${room === r.key ? C.ink : C.line}` }}>
-            {r.label} <span style={{ opacity: 0.6 }}>{r.n}</span>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(55,55,55,0.35)", zIndex: 50,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, maxWidth: 1180,
+          maxHeight: "92%", overflow: "auto", padding: "20px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
+          <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>✦</span>
+          <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
+            opciones de distribución en el lote
+          </h2>
+          <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>{loteInfo}</span>
+          <Btn onClick={onRegen} title="Regenerar opciones"><Sparkles size={13} /> regenerar</Btn>
+          <Btn onClick={consultar} disabled={alicia === "cargando"} title="Pedir opinión al agente (Alicia)">
+            <MessageCircle size={13} /> {alicia === "cargando" ? "consultando…" : "opinión de alicia"}
+          </Btn>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
+            <X size={15} color={C.soft} />
           </button>
-        ))}
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, alignContent: "start" }}>
-        {list.map((it) => (
-          <button key={it.url} onClick={() => onPick(it)} title={`insertar como fondo · ${it.name}`}
-            style={{ display: "flex", flexDirection: "column", gap: 4, padding: 6, background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, cursor: "pointer" }}>
-            <div style={{ height: 78, background: "#fff", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: 2 }}>
-              <img src={it.thumb} alt={it.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        </div>
+        {typeof alicia === "string" && alicia !== "cargando" && (
+          <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, background: C.card, border: `1px solid ${C.peri}`,
+            borderLeft: `3px solid ${C.peri}`, borderRadius: 3, padding: "10px 12px", marginBottom: 14, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+            {alicia}
+          </div>
+        )}
+        {!opciones.length && (
+          <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>
+            el footprint no admite unidades — revisa retiro/frente o reduce uds/piso
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+          {opciones.map((v, i) => (
+            <div key={v.id} style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
+              <VariantPreview v={v} W={300} H={210} />
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
+                <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>{i + 1}</span>
+                <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, textTransform: "lowercase", color: C.ink }}>{v.nombre}</span>
+                <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{v.stats.uds} uds</span>
+              </div>
+              {v.notas.slice(0, 4).map((n, j) => (
+                <div key={j} style={{ fontFamily: mono, fontSize: 9, color: C.soft, lineHeight: 1.5 }}>· {n}</div>
+              ))}
+              <button onClick={() => onUse(v)}
+                style={{ marginTop: 8, width: "100%", fontFamily: mono, fontSize: 11, color: C.card,
+                  background: C.orange, border: "none", borderRadius: 2, padding: "7px 0", cursor: "pointer" }}>
+                usar esta →
+              </button>
             </div>
-            <span style={{ fontFamily: mono, fontSize: 8.5, color: C.soft, lineHeight: 1.2, textAlign: "left" }}>{it.name}</span>
-          </button>
-        ))}
-      </div>
-      <div style={{ padding: "8px 12px", borderTop: `1px solid ${C.line}`, fontFamily: mono, fontSize: 8.5, color: C.soft, lineHeight: 1.5 }}>
-        inserta como fondo → calibra la escala → traza/diseña encima
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -256,7 +279,9 @@ function FichaModal({ ficha, setFicha, onClose }) {
           {F("lámina", "lamina")}
           {F("ubicación", "ubicacion", true)}
           {F("cliente", "cliente")}
+          {F("observaciones", "observaciones")}
           {F("profesional responsable", "responsable")}
+          {F("C.A.P.", "cap")}
           {F("desarrollo", "desarrollo")}
           {F("plano", "plano")}
           {F("escala", "escala")}
@@ -284,10 +309,17 @@ export default function EditorPlanos() {
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
   const [showGen, setShowGen] = useState(false);
   const [showLib, setShowLib] = useState(false);
-  const [showLayouts, setShowLayouts] = useState(false);
-  const [brief, setBrief] = useState({ area: 65, frente: 6.5, dormitorios: 2, banos: 2 });
+  const [showOpts, setShowOpts] = useState(false);
+  const [opciones, setOpciones] = useState([]);
+  // brief = parámetros de CABIDA (paso 1): mandan sobre todo lo que se genera
+  const [brief, setBrief] = useState({
+    area: 65, frente: 6.5, dormitorios: 2, banos: 2,          // depa suelto (generador simple)
+    areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // planta en lote
+    nse: "C", terraza: true,
+  });
   const [ficha, setFicha] = useState(FICHA_DEF);
   const [showFicha, setShowFicha] = useState(false);
+  const [cabidaBar, setCabidaBar] = useState(true);
 
   const [draft, setDraft] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -298,7 +330,6 @@ export default function EditorPlanos() {
   const [lote, setLote] = useState(null);          // { pts } polígono del terreno (metros)
   const [retiro, setRetiro] = useState(3);         // retiro perimetral (m)
   const [frontIdx, setFrontIdx] = useState(0);     // borde-frente del lote
-  const [loteParams, setLoteParams] = useState({ udsPiso: 4, mix1: 40, mix2: 40, areaObjetivo: 70 });
   const [calib, setCalib] = useState([]);          // puntos de calibración en curso
   const [loteBar, setLoteBar] = useState(false);   // barra de herramientas de lote visible
   const fileRef = useRef(null);
@@ -319,7 +350,7 @@ export default function EditorPlanos() {
         const saved = JSON.parse(raw);
         if (typeof saved?.muro === "number") setMuro(saved.muro);
         if (typeof saved?.altura === "number") setAltura(saved.altura);
-        if (saved?.loteParams) setLoteParams(saved.loteParams);
+        if (saved?.brief) setBrief((b) => ({ ...b, ...saved.brief }));
         if (saved?.ficha) setFicha({ ...FICHA_DEF, ...saved.ficha });
       }
     } catch { /* storage corrupto */ }
@@ -335,11 +366,11 @@ export default function EditorPlanos() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, loteParams, ficha })); }
+    try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, brief, ficha })); }
     catch { /* cuota — la imagen base puede exceder; se guarda el resto igual */
-      try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, lote, retiro, frontIdx, loteParams, ficha })); } catch { /* nada */ }
+      try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, lote, retiro, frontIdx, brief, ficha })); } catch { /* nada */ }
     }
-  }, [rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, loteParams, ficha]);
+  }, [rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, brief, ficha]);
 
   // ── historial ─────────────────────────────────────────────
   const snapshot = useCallback(() => ({ rooms, items }), [rooms, items]);
@@ -432,20 +463,12 @@ export default function EditorPlanos() {
 
   const cycleFront = () => lote && setFrontIdx((i) => (i + 1) % lote.pts.length);
 
-  // genera la planta típica sobre el footprint (sigue la forma del lote)
-  const generarEnLote = useCallback(() => {
-    if (!footprint) return;
-    const res = packFloor(footprint, frontIdx, {
-      udsPiso: loteParams.udsPiso, mix1: loteParams.mix1, mix2: loteParams.mix2, areaObjetivo: loteParams.areaObjetivo,
-    });
-    const nr = [];
-    if (res.core) nr.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });
-    if (res.corridor) nr.push({ id: res.corridor.id, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
-    res.units.forEach((u) => nr.push({ id: u.id, name: `${u.subtipo} · ${fmt(u.areaReal, 0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts }));
-    commit(nr, []);
-    setSelId(null); setSelItem(null); setDraft([]);
-    if (res.warns?.length) console.info("[generar-en-lote]", res.warns.join(" · "));
-  }, [footprint, frontIdx, loteParams, commit]);
+  // paso 3: genera las 5 opciones de distribución dentro del footprint
+  const abrirOpciones = useCallback(() => {
+    if (!footprint) { setLoteBar(true); return; }
+    setOpciones(generarOpciones(footprint, frontIdx, brief));
+    setShowOpts(true);
+  }, [footprint, frontIdx, brief]);
 
   // mueble bajo el puntero (el más reciente primero)
   const hitItem = useCallback((world) => {
@@ -518,24 +541,10 @@ export default function EditorPlanos() {
     setSelItem(t.id); setSelId(null); setTool("select");
   }, [items, commit, toWorldRaw]);
 
-  // inserta un layout de referencia como fondo a escala (viewBox 1000×650 · ~4 m ancho por defecto)
-  const insertLayout = useCallback((it) => {
-    const box = wrapRef.current?.getBoundingClientRect();
-    const w = 1000, h = 650, mpp = 4 / w;   // escala inicial; el usuario calibra a la real
-    setPlano({ src: it.url, ox: 0, oy: 0, mpp, w, h, opacity: 0.85 });
-    setLoteBar(true);
-    setShowLayouts(false);
-    if (box) {
-      const wM = w * mpp, hM = h * mpp;
-      const scale = Math.min((box.width - 120) / wM, (box.height - 140) / hM);
-      setView({ scale, tx: box.width / 2 - (wM / 2) * scale, ty: box.height / 2 - (hM / 2) * scale });
-    }
-  }, []);
-
   const useVariant = useCallback((v) => {
     const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo }));
     commit(nr, v.items.map((t) => ({ ...t })));
-    setShowGen(false); setSelId(null); setSelItem(null); setDraft([]);
+    setShowGen(false); setShowOpts(false); setSelId(null); setSelItem(null); setDraft([]);
     requestAnimationFrame(() => fitTo(nr));
   }, [commit, fitTo]);
 
@@ -658,7 +667,7 @@ export default function EditorPlanos() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
-      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowGen(false); setShowLib(false); setCalib([]); }
+      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowGen(false); setShowOpts(false); setShowLib(false); setCalib([]); }
       if (e.key === "Enter" && tool === "wall") onDouble();
       if (e.key === "r" || e.key === "R") rotateSel();
       if (e.key === "Backspace" || e.key === "Delete") {
@@ -720,12 +729,20 @@ export default function EditorPlanos() {
           <BamLogo height={15} />
           <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>editor de planos</span>
         </span>
-        <Btn accent onClick={() => setShowGen(true)} title="Generar distribución desde parámetros de cabida">
-          <Sparkles size={13} /> generar
+        {/* flujo: 1 cabida → 2 lote → 3 generar (5 opciones) */}
+        <Btn active={cabidaBar} onClick={() => setCabidaBar((s) => !s)} title="Paso 1 · parámetros de cabida (NSE, mix, área objetivo)">
+          <b style={{ color: cabidaBar ? C.card : C.orange }}>1</b> cabida
         </Btn>
+        <Btn active={loteBar} onClick={() => setLoteBar((s) => !s)} title="Paso 2 · lote: subir plano, calibrar, calcar terreno">
+          <b style={{ color: loteBar ? C.card : lote ? C.peri : C.orange }}>2</b> lote {lote ? "✓" : ""}
+        </Btn>
+        <Btn accent onClick={abrirOpciones} disabled={!footprint}
+          title={footprint ? "Paso 3 · generar 5 opciones de distribución en el lote" : "Primero calca el lote (paso 2)"}>
+          <Sparkles size={13} /> <b>3</b> generar
+        </Btn>
+        <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
-        <Btn active={loteBar} onClick={() => setLoteBar((s) => !s)} title="Flujo de lote: subir plano, calibrar, calcar terreno, generar tipologías"><Layers size={13} /> lote</Btn>
-        <Btn active={showLayouts} onClick={() => setShowLayouts((s) => !s)} title={`Librería de layouts dimensionados (dimensions.com · ${LAYOUT_TOTAL})`}><BookOpen size={13} /> layouts</Btn>
+        <Btn onClick={() => setShowGen(true)} title="Generar un depa suelto (sin lote)">depa suelto</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
         <Btn active={tool === "wall"} onClick={() => setTool("wall")} title="Dibujar muros (W)"><PenLine size={13} /> muro</Btn>
@@ -769,15 +786,47 @@ export default function EditorPlanos() {
         </div>
       </div>
 
-      {/* barra de lote */}
+      {/* paso 1 · barra de cabida */}
+      {cabidaBar && (() => {
+        const li = { display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft };
+        const inp = { fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 46, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" };
+        const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 16px", borderBottom: `1px solid ${C.line}`, background: "#F4F2EC" }}>
+            <span style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>1 · cabida ▸</span>
+            <label style={li}>NSE
+              <select value={brief.nse} onChange={(e) => setB("nse", e.target.value)}
+                style={{ ...inp, width: 44, textAlign: "left" }}>
+                {["A", "B", "C", "D"].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select></label>
+            <label style={li}>uds/piso
+              <input type="number" value={brief.udsPiso} step={1} min={1} onChange={(e) => setB("udsPiso", parseInt(e.target.value) || 1)} style={inp} /></label>
+            <label style={li}>área objetivo
+              <input type="number" value={brief.areaObjetivo} step={5} min={25} onChange={(e) => setB("areaObjetivo", parseInt(e.target.value) || 25)} style={inp} /> m²</label>
+            <label style={li}>1D%
+              <input type="number" value={brief.pct1} step={5} min={0} max={100} onChange={(e) => setB("pct1", parseInt(e.target.value) || 0)} style={inp} /></label>
+            <label style={li}>2D%
+              <input type="number" value={brief.pct2} step={5} min={0} max={100} onChange={(e) => setB("pct2", parseInt(e.target.value) || 0)} style={inp} /></label>
+            <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>3D {Math.max(0, 100 - brief.pct1 - brief.pct2)}%</span>
+            <label style={{ ...li, cursor: "pointer" }}>
+              <input type="checkbox" checked={!!brief.terraza} onChange={(e) => setB("terraza", e.target.checked)} />
+              terraza + jardineras a fachada
+            </label>
+            <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.soft }}>
+              tipologías de mercado: 2D 50-60 · 3D 60-70 · 1D 40-50 (Nexo jul-26)
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* paso 2 · barra de lote */}
       {loteBar && (() => {
         const li = { display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft };
         const inp = { fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 46, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" };
-        const setLP = (k, v) => setLoteParams((p) => ({ ...p, [k]: v }));
         const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 16px", borderBottom: `1px solid ${C.line}`, background: "#F4F2EC" }}>
-            <span style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>lote ▸</span>
+            <span style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>2 · lote ▸</span>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPlano(f); e.target.value = ""; }} />
             <Btn onClick={() => fileRef.current?.click()} title="Subir el plano del terreno (imagen)"><Upload size={13} /> subir plano</Btn>
@@ -794,26 +843,16 @@ export default function EditorPlanos() {
             <label style={li}>retiro
               <input type="number" value={retiro} step={0.5} min={0} onChange={(e) => setRetiro(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
             <Btn onClick={cycleFront} disabled={!lote} title="Rotar el borde-frente (hacia la calle)"><RefreshCw size={12} /> frente</Btn>
-            <div style={{ width: 1, height: 20, background: C.line }} />
-            <label style={li}>uds/piso
-              <input type="number" value={loteParams.udsPiso} step={1} min={1} onChange={(e) => setLP("udsPiso", parseInt(e.target.value) || 1)} style={inp} /></label>
-            <label style={li}>1D%
-              <input type="number" value={loteParams.mix1} step={5} min={0} max={100} onChange={(e) => setLP("mix1", parseInt(e.target.value) || 0)} style={inp} /></label>
-            <label style={li}>2D%
-              <input type="number" value={loteParams.mix2} step={5} min={0} max={100} onChange={(e) => setLP("mix2", parseInt(e.target.value) || 0)} style={inp} /></label>
-            <label style={li}>área
-              <input type="number" value={loteParams.areaObjetivo} step={5} min={20} onChange={(e) => setLP("areaObjetivo", parseInt(e.target.value) || 20)} style={inp} /> m²</label>
-            <Btn accent onClick={generarEnLote} disabled={!footprint} title="Generar la planta típica dentro del footprint">
-              <Sparkles size={13} /> generar en lote</Btn>
             {fr && <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>footprint {fmt(area(footprint), 0)} m² · {fmt(fr.frente, 1)}×{fmt(fr.fondo, 1)} m{isConvex(footprint) ? "" : " · no convexo"}</span>}
             {lote && !footprint && <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>▲ el retiro deja el lote sin área construible — redúcelo</span>}
+            {footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>listo → 3 · generar</span>}
           </div>
         );
       })()}
 
       {/* lienzo */}
       <div ref={wrapRef} style={{ flex: 1, position: "relative", overflow: "hidden", cursor: (tool === "wall" || tool === "lote" || tool === "calibrate") ? "crosshair" : "default" }}>
-        <svg ref={svgRef} width="100%" height="100%" style={{ display: "block", touchAction: "none" }}
+        <svg ref={svgRef} width="100%" height="100%" style={{ display: "block", touchAction: "none", background: C.card }}
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
           onWheel={onWheel} onDoubleClick={onDouble} onContextMenu={(e) => e.preventDefault()}>
           {/* plano de fondo */}
@@ -830,7 +869,7 @@ export default function EditorPlanos() {
           {lote && (
             <>
               <polygon points={lote.pts.map(toScreen).map((p) => `${p.x},${p.y}`).join(" ")}
-                fill="none" stroke={C.ink} strokeWidth={2} strokeDasharray="8 4" />
+                fill="none" stroke={C.peri} strokeWidth={2.5} strokeDasharray="10 5" />
               {(() => {
                 const a = toScreen(lote.pts[frontIdx]), b = toScreen(lote.pts[(frontIdx + 1) % lote.pts.length]);
                 const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -857,10 +896,13 @@ export default function EditorPlanos() {
           {rooms.map((r, i) => {
             const scr = r.pts.map(toScreen);
             const selected = r.id === selId;
+            const terraza = r.tipo === "terraza"; // borde fino, no es muro
             return (
               <polygon key={r.id} points={scr.map((p) => `${p.x},${p.y}`).join(" ")}
                 fill={roomFill(r, i)} fillOpacity={selected ? 0.95 : 0.8}
-                stroke={selected ? C.orange : C.ink} strokeWidth={selected ? wallPx + 1 : wallPx}
+                stroke={selected ? C.orange : C.ink}
+                strokeWidth={selected ? (terraza ? 2.5 : wallPx + 1) : (terraza ? 1.2 : wallPx)}
+                strokeDasharray={terraza ? "6 4" : undefined}
                 strokeLinejoin="miter" />
             );
           })}
@@ -892,7 +934,7 @@ export default function EditorPlanos() {
                   const ang = (Math.atan2(q.y - p.y, q.x - p.x) * 180) / Math.PI;
                   const flip = ang > 90 || ang < -90;
                   return (
-                    <text key={pi} x={m.x} y={m.y} fontFamily={mono} fontSize={9.5} fill={C.orange}
+                    <text key={pi} x={m.x} y={m.y} fontFamily={mono} fontSize={9.5} fill={C.peri}
                       textAnchor="middle" dominantBaseline="central"
                       transform={`rotate(${flip ? ang + 180 : ang} ${m.x} ${m.y}) translate(0 -7)`}>
                       {fmt(L, 2)}
@@ -900,9 +942,9 @@ export default function EditorPlanos() {
                   );
                 })}
                 <text x={c.x} y={c.y} fontFamily={mono} fontSize={small ? 8.5 : 10.5} fontWeight={700}
-                  fill={C.ink} textAnchor="middle" style={{ paintOrder: "stroke" }} stroke={C.card} strokeWidth={2.5}>
+                  fill={C.peri} textAnchor="middle" style={{ paintOrder: "stroke" }} stroke={C.card} strokeWidth={2.5}>
                   {r.name}
-                  {!small && <tspan x={c.x} dy="12" fontSize={8.5} fontWeight={400} fill={C.soft} stroke={C.card} strokeWidth={2.5}>{fmt(a, 1)} m²</tspan>}
+                  {!small && <tspan x={c.x} dy="12" fontSize={8.5} fontWeight={400} fill={C.peri} stroke={C.card} strokeWidth={2.5}>{fmt(a, 1)} m²</tspan>}
                 </text>
               </g>
             );
@@ -947,15 +989,15 @@ export default function EditorPlanos() {
         {!rooms.length && !draft.length && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <div style={{ textAlign: "center", fontFamily: mono, fontSize: 12, color: C.soft, lineHeight: 1.9 }}>
-              <b style={{ color: C.orange }}>✦ generar</b> crea la distribución desde los parámetros de cabida<br />
-              o dibuja a mano con <b style={{ color: C.ink }}>muro</b> · <b style={{ color: C.ink }}>+ mueble</b> abre la librería<br />
-              <span style={{ fontSize: 10.5 }}>R = rotar mueble · rueda = zoom · alt+arrastrar = paneo · ⌘Z = deshacer</span>
+              <b style={{ color: C.orange }}>1 cabida</b> define NSE, mix y área objetivo ·{" "}
+              <b style={{ color: C.orange }}>2 lote</b> sube el plano, calibra y calca el terreno<br />
+              <b style={{ color: C.orange }}>3 generar</b> te da 5 opciones de distribución dentro del lote<br />
+              <span style={{ fontSize: 10.5 }}>también puedes dibujar a mano con <b style={{ color: C.ink }}>muro</b> · R = rotar mueble · rueda = zoom · alt+arrastrar = paneo · ⌘Z = deshacer</span>
             </div>
           </div>
         )}
 
         {showLib && <LibPanel onAdd={addItem} onClose={() => setShowLib(false)} />}
-        {showLayouts && <LayoutsPanel onPick={insertLayout} onClose={() => setShowLayouts(false)} />}
       </div>
 
       {/* barra de estado */}
@@ -984,6 +1026,16 @@ export default function EditorPlanos() {
       {showGen && (
         <GenModal brief={brief} setBrief={setBrief} onUse={useVariant} onClose={() => setShowGen(false)} />
       )}
+      {showOpts && (() => {
+        const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
+        const info = fr ? `${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
+        return (
+          <OpcionesModal opciones={opciones} brief={brief} loteInfo={info}
+            onUse={useVariant}
+            onRegen={() => setOpciones(generarOpciones(footprint, frontIdx, brief))}
+            onClose={() => setShowOpts(false)} />
+        );
+      })()}
       {showFicha && <FichaModal ficha={ficha} setFicha={setFicha} onClose={() => setShowFicha(false)} />}
     </div>
   );
