@@ -1,0 +1,1401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" version="1.1" viewBox="0 0 1000 800">
+  <g id="_2D_AG-DIAGRAM" data-name="2D$AG-DIAGRAM">
+    <g id="POLYLINE">
+      <path d="M631.551,747.048c32.333-.049,67.249-10.085,88.73-35.506,18.46-21.868,22.916-51.692,10.67-77.702-9.155-19.495-26.195-33.562-45.809-41.823-32.553-13.745-74.791-13.731-107.329.061-20.543,8.683-38.164,23.726-46.914,44.568-10.849,25.805-5.657,54.622,12.584,75.676,21.552,24.854,56.07,34.677,88.066,34.726Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.999 2.998" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-2" data-name="POLYLINE">
+      <path d="M631.551,542.988c32.128-.07,67.79-9.022,89.34-34.362,18.288-21.505,22.261-51.142,9.476-76.437-9.645-19.112-27.078-32.228-46.825-39.685-32.37-12.273-75.29-11.982-107.302,1.324-19.337,8.004-36.036,21.715-44.786,41.036-11.594,25.56-6.503,54.678,12.205,75.421,21.7,24.082,56.488,32.636,87.893,32.703Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.008 3.012" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-3" data-name="POLYLINE">
+      <path d="M631.551,344.832c29.634-.086,63.365-6.78,85.26-28.08,20.274-19.633,26.81-48.996,15.512-75.05-8.083-18.617-23.716-31.841-42.167-39.642-32.235-13.725-78.66-14.12-111.53-2.234-19.221,6.908-36.154,19.121-45.754,37.499-13.389,25.632-8.686,56.074,11.064,77.029,21.784,23.207,56.896,30.388,87.615,30.479Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.002 3.003" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-4" data-name="POLYLINE">
+      <path d="M386.162,747.048c30.705.014,62.999-10.855,82.969-35.066,17.425-21.079,22.348-49.385,12.105-74.87-8.178-20.421-24.837-35.817-44.653-44.837-30.53-13.926-69.147-14.057-99.816-.464-20.018,8.854-36.96,24.144-45.393,44.594-10.518,25.419-5.876,53.824,11.414,75.083,19.923,24.546,52.461,35.576,83.373,35.56Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.996 2.993" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-5" data-name="POLYLINE">
+      <path d="M386.162,542.988c30.416-.034,62.843-9.675,83.092-33.466,17.188-20.203,22.15-47.693,12.183-72.4-8.559-21.239-26.427-36.382-47.398-44.745-29.511-11.796-66.67-11.755-96.141.157-21.383,8.624-39.42,24.299-47.641,46.209-9.198,24.513-3.884,51.412,13.136,71.157,20.291,23.524,52.507,33.051,82.77,33.088Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.004 3.006" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-6" data-name="POLYLINE">
+      <path d="M386.162,344.832c30.098-.076,62.905-8.435,83.329-31.882,17.297-19.852,21.995-47.358,11.469-71.608-7.846-18.118-22.897-31.415-40.737-39.365-31.697-14.209-76.323-14.218-108.038-.039-17.494,7.777-32.354,20.705-40.343,38.323-11,24.189-6.706,51.932,10.473,72.086,20.364,23.896,53.49,32.411,83.846,32.485Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.996 2.994" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-7" data-name="POLYLINE">
+      <path d="M152.58,747.048c29.303.044,59.229-11.693,77.662-35.039,16.879-21.283,21.556-49.485,11.68-74.888-8.312-21.48-25.821-37.844-46.814-46.818-27.121-11.604-59.236-11.442-86.214.506-20.834,9.221-38.067,25.794-46.049,47.347-9.565,25.71-4.333,53.992,13.059,75.076,18.515,22.549,47.906,33.858,76.676,33.816Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.994 2.991" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-8" data-name="POLYLINE">
+      <path d="M152.58,542.988c29.805.042,60.916-11.313,79.358-35.561,15.692-20.555,19.574-47.453,9.691-71.434-8.777-21.364-26.942-36.867-48.256-45.034-27.277-10.469-59.835-9.855-86.55,2.068-21.156,9.428-38.369,26.433-45.401,48.787-7.357,23.306-2.208,48.317,13.094,67.264,18.593,23.131,48.978,33.952,78.065,33.909Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.001 3.001" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-9" data-name="POLYLINE">
+      <path d="M152.58,344.832c28.663.003,59.063-9.477,77.943-32.006,17.737-21.101,21.663-50.116,9.482-74.949-9.062-18.524-25.606-31.685-44.66-38.958-27.504-10.521-61.639-10.168-88.791,1.319-18.882,7.97-34.85,21.962-42.95,41.032-10.63,24.96-5.483,53.153,12.531,73.288,19.028,21.324,48.513,30.262,76.446,30.274Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.009 3.014" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+    <g id="POLYLINE-10" data-name="POLYLINE">
+      <g>
+        <polyline points="526.275 152.58 525.275 152.58 525.275 151.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="525.275" y1="148.597" x2="525.275" y2="60.604" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="525.275 59.113 525.275 58.113 526.275 58.113" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="529.241" y1="58.113" x2="735.345" y2="58.113" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.977 2.966" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="736.827 58.113 737.827 58.113 737.827 59.113" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="737.827" y1="62.095" x2="737.827" y2="150.089" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="737.827 151.58 737.827 152.58 736.827 152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="733.862" y1="152.58" x2="527.758" y2="152.58" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.977 2.966" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g id="POLYLINE-11" data-name="POLYLINE">
+      <g>
+        <polyline points="286.79 152.58 285.79 152.58 285.79 151.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="285.79" y1="148.597" x2="285.79" y2="60.604" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="285.79 59.113 285.79 58.113 286.79 58.113" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="289.801" y1="58.113" x2="484.028" y2="58.113" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.008 3.011" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="485.533 58.113 486.533 58.113 486.533 59.113" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="486.533" y1="62.095" x2="486.533" y2="150.089" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="486.533 151.58 486.533 152.58 485.533 152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="482.522" y1="152.58" x2="288.295" y2="152.58" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.008 3.011" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g id="POLYLINE-12" data-name="POLYLINE">
+      <g>
+        <polyline points="59.113 152.58 58.113 152.58 58.113 151.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="58.113" y1="148.597" x2="58.113" y2="60.604" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="58.113 59.113 58.113 58.113 59.113 58.113" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="62.095" y1="58.113" x2="244.556" y2="58.113" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="246.048 58.113 247.048 58.113 247.048 59.113" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="247.048" y1="62.095" x2="247.048" y2="150.089" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="247.048 151.58 247.048 152.58 246.048 152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="243.065" y1="152.58" x2="60.604" y2="152.58" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g id="POLYLINE-13" data-name="POLYLINE">
+      <g>
+        <polyline points="930.079 284.79 930.079 285.79 929.079 285.79" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="926.108" y1="285.79" x2="779.054" y2="285.79" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.981 2.971" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="777.569 285.79 776.569 285.79 776.569 284.79" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="776.569" y1="281.807" x2="776.569" y2="193.813" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="776.569 192.322 776.569 191.322 777.569 191.322" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="780.54" y1="191.322" x2="927.594" y2="191.322" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.981 2.971" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="929.079 191.322 930.079 191.322 930.079 192.322" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="930.079" y1="195.305" x2="930.079" y2="283.298" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g id="POLYLINE-14" data-name="POLYLINE">
+      <g>
+        <polyline points="935.983 477.041 935.983 478.041 934.983 478.041" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="931.995" y1="478.041" x2="779.063" y2="478.041" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.993 2.989" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="777.569 478.041 776.569 478.041 776.569 477.041" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="776.569" y1="474.058" x2="776.569" y2="386.065" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="776.569 384.573 776.569 383.573 777.569 383.573" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="780.558" y1="383.573" x2="933.489" y2="383.573" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.993 2.989" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="934.983 383.573 935.983 383.573 935.983 384.573" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="935.983" y1="387.556" x2="935.983" y2="475.55" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g id="POLYLINE-15" data-name="POLYLINE">
+      <g>
+        <polyline points="941.888 675.197 941.888 676.197 940.888 676.197" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="937.882" y1="676.197" x2="779.072" y2="676.197" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.004 3.006" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="777.569 676.197 776.569 676.197 776.569 675.197" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="776.569" y1="672.214" x2="776.569" y2="584.221" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="776.569 582.729 776.569 581.729 777.569 581.729" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="780.575" y1="581.729" x2="939.385" y2="581.729" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.004 3.006" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <polyline points="940.888 581.729 941.888 581.729 941.888 582.729" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+        <line x1="941.888" y1="585.712" x2="941.888" y2="673.706" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.983" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+      </g>
+    </g>
+  </g>
+  <g id="_2D_AG-DETAILS-DIAGRAM" data-name="2D$AG-DETAILS-DIAGRAM">
+    <g id="POLYLINE-16" data-name="POLYLINE">
+      <path d="M631.551,711.623c20.67-.011,45.31-5.539,59.968-21.026,11.236-11.885,14.323-28.428,6.663-43.116-6.158-11.795-17.879-19.596-30.092-24.133-23.368-8.677-54.092-8.333-77.023,1.594-11.503,4.977-22.201,13.222-27.304,24.954-6.376,14.652-2.474,30.37,8.625,41.538,14.757,14.841,38.819,20.176,59.163,20.19Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.011 3.017" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-17" data-name="POLYLINE">
+      <path d="M631.551,507.562c19.69-.018,44.088-4.491,58.921-18.282,16.113-15.013,15.847-37.687-.476-52.439-14.566-13.152-37.849-17.597-56.976-17.834-18.934-.187-41.672,3.647-56.992,15.388-5.942,4.559-10.862,10.637-13.381,17.74-4.704,13.209-.621,26.881,9.3,36.493,14.758,14.319,39.661,18.917,59.604,18.934Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.999 2.999" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-18" data-name="POLYLINE">
+      <path d="M631.551,309.406c19.26-.023,44.827-3.776,59.536-17.086,3.75-3.396,6.867-7.55,8.845-12.218,2.989-6.976,3.28-14.896.768-22.062-1.354-3.903-3.498-7.532-6.177-10.67-2.571-3.021-5.648-5.62-8.958-7.797-17.066-11.144-43.237-13.778-63.257-12.539-17.641,1.143-39.944,5.662-52.501,18.968-12.783,13.566-11.955,32.969,1.552,45.707,14.613,13.831,40.71,17.673,60.193,17.697Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.989 2.984" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-19" data-name="POLYLINE">
+      <path d="M386.162,711.623c19.248-.01,40.739-5.861,54.103-20.407,11.252-12.266,14.254-29.201,6.603-44.188-6.259-12.279-18.361-20.529-31.118-24.999-18.578-6.507-40.598-6.507-59.176,0-12.755,4.469-24.858,12.72-31.116,24.997-7.651,14.985-4.654,31.92,6.601,44.189,13.367,14.548,34.853,20.396,54.104,20.408Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.006 3.01" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-20" data-name="POLYLINE">
+      <path d="M386.162,507.562c19.087-.014,41.556-5.214,54.941-19.67,9.979-10.79,12.994-25.678,6.764-39.174-5.188-11.264-15.75-18.976-27.034-23.469-20.782-8.281-47.94-8.332-68.785-.222-11.501,4.471-22.317,12.237-27.592,23.69-6.229,13.49-3.217,28.383,6.764,39.174,13.387,14.456,35.852,19.655,54.941,19.67Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.992 2.987" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-21" data-name="POLYLINE">
+      <path d="M386.162,309.406c18.545-.022,41.688-4.339,55.097-18.068,6.924-7.08,10.738-16.61,9.676-26.548-.707-6.877-3.797-13.402-8.364-18.557-12.694-14.356-35.576-19.069-54.005-19.463-20.233-.397-46.932,4.341-60.14,21.058-7.815,9.884-9.509,22.877-3.929,34.258,3.892,8.011,10.927,14.08,18.739,18.136,5.644,2.95,11.775,5.008,17.969,6.448,8.154,1.877,16.595,2.727,24.958,2.734Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.008 3.011" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-22" data-name="POLYLINE">
+      <path d="M152.58,711.623c18.826-.003,38.739-6.999,50.444-22.323,9.146-12.016,11.269-27.518,5.036-41.361-5.526-12.354-16.762-21.246-29.214-26.016-16.6-6.364-35.925-6.365-52.525-.003-12.454,4.769-23.695,13.663-29.222,26.019-6.232,13.842-4.111,29.343,5.036,41.361,11.708,15.325,31.617,22.32,50.444,22.323Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2.004 3.006" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-23" data-name="POLYLINE">
+      <path d="M152.58,507.562c17.852-.016,37.438-5.704,49.484-19.516,9.871-11.344,12.499-26.723,5.986-40.42-5.268-11.137-15.644-19-26.927-23.42-17.725-6.951-39.359-6.951-57.085,0-11.362,4.451-21.799,12.392-27.033,23.645-6.383,13.656-3.717,28.927,6.099,40.203,12.042,13.805,31.633,19.494,49.477,19.509Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 1.985 2.978" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-24" data-name="POLYLINE">
+      <path d="M152.58,309.406c17.459-.019,37.665-4.87,49.796-18.192,9.125-10.028,11.935-23.835,6.452-36.379-4.53-10.403-13.874-17.709-24.14-22.021-19.121-8.047-44.596-8.089-63.772-.186-10.373,4.266-19.862,11.551-24.494,22.003-5.607,12.608-2.812,26.533,6.405,36.63,12.14,13.287,32.31,18.125,49.753,18.144Z" fill="none" stroke="#3a54f5" stroke-dasharray="0 0 2 2.999" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="POLYLINE-25" data-name="POLYLINE">
+      <g>
+        <line x1="894.654" y1="291.694" x2="894.654" y2="290.694" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="894.654" y1="286.79" x2="894.654" y2="285.79" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-26" data-name="POLYLINE">
+      <g>
+        <line x1="900.558" y1="483.945" x2="900.558" y2="482.945" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="900.558" y1="479.041" x2="900.558" y2="478.041" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-27" data-name="POLYLINE">
+      <g>
+        <line x1="906.462" y1="682.101" x2="906.462" y2="681.101" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="906.462" y1="677.197" x2="906.462" y2="676.197" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-28" data-name="POLYLINE">
+      <g>
+        <line x1="702.402" y1="158.484" x2="702.402" y2="157.484" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="702.402" y1="153.58" x2="702.402" y2="152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-29" data-name="POLYLINE">
+      <g>
+        <line x1="451.108" y1="158.484" x2="451.108" y2="157.484" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="451.108" y1="153.58" x2="451.108" y2="152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-30" data-name="POLYLINE">
+      <g>
+        <line x1="211.623" y1="158.484" x2="211.623" y2="157.484" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="211.623" y1="153.58" x2="211.623" y2="152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-31" data-name="POLYLINE">
+      <g>
+        <line x1="811.995" y1="291.694" x2="811.995" y2="290.694" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="811.995" y1="286.79" x2="811.995" y2="285.79" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-32" data-name="POLYLINE">
+      <g>
+        <line x1="811.995" y1="483.945" x2="811.995" y2="482.945" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="811.995" y1="479.041" x2="811.995" y2="478.041" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-33" data-name="POLYLINE">
+      <g>
+        <line x1="811.995" y1="682.101" x2="811.995" y2="681.101" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="811.995" y1="677.197" x2="811.995" y2="676.197" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-34" data-name="POLYLINE">
+      <g>
+        <line x1="560.701" y1="158.484" x2="560.701" y2="157.484" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="560.701" y1="153.58" x2="560.701" y2="152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-35" data-name="POLYLINE">
+      <g>
+        <line x1="321.215" y1="158.484" x2="321.215" y2="157.484" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="321.215" y1="153.58" x2="321.215" y2="152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="POLYLINE-36" data-name="POLYLINE">
+      <g>
+        <line x1="93.538" y1="158.484" x2="93.538" y2="157.484" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="93.538" y1="153.58" x2="93.538" y2="152.58" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+  </g>
+  <g id="_2D_AG-FURNITURE" data-name="2D$AG-FURNITURE">
+    <g id="POLYLINE-37" data-name="POLYLINE">
+      <polyline points="655.753 142.74 663.04 142.74 663.04 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-38" data-name="POLYLINE">
+      <line x1="638.439" y1="142.74" x2="654.184" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-39" data-name="POLYLINE">
+      <line x1="626.232" y1="142.74" x2="636.87" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-40" data-name="POLYLINE">
+      <line x1="608.918" y1="142.74" x2="624.663" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-41" data-name="POLYLINE">
+      <polyline points="600.062 138.809 600.062 142.74 607.349 142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-42" data-name="POLYLINE">
+      <line x1="652.708" y1="136.836" x2="639.916" y2="136.836" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-43" data-name="POLYLINE">
+      <line x1="653.692" y1="126.011" x2="638.932" y2="126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-44" data-name="POLYLINE">
+      <polyline points="668.453 124.043 677.801 124.043 677.801 126.011 668.453 126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-45" data-name="POLYLINE">
+      <line x1="638.932" y1="124.043" x2="653.692" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-46" data-name="POLYLINE">
+      <line x1="653.692" y1="124.043" x2="638.932" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-47" data-name="POLYLINE">
+      <polyline points="668.453 123.059 678.785 123.059 678.785 124.043 668.453 124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-48" data-name="POLYLINE">
+      <line x1="638.932" y1="123.059" x2="653.692" y2="123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-49" data-name="POLYLINE">
+      <polyline points="663.04 138.809 663.04 150.612 665.009 150.612 665.009 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-50" data-name="POLYLINE">
+      <line x1="623.187" y1="136.836" x2="610.394" y2="136.836" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-51" data-name="POLYLINE">
+      <line x1="624.171" y1="126.011" x2="609.41" y2="126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-52" data-name="POLYLINE">
+      <line x1="609.41" y1="124.043" x2="624.171" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-53" data-name="POLYLINE">
+      <line x1="624.171" y1="124.043" x2="609.41" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-54" data-name="POLYLINE">
+      <line x1="609.41" y1="123.059" x2="624.171" y2="123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-55" data-name="POLYLINE">
+      <polyline points="594.65 126.011 585.301 126.011 585.301 124.043 594.65 124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-56" data-name="POLYLINE">
+      <polyline points="594.65 124.043 584.317 124.043 584.317 123.059 594.65 123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-57" data-name="POLYLINE">
+      <polyline points="598.094 138.809 598.094 150.612 600.062 150.612 600.062 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-58" data-name="POLYLINE">
+      <path d="M667.977,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-59" data-name="POLYLINE">
+      <path d="M668.453,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-60" data-name="POLYLINE">
+      <polygon points="666.256 138.809 666.731 152.58 667.961 152.58 667.961 138.809 666.256 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-61" data-name="POLYLINE">
+      <path d="M653.692,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-62" data-name="POLYLINE">
+      <polygon points="655.889 138.809 655.414 152.58 654.184 152.58 654.184 138.809 655.889 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-63" data-name="POLYLINE">
+      <path d="M638.456,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-64" data-name="POLYLINE">
+      <path d="M638.932,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-65" data-name="POLYLINE">
+      <polygon points="636.735 138.809 637.209 152.58 638.439 152.58 638.439 138.809 636.735 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-66" data-name="POLYLINE">
+      <path d="M624.171,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-67" data-name="POLYLINE">
+      <polygon points="626.367 138.809 625.893 152.58 624.663 152.58 624.663 138.809 626.367 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-68" data-name="POLYLINE">
+      <path d="M608.934,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-69" data-name="POLYLINE">
+      <path d="M609.41,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-70" data-name="POLYLINE">
+      <polygon points="607.214 138.809 607.688 152.58 608.918 152.58 608.918 138.809 607.214 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-71" data-name="POLYLINE">
+      <path d="M594.65,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-72" data-name="POLYLINE">
+      <polygon points="596.846 138.809 596.372 152.58 595.142 152.58 595.142 138.809 596.846 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-73" data-name="POLYLINE">
+      <path d="M575.266,136.836c-.002-.395.096-.794.309-1.129.111-.193.164-.414.188-.633.038-.37-.002-.747-.065-1.112-.014-.075-.033-.175-.049-.249l-3.005-14.136c-.016-.073-.039-.179-.058-.252-.078-.316-.176-.634-.303-.934-.248-.581-.637-1.193-1.277-1.378-.285-.079-.629-.062-.896.064-.203.098-.369.267-.463.472-.08.171-.108.366-.081.553.275,1.477,3.582,16.46,3.641,17.524.127.803.082,2.126.091,2.944.004.035.015.069.032.099.032.056.088.098.151.114.017.004.036.007.054.008.008.002,1.476-.001,1.484,0,.007,0,.015,0,.023,0,.039-.003.077-.015.11-.035.049-.029.087-.077.103-.131.005-.018.008-.036.009-.054.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-74" data-name="POLYLINE">
+      <path d="M591.896,135.36v-.017s0-.017,0-.017v-.017s-.002-.017-.002-.017v-.017s-.003-.017-.003-.017l-.002-.016-.002-.016-.003-.016-.003-.016-.003-.016-.003-.016-.004-.016-.004-.016-.004-.015-.005-.015-.005-.015-.005-.015-.006-.015-.006-.015-.006-.015-.006-.015-.007-.014-.007-.014-.007-.014-.008-.014-.008-.014-.008-.014-.008-.014-.009-.014-.009-.013-.009-.013-.009-.013-.01-.013-.01-.013c-.226-.278-.57-.424-.903-.532-1.12-.331-2.336-.349-3.496-.394-1.896-.025-4.218-.048-6.106.023-1.062.05-2.149.135-3.185.377-1.006.245-2.163.666-2.599,1.69-.08.192-.128.397-.148.603-.021.087-.008,1.817-.011,1.958,0,.126.098.235.224.245.06.003,15.88,0,15.94,0,.056-.003.113-.016.165-.038.089-.037.166-.101.219-.181.044-.066.072-.143.08-.222.001-.016.003-.034.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-75" data-name="POLYLINE">
+      <path d="M573.544,138.79c0,4.539-.245,9.281-.767,13.79h1.23c.693-4.575,1.103-9.398,1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-76" data-name="POLYLINE">
+      <polyline points="591.404 138.804 591.623 152.58 590.393 152.58 589.682 138.804" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-77" data-name="POLYLINE">
+      <path d="M687.837,136.836c.002-.395-.096-.794-.309-1.129-.111-.193-.164-.414-.188-.633-.038-.37.002-.747.065-1.112.014-.075.033-.175.049-.249l3.005-14.136c.016-.073.039-.179.058-.252.078-.316.176-.634.303-.934.248-.581.637-1.193,1.277-1.378.285-.079.629-.062.896.064.203.098.369.267.463.472.08.171.108.366.081.553-.275,1.477-3.582,16.46-3.641,17.524-.127.803-.082,2.126-.091,2.944-.004.035-.015.069-.032.099-.032.056-.088.098-.151.114-.017.004-.036.007-.054.008-.008.002-1.476-.001-1.484,0-.007,0-.015,0-.023,0-.039-.003-.077-.015-.11-.035-.049-.029-.087-.077-.103-.131-.005-.018-.008-.036-.009-.054-.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-78" data-name="POLYLINE">
+      <path d="M671.207,135.36v-.017s0-.017,0-.017v-.017s.002-.017.002-.017v-.017s.003-.017.003-.017l.002-.016.002-.016.003-.016.003-.016.003-.016.003-.016.004-.016.004-.016.004-.015.005-.015.005-.015.005-.015.006-.015.006-.015.006-.015.006-.015.007-.014.007-.014.007-.014.008-.014.008-.014.008-.014.008-.014.009-.014.009-.013.009-.013.009-.013.01-.013.01-.013c.226-.278.57-.424.903-.532,1.12-.331,2.336-.349,3.496-.394,1.896-.025,4.218-.048,6.106.023,1.062.05,2.149.135,3.185.377,1.006.245,2.163.666,2.599,1.69.08.192.128.397.148.603.021.087.008,1.817.011,1.958,0,.126-.098.235-.224.245-.06.003-15.88,0-15.94,0-.056-.003-.113-.016-.165-.038-.089-.037-.166-.101-.219-.181-.044-.066-.072-.143-.08-.222-.001-.016-.003-.034-.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-79" data-name="POLYLINE">
+      <path d="M689.559,138.79c0,4.539.245,9.281.767,13.79h-1.23c-.693-4.575-1.103-9.398-1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-80" data-name="POLYLINE">
+      <polyline points="671.699 138.804 671.48 152.58 672.71 152.58 673.421 138.804" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-81" data-name="POLYLINE">
+      <rect x="662.056" y="150.612" width="3.936" height="1.968" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-82" data-name="POLYLINE">
+      <rect x="597.11" y="150.612" width="3.936" height="1.968" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-83" data-name="POLYLINE">
+      <polyline points="407.411 142.74 411.746 142.74 411.746 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-84" data-name="POLYLINE">
+      <line x1="393.05" y1="142.74" x2="405.842" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-85" data-name="POLYLINE">
+      <path d="M420.244,134.68c.252-.209.567-.326.878-.417,1.251-.328,2.595-.33,3.882-.367,1.99,0,4.403-.057,6.375.078.963.071,1.944.183,2.872.458.611.186,1.224.448,1.684.903.342.334.557.79.598,1.266.018.168.015,1.808.006,2.008-.01.049-.035.094-.071.128-.036.034-.082.057-.13.064-.023.022-15.628-.009-15.658.003" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-86" data-name="POLYLINE">
+      <line x1="404.366" y1="136.836" x2="394.526" y2="136.836" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-87" data-name="POLYLINE">
+      <line x1="405.35" y1="126.011" x2="393.542" y2="126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-88" data-name="POLYLINE">
+      <polyline points="420.111 124.043 426.507 124.043 426.507 126.011 420.111 126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-89" data-name="POLYLINE">
+      <line x1="393.542" y1="124.043" x2="405.35" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-90" data-name="POLYLINE">
+      <line x1="405.35" y1="124.043" x2="393.542" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-91" data-name="POLYLINE">
+      <polyline points="420.111 123.059 427.491 123.059 427.491 124.043 420.111 124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-92" data-name="POLYLINE">
+      <line x1="393.542" y1="123.059" x2="405.35" y2="123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-93" data-name="POLYLINE">
+      <polyline points="411.746 138.809 411.746 150.612 413.715 150.612 413.715 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-94" data-name="POLYLINE">
+      <line x1="380.842" y1="142.74" x2="391.481" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-95" data-name="POLYLINE">
+      <line x1="366.481" y1="142.74" x2="379.273" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-96" data-name="POLYLINE">
+      <line x1="377.797" y1="136.836" x2="367.957" y2="136.836" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-97" data-name="POLYLINE">
+      <line x1="378.781" y1="126.011" x2="366.973" y2="126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-98" data-name="POLYLINE">
+      <line x1="366.973" y1="124.043" x2="378.781" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-99" data-name="POLYLINE">
+      <line x1="378.781" y1="124.043" x2="366.973" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-100" data-name="POLYLINE">
+      <line x1="366.973" y1="123.059" x2="378.781" y2="123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-101" data-name="POLYLINE">
+      <polyline points="360.576 138.809 360.576 142.74 364.912 142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-102" data-name="POLYLINE">
+      <path d="M352.079,134.68c-.252-.209-.567-.326-.878-.417-1.251-.328-2.595-.33-3.882-.367-1.99,0-4.403-.057-6.375.078-.963.071-1.944.183-2.872.458-.611.186-1.224.448-1.684.903-.342.334-.557.79-.598,1.266-.018.168-.015,1.808-.006,2.008.01.049.035.094.071.128.036.034.082.057.13.064.023.022,15.628-.009,15.658.003" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-103" data-name="POLYLINE">
+      <polyline points="352.212 126.011 345.816 126.011 345.816 124.043 352.212 124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-104" data-name="POLYLINE">
+      <polyline points="352.212 124.043 344.832 124.043 344.832 123.059 352.212 123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-105" data-name="POLYLINE">
+      <polyline points="358.608 138.809 358.608 150.612 360.576 150.612 360.576 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-106" data-name="POLYLINE">
+      <path d="M419.635,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-107" data-name="POLYLINE">
+      <path d="M420.111,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-108" data-name="POLYLINE">
+      <polygon points="417.914 138.809 418.389 152.58 419.619 152.58 419.619 138.809 417.914 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-109" data-name="POLYLINE">
+      <path d="M405.35,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-110" data-name="POLYLINE">
+      <polygon points="407.547 138.809 407.072 152.58 405.842 152.58 405.842 138.809 407.547 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-111" data-name="POLYLINE">
+      <path d="M393.066,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-112" data-name="POLYLINE">
+      <path d="M393.542,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-113" data-name="POLYLINE">
+      <polygon points="391.345 138.809 391.82 152.58 393.05 152.58 393.05 138.809 391.345 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-114" data-name="POLYLINE">
+      <path d="M378.781,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-115" data-name="POLYLINE">
+      <polygon points="380.978 138.809 380.503 152.58 379.273 152.58 379.273 138.809 380.978 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-116" data-name="POLYLINE">
+      <path d="M366.497,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-117" data-name="POLYLINE">
+      <path d="M366.973,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-118" data-name="POLYLINE">
+      <polygon points="364.776 138.809 365.251 152.58 366.481 152.58 366.481 138.809 364.776 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-119" data-name="POLYLINE">
+      <path d="M352.212,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-120" data-name="POLYLINE">
+      <polygon points="354.409 138.809 353.934 152.58 352.704 152.58 352.704 138.809 354.409 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-121" data-name="POLYLINE">
+      <path d="M335.78,136.836c-.002-.395.096-.794.309-1.129.111-.193.164-.414.188-.633.038-.37-.002-.747-.065-1.112-.014-.075-.033-.175-.049-.249l-3.005-14.136c-.016-.073-.039-.179-.058-.252-.078-.316-.176-.634-.303-.934-.248-.581-.637-1.193-1.277-1.378-.285-.079-.629-.062-.896.064-.203.098-.369.267-.463.472-.08.171-.108.366-.081.553.275,1.477,3.582,16.46,3.641,17.524.127.803.082,2.126.091,2.944.004.035.015.069.032.099.032.056.088.098.151.114.017.004.036.007.054.008.008.002,1.476-.001,1.484,0,.007,0,.015,0,.023,0,.039-.003.077-.015.11-.035.049-.029.087-.077.103-.131.005-.018.008-.036.009-.054.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-122" data-name="POLYLINE">
+      <path d="M334.058,138.79c0,4.539-.245,9.281-.767,13.79h1.23c.693-4.575,1.103-9.398,1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-123" data-name="POLYLINE">
+      <polyline points="351.918 138.804 352.137 152.58 350.907 152.58 350.196 138.804" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-124" data-name="POLYLINE">
+      <path d="M436.543,136.836c.002-.395-.096-.794-.309-1.129-.111-.193-.164-.414-.188-.633-.038-.37.002-.747.065-1.112.014-.075.033-.175.049-.249l3.005-14.136c.016-.073.039-.179.058-.252.078-.316.176-.634.303-.934.248-.581.637-1.193,1.277-1.378.285-.079.629-.062.896.064.203.098.369.267.463.472.08.171.108.366.081.553-.275,1.477-3.582,16.46-3.641,17.524-.127.803-.082,2.126-.091,2.944-.004.035-.015.069-.032.099-.032.056-.088.098-.151.114-.017.004-.036.007-.054.008-.008.002-1.476-.001-1.484,0-.007,0-.015,0-.023,0-.039-.003-.077-.015-.11-.035-.049-.029-.087-.077-.103-.131-.005-.018-.008-.036-.009-.054-.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-125" data-name="POLYLINE">
+      <path d="M438.265,138.79c0,4.539.245,9.281.767,13.79h-1.23c-.693-4.575-1.103-9.398-1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-126" data-name="POLYLINE">
+      <polyline points="420.405 138.804 420.186 152.58 421.416 152.58 422.127 138.804" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-127" data-name="POLYLINE">
+      <rect x="357.624" y="150.612" width="3.936" height="1.968" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-128" data-name="POLYLINE">
+      <rect x="410.762" y="150.612" width="3.936" height="1.968" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-129" data-name="POLYLINE">
+      <polyline points="174.229 150.612 174.229 150.612 174.229 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-130" data-name="POLYLINE">
+      <polyline points="172.261 138.809 172.261 150.612 172.931 150.612" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-131" data-name="POLYLINE">
+      <polyline points="172.931 150.612 171.277 150.612 171.277 152.58 175.213 152.58 175.213 150.612 174.229 150.612" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-132" data-name="POLYLINE">
+      <polyline points="162.022 142.74 172.261 142.74 172.261 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-133" data-name="POLYLINE">
+      <line x1="144.708" y1="142.74" x2="160.452" y2="142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-134" data-name="POLYLINE">
+      <line x1="158.976" y1="136.836" x2="146.184" y2="136.836" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-135" data-name="POLYLINE">
+      <line x1="159.96" y1="126.011" x2="145.2" y2="126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-136" data-name="POLYLINE">
+      <polyline points="174.721 124.043 187.022 124.043 187.022 126.011 174.721 126.011" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-137" data-name="POLYLINE">
+      <line x1="145.2" y1="124.043" x2="159.96" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-138" data-name="POLYLINE">
+      <line x1="159.96" y1="124.043" x2="145.2" y2="124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-139" data-name="POLYLINE">
+      <polyline points="174.721 123.059 188.006 123.059 188.006 124.043 174.721 124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-140" data-name="POLYLINE">
+      <line x1="145.2" y1="123.059" x2="159.96" y2="123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-141" data-name="POLYLINE">
+      <polyline points="132.229 150.612 132.899 150.612 132.899 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-142" data-name="POLYLINE">
+      <polyline points="130.931 150.612 129.947 150.612 129.947 152.58 133.883 152.58 133.883 150.612 132.229 150.612" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-143" data-name="POLYLINE">
+      <polyline points="132.899 138.809 132.899 142.74 143.139 142.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-144" data-name="POLYLINE">
+      <polyline points="130.439 126.011 118.139 126.011 118.139 124.043 130.439 124.043" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-145" data-name="POLYLINE">
+      <polyline points="130.439 124.043 117.155 124.043 117.155 123.059 130.439 123.059" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-146" data-name="POLYLINE">
+      <path d="M174.245,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-147" data-name="POLYLINE">
+      <path d="M174.721,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-148" data-name="POLYLINE">
+      <path d="M159.96,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-149" data-name="POLYLINE">
+      <polygon points="162.157 138.809 161.683 152.58 160.452 152.58 160.452 138.809 162.157 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-150" data-name="POLYLINE">
+      <path d="M144.724,138.809c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-151" data-name="POLYLINE">
+      <path d="M145.2,134.61c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-152" data-name="POLYLINE">
+      <polygon points="143.003 138.809 143.478 152.58 144.708 152.58 144.708 138.809 143.003 138.809" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-153" data-name="POLYLINE">
+      <path d="M130.439,134.61c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-154" data-name="POLYLINE">
+      <path d="M108.103,136.836c-.002-.395.096-.794.309-1.129.111-.193.164-.414.188-.633.038-.37-.002-.747-.065-1.112-.014-.075-.033-.175-.049-.249l-3.005-14.136c-.016-.073-.039-.179-.058-.252-.078-.316-.176-.634-.303-.934-.248-.581-.637-1.193-1.277-1.378-.285-.079-.629-.062-.896.064-.203.098-.369.267-.463.472-.08.171-.108.366-.081.553.275,1.477,3.582,16.46,3.641,17.524.127.803.082,2.126.091,2.944.004.035.015.069.032.099.032.056.088.098.151.114.017.004.036.007.054.008.008.002,1.476-.001,1.484,0,.007,0,.015,0,.023,0,.039-.003.077-.015.11-.035.049-.029.087-.077.103-.131.005-.018.008-.036.009-.054.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-155" data-name="POLYLINE">
+      <path d="M124.733,135.36v-.017s0-.017,0-.017v-.017s-.002-.017-.002-.017v-.017s-.003-.017-.003-.017l-.002-.016-.002-.016-.003-.016-.003-.016-.003-.016-.003-.016-.004-.016-.004-.016-.004-.015-.005-.015-.005-.015-.005-.015-.006-.015-.006-.015-.006-.015-.006-.015-.007-.014-.007-.014-.007-.014-.008-.014-.008-.014-.008-.014-.008-.014-.009-.014-.009-.013-.009-.013-.009-.013-.01-.013-.01-.013c-.226-.278-.57-.424-.903-.532-1.12-.331-2.336-.349-3.496-.394-1.896-.025-4.218-.048-6.106.023-1.062.05-2.149.135-3.185.377-1.006.245-2.163.666-2.599,1.69-.08.192-.128.397-.148.603-.021.087-.008,1.817-.011,1.958,0,.126.098.235.224.245.06.003,15.88,0,15.94,0,.056-.003.113-.016.165-.038.089-.037.166-.101.219-.181.044-.066.072-.143.08-.222.001-.016.003-.034.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-156" data-name="POLYLINE">
+      <path d="M106.381,138.79c0,4.539-.245,9.281-.767,13.79h1.23c.693-4.575,1.103-9.398,1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-157" data-name="POLYLINE">
+      <polyline points="124.241 138.804 124.46 152.58 123.23 152.58 122.519 138.804" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-158" data-name="POLYLINE">
+      <path d="M197.057,136.836c.002-.395-.096-.794-.309-1.129-.111-.193-.164-.414-.188-.633-.038-.37.002-.747.065-1.112.014-.075.033-.175.049-.249l3.005-14.136c.016-.073.039-.179.058-.252.078-.316.176-.634.303-.934.248-.581.637-1.193,1.277-1.378.285-.079.629-.062.896.064.203.098.369.267.463.472.08.171.108.366.081.553-.275,1.477-3.582,16.46-3.641,17.524-.127.803-.082,2.126-.091,2.944-.004.035-.015.069-.032.099-.032.056-.088.098-.151.114-.017.004-.036.007-.054.008-.008.002-1.476-.001-1.484,0-.007,0-.015,0-.023,0-.039-.003-.077-.015-.11-.035-.049-.029-.087-.077-.103-.131-.005-.018-.008-.036-.009-.054-.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-159" data-name="POLYLINE">
+      <path d="M180.427,135.36v-.017s0-.017,0-.017v-.017s.002-.017.002-.017v-.017s.003-.017.003-.017l.002-.016.002-.016.003-.016.003-.016.003-.016.003-.016.004-.016.004-.016.004-.015.005-.015.005-.015.005-.015.006-.015.006-.015.006-.015.006-.015.007-.014.007-.014.007-.014.008-.014.008-.014.008-.014.008-.014.009-.014.009-.013.009-.013.009-.013.01-.013.01-.013c.226-.278.57-.424.903-.532,1.12-.331,2.336-.349,3.496-.394,1.896-.025,4.218-.048,6.106.023,1.062.05,2.149.135,3.185.377,1.006.245,2.163.666,2.599,1.69.08.192.128.397.148.603.021.087.008,1.817.011,1.958,0,.126-.098.235-.224.245-.06.003-15.88,0-15.94,0-.056-.003-.113-.016-.165-.038-.089-.037-.166-.101-.219-.181-.044-.066-.072-.143-.08-.222-.001-.016-.003-.034-.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-160" data-name="POLYLINE">
+      <path d="M198.779,138.79c0,4.539.245,9.281.767,13.79h-1.23c-.693-4.575-1.103-9.398-1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-161" data-name="POLYLINE">
+      <polyline points="180.919 138.804 180.7 152.58 181.93 152.58 182.641 138.804" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-162" data-name="POLYLINE">
+      <line x1="848.404" y1="283.821" x2="858.244" y2="283.821" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-163" data-name="POLYLINE">
+      <line x1="858.914" y1="283.821" x2="847.734" y2="283.821" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-164" data-name="POLYLINE">
+      <line x1="863.763" y1="283.821" x2="860.212" y2="283.821" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-165" data-name="POLYLINE">
+      <line x1="846.436" y1="283.821" x2="842.886" y2="283.821" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-166" data-name="POLYLINE">
+      <polyline points="845.944 259.221 836.595 259.221 836.595 257.252 845.944 257.252" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-167" data-name="POLYLINE">
+      <polyline points="860.704 257.252 870.053 257.252 870.053 259.221 860.704 259.221" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-168" data-name="POLYLINE">
+      <polyline points="845.944 257.252 835.611 257.252 835.611 256.268 845.944 256.268" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-169" data-name="POLYLINE">
+      <polyline points="860.704 256.268 871.037 256.268 871.037 257.252 860.704 257.252" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-170" data-name="POLYLINE">
+      <path d="M860.228,272.019c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-171" data-name="POLYLINE">
+      <path d="M860.704,267.82c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-172" data-name="POLYLINE">
+      <polygon points="858.508 272.019 858.982 285.79 860.212 285.79 860.212 272.019 858.508 272.019" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-173" data-name="POLYLINE">
+      <path d="M845.944,267.82c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-174" data-name="POLYLINE">
+      <polygon points="848.14 272.019 847.666 285.79 846.436 285.79 846.436 272.019 848.14 272.019" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-175" data-name="POLYLINE">
+      <path d="M841.59,283.914c-.23.107-.415.307-.503.545-.032.086-.053.177-.06.268-.001.014-.002.034-.003.047,0,.007,0,.024,0,.031v.984s24.601,0,24.601,0c-.002-.051.005-1.063-.005-1.079-.008-.086-.028-.171-.058-.252-.089-.238-.273-.438-.503-.545" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-176" data-name="POLYLINE">
+      <path d="M826.56,270.045c-.002-.395.096-.794.309-1.129.111-.193.164-.414.188-.633.038-.37-.002-.747-.065-1.112-.014-.075-.033-.175-.049-.249l-3.005-14.136c-.016-.073-.039-.179-.058-.252-.078-.316-.176-.634-.303-.934-.248-.581-.637-1.193-1.277-1.378-.285-.079-.629-.062-.896.064-.203.098-.369.267-.463.472-.08.171-.108.366-.081.553.275,1.477,3.582,16.46,3.641,17.524.127.803.082,2.126.091,2.944.004.035.015.069.032.099.032.056.088.098.151.114.017.004.036.007.054.008.008.002,1.476-.001,1.484,0,.007,0,.015,0,.023,0,.039-.003.077-.015.11-.035.049-.029.087-.077.103-.131.005-.018.008-.036.009-.054.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-177" data-name="POLYLINE">
+      <path d="M843.19,268.569v-.017s0-.017,0-.017v-.017s-.002-.017-.002-.017v-.017s-.003-.017-.003-.017l-.002-.016-.002-.016-.003-.016-.003-.016-.003-.016-.003-.016-.004-.016-.004-.016-.004-.015-.005-.015-.005-.015-.005-.015-.006-.015-.006-.015-.006-.015-.006-.015-.007-.014-.007-.014-.007-.014-.008-.014-.008-.014-.008-.014-.008-.014-.009-.014-.009-.013-.009-.013-.009-.013-.01-.013-.01-.013c-.226-.278-.57-.424-.903-.532-1.12-.331-2.336-.349-3.496-.394-1.896-.025-4.218-.048-6.106.023-1.062.05-2.149.135-3.185.377-1.006.245-2.163.666-2.599,1.69-.08.192-.128.397-.148.603-.021.087-.008,1.817-.011,1.958,0,.126.098.235.224.245.06.003,15.88,0,15.94,0,.056-.003.113-.016.165-.038.089-.037.166-.101.219-.181.044-.066.072-.143.08-.222.001-.016.003-.034.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-178" data-name="POLYLINE">
+      <path d="M824.838,271.999c0,4.539-.245,9.281-.767,13.79h1.23c.693-4.575,1.103-9.398,1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-179" data-name="POLYLINE">
+      <polyline points="842.698 272.013 842.917 285.79 841.687 285.79 840.976 272.013" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-180" data-name="POLYLINE">
+      <path d="M880.088,270.045c.002-.395-.096-.794-.309-1.129-.111-.193-.164-.414-.188-.633-.038-.37.002-.747.065-1.112.014-.075.033-.175.049-.249l3.005-14.136c.016-.073.039-.179.058-.252.078-.316.176-.634.303-.934.248-.581.637-1.193,1.277-1.378.285-.079.629-.062.896.064.203.098.369.267.463.472.08.171.108.366.081.553-.275,1.477-3.582,16.46-3.641,17.524-.127.803-.082,2.126-.091,2.944-.004.035-.015.069-.032.099-.032.056-.088.098-.151.114-.017.004-.036.007-.054.008-.008.002-1.476-.001-1.484,0-.007,0-.015,0-.023,0-.039-.003-.077-.015-.11-.035-.049-.029-.087-.077-.103-.131-.005-.018-.008-.036-.009-.054-.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-181" data-name="POLYLINE">
+      <path d="M863.458,268.569v-.017s0-.017,0-.017v-.017s.002-.017.002-.017v-.017s.003-.017.003-.017l.002-.016.002-.016.003-.016.003-.016.003-.016.003-.016.004-.016.004-.016.004-.015.005-.015.005-.015.005-.015.006-.015.006-.015.006-.015.006-.015.007-.014.007-.014.007-.014.008-.014.008-.014.008-.014.008-.014.009-.014.009-.013.009-.013.009-.013.01-.013.01-.013c.226-.278.57-.424.903-.532,1.12-.331,2.336-.349,3.496-.394,1.896-.025,4.218-.048,6.106.023,1.062.05,2.149.135,3.185.377,1.006.245,2.163.666,2.599,1.69.08.192.128.397.148.603.021.087.008,1.817.011,1.958,0,.126-.098.235-.224.245-.06.003-15.88,0-15.94,0-.056-.003-.113-.016-.165-.038-.089-.037-.166-.101-.219-.181-.044-.066-.072-.143-.08-.222-.001-.016-.003-.034-.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-182" data-name="POLYLINE">
+      <path d="M881.811,271.999c0,4.539.245,9.281.767,13.79h-1.23c-.693-4.575-1.103-9.398-1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-183" data-name="POLYLINE">
+      <polyline points="863.95 272.013 863.731 285.79 864.961 285.79 865.672 272.013" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-184" data-name="POLYLINE">
+      <path d="M891.897,660.453c.002-.395-.096-.794-.309-1.129-.111-.193-.164-.414-.188-.633-.038-.37.002-.747.065-1.112.014-.075.033-.175.049-.249l3.005-14.136c.016-.073.039-.179.058-.252.078-.316.176-.634.303-.934.248-.581.637-1.193,1.277-1.378.285-.079.629-.062.896.064.203.098.369.267.463.472.08.171.108.366.081.553-.275,1.477-3.582,16.46-3.641,17.524-.127.803-.082,2.126-.091,2.944-.004.035-.015.069-.032.099-.032.056-.088.098-.151.114-.017.004-.036.007-.054.008-.008.002-1.476-.001-1.484,0-.007,0-.015,0-.023,0-.039-.003-.077-.015-.11-.035-.049-.029-.087-.077-.103-.131-.005-.018-.008-.036-.009-.054-.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-185" data-name="POLYLINE">
+      <path d="M875.267,658.976v-.017s0-.017,0-.017v-.017s.002-.017.002-.017v-.017s.003-.017.003-.017l.002-.016.002-.016.003-.016.003-.016.003-.016.003-.016.004-.016.004-.016.004-.015.005-.015.005-.015.005-.015.006-.015.006-.015.006-.015.006-.015.007-.014.007-.014.007-.014.008-.014.008-.014.008-.014.008-.014.009-.014.009-.013.009-.013.009-.013.01-.013.01-.013c.226-.278.57-.424.903-.532,1.12-.331,2.336-.349,3.496-.394,1.896-.025,4.218-.048,6.106.023,1.062.05,2.149.135,3.185.377,1.006.245,2.163.666,2.599,1.69.08.192.128.397.148.603.021.087.008,1.817.011,1.958,0,.126-.098.235-.224.245-.06.003-15.88,0-15.94,0-.056-.003-.113-.016-.165-.038-.089-.037-.166-.101-.219-.181-.044-.066-.072-.143-.08-.222-.001-.016-.003-.034-.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-186" data-name="POLYLINE">
+      <path d="M893.619,662.407c0,4.539.245,9.281.767,13.79h-1.23c-.693-4.575-1.103-9.398-1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-187" data-name="POLYLINE">
+      <polyline points="875.759 662.421 875.54 676.197 876.77 676.197 877.481 662.421" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-188" data-name="POLYLINE">
+      <path d="M826.56,660.453c-.002-.395.096-.794.309-1.129.111-.193.164-.414.188-.633.038-.37-.002-.747-.065-1.112-.014-.075-.033-.175-.049-.249l-3.005-14.136c-.016-.073-.039-.179-.058-.252-.078-.316-.176-.634-.303-.934-.248-.581-.637-1.193-1.277-1.378-.285-.079-.629-.062-.896.064-.203.098-.369.267-.463.472-.08.171-.108.366-.081.553.275,1.477,3.582,16.46,3.641,17.524.127.803.082,2.126.091,2.944.004.035.015.069.032.099.032.056.088.098.151.114.017.004.036.007.054.008.008.002,1.476-.001,1.484,0,.007,0,.015,0,.023,0,.039-.003.077-.015.11-.035.049-.029.087-.077.103-.131.005-.018.008-.036.009-.054.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-189" data-name="POLYLINE">
+      <path d="M843.19,658.976v-.017s0-.017,0-.017v-.017s-.002-.017-.002-.017v-.017s-.003-.017-.003-.017l-.002-.016-.002-.016-.003-.016-.003-.016-.003-.016-.003-.016-.004-.016-.004-.016-.004-.015-.005-.015-.005-.015-.005-.015-.006-.015-.006-.015-.006-.015-.006-.015-.007-.014-.007-.014-.007-.014-.008-.014-.008-.014-.008-.014-.008-.014-.009-.014-.009-.013-.009-.013-.009-.013-.01-.013-.01-.013c-.226-.278-.57-.424-.903-.532-1.12-.331-2.336-.349-3.496-.394-1.896-.025-4.218-.048-6.106.023-1.062.05-2.149.135-3.185.377-1.006.245-2.163.666-2.599,1.69-.08.192-.128.397-.148.603-.021.087-.008,1.817-.011,1.958,0,.126.098.235.224.245.06.003,15.88,0,15.94,0,.056-.003.113-.016.165-.038.089-.037.166-.101.219-.181.044-.066.072-.143.08-.222.001-.016.003-.034.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-190" data-name="POLYLINE">
+      <path d="M824.838,662.407c0,4.539-.245,9.281-.767,13.79h1.23c.693-4.575,1.103-9.398,1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-191" data-name="POLYLINE">
+      <polyline points="842.698 662.421 842.917 676.197 841.687 676.197 840.976 662.421" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-192" data-name="POLYLINE">
+      <path d="M866.133,662.426c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-193" data-name="POLYLINE">
+      <path d="M866.609,658.227c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-194" data-name="POLYLINE">
+      <polygon points="864.412 662.426 864.886 676.197 866.117 676.197 866.117 662.426 864.412 662.426" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-195" data-name="POLYLINE">
+      <path d="M851.848,658.227c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-196" data-name="POLYLINE">
+      <polygon points="854.044 662.426 853.57 676.197 852.34 676.197 852.34 662.426 854.044 662.426" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-197" data-name="POLYLINE">
+      <polyline points="866.609 647.66 881.861 647.66 881.861 649.628 866.609 649.628" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-198" data-name="POLYLINE">
+      <polyline points="851.848 649.628 836.595 649.628 836.595 647.66 851.848 647.66" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-199" data-name="POLYLINE">
+      <polyline points="866.609 646.676 882.845 646.676 882.845 647.66 866.609 647.66" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-200" data-name="POLYLINE">
+      <polyline points="851.848 647.66 835.611 647.66 835.611 646.676 851.848 646.676" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-201" data-name="POLYLINE">
+      <line x1="864.819" y1="674.229" x2="853.638" y2="674.229" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-202" data-name="POLYLINE">
+      <line x1="853.638" y1="674.229" x2="864.819" y2="674.229" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-203" data-name="POLYLINE">
+      <path d="M852.34,674.229h-7.872c-.021,0-.045,0-.066.002-.085.006-.17.023-.251.05-.13.044-.251.116-.352.209-.14.129-.241.301-.287.486-.015.059-.024.121-.027.181,0,.017-.002.037-.002.055v.984s31.489,0,31.489,0c-.001-.016,0-.981,0-.995,0-.018,0-.038-.002-.055-.004-.061-.014-.123-.029-.182-.047-.181-.147-.348-.284-.474-.104-.096-.229-.169-.363-.213-.081-.026-.165-.042-.25-.047-.017,0-.037-.002-.055-.002h-7.872" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-204" data-name="POLYLINE">
+      <polyline points="869.854 464.265 869.636 478.041 870.866 478.041 871.577 464.265" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-205" data-name="POLYLINE">
+      <path d="M887.715,464.251c0,4.539.245,9.281.767,13.79h-1.23c-.693-4.575-1.103-9.398-1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-206" data-name="POLYLINE">
+      <path d="M869.362,460.821v-.017s0-.017,0-.017v-.017s.002-.017.002-.017v-.017s.003-.017.003-.017l.002-.016.002-.016.003-.016.003-.016.003-.016.003-.016.004-.016.004-.016.004-.015.005-.015.005-.015.005-.015.006-.015.006-.015.006-.015.006-.015.007-.014.007-.014.007-.014.008-.014.008-.014.008-.014.008-.014.009-.014.009-.013.009-.013.009-.013.01-.013.01-.013c.226-.278.57-.424.903-.532,1.12-.331,2.336-.349,3.496-.394,1.896-.025,4.218-.048,6.106.023,1.062.05,2.149.135,3.185.377,1.006.245,2.163.666,2.599,1.69.08.192.128.397.148.603.021.087.008,1.817.011,1.958,0,.126-.098.235-.224.245-.06.003-15.88,0-15.94,0-.056-.003-.113-.016-.165-.038-.089-.037-.166-.101-.219-.181-.044-.066-.072-.143-.08-.222-.001-.016-.003-.034-.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-207" data-name="POLYLINE">
+      <path d="M885.993,462.297c.002-.395-.096-.794-.309-1.129-.111-.193-.164-.414-.188-.633-.038-.37.002-.747.065-1.112.014-.075.033-.175.049-.249l3.005-14.136c.016-.073.039-.179.058-.252.078-.316.176-.634.303-.934.248-.581.637-1.193,1.277-1.378.285-.079.629-.062.896.064.203.098.369.267.463.472.08.171.108.366.081.553-.275,1.477-3.582,16.46-3.641,17.524-.127.803-.082,2.126-.091,2.944-.004.035-.015.069-.032.099-.032.056-.088.098-.151.114-.017.004-.036.007-.054.008-.008.002-1.476-.001-1.484,0-.007,0-.015,0-.023,0-.039-.003-.077-.015-.11-.035-.049-.029-.087-.077-.103-.131-.005-.018-.008-.036-.009-.054-.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-208" data-name="POLYLINE">
+      <polyline points="842.698 464.265 842.917 478.041 841.687 478.041 840.976 464.265" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-209" data-name="POLYLINE">
+      <path d="M824.838,464.251c0,4.539-.245,9.281-.767,13.79h1.23c.693-4.575,1.103-9.398,1.259-14.023" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-210" data-name="POLYLINE">
+      <path d="M843.19,460.821v-.017s0-.017,0-.017v-.017s-.002-.017-.002-.017v-.017s-.003-.017-.003-.017l-.002-.016-.002-.016-.003-.016-.003-.016-.003-.016-.003-.016-.004-.016-.004-.016-.004-.015-.005-.015-.005-.015-.005-.015-.006-.015-.006-.015-.006-.015-.006-.015-.007-.014-.007-.014-.007-.014-.008-.014-.008-.014-.008-.014-.008-.014-.009-.014-.009-.013-.009-.013-.009-.013-.01-.013-.01-.013c-.226-.278-.57-.424-.903-.532-1.12-.331-2.336-.349-3.496-.394-1.896-.025-4.218-.048-6.106.023-1.062.05-2.149.135-3.185.377-1.006.245-2.163.666-2.599,1.69-.08.192-.128.397-.148.603-.021.087-.008,1.817-.011,1.958,0,.126.098.235.224.245.06.003,15.88,0,15.94,0,.056-.003.113-.016.165-.038.089-.037.166-.101.219-.181.044-.066.072-.143.08-.222.001-.016.003-.034.003-.051v-2.952Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-211" data-name="POLYLINE">
+      <path d="M826.56,462.297c-.002-.395.096-.794.309-1.129.111-.193.164-.414.188-.633.038-.37-.002-.747-.065-1.112-.014-.075-.033-.175-.049-.249l-3.005-14.136c-.016-.073-.039-.179-.058-.252-.078-.316-.176-.634-.303-.934-.248-.581-.637-1.193-1.277-1.378-.285-.079-.629-.062-.896.064-.203.098-.369.267-.463.472-.08.171-.108.366-.081.553.275,1.477,3.582,16.46,3.641,17.524.127.803.082,2.126.091,2.944.004.035.015.069.032.099.032.056.088.098.151.114.017.004.036.007.054.008.008.002,1.476-.001,1.484,0,.007,0,.015,0,.023,0,.039-.003.077-.015.11-.035.049-.029.087-.077.103-.131.005-.018.008-.036.009-.054.002-.009,0-1.722,0-1.733Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-212" data-name="POLYLINE">
+      <polygon points="851.092 464.27 850.618 478.041 849.388 478.041 849.388 464.27 851.092 464.27" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-213" data-name="POLYLINE">
+      <path d="M848.896,460.071c-.283.139-.553.324-.74.581-.137.188-.22.414-.238.645-.008.052-.011,2.471,0,2.553.012.085.048.166.101.233.066.083.159.144.262.171.038.03,1.02.011,1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-214" data-name="POLYLINE">
+      <polygon points="861.46 464.27 861.934 478.041 863.164 478.041 863.164 464.27 861.46 464.27" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-215" data-name="POLYLINE">
+      <path d="M863.656,460.071c.283.139.553.324.74.581.137.188.22.414.238.645.008.052.011,2.471,0,2.553-.012.085-.048.166-.101.233-.066.083-.159.144-.262.171-.038.03-1.02.011-1.092.016" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-216" data-name="POLYLINE">
+      <path d="M863.18,464.27c.131,0,.261-.056.349-.153.081-.087.127-.205.127-.323,0-.033.001-20.388,0-20.418-.008-.268-.132-.53-.334-.707-.112-.098-.246-.171-.39-.21-.056-.015-.113-.026-.171-.031-.029-.002-.059-.004-.088-.004-.046.005-12.794-.005-12.836,0-.252.01-.497.122-.67.305-.167.175-.266.414-.27.656.001.055-.003,20.39.001,20.445.005.065.024.129.055.187.043.081.11.149.191.193.059.032.125.052.192.057.013.042,13.824-.027,13.846.001Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-217" data-name="POLYLINE">
+      <polyline points="863.656 448.52 876.941 448.52 876.941 449.504 863.656 449.504" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-218" data-name="POLYLINE">
+      <polyline points="848.896 449.504 835.611 449.504 835.611 448.52 848.896 448.52" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-219" data-name="POLYLINE">
+      <polyline points="863.656 449.504 875.957 449.504 875.957 451.472 863.656 451.472" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-220" data-name="POLYLINE">
+      <polyline points="848.896 451.472 836.595 451.472 836.595 449.504 848.896 449.504" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-221" data-name="POLYLINE">
+      <line x1="850.686" y1="476.073" x2="861.867" y2="476.073" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-222" data-name="POLYLINE">
+      <line x1="861.867" y1="476.073" x2="850.686" y2="476.073" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-223" data-name="POLYLINE">
+      <line x1="869.667" y1="476.073" x2="863.164" y2="476.073" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-224" data-name="POLYLINE">
+      <line x1="849.388" y1="476.073" x2="842.886" y2="476.073" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-225" data-name="POLYLINE">
+      <path d="M841.59,476.166c-.23.107-.415.307-.503.545-.032.086-.053.177-.06.268-.001.014-.002.034-.003.047,0,.007,0,.024,0,.031v.984s30.505,0,30.505,0c-.002-.051.005-1.063-.005-1.079-.008-.086-.028-.171-.058-.252-.089-.238-.273-.438-.503-.545" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-226" data-name="POLYLINE">
+      <line x1="590.45" y1="276.805" x2="575.158" y2="275.448" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-227" data-name="POLYLINE">
+      <line x1="575.158" y1="260.706" x2="590.45" y2="259.349" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-228" data-name="POLYLINE">
+      <line x1="623.344" y1="285.52" x2="624.18" y2="294.949" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-229" data-name="POLYLINE">
+      <line x1="638.922" y1="294.949" x2="639.759" y2="285.52" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-230" data-name="POLYLINE">
+      <line x1="597.107" y1="280.197" x2="595.547" y2="289.765" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-231" data-name="POLYLINE">
+      <line x1="609.83" y1="293.414" x2="613.016" y2="284.369" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-232" data-name="POLYLINE">
+      <line x1="650.087" y1="251.785" x2="653.273" y2="242.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-233" data-name="POLYLINE">
+      <line x1="667.555" y1="246.389" x2="665.995" y2="255.957" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-234" data-name="POLYLINE">
+      <line x1="623.344" y1="250.634" x2="624.18" y2="241.205" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-235" data-name="POLYLINE">
+      <line x1="638.922" y1="241.205" x2="639.759" y2="250.634" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-236" data-name="POLYLINE">
+      <line x1="597.107" y1="255.957" x2="595.547" y2="246.389" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-237" data-name="POLYLINE">
+      <line x1="609.83" y1="242.74" x2="613.016" y2="251.785" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-238" data-name="POLYLINE">
+      <line x1="650.087" y1="284.369" x2="653.273" y2="293.414" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-239" data-name="POLYLINE">
+      <line x1="667.555" y1="289.765" x2="665.995" y2="280.197" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-240" data-name="POLYLINE">
+      <line x1="672.653" y1="259.349" x2="687.944" y2="260.706" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-241" data-name="POLYLINE">
+      <line x1="687.944" y1="275.448" x2="672.653" y2="276.805" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-242" data-name="POLYLINE">
+      <path d="M678.785,268.077c.008-2.401-1.343-4.568-3.001-6.213-1.854-1.842-4.115-3.241-6.439-4.411-3.461-1.725-7.205-2.971-10.942-3.948-8.74-2.238-17.843-3.117-26.852-3.141-8.664.02-17.417.842-25.847,2.887-4.345,1.078-8.691,2.485-12.664,4.57-2.308,1.229-4.549,2.701-6.304,4.66-3.167,3.551-3.246,7.476-.091,11.089,1.678,1.912,3.828,3.363,6.046,4.577,4.067,2.191,8.54,3.645,13.012,4.756,8.429,2.045,17.183,2.867,25.847,2.887,9.009-.024,18.112-.903,26.852-3.141,3.736-.977,7.481-2.222,10.942-3.948,2.323-1.171,4.585-2.569,6.439-4.411,1.658-1.644,3.01-3.812,3.001-6.213Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-243" data-name="POLYLINE">
+      <path d="M653.293,293.531c-.077-.29.042-.615.289-.786.062-.044.131-.078.203-.101.011-.023,12.895-3.283,12.919-3.302.244-.061.516.014.694.192.075.074.134.164.171.263.01.026.018.053.025.079l1.175,4.597c.033.129.03.267-.008.394-.058.198-.203.367-.389.455-.041.019-.084.035-.127.047-.087.007-12.851,3.296-12.927,3.301-.099.018-.202.016-.3-.007-.136-.031-.262-.102-.36-.201-.072-.073-.128-.161-.164-.256-.01-.026-.018-.053-.025-.079l-1.175-4.597Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-244" data-name="POLYLINE">
+      <path d="M624.171,295.067c-.003-.3.193-.585.475-.69.071-.027.146-.043.222-.047.017-.019,13.306.011,13.334-.001.252,0,.497.141.625.358.054.09.089.192.101.297.003.027.005.056.005.083v4.745c0,.133-.037.266-.105.38-.105.177-.288.305-.49.344-.044.009-.09.013-.135.014-.086-.014-13.267.012-13.342-.002-.101-.007-.2-.034-.289-.081-.124-.064-.229-.163-.299-.284-.051-.088-.084-.187-.096-.289-.003-.027-.005-.056-.005-.083v-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-245" data-name="POLYLINE">
+      <path d="M595.509,289.877c.072-.292.332-.519.631-.551.075-.009.152-.006.227.009.021-.015,12.889,3.305,12.919,3.3.244.063.446.26.517.502.03.101.038.208.024.312-.004.027-.009.055-.016.082l-1.175,4.597c-.033.129-.101.249-.196.342-.146.145-.354.225-.56.212-.045-.003-.09-.009-.134-.02-.08-.035-12.857-3.272-12.927-3.304-.096-.031-.185-.083-.26-.15-.104-.092-.181-.215-.219-.349-.028-.098-.035-.202-.021-.303.004-.027.009-.055.016-.082l1.175-4.597Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-246" data-name="POLYLINE">
+      <line x1="588.561" y1="471.841" x2="575.158" y2="470.651" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-247" data-name="POLYLINE">
+      <line x1="575.158" y1="455.91" x2="588.561" y2="454.72" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-248" data-name="POLYLINE">
+      <line x1="623.34" y1="442.931" x2="624.181" y2="433.456" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-249" data-name="POLYLINE">
+      <line x1="638.922" y1="433.456" x2="639.763" y2="442.931" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-250" data-name="POLYLINE">
+      <line x1="596.527" y1="477.146" x2="594.467" y2="486.698" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-251" data-name="POLYLINE">
+      <line x1="608.546" y1="491.068" x2="612.213" y2="482.134" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-252" data-name="POLYLINE">
+      <line x1="650.89" y1="444.427" x2="654.557" y2="435.494" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-253" data-name="POLYLINE">
+      <line x1="668.636" y1="439.863" x2="666.575" y2="449.416" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-254" data-name="POLYLINE">
+      <line x1="596.527" y1="449.416" x2="594.467" y2="439.863" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-255" data-name="POLYLINE">
+      <line x1="608.546" y1="435.494" x2="612.213" y2="444.427" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-256" data-name="POLYLINE">
+      <line x1="674.542" y1="454.72" x2="687.944" y2="455.91" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-257" data-name="POLYLINE">
+      <line x1="687.944" y1="470.652" x2="674.542" y2="471.841" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-258" data-name="POLYLINE">
+      <line x1="623.34" y1="483.631" x2="624.181" y2="493.105" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-259" data-name="POLYLINE">
+      <line x1="638.922" y1="493.105" x2="639.763" y2="483.631" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-260" data-name="POLYLINE">
+      <line x1="650.89" y1="482.134" x2="654.557" y2="491.068" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-261" data-name="POLYLINE">
+      <line x1="668.636" y1="486.698" x2="666.575" y2="477.146" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-262" data-name="POLYLINE">
+      <path d="M678.785,463.281c.013-2.755-1.315-5.338-3.104-7.368-1.785-2.036-4.009-3.663-6.335-5.027-3.419-1.99-7.163-3.455-10.942-4.606-16.149-4.815-36.484-4.873-52.699-.296-4.527,1.309-9.012,3.031-13.012,5.549-2.271,1.445-4.423,3.174-6.046,5.339-3.097,4.134-3.105,8.673,0,12.817,1.623,2.165,3.775,3.894,6.046,5.339,4,2.517,8.485,4.24,13.012,5.549,16.211,4.576,36.546,4.52,52.699-.296,3.778-1.151,7.523-2.615,10.942-4.606,2.327-1.364,4.551-2.991,6.335-5.027,1.789-2.03,3.118-4.613,3.104-7.368h0Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-263" data-name="POLYLINE">
+      <path d="M654.583,491.183c-.092-.286.011-.616.249-.799.06-.047.127-.085.198-.111.01-.023,12.711-3.933,12.734-3.954.241-.074.516-.012.703.157.078.07.142.157.184.254.011.025.021.052.029.078l1.407,4.532c.04.127.044.265.012.394-.048.2-.184.377-.366.474-.04.021-.082.039-.125.053-.086.012-12.667,3.944-12.743,3.953-.098.023-.201.026-.3.009-.137-.024-.267-.088-.369-.183-.075-.069-.136-.154-.177-.247-.011-.025-.021-.052-.029-.078l-1.407-4.532Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-264" data-name="POLYLINE">
+      <path d="M624.171,493.223c-.003-.3.193-.585.475-.69.071-.027.146-.043.222-.047.017-.019,13.306.011,13.334-.001.252,0,.497.141.625.358.054.09.089.192.101.297.003.027.005.056.005.083v4.745c0,.133-.037.266-.105.38-.105.177-.288.305-.49.344-.044.009-.09.013-.135.014-.086-.014-13.267.012-13.342-.002-.101-.007-.2-.034-.289-.081-.124-.064-.229-.163-.299-.284-.051-.088-.084-.187-.096-.289-.003-.027-.005-.056-.005-.083v-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-265" data-name="POLYLINE">
+      <path d="M594.423,486.808c.087-.288.358-.502.658-.518.076-.005.152.002.226.021.022-.013,12.705,3.955,12.735,3.951.24.076.433.282.49.527.025.102.028.21.008.313-.005.027-.012.055-.02.081l-1.407,4.532c-.039.127-.114.243-.213.332-.153.138-.365.206-.57.184-.045-.005-.09-.014-.133-.027-.078-.039-12.675-3.921-12.742-3.956-.094-.036-.181-.092-.252-.163-.099-.098-.17-.224-.201-.36-.023-.099-.025-.204-.006-.304.005-.027.012-.055.02-.081l1.407-4.532Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-266" data-name="POLYLINE">
+      <line x1="587.453" y1="672.851" x2="575.158" y2="671.759" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-267" data-name="POLYLINE">
+      <line x1="575.158" y1="657.018" x2="587.453" y2="655.927" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-268" data-name="POLYLINE">
+      <line x1="623.336" y1="687.646" x2="624.18" y2="697.165" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-269" data-name="POLYLINE">
+      <line x1="638.922" y1="697.165" x2="639.767" y2="687.646" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-270" data-name="POLYLINE">
+      <line x1="595.966" y1="679.918" x2="593.383" y2="689.415" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-271" data-name="POLYLINE">
+      <line x1="607.21" y1="694.526" x2="611.373" y2="685.742" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-272" data-name="POLYLINE">
+      <line x1="595.966" y1="648.859" x2="593.383" y2="639.362" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-273" data-name="POLYLINE">
+      <line x1="607.21" y1="634.251" x2="611.373" y2="643.035" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-274" data-name="POLYLINE">
+      <line x1="623.336" y1="641.132" x2="624.18" y2="631.612" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-275" data-name="POLYLINE">
+      <line x1="638.922" y1="631.612" x2="639.767" y2="641.132" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-276" data-name="POLYLINE">
+      <line x1="651.729" y1="643.035" x2="655.893" y2="634.251" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-277" data-name="POLYLINE">
+      <line x1="669.72" y1="639.362" x2="667.137" y2="648.859" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-278" data-name="POLYLINE">
+      <line x1="675.649" y1="655.927" x2="687.944" y2="657.018" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-279" data-name="POLYLINE">
+      <line x1="687.944" y1="671.759" x2="675.649" y2="672.851" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-280" data-name="POLYLINE">
+      <line x1="651.729" y1="685.742" x2="655.893" y2="694.526" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-281" data-name="POLYLINE">
+      <line x1="669.72" y1="689.415" x2="667.137" y2="679.918" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-282" data-name="POLYLINE">
+      <path d="M678.785,664.389c.012-2.951-1.159-5.8-2.899-8.147-1.768-2.397-4.074-4.369-6.54-6.018-3.084-2.052-6.478-3.641-9.952-4.912-16.286-5.868-37.234-6.009-53.689-.689-4.452,1.465-8.815,3.395-12.664,6.093-2.503,1.768-4.821,3.895-6.483,6.488-2.98,4.64-2.985,9.727,0,14.373,1.663,2.593,3.98,4.72,6.483,6.488,3.849,2.698,8.212,4.628,12.664,6.093,16.452,5.319,37.399,5.179,53.689-.689,3.474-1.271,6.868-2.861,9.952-4.912,2.466-1.65,4.773-3.621,6.54-6.018,1.74-2.347,2.912-5.196,2.899-8.147Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-283" data-name="POLYLINE">
+      <path d="M655.925,694.64c-.107-.281-.022-.616.206-.811.057-.05.122-.091.192-.121.009-.024,12.485-4.603,12.506-4.624.237-.086.515-.04.71.119.082.066.15.149.197.243.012.025.024.051.033.076l1.645,4.451c.046.125.058.262.033.393-.037.203-.164.386-.34.493-.038.023-.079.044-.122.06-.085.016-12.44,4.612-12.515,4.624-.097.029-.199.037-.299.025-.138-.017-.271-.074-.378-.163-.079-.065-.144-.146-.19-.237-.012-.025-.024-.051-.033-.076l-1.645-4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-284" data-name="POLYLINE">
+      <path d="M624.171,697.283c-.003-.3.193-.585.475-.69.071-.027.146-.043.222-.047.017-.019,13.306.011,13.334-.001.252,0,.497.141.625.358.054.09.089.192.101.297.003.027.005.056.005.083v4.745c0,.133-.037.266-.105.38-.105.177-.288.305-.49.344-.044.009-.09.013-.135.014-.086-.014-13.267.012-13.342-.002-.101-.007-.2-.034-.289-.081-.124-.064-.229-.163-.299-.284-.051-.088-.084-.187-.096-.289-.003-.027-.005-.056-.005-.083v-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-285" data-name="POLYLINE">
+      <path d="M593.333,689.523c.102-.283.384-.482.685-.482.076,0,.152.01.225.033.022-.012,12.477,4.624,12.507,4.622.236.088.417.305.462.552.02.103.017.211-.009.313-.007.027-.015.054-.024.08l-1.645,4.451c-.046.125-.127.237-.23.32-.16.129-.376.187-.579.153-.044-.007-.089-.018-.131-.034-.075-.043-12.449-4.588-12.514-4.627-.092-.041-.176-.102-.243-.176-.094-.103-.158-.233-.182-.37-.018-.1-.014-.205.01-.304.007-.027.015-.054.024-.08l1.645-4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-286" data-name="POLYLINE">
+      <line x1="350.096" y1="276.728" x2="335.672" y2="275.448" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-287" data-name="POLYLINE">
+      <line x1="335.672" y1="260.706" x2="350.097" y2="259.426" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-288" data-name="POLYLINE">
+      <line x1="377.947" y1="285.436" x2="378.791" y2="294.949" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-289" data-name="POLYLINE">
+      <line x1="393.532" y1="294.949" x2="394.377" y2="285.436" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-290" data-name="POLYLINE">
+      <line x1="354.642" y1="279.534" x2="352.635" y2="289.187" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-291" data-name="POLYLINE">
+      <line x1="366.746" y1="293.452" x2="370.365" y2="284.445" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-292" data-name="POLYLINE">
+      <line x1="401.958" y1="251.709" x2="405.577" y2="242.702" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-293" data-name="POLYLINE">
+      <line x1="419.688" y1="246.967" x2="417.681" y2="256.62" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-294" data-name="POLYLINE">
+      <line x1="377.947" y1="250.718" x2="378.791" y2="241.205" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-295" data-name="POLYLINE">
+      <line x1="393.532" y1="241.205" x2="394.377" y2="250.718" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-296" data-name="POLYLINE">
+      <line x1="354.642" y1="256.62" x2="352.635" y2="246.967" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-297" data-name="POLYLINE">
+      <line x1="366.746" y1="242.702" x2="370.365" y2="251.709" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-298" data-name="POLYLINE">
+      <line x1="401.958" y1="284.445" x2="405.577" y2="293.452" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-299" data-name="POLYLINE">
+      <line x1="419.688" y1="289.187" x2="417.681" y2="279.534" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-300" data-name="POLYLINE">
+      <line x1="422.227" y1="259.426" x2="436.65" y2="260.706" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-301" data-name="POLYLINE">
+      <line x1="436.65" y1="275.448" x2="422.226" y2="276.728" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-302" data-name="POLYLINE">
+      <path d="M427.491,268.077c.011-2.372-1.16-4.585-2.716-6.315-1.567-1.752-3.513-3.143-5.544-4.309-2.996-1.709-6.274-2.963-9.574-3.948-7.011-2.055-14.361-2.97-21.653-3.123-7.909-.135-15.903.621-23.566,2.627-4.151,1.112-8.276,2.596-11.973,4.813-2.06,1.25-4.024,2.751-5.516,4.66-2.777,3.556-2.834,7.488-.079,11.089,1.426,1.864,3.31,3.341,5.291,4.577,3.508,2.162,7.432,3.636,11.385,4.756,14.199,3.923,31.961,3.876,46.112-.253,3.3-.985,6.578-2.239,9.574-3.948,2.03-1.166,3.976-2.557,5.544-4.309,1.556-1.73,2.728-3.944,2.716-6.315Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-303" data-name="POLYLINE">
+      <path d="M405.602,293.568c-.089-.287.015-.616.255-.797.06-.046.127-.084.199-.11.01-.023,12.74-3.839,12.763-3.859.241-.072.516-.009.702.162.078.071.141.158.182.255.011.025.021.052.029.078l1.373,4.542c.039.127.042.265.009.394-.05.2-.187.375-.369.471-.04.021-.082.039-.125.052-.086.011-12.696,3.851-12.772,3.859-.098.023-.201.025-.3.006-.137-.025-.266-.09-.368-.185-.075-.069-.135-.155-.175-.249-.011-.025-.021-.052-.029-.078l-1.373-4.542Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-304" data-name="POLYLINE">
+      <path d="M378.781,295.067c-.003-.3.193-.585.475-.69.071-.027.146-.043.222-.047.017-.019,13.306.011,13.334-.001.252,0,.497.141.625.358.054.09.089.192.101.297.003.027.005.056.005.083v4.745c0,.133-.037.266-.105.38-.105.177-.288.305-.49.344-.044.009-.09.013-.135.014-.086-.014-13.267.012-13.342-.002-.101-.007-.2-.034-.289-.081-.124-.064-.229-.163-.299-.284-.051-.088-.084-.187-.096-.289-.003-.027-.005-.056-.005-.083v-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-305" data-name="POLYLINE">
+      <path d="M352.592,289.297c.084-.288.354-.504.654-.523.076-.005.152,0,.226.019.022-.014,12.734,3.861,12.764,3.857.241.074.435.279.494.524.026.102.029.21.01.313-.005.027-.011.055-.02.081l-1.373,4.542c-.038.127-.112.244-.211.333-.152.139-.364.209-.569.188-.045-.004-.09-.013-.133-.026-.078-.038-12.703-3.827-12.771-3.862-.094-.035-.181-.091-.254-.161-.1-.097-.172-.223-.204-.358-.024-.099-.027-.204-.008-.304.005-.027.011-.055.02-.081l1.373-4.542Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-306" data-name="POLYLINE">
+      <line x1="347.551" y1="672.814" x2="335.672" y2="671.759" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-307" data-name="POLYLINE">
+      <line x1="335.672" y1="657.018" x2="347.551" y2="655.964" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-308" data-name="POLYLINE">
+      <line x1="377.936" y1="641.244" x2="378.791" y2="631.612" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-309" data-name="POLYLINE">
+      <line x1="393.532" y1="631.612" x2="394.387" y2="641.244" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-310" data-name="POLYLINE">
+      <line x1="377.936" y1="687.533" x2="378.791" y2="697.165" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-311" data-name="POLYLINE">
+      <line x1="393.532" y1="697.165" x2="394.387" y2="687.533" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-312" data-name="POLYLINE">
+      <line x1="353.627" y1="678.953" x2="350.393" y2="688.444" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-313" data-name="POLYLINE">
+      <line x1="363.871" y1="694.414" x2="368.649" y2="685.781" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-314" data-name="POLYLINE">
+      <line x1="403.673" y1="642.997" x2="408.452" y2="634.363" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-315" data-name="POLYLINE">
+      <line x1="421.93" y1="640.333" x2="418.696" y2="649.824" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-316" data-name="POLYLINE">
+      <line x1="353.627" y1="649.824" x2="350.393" y2="640.333" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-317" data-name="POLYLINE">
+      <line x1="363.871" y1="634.363" x2="368.649" y2="642.997" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-318" data-name="POLYLINE">
+      <line x1="424.772" y1="655.964" x2="436.65" y2="657.018" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-319" data-name="POLYLINE">
+      <line x1="436.65" y1="671.759" x2="424.772" y2="672.814" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-320" data-name="POLYLINE">
+      <line x1="403.673" y1="685.781" x2="408.452" y2="694.414" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-321" data-name="POLYLINE">
+      <line x1="421.93" y1="688.444" x2="418.696" y2="678.953" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-322" data-name="POLYLINE">
+      <path d="M427.491,664.389c.01-2.895-.972-5.732-2.537-8.147-1.58-2.452-3.711-4.527-6.045-6.261-2.826-2.093-5.988-3.73-9.252-5.022-14.073-5.495-31.949-5.572-46.112-.338-3.953,1.482-7.778,3.444-11.081,6.093-2.284,1.84-4.333,4.043-5.749,6.626-2.477,4.497-2.514,9.435-.074,13.96,1.417,2.642,3.499,4.891,5.823,6.763,3.18,2.55,6.846,4.464,10.639,5.925,14.234,5.411,32.362,5.373,46.553-.171,3.389-1.341,6.668-3.054,9.574-5.264,2.205-1.683,4.216-3.68,5.723-6.018,1.565-2.415,2.547-5.252,2.537-8.147Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-323" data-name="POLYLINE">
+      <path d="M408.491,694.526c-.124-.274-.061-.613.155-.823.054-.053.116-.099.184-.133.007-.024,12.171-5.378,12.191-5.401.231-.101.511-.072.716.074.086.06.159.14.212.231.014.024.027.049.038.074l1.922,4.339c.054.122.074.258.058.39-.025.204-.139.396-.309.513-.037.026-.077.049-.118.067-.084.022-12.126,5.384-12.2,5.402-.095.035-.197.049-.297.043-.139-.008-.275-.057-.388-.139-.083-.06-.153-.137-.204-.225-.014-.024-.027-.049-.038-.074l-1.922-4.339Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-324" data-name="POLYLINE">
+      <path d="M378.781,697.283c-.003-.3.193-.585.475-.69.071-.027.146-.043.222-.047.017-.019,13.306.011,13.334-.001.252,0,.497.141.625.358.054.09.089.192.101.297.003.027.005.056.005.083v4.745c0,.133-.037.266-.105.38-.105.177-.288.305-.49.344-.044.009-.09.013-.135.014-.086-.014-13.267.012-13.342-.002-.101-.007-.2-.034-.289-.081-.124-.064-.229-.163-.299-.284-.051-.088-.084-.187-.096-.289-.003-.027-.005-.056-.005-.083v-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-325" data-name="POLYLINE">
+      <path d="M350.336,688.548c.119-.276.413-.457.713-.438.076.004.151.02.222.047.023-.011,12.161,5.399,12.192,5.399.23.103.397.33.426.58.013.104.003.212-.028.312-.008.026-.018.053-.029.078l-1.922,4.339c-.054.122-.141.228-.25.305-.168.119-.387.163-.587.116-.044-.01-.087-.024-.129-.042-.073-.048-12.136-5.362-12.198-5.405-.089-.047-.169-.112-.232-.191-.087-.108-.143-.242-.158-.38-.011-.101-.001-.205.029-.303.008-.026.018-.053.029-.078l1.922-4.339Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-326" data-name="POLYLINE">
+      <line x1="348.498" y1="471.79" x2="335.672" y2="470.651" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-327" data-name="POLYLINE">
+      <line x1="335.672" y1="455.91" x2="348.498" y2="454.771" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-328" data-name="POLYLINE">
+      <line x1="377.941" y1="483.533" x2="378.791" y2="493.105" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-329" data-name="POLYLINE">
+      <line x1="393.532" y1="493.105" x2="394.382" y2="483.533" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-330" data-name="POLYLINE">
+      <line x1="354.115" y1="476.33" x2="351.503" y2="485.933" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-331" data-name="POLYLINE">
+      <line x1="365.33" y1="491.044" x2="369.523" y2="482.197" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-332" data-name="POLYLINE">
+      <line x1="402.8" y1="444.364" x2="406.993" y2="435.517" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-333" data-name="POLYLINE">
+      <line x1="420.82" y1="440.628" x2="418.208" y2="450.231" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-334" data-name="POLYLINE">
+      <line x1="377.941" y1="443.029" x2="378.791" y2="433.456" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-335" data-name="POLYLINE">
+      <line x1="393.532" y1="433.456" x2="394.382" y2="443.029" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-336" data-name="POLYLINE">
+      <line x1="354.115" y1="450.231" x2="351.503" y2="440.628" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-337" data-name="POLYLINE">
+      <line x1="365.33" y1="435.517" x2="369.523" y2="444.364" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-338" data-name="POLYLINE">
+      <line x1="423.825" y1="454.772" x2="436.65" y2="455.91" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-339" data-name="POLYLINE">
+      <line x1="436.65" y1="470.652" x2="423.825" y2="471.79" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-340" data-name="POLYLINE">
+      <line x1="402.8" y1="482.197" x2="406.993" y2="491.044" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-341" data-name="POLYLINE">
+      <line x1="420.82" y1="485.933" x2="418.208" y2="476.33" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-342" data-name="POLYLINE">
+      <path d="M427.491,463.281c.01-2.531-.974-4.981-2.45-7.009-1.481-2.048-3.418-3.746-5.494-5.172-2.782-1.9-5.866-3.356-9.024-4.512-14.262-5.135-32.568-5.258-46.978-.603-3.895,1.282-7.713,2.97-11.081,5.331-2.19,1.547-4.218,3.408-5.673,5.677-2.575,4.008-2.619,8.414-.076,12.456,1.391,2.217,3.336,4.05,5.444,5.58,3.44,2.476,7.372,4.227,11.385,5.549,14.407,4.654,32.713,4.533,46.978-.603,3.158-1.156,6.242-2.612,9.024-4.512,2.076-1.426,4.012-3.124,5.494-5.172,1.475-2.028,2.461-4.478,2.45-7.009h0Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-343" data-name="POLYLINE">
+      <path d="M407.025,491.158c-.107-.281-.022-.616.206-.811.057-.05.122-.091.192-.121.009-.024,12.485-4.603,12.506-4.624.237-.086.515-.04.71.119.082.066.15.149.197.243.012.025.024.051.033.076l1.645,4.451c.046.125.058.262.033.393-.037.203-.164.386-.34.493-.038.023-.079.044-.122.06-.085.016-12.44,4.612-12.515,4.624-.097.029-.199.037-.299.025-.138-.017-.271-.074-.378-.163-.079-.065-.144-.146-.19-.237-.012-.025-.024-.051-.033-.076l-1.645-4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-344" data-name="POLYLINE">
+      <path d="M378.781,493.223c-.003-.3.193-.585.475-.69.071-.027.146-.043.222-.047.017-.019,13.306.011,13.334-.001.252,0,.497.141.625.358.054.09.089.192.101.297.003.027.005.056.005.083v4.745c0,.133-.037.266-.105.38-.105.177-.288.305-.49.344-.044.009-.09.013-.135.014-.086-.014-13.267.012-13.342-.002-.101-.007-.2-.034-.289-.081-.124-.064-.229-.163-.299-.284-.051-.088-.084-.187-.096-.289-.003-.027-.005-.056-.005-.083v-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-345" data-name="POLYLINE">
+      <path d="M351.453,486.041c.102-.283.384-.482.685-.482.076,0,.152.01.225.033.022-.012,12.477,4.624,12.507,4.622.236.088.417.305.462.552.02.103.017.211-.009.313-.007.027-.015.054-.024.08l-1.645,4.451c-.046.125-.127.237-.23.32-.16.129-.376.187-.579.153-.044-.007-.089-.018-.131-.034-.075-.043-12.449-4.588-12.514-4.627-.092-.041-.176-.102-.243-.176-.094-.103-.158-.233-.182-.37-.018-.1-.014-.205.01-.304.007-.027.015-.054.024-.08l1.645-4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-346" data-name="POLYLINE">
+      <path d="M688.063,657.008c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-347" data-name="POLYLINE">
+      <path d="M655.925,634.137c-.107.281-.022.616.206.811.057.05.122.091.192.121.009.024,12.485,4.603,12.506,4.624.237.086.515.04.71-.119.082-.066.15-.149.197-.243.012-.025.024-.051.033-.076l1.645-4.451c.046-.125.058-.262.033-.393-.037-.203-.164-.386-.34-.493-.038-.023-.079-.044-.122-.06-.085-.016-12.44-4.612-12.515-4.624-.097-.029-.199-.037-.299-.025-.138.017-.271.074-.378.163-.079.065-.144.146-.19.237-.012.025-.024.051-.033.076l-1.645,4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-348" data-name="POLYLINE">
+      <path d="M624.171,631.494c-.003.3.193.585.475.69.071.027.146.043.222.047.017.019,13.306-.011,13.334.001.252,0,.497-.141.625-.358.054-.09.089-.192.101-.297.003-.027.005-.056.005-.083v-4.745c0-.133-.037-.266-.105-.38-.105-.177-.288-.305-.49-.344-.044-.009-.09-.013-.135-.014-.086.014-13.267-.012-13.342.002-.101.007-.2.034-.289.081-.124.064-.229.163-.299.284-.051.088-.084.187-.096.289-.003.027-.005.056-.005.083v4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-349" data-name="POLYLINE">
+      <path d="M593.333,639.255c.102.283.384.482.685.482.076,0,.152-.01.225-.033.022.012,12.477-4.624,12.507-4.622.236-.088.417-.305.462-.552.02-.103.017-.211-.009-.313-.007-.027-.015-.054-.024-.08l-1.645-4.451c-.046-.125-.127-.237-.23-.32-.16-.129-.376-.187-.579-.153-.044.007-.089.018-.131.034-.075.043-12.449,4.588-12.514,4.627-.092.041-.176.102-.243.176-.094.103-.158.233-.182.37-.018.1-.014.205.01.304.007.027.015.054.024.08l1.645,4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-350" data-name="POLYLINE">
+      <path d="M436.769,657.008c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-351" data-name="POLYLINE">
+      <path d="M408.491,634.251c-.124.274-.061.613.155.823.054.053.116.099.184.133.007.024,12.171,5.378,12.191,5.401.231.101.511.072.716-.074.086-.06.159-.14.212-.231.014-.024.027-.049.038-.074l1.922-4.339c.054-.122.074-.258.058-.39-.025-.204-.139-.396-.309-.513-.037-.026-.077-.049-.118-.067-.084-.022-12.126-5.384-12.2-5.402-.095-.035-.197-.049-.297-.043-.139.008-.275.057-.388.139-.083.06-.153.137-.204.225-.014.024-.027.049-.038.074l-1.922,4.339Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-352" data-name="POLYLINE">
+      <path d="M378.781,631.494c-.003.3.193.585.475.69.071.027.146.043.222.047.017.019,13.306-.011,13.334.001.252,0,.497-.141.625-.358.054-.09.089-.192.101-.297.003-.027.005-.056.005-.083v-4.745c0-.133-.037-.266-.105-.38-.105-.177-.288-.305-.49-.344-.044-.009-.09-.013-.135-.014-.086.014-13.267-.012-13.342.002-.101.007-.2.034-.289.081-.124.064-.229.163-.299.284-.051.088-.084.187-.096.289-.003.027-.005.056-.005.083v4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-353" data-name="POLYLINE">
+      <path d="M350.336,640.229c.119.276.413.457.713.438.076-.004.151-.02.222-.047.023.011,12.161-5.399,12.192-5.399.23-.103.397-.33.426-.58.013-.104.003-.212-.028-.312-.008-.026-.018-.053-.029-.078l-1.922-4.339c-.054-.122-.141-.228-.25-.305-.168-.119-.387-.163-.587-.116-.044.01-.087.024-.129.042-.073.048-12.136,5.362-12.198,5.405-.089.047-.169.112-.232.191-.087.108-.143.242-.158.38-.011.101-.001.205.029.303.008.026.018.053.029.078l1.922,4.339Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-354" data-name="POLYLINE">
+      <path d="M688.063,455.9c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-355" data-name="POLYLINE">
+      <path d="M654.583,435.378c-.092.286.011.616.249.799.06.047.127.085.198.111.01.023,12.711,3.933,12.734,3.954.241.074.516.012.703-.157.078-.07.142-.157.184-.254.011-.025.021-.052.029-.078l1.407-4.532c.04-.127.044-.265.012-.394-.048-.2-.184-.377-.366-.474-.04-.021-.082-.039-.125-.053-.086-.012-12.667-3.944-12.743-3.953-.098-.023-.201-.026-.3-.009-.137.024-.267.088-.369.183-.075.069-.136.154-.177.247-.011.025-.021.052-.029.078l-1.407,4.532Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-356" data-name="POLYLINE">
+      <path d="M624.171,433.338c-.003.3.193.585.475.69.071.027.146.043.222.047.017.019,13.306-.011,13.334.001.252,0,.497-.141.625-.358.054-.09.089-.192.101-.297.003-.027.005-.056.005-.083v-4.745c0-.133-.037-.266-.105-.38-.105-.177-.288-.305-.49-.344-.044-.009-.09-.013-.135-.014-.086.014-13.267-.012-13.342.002-.101.007-.2.034-.289.081-.124.064-.229.163-.299.284-.051.088-.084.187-.096.289-.003.027-.005.056-.005.083v4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-357" data-name="POLYLINE">
+      <path d="M594.423,439.753c.087.288.358.502.658.518.076.005.152-.002.226-.021.022.013,12.705-3.955,12.735-3.951.24-.076.433-.282.49-.527.025-.102.028-.21.008-.313-.005-.027-.012-.055-.02-.081l-1.407-4.532c-.039-.127-.114-.243-.213-.332-.153-.138-.365-.206-.57-.184-.045.005-.09.014-.133.027-.078.039-12.675,3.921-12.742,3.956-.094.036-.181.092-.252.163-.099.098-.17.224-.201.36-.023.099-.025.204-.006.304.005.027.012.055.02.081l1.407,4.532Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-358" data-name="POLYLINE">
+      <path d="M436.769,455.9c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-359" data-name="POLYLINE">
+      <path d="M407.025,435.403c-.107.281-.022.616.206.811.057.05.122.091.192.121.009.024,12.485,4.603,12.506,4.624.237.086.515.04.71-.119.082-.066.15-.149.197-.243.012-.025.024-.051.033-.076l1.645-4.451c.046-.125.058-.262.033-.393-.037-.203-.164-.386-.34-.493-.038-.023-.079-.044-.122-.06-.085-.016-12.44-4.612-12.515-4.624-.097-.029-.199-.037-.299-.025-.138.017-.271.074-.378.163-.079.065-.144.146-.19.237-.012.025-.024.051-.033.076l-1.645,4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-360" data-name="POLYLINE">
+      <path d="M378.781,433.338c-.003.3.193.585.475.69.071.027.146.043.222.047.017.019,13.306-.011,13.334.001.252,0,.497-.141.625-.358.054-.09.089-.192.101-.297.003-.027.005-.056.005-.083v-4.745c0-.133-.037-.266-.105-.38-.105-.177-.288-.305-.49-.344-.044-.009-.09-.013-.135-.014-.086.014-13.267-.012-13.342.002-.101.007-.2.034-.289.081-.124.064-.229.163-.299.284-.051.088-.084.187-.096.289-.003.027-.005.056-.005.083v4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-361" data-name="POLYLINE">
+      <path d="M351.453,440.521c.102.283.384.482.685.482.076,0,.152-.01.225-.033.022.012,12.477-4.624,12.507-4.622.236-.088.417-.305.462-.552.02-.103.017-.211-.009-.313-.007-.027-.015-.054-.024-.08l-1.645-4.451c-.046-.125-.127-.237-.23-.32-.16-.129-.376-.187-.579-.153-.044.007-.089.018-.131.034-.075.043-12.449,4.588-12.514,4.627-.092.041-.176.102-.243.176-.094.103-.158.233-.182.37-.018.1-.014.205.01.304.007.027.015.054.024.08l1.645,4.451Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-362" data-name="POLYLINE">
+      <path d="M688.063,260.697c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-363" data-name="POLYLINE">
+      <path d="M653.293,242.623c-.077.29.042.615.289.786.062.044.131.078.203.101.011.023,12.895,3.283,12.919,3.302.244.061.516-.014.694-.192.075-.074.134-.164.171-.263.01-.026.018-.053.025-.079l1.175-4.597c.033-.129.03-.267-.008-.394-.058-.198-.203-.367-.389-.455-.041-.019-.084-.035-.127-.047-.087-.007-12.851-3.296-12.927-3.301-.099-.018-.202-.016-.3.007-.136.031-.262.102-.36.201-.072.073-.128.161-.164.256-.01.026-.018.053-.025.079l-1.175,4.597Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-364" data-name="POLYLINE">
+      <path d="M624.171,241.087c-.003.3.193.585.475.69.071.027.146.043.222.047.017.019,13.306-.011,13.334.001.252,0,.497-.141.625-.358.054-.09.089-.192.101-.297.003-.027.005-.056.005-.083v-4.745c0-.133-.037-.266-.105-.38-.105-.177-.288-.305-.49-.344-.044-.009-.09-.013-.135-.014-.086.014-13.267-.012-13.342.002-.101.007-.2.034-.289.081-.124.064-.229.163-.299.284-.051.088-.084.187-.096.289-.003.027-.005.056-.005.083v4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-365" data-name="POLYLINE">
+      <path d="M595.509,246.277c.072.292.332.519.631.551.075.009.152.006.227-.009.021.015,12.889-3.305,12.919-3.3.244-.063.446-.26.517-.502.03-.101.038-.208.024-.312-.004-.027-.009-.055-.016-.082l-1.175-4.597c-.033-.129-.101-.249-.196-.342-.146-.145-.354-.225-.56-.212-.045.003-.09.009-.134.02-.08.035-12.857,3.272-12.927,3.304-.096.031-.185.083-.26.15-.104.092-.181.215-.219.349-.028.098-.035.202-.021.303.004.027.009.055.016.082l1.175,4.597Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-366" data-name="POLYLINE">
+      <path d="M436.769,260.697c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-367" data-name="POLYLINE">
+      <path d="M405.602,242.586c-.089.287.015.616.255.797.06.046.127.084.199.11.01.023,12.74,3.839,12.763,3.859.241.072.516.009.702-.162.078-.071.141-.158.182-.255.011-.025.021-.052.029-.078l1.373-4.542c.039-.127.042-.265.009-.394-.05-.2-.187-.375-.369-.471-.04-.021-.082-.039-.125-.052-.086-.011-12.696-3.851-12.772-3.859-.098-.023-.201-.025-.3-.006-.137.025-.266.09-.368.185-.075.069-.135.155-.175.249-.011.025-.021.052-.029.078l-1.373,4.542Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-368" data-name="POLYLINE">
+      <path d="M378.781,241.087c-.003.3.193.585.475.69.071.027.146.043.222.047.017.019,13.306-.011,13.334.001.252,0,.497-.141.625-.358.054-.09.089-.192.101-.297.003-.027.005-.056.005-.083v-4.745c0-.133-.037-.266-.105-.38-.105-.177-.288-.305-.49-.344-.044-.009-.09-.013-.135-.014-.086.014-13.267-.012-13.342.002-.101.007-.2.034-.289.081-.124.064-.229.163-.299.284-.051.088-.084.187-.096.289-.003.027-.005.056-.005.083v4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-369" data-name="POLYLINE">
+      <path d="M352.592,246.857c.084.288.354.504.654.523.076.005.152,0,.226-.019.022.014,12.734-3.861,12.764-3.857.241-.074.435-.279.494-.524.026-.102.029-.21.01-.313-.005-.027-.011-.055-.02-.081l-1.373-4.542c-.038-.127-.112-.244-.211-.333-.152-.139-.364-.209-.569-.188-.045.004-.09.013-.133.026-.078.038-12.703,3.827-12.771,3.862-.094.035-.181.091-.254.161-.1.097-.172.223-.204.358-.024.099-.027.204-.008.304.005.027.011.055.02.081l1.373,4.542Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-370" data-name="POLYLINE">
+      <path d="M575.04,275.457c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-371" data-name="POLYLINE">
+      <path d="M575.04,671.769c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-372" data-name="POLYLINE">
+      <path d="M335.554,671.769c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-373" data-name="POLYLINE">
+      <path d="M335.554,470.661c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-374" data-name="POLYLINE">
+      <path d="M575.04,470.661c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-375" data-name="POLYLINE">
+      <path d="M335.554,275.457c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-376" data-name="POLYLINE">
+      <line x1="159.879" y1="641.278" x2="163.736" y2="632.137" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-377" data-name="POLYLINE">
+      <line x1="177.772" y1="636.644" x2="175.564" y2="646.417" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-378" data-name="POLYLINE">
+      <line x1="129.597" y1="646.417" x2="127.389" y2="636.644" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-379" data-name="POLYLINE">
+      <line x1="141.424" y1="632.137" x2="145.281" y2="641.278" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-380" data-name="POLYLINE">
+      <line x1="119.465" y1="672.777" x2="107.995" y2="671.759" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-381" data-name="POLYLINE">
+      <line x1="107.995" y1="657.018" x2="119.465" y2="656" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-382" data-name="POLYLINE">
+      <line x1="129.597" y1="682.36" x2="127.389" y2="692.133" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-383" data-name="POLYLINE">
+      <line x1="141.424" y1="696.64" x2="145.281" y2="687.499" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-384" data-name="POLYLINE">
+      <line x1="159.879" y1="687.499" x2="163.736" y2="696.64" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-385" data-name="POLYLINE">
+      <line x1="177.772" y1="692.133" x2="175.564" y2="682.36" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-386" data-name="POLYLINE">
+      <line x1="185.695" y1="656" x2="197.165" y2="657.018" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-387" data-name="POLYLINE">
+      <line x1="197.165" y1="671.759" x2="185.695" y2="672.777" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-388" data-name="POLYLINE">
+      <path d="M188.006,664.389c.004-2.532-.632-5.056-1.747-7.324-1.119-2.287-2.706-4.338-4.535-6.102-2.71-2.61-5.956-4.637-9.381-6.174-11.392-5.057-25.567-5.311-37.219-.951-5.848,2.221-11.455,5.764-14.973,11.043-3.99,6.016-3.992,12.997,0,19.015,3.518,5.28,9.125,8.822,14.973,11.043,11.651,4.36,25.826,4.106,37.219-.951,3.424-1.537,6.67-3.564,9.381-6.174,1.901-1.834,3.542-3.98,4.667-6.377,1.033-2.195,1.619-4.619,1.615-7.049Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-389" data-name="POLYLINE">
+      <path d="M163.763,696.756c-.094-.285.005-.616.241-.802.059-.047.126-.086.197-.113.01-.024,12.672-4.057,12.695-4.078.24-.076.516-.017.704.15.079.069.143.156.186.252.011.025.022.052.03.078l1.451,4.518c.041.127.046.264.016.394-.046.201-.181.379-.361.477-.039.022-.081.04-.124.054-.086.013-12.628,4.068-12.704,4.078-.098.024-.201.028-.3.012-.137-.023-.268-.086-.371-.179-.076-.068-.138-.152-.179-.245-.011-.025-.022-.052-.03-.078l-1.451-4.518Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-390" data-name="POLYLINE">
+      <path d="M127.344,692.243c.089-.287.363-.498.663-.511.076-.004.152.004.226.023.022-.013,12.665,4.079,12.696,4.076.239.078.43.286.485.532.024.102.026.21.005.313-.006.027-.012.054-.021.081l-1.451,4.518c-.041.127-.116.242-.216.33-.154.136-.367.203-.572.178-.045-.005-.089-.015-.132-.028-.077-.04-12.636-4.045-12.703-4.081-.094-.037-.18-.094-.251-.165-.098-.099-.168-.226-.198-.361-.022-.1-.023-.204-.003-.304.006-.027.012-.054.021-.081,0,0,1.451-4.518,1.451-4.518Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-391" data-name="POLYLINE">
+      <path d="M197.283,657.008c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-392" data-name="POLYLINE">
+      <path d="M163.763,632.022c-.094.285.005.616.241.802.059.047.126.086.197.113.01.024,12.672,4.057,12.695,4.078.24.076.516.017.704-.15.079-.069.143-.156.186-.252.011-.025.022-.052.03-.078l1.451-4.518c.041-.127.046-.264.016-.394-.046-.201-.181-.379-.361-.477-.039-.022-.081-.04-.124-.054-.086-.013-12.628-4.068-12.704-4.078-.098-.024-.201-.028-.3-.012-.137.023-.268.086-.371.179-.076.068-.138.152-.179.245-.011.025-.022.052-.03.078l-1.451,4.518Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-393" data-name="POLYLINE">
+      <path d="M127.344,636.535c.089.287.363.498.663.511.076.004.152-.004.226-.023.022.013,12.665-4.079,12.696-4.076.239-.078.43-.286.485-.532.024-.102.026-.21.005-.313-.006-.027-.012-.054-.021-.081l-1.451-4.518c-.041-.127-.116-.242-.216-.33-.154-.136-.367-.203-.572-.178-.045.005-.089.015-.132.028-.077.04-12.636,4.045-12.703,4.081-.094.037-.18.094-.251.165-.098.099-.168.226-.198.361-.022.1-.023.204-.003.304.006.027.012.054.021.081,0,0,1.451,4.518,1.451,4.518Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-394" data-name="POLYLINE">
+      <path d="M107.877,671.769c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-395" data-name="POLYLINE">
+      <line x1="120.259" y1="471.74" x2="107.995" y2="470.652" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-396" data-name="POLYLINE">
+      <line x1="107.995" y1="455.91" x2="120.259" y2="454.822" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-397" data-name="POLYLINE">
+      <line x1="130.024" y1="479.215" x2="128.313" y2="489.003" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-398" data-name="POLYLINE">
+      <line x1="142.553" y1="492.816" x2="145.926" y2="483.578" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-399" data-name="POLYLINE">
+      <line x1="159.234" y1="442.984" x2="162.607" y2="433.746" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-400" data-name="POLYLINE">
+      <line x1="176.847" y1="437.558" x2="175.136" y2="447.346" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-401" data-name="POLYLINE">
+      <line x1="130.024" y1="447.346" x2="128.313" y2="437.559" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-402" data-name="POLYLINE">
+      <line x1="142.553" y1="433.746" x2="145.926" y2="442.984" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-403" data-name="POLYLINE">
+      <line x1="159.234" y1="483.578" x2="162.607" y2="492.816" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-404" data-name="POLYLINE">
+      <line x1="176.847" y1="489.003" x2="175.136" y2="479.215" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-405" data-name="POLYLINE">
+      <line x1="184.901" y1="454.821" x2="197.165" y2="455.91" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-406" data-name="POLYLINE">
+      <line x1="197.165" y1="470.651" x2="184.902" y2="471.74" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-407" data-name="POLYLINE">
+      <path d="M162.629,492.932c-.08-.29.035-.615.28-.789.061-.044.13-.079.202-.103.011-.023,12.856-3.43,12.88-3.45.244-.064.516.008.696.184.076.073.135.163.174.261.01.026.019.053.026.079l1.227,4.584c.035.128.033.266-.003.394-.056.198-.199.369-.384.459-.04.02-.083.036-.127.048-.086.008-12.813,3.443-12.889,3.449-.099.02-.202.018-.3-.003-.136-.03-.263-.099-.362-.197-.072-.072-.13-.159-.167-.254-.01-.026-.019-.053-.026-.079l-1.227-4.584Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-408" data-name="POLYLINE">
+      <path d="M128.273,489.114c.075-.291.338-.515.637-.543.075-.008.152-.004.227.012.021-.014,12.85,3.453,12.88,3.448.243.066.443.265.511.508.029.101.036.209.02.313-.004.027-.01.055-.017.082l-1.227,4.584c-.034.129-.104.247-.2.34-.147.144-.357.22-.562.206-.045-.003-.09-.01-.134-.021-.079-.036-12.819-3.42-12.888-3.452-.095-.032-.184-.085-.259-.153-.103-.094-.179-.217-.215-.351-.027-.098-.033-.203-.018-.304.004-.027.01-.055.017-.082l1.227-4.584Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-409" data-name="POLYLINE">
+      <path d="M188.006,463.281c.008-2.526-.828-5.007-2.175-7.129-1.349-2.137-3.174-3.956-5.181-5.478-2.524-1.908-5.367-3.388-8.306-4.543-12.102-4.693-27.423-4.694-39.527,0-3.259,1.282-6.403,2.96-9.119,5.185-2,1.644-3.782,3.616-4.992,5.918-2.064,3.906-2.065,8.187,0,12.095,1.209,2.302,2.992,4.273,4.992,5.918,2.717,2.225,5.86,3.903,9.119,5.185,12.102,4.693,27.423,4.694,39.527,0,2.939-1.155,5.782-2.635,8.306-4.543,2.007-1.522,3.832-3.341,5.181-5.478,1.346-2.122,2.183-4.602,2.175-7.129Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-410" data-name="POLYLINE">
+      <path d="M197.283,455.9c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-411" data-name="POLYLINE">
+      <path d="M162.629,433.629c-.08.29.035.615.28.789.061.044.13.079.202.103.011.023,12.856,3.43,12.88,3.45.244.064.516-.008.696-.184.076-.073.135-.163.174-.261.01-.026.019-.053.026-.079l1.227-4.584c.035-.128.033-.266-.003-.394-.056-.198-.199-.369-.384-.459-.04-.02-.083-.036-.127-.048-.086-.008-12.813-3.443-12.889-3.449-.099-.02-.202-.018-.3.003-.136.03-.263.099-.362.197-.072.072-.13.159-.167.254-.01.026-.019.053-.026.079l-1.227,4.584Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-412" data-name="POLYLINE">
+      <path d="M128.273,437.447c.075.291.338.515.637.543.075.008.152.004.227-.012.021.014,12.85-3.453,12.88-3.448.243-.066.443-.265.511-.508.029-.101.036-.209.02-.313-.004-.027-.01-.055-.017-.082l-1.227-4.584c-.034-.129-.104-.247-.2-.34-.147-.144-.357-.22-.562-.206-.045.003-.09.01-.134.021-.079.036-12.819,3.42-12.888,3.452-.095.032-.184.085-.259.153-.103.094-.179.217-.215.351-.027.098-.033.203-.018.304.004.027.01.055.017.082l1.227,4.584Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-413" data-name="POLYLINE">
+      <path d="M107.877,470.661c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-414" data-name="POLYLINE">
+      <line x1="121.585" y1="276.654" x2="107.995" y2="275.448" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-415" data-name="POLYLINE">
+      <line x1="107.995" y1="260.706" x2="121.585" y2="259.5" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-416" data-name="POLYLINE">
+      <line x1="130.471" y1="281.916" x2="129.227" y2="291.678" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-417" data-name="POLYLINE">
+      <line x1="143.628" y1="294.828" x2="146.543" y2="285.53" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-418" data-name="POLYLINE">
+      <line x1="158.618" y1="285.53" x2="161.533" y2="294.828" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-419" data-name="POLYLINE">
+      <line x1="175.934" y1="291.678" x2="174.689" y2="281.916" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-420" data-name="POLYLINE">
+      <line x1="158.618" y1="250.623" x2="161.533" y2="241.326" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-421" data-name="POLYLINE">
+      <line x1="175.934" y1="244.475" x2="174.689" y2="254.237" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-422" data-name="POLYLINE">
+      <line x1="130.471" y1="254.237" x2="129.227" y2="244.475" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-423" data-name="POLYLINE">
+      <line x1="143.628" y1="241.326" x2="146.543" y2="250.623" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-424" data-name="POLYLINE">
+      <line x1="183.575" y1="259.5" x2="197.165" y2="260.706" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-425" data-name="POLYLINE">
+      <line x1="197.165" y1="275.448" x2="183.575" y2="276.654" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-426" data-name="POLYLINE">
+      <path d="M161.548,294.945c-.067-.293.063-.613.317-.775.063-.042.134-.073.207-.094.012-.022,13.001-2.832,13.026-2.85.246-.053.515.032.687.216.072.076.128.169.162.268.009.026.017.053.022.08l1.014,4.636c.029.13.021.268-.022.394-.065.195-.216.36-.405.441-.041.018-.085.032-.129.042-.087.004-12.958,2.847-13.035,2.849-.1.015-.203.009-.3-.017-.134-.036-.258-.111-.352-.213-.069-.075-.122-.165-.155-.261-.009-.026-.017-.053-.022-.08l-1.014-4.636Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-427" data-name="POLYLINE">
+      <path d="M129.192,291.792c.062-.294.313-.53.611-.572.075-.011.152-.011.227.001.021-.015,12.996,2.854,13.026,2.848.246.055.455.244.534.483.034.1.046.207.035.311-.003.027-.007.055-.013.082l-1.014,4.636c-.028.13-.093.252-.184.349-.141.15-.346.237-.552.232-.045,0-.09-.006-.135-.015-.081-.032-12.964-2.822-13.034-2.852-.097-.028-.188-.076-.265-.141-.107-.089-.188-.209-.231-.341-.031-.097-.042-.201-.032-.302.003-.027.007-.055.013-.082l1.014-4.636Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-428" data-name="POLYLINE">
+      <path d="M188.006,268.077c.009-2.17-.835-4.269-2.1-6.008-1.27-1.756-2.93-3.211-4.709-4.433-2.385-1.629-5.028-2.877-7.735-3.868-12.235-4.402-27.905-4.508-40.267-.517-3.339,1.099-6.611,2.546-9.498,4.57-1.877,1.326-3.616,2.921-4.862,4.866-2.207,3.433-2.244,7.214-.065,10.677,1.25,1.991,3.018,3.62,4.928,4.969,2.886,2.023,6.159,3.471,9.498,4.57,12.36,3.99,28.029,3.886,40.267-.517,2.707-.991,5.351-2.239,7.735-3.868,1.813-1.246,3.504-2.734,4.782-4.536,1.224-1.716,2.035-3.778,2.026-5.905Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-429" data-name="POLYLINE">
+      <path d="M197.283,260.697c-.3-.003-.585.193-.69.475-.027.071-.043.146-.047.222-.019.017.011,13.306-.001,13.334,0,.252.141.497.358.625.09.054.192.089.297.101.027.003.056.005.083.005h4.745c.133,0,.266-.037.38-.105.177-.105.305-.288.344-.49.009-.044.013-.09.014-.135-.014-.086.012-13.267-.002-13.342-.007-.101-.034-.2-.081-.289-.064-.124-.163-.229-.284-.299-.088-.051-.187-.084-.289-.096-.027-.003-.056-.005-.083-.005h-4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-430" data-name="POLYLINE">
+      <path d="M161.548,241.209c-.067.293.063.613.317.775.063.042.134.073.207.094.012.022,13.001,2.832,13.026,2.85.246.053.515-.032.687-.216.072-.076.128-.169.162-.268.009-.026.017-.053.022-.08l1.014-4.636c.029-.13.021-.268-.022-.394-.065-.195-.216-.36-.405-.441-.041-.018-.085-.032-.129-.042-.087-.004-12.958-2.847-13.035-2.849-.1-.015-.203-.009-.3.017-.134.036-.258.111-.352.213-.069.075-.122.165-.155.261-.009.026-.017.053-.022.08l-1.014,4.636Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-431" data-name="POLYLINE">
+      <path d="M129.192,244.362c.062.294.313.53.611.572.075.011.152.011.227-.001.021.015,12.996-2.854,13.026-2.848.246-.055.455-.244.534-.483.034-.1.046-.207.035-.311-.003-.027-.007-.055-.013-.082l-1.014-4.636c-.028-.13-.093-.252-.184-.349-.141-.15-.346-.237-.552-.232-.045,0-.09.006-.135.015-.081.032-12.964,2.822-13.034,2.852-.097.028-.188.076-.265.141-.107.089-.188.209-.231.341-.031.097-.042.201-.032.302.003.027.007.055.013.082l1.014,4.636Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+    <g id="POLYLINE-432" data-name="POLYLINE">
+      <path d="M107.877,275.457c.3.003.585-.193.69-.475.027-.071.043-.146.047-.222.019-.017-.011-13.306.001-13.334,0-.252-.141-.497-.358-.625-.09-.054-.192-.089-.297-.101-.027-.003-.056-.005-.083-.005h-4.745c-.133,0-.266.037-.38.105-.177.105-.305.288-.344.49-.009.044-.013.09-.014.135.014.086-.012,13.267.002,13.342.007.101.034.2.081.289.064.124.163.229.284.299.088.051.187.084.289.096.027.003.056.005.083.005h4.745Z" fill="none" stroke="#3a54f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25"/>
+    </g>
+  </g>
+  <metadata>
+    <sfw xmlns="http://ns.adobe.com/SaveForWeb/1.0/">
+      <slices/>
+      <sliceSourceBounds x="-3360.88" y="-7170" width="9598.88" height="15750" bottomLeftOrigin="true"/>
+    </sfw>
+  </metadata>
+</svg>
