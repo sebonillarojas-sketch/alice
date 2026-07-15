@@ -128,15 +128,12 @@ function fachada(units, F, { terraza = true } = {}) {
 }
 
 /**
- * genera N opciones de planta dentro del footprint.
- * brief: { areaObjetivo, pct1, pct2, udsPiso, nse, terraza }
+ * FASE 1 — DISTRIBUCIÓN: reparte core + corredor + bloques de unidad dentro del
+ * footprint. Devuelve partis SIN amoblar (las tipologías vienen después).
+ * cfg: { udsPiso, pct1, pct2, areaObjetivo }
  */
-export function generarOpciones(footprint, frontIdx, brief = {}) {
-  const {
-    udsPiso = 4, pct1 = 25, pct2 = 40, areaObjetivo = 60,
-    nse = "C", terraza = true,
-  } = brief;
-
+export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
+  const { udsPiso = 4, pct1 = 25, pct2 = 40, areaObjetivo = 60 } = cfg;
   const unidades = mixTipologias(Math.max(1, udsPiso), { pct1, pct2, areaObjetivo });
 
   const configs = [
@@ -146,58 +143,85 @@ export function generarOpciones(footprint, frontIdx, brief = {}) {
     { nombre: "core lateral · chicos al frente", corePos: "izq", ordenar: "asc" },
   ];
 
-  const opciones = [];
-  for (const cfg of configs) {
-    const res = packFloor(footprint, frontIdx, { unidades, corePos: cfg.corePos, ordenar: cfg.ordenar });
+  const partis = [];
+  for (const c of configs) {
+    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar });
     if (!res.units.length) continue;
-    const rooms = [], items = [], notas = [];
+    const rooms = [];
     if (res.core) rooms.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });
     if (res.corridor) rooms.push({ id: res.corridor.id, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
-
-    let amobladas = 0;
     res.units.forEach((u) => {
-      // recorte chico (partido por el core) → depósito, no departamento
-      if (u.areaReal < 16) {
-        u.tipologia = { id: "depósito" };
-        rooms.push({ id: u.id, name: `depósito · ${u.areaReal.toFixed(0)}m²`, tipo: "servicio", pts: u.pts });
-        return;
-      }
-      const t = tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms);
+      const t = u.areaReal < 16 ? { id: "depósito" } : tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms);
       u.tipologia = t;
-      const A = amoblarUnidad(u, res.F, nse);
-      if (A) {
-        u.tipologia = A.tipologia;   // puede haber caído a la tipología que sí cabe
-        rooms.push(...A.rooms.map((r) => ({ ...r, unidad: A.tipologia.id })));
-        items.push(...A.items);
-        amobladas++;
-        if (A.warns.length) notas.push(`${A.tipologia.id}: ${A.warns[0]}`);
-      } else {
-        rooms.push({ id: u.id, name: `${t.id} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
-        notas.push(`${t.id}: recorte ${u.areaReal.toFixed(0)}m² sin distribución interna`);
-      }
+      rooms.push({ id: u.id, name: `${t.id} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
     });
-
-    // sugerencia de fachada: terraza + vegetación
-    const fx = fachada(res.units, res.F, { terraza });
-    rooms.push(...fx.rooms);
-    items.push(...fx.items);
-    if (fx.rooms.length) notas.push(`sugerencia: ${fx.rooms.length} terrazas con jardinera a fachada`);
-    else if (fx.items.length) notas.push("sugerencia: jardineras a fachada");
-
-    const resumen = res.units.map((u) => `${u.tipologia.id} ${u.areaReal.toFixed(0)}m²`).join(" · ");
-    opciones.push({
-      id: oid(), nombre: cfg.nombre,
-      rooms, items,
-      notas: [resumen, res.doble ? "doble crujía" : "crujía simple", ...notas],
-      stats: {
-        uds: res.units.length, amobladas,
-        areaPiso: rooms.filter((r) => r.tipo === "unidad" || r.unidad).reduce((a, r) => a + area(r.pts), 0),
-      },
+    partis.push({
+      id: oid(), nombre: c.nombre, rooms, res,
+      notas: [
+        res.units.map((u) => `${u.tipologia.id} ${u.areaReal.toFixed(0)}m²`).join(" · "),
+        res.doble ? "doble crujía" : "crujía simple",
+      ],
+      stats: { uds: res.units.length },
     });
   }
+  return partis.slice(0, 5);
+}
+
+/**
+ * FASE 2 — TIPOLOGÍAS: amuebla un parti elegido (asigna la tipología más cercana
+ * a cada bloque y arma su interior con reglas + NSE) y suma terraza/jardineras.
+ * brief: { nse, terraza }
+ */
+export function amoblarParti(parti, brief = {}) {
+  const { nse = "C", terraza = true } = brief;
+  const { res } = parti;
+  const rooms = [], items = [], notas = [];
+  if (res.core) rooms.push({ id: `${res.core.id}a`, name: "core", tipo: "core", pts: res.core.pts });
+  if (res.corridor) rooms.push({ id: `${res.corridor.id}a`, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
+
+  let amobladas = 0;
+  res.units.forEach((u) => {
+    if (u.areaReal < 16) {
+      rooms.push({ id: `${u.id}a`, name: `depósito · ${u.areaReal.toFixed(0)}m²`, tipo: "servicio", pts: u.pts });
+      return;
+    }
+    const A = amoblarUnidad(u, res.F, nse);
+    if (A) {
+      u.tipologia = A.tipologia;   // puede haber caído a la tipología que sí cabe
+      rooms.push(...A.rooms.map((r) => ({ ...r, unidad: A.tipologia.id })));
+      items.push(...A.items);
+      amobladas++;
+      if (A.warns.length) notas.push(`${A.tipologia.id}: ${A.warns[0]}`);
+    } else {
+      rooms.push({ id: `${u.id}a`, name: `${u.tipologia.id} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
+      notas.push(`${u.tipologia.id}: recorte ${u.areaReal.toFixed(0)}m² sin distribución interna`);
+    }
+  });
+
+  // sugerencia de fachada: terraza + vegetación
+  const fx = fachada(res.units, res.F, { terraza });
+  rooms.push(...fx.rooms);
+  items.push(...fx.items);
+  if (fx.rooms.length) notas.push(`sugerencia: ${fx.rooms.length} terrazas con jardinera a fachada`);
+  else if (fx.items.length) notas.push("sugerencia: jardineras a fachada");
+
+  return {
+    id: oid(), nombre: parti.nombre, rooms, items,
+    notas: [...parti.notas, ...notas],
+    stats: {
+      uds: res.units.length, amobladas,
+      areaPiso: rooms.filter((r) => r.tipo === "unidad" || r.unidad).reduce((a, r) => a + area(r.pts), 0),
+    },
+  };
+}
+
+/** compat: distribución + tipologías en un paso (5 opciones amobladas) */
+export function generarOpciones(footprint, frontIdx, brief = {}) {
+  const partis = generarDistribuciones(footprint, frontIdx, brief);
+  const opciones = partis.map((p) => amoblarParti(p, brief));
 
   // 5ª opción: espejo de la primera
-  if (opciones[0]) {
+  if (opciones[0] && opciones.length < 5) {
     const base = opciones[0];
     const xs = base.rooms.flatMap((r) => r.pts.map((p) => p.x));
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
@@ -208,6 +232,5 @@ export function generarOpciones(footprint, frontIdx, brief = {}) {
       notas: base.notas, stats: base.stats,
     });
   }
-
   return opciones.slice(0, 5);
 }

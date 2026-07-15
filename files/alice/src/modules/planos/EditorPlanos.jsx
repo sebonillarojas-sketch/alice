@@ -7,12 +7,12 @@ import {
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
   pointInPolygon, nearestVertex, bbox,
-  offsetPolygon, orientedFrame, isConvex,
+  offsetEdges, orientedFrame, isConvex,
 } from "./geometry.js";
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
-import { generarDistribuciones } from "./distribucion.js";
-import { generarOpciones } from "./plantas.js";
+import { generarDistribuciones as generarDepas } from "./distribucion.js";
+import { generarDistribuciones, amoblarParti } from "./plantas.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
@@ -74,7 +74,7 @@ function VariantPreview({ v, W = 236, H = 170 }) {
         <polygon key={r.id} points={r.pts.map(T).map((p) => `${p.x},${p.y}`).join(" ")}
           fill={roomFill(r, i)} stroke={C.ink} strokeWidth={1.4} strokeLinejoin="round" />
       ))}
-      {v.items.map((t) => {
+      {(v.items || []).map((t) => {
         const s = T({ x: t.x, y: t.y });
         return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={false} />;
       })}
@@ -84,8 +84,8 @@ function VariantPreview({ v, W = 236, H = 170 }) {
 
 // ── modal generador ───────────────────────────────────────────
 function GenModal({ brief, setBrief, onUse, onClose }) {
-  const [vars, setVars] = useState(() => generarDistribuciones(brief));
-  const regen = () => setVars(generarDistribuciones(brief));
+  const [vars, setVars] = useState(() => generarDepas(brief));
+  const regen = () => setVars(generarDepas(brief));
   const In = ({ label, k, step = 0.5, min = 1 }) => (
     <label style={{ display: "flex", alignItems: "baseline", gap: 6, fontFamily: sans, fontSize: 12, color: C.ink }}>
       {label}
@@ -185,74 +185,148 @@ function LibPanel({ onAdd, onClose }) {
   );
 }
 
-// ── modal de opciones de planta (paso 3: cabida + lote → 5 opciones) ──
-function OpcionesModal({ opciones, onUse, onRegen, onClose, loteInfo, brief }) {
-  const [alicia, setAlicia] = useState(null);   // null | "cargando" | texto
+// contenedor común de los modales de pasos
+function Modal({ children, onClose, maxWidth = 1180 }) {
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(55,55,55,0.35)", zIndex: 50,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, maxWidth,
+          maxHeight: "92%", overflow: "auto", padding: "20px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = { fontFamily: mono, fontSize: 12, fontWeight: 600, color: C.ink, width: 54, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "4px 6px" };
+const labelStyle = { display: "flex", alignItems: "baseline", gap: 5, fontFamily: mono, fontSize: 11, color: C.soft };
+
+// ── PASO 2 · distribución: elegir el parti de la planta (sin tipologías aún) ──
+function DistribModal({ partis, brief, setBrief, onUse, onRegen, onClose, loteInfo }) {
+  const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>2</span>
+        <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
+          distribución de la planta
+        </h2>
+        <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>{loteInfo}</span>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
+          <X size={15} color={C.soft} />
+        </button>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 14 }}>
+        <label style={labelStyle}>uds/piso
+          <input type="number" value={brief.udsPiso} step={1} min={1} onChange={(e) => setB("udsPiso", parseInt(e.target.value) || 1)} style={inputStyle} /></label>
+        <label style={labelStyle}>área objetivo
+          <input type="number" value={brief.areaObjetivo} step={5} min={25} onChange={(e) => setB("areaObjetivo", parseInt(e.target.value) || 25)} style={inputStyle} /> m²</label>
+        <label style={labelStyle}>1D%
+          <input type="number" value={brief.pct1} step={5} min={0} max={100} onChange={(e) => setB("pct1", parseInt(e.target.value) || 0)} style={inputStyle} /></label>
+        <label style={labelStyle}>2D%
+          <input type="number" value={brief.pct2} step={5} min={0} max={100} onChange={(e) => setB("pct2", parseInt(e.target.value) || 0)} style={inputStyle} /></label>
+        <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>3D {Math.max(0, 100 - brief.pct1 - brief.pct2)}%</span>
+        <Btn onClick={onRegen} accent title="Regenerar distribuciones"><Sparkles size={13} /> regenerar</Btn>
+      </div>
+      {!partis.length && (
+        <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>
+          el footprint no admite unidades — revisa retiros/frente o reduce uds/piso
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+        {partis.map((v, i) => (
+          <div key={v.id} style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
+            <VariantPreview v={v} W={280} H={190} />
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
+              <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>{i + 1}</span>
+              <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, textTransform: "lowercase", color: C.ink }}>{v.nombre}</span>
+              <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{v.stats.uds} uds</span>
+            </div>
+            {v.notas.slice(0, 3).map((n, j) => (
+              <div key={j} style={{ fontFamily: mono, fontSize: 9, color: C.soft, lineHeight: 1.5 }}>· {n}</div>
+            ))}
+            <button onClick={() => onUse(v)}
+              style={{ marginTop: 8, width: "100%", fontFamily: mono, fontSize: 11, color: C.card,
+                background: C.orange, border: "none", borderRadius: 2, padding: "7px 0", cursor: "pointer" }}>
+              elegir esta → 3 · tipologías
+            </button>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
+// ── PASO 3 · tipologías: amoblar el parti elegido (NSE, terraza) ──
+function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
+  const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
+  const [alicia, setAlicia] = useState(null);
+  // el amoblado se recalcula al cambiar NSE/terraza
+  const amoblado = (() => { try { return amoblarParti(parti, brief); } catch { return null; } })();
   const consultar = async () => {
+    if (!amoblado) return;
     setAlicia("cargando");
     try {
-      const resumen = opciones.map((o, i) => `${i + 1}. ${o.nombre}: ${o.notas.join(" | ")}`).join("\n");
       const text = await aliciaAnalyze({
-        system: "Sos Alicia, arquitecta senior de BAM (vivienda multifamiliar en Lima). Evaluás opciones de planta típica con criterio de diseño, RNE A.010/A.020 y mercado limeño (lo que más se vende: 2D 50-60 m², 3D 60-70 m²). Respondé en máx. 8 líneas: cuál opción elegirías y por qué, y un ajuste concreto por opción si aplica.",
-        prompt: `Lote: ${loteInfo}. Brief: ${brief.udsPiso} uds/piso · NSE ${brief.nse} · área objetivo ${brief.areaObjetivo} m² · mix 1D ${brief.pct1}% / 2D ${brief.pct2}% / 3D ${Math.max(0, 100 - brief.pct1 - brief.pct2)}%.\nOpciones generadas:\n${resumen}`,
-        max_tokens: 700,
+        system: "Sos Alicia, arquitecta senior de BAM (vivienda multifamiliar en Lima). Evaluás una planta típica amoblada con criterio de diseño, RNE A.010/A.020 y mercado limeño. Respondé en máx. 6 líneas: qué está bien, qué ajustarías y si el NSE/mix calza con la ubicación.",
+        prompt: `Lote: ${loteInfo}. Parti: ${parti.nombre}. NSE ${brief.nse}, terraza ${brief.terraza ? "sí" : "no"}.\nResultado: ${amoblado.notas.join(" | ")}`,
+        max_tokens: 500,
       });
       setAlicia(text || "sin respuesta");
     } catch (e) { setAlicia(`no se pudo consultar: ${e.message}`); }
   };
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(55,55,55,0.35)", zIndex: 50,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-        style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, maxWidth: 1180,
-          maxHeight: "92%", overflow: "auto", padding: "20px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-          <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>✦</span>
-          <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
-            opciones de distribución en el lote
-          </h2>
-          <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>{loteInfo}</span>
-          <Btn onClick={onRegen} title="Regenerar opciones"><Sparkles size={13} /> regenerar</Btn>
-          <Btn onClick={consultar} disabled={alicia === "cargando"} title="Pedir opinión al agente (Alicia)">
-            <MessageCircle size={13} /> {alicia === "cargando" ? "consultando…" : "opinión de alicia"}
-          </Btn>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
-            <X size={15} color={C.soft} />
-          </button>
-        </div>
-        {typeof alicia === "string" && alicia !== "cargando" && (
-          <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, background: C.card, border: `1px solid ${C.peri}`,
-            borderLeft: `3px solid ${C.peri}`, borderRadius: 3, padding: "10px 12px", marginBottom: 14, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
-            {alicia}
-          </div>
-        )}
-        {!opciones.length && (
-          <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>
-            el footprint no admite unidades — revisa retiro/frente o reduce uds/piso
-          </div>
-        )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
-          {opciones.map((v, i) => (
-            <div key={v.id} style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
-              <VariantPreview v={v} W={300} H={210} />
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
-                <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>{i + 1}</span>
-                <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, textTransform: "lowercase", color: C.ink }}>{v.nombre}</span>
-                <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{v.stats.uds} uds</span>
-              </div>
-              {v.notas.slice(0, 4).map((n, j) => (
-                <div key={j} style={{ fontFamily: mono, fontSize: 9, color: C.soft, lineHeight: 1.5 }}>· {n}</div>
-              ))}
-              <button onClick={() => onUse(v)}
-                style={{ marginTop: 8, width: "100%", fontFamily: mono, fontSize: 11, color: C.card,
-                  background: C.orange, border: "none", borderRadius: 2, padding: "7px 0", cursor: "pointer" }}>
-                usar esta →
-              </button>
-            </div>
-          ))}
-        </div>
+    <Modal onClose={onClose} maxWidth={860}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>3</span>
+        <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
+          tipologías · {parti.nombre}
+        </h2>
+        <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>{loteInfo}</span>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
+          <X size={15} color={C.soft} />
+        </button>
       </div>
-    </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 14 }}>
+        <label style={labelStyle}>NSE
+          <select value={brief.nse} onChange={(e) => setB("nse", e.target.value)} style={{ ...inputStyle, width: 48, textAlign: "left" }}>
+            {["A", "B", "C", "D"].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select></label>
+        <label style={{ ...labelStyle, cursor: "pointer" }}>
+          <input type="checkbox" checked={!!brief.terraza} onChange={(e) => setB("terraza", e.target.checked)} />
+          terraza + jardineras a fachada
+        </label>
+        <Btn onClick={consultar} disabled={alicia === "cargando"} title="Pedir opinión al agente (Alicia)">
+          <MessageCircle size={13} /> {alicia === "cargando" ? "consultando…" : "opinión de alicia"}
+        </Btn>
+      </div>
+      {typeof alicia === "string" && alicia !== "cargando" && (
+        <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, background: C.card, border: `1px solid ${C.peri}`,
+          borderLeft: `3px solid ${C.peri}`, borderRadius: 3, padding: "10px 12px", marginBottom: 14, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+          {alicia}
+        </div>
+      )}
+      {amoblado ? (
+        <>
+          <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
+            <VariantPreview v={amoblado} W={780} H={460} />
+          </div>
+          <div style={{ margin: "8px 2px" }}>
+            {amoblado.notas.slice(0, 6).map((n, j) => (
+              <div key={j} style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, lineHeight: 1.6 }}>· {n}</div>
+            ))}
+          </div>
+          <button onClick={() => onAplicar(amoblado)}
+            style={{ width: "100%", fontFamily: mono, fontSize: 12, color: C.card,
+              background: C.orange, border: "none", borderRadius: 2, padding: "9px 0", cursor: "pointer" }}>
+            aplicar al plano →
+          </button>
+        </>
+      ) : (
+        <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>no se pudo amoblar este parti</div>
+      )}
+    </Modal>
   );
 }
 
@@ -309,37 +383,49 @@ export default function EditorPlanos() {
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
   const [showGen, setShowGen] = useState(false);
   const [showLib, setShowLib] = useState(false);
-  const [showOpts, setShowOpts] = useState(false);
-  const [opciones, setOpciones] = useState([]);
-  // brief = parámetros de CABIDA (paso 1): mandan sobre todo lo que se genera
+  const [showDistrib, setShowDistrib] = useState(false); // paso 2
+  const [showTipo, setShowTipo] = useState(false);       // paso 3
+  const [partis, setPartis] = useState([]);
+  const [parti, setParti] = useState(null);              // distribución elegida (en memoria, no persiste)
   const [brief, setBrief] = useState({
     area: 65, frente: 6.5, dormitorios: 2, banos: 2,          // depa suelto (generador simple)
-    areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // planta en lote
-    nse: "C", terraza: true,
+    areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // distribución en lote
+    nse: "C", terraza: true,                                   // tipologías
   });
   const [ficha, setFicha] = useState(FICHA_DEF);
   const [showFicha, setShowFicha] = useState(false);
-  const [cabidaBar, setCabidaBar] = useState(true);
 
   const [draft, setDraft] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [view, setView] = useState({ scale: 42, tx: 60, ty: 60 });
 
-  // ── flujo lote ──
+  // ── paso 1: lote ──
   const [plano, setPlano] = useState(null);        // { src, ox, oy, mpp, w, h, opacity }
   const [lote, setLote] = useState(null);          // { pts } polígono del terreno (metros)
-  const [retiro, setRetiro] = useState(3);         // retiro perimetral (m)
+  const [tipoLote, setTipoLote] = useState("medianera"); // medianera | esquina
+  const [retiro, setRetiro] = useState(3);         // retiro frontal (m)
+  const [retiroLat, setRetiroLat] = useState(3);   // retiro de la calle lateral (solo esquina)
   const [frontIdx, setFrontIdx] = useState(0);     // borde-frente del lote
   const [calib, setCalib] = useState([]);          // puntos de calibración en curso
-  const [loteBar, setLoteBar] = useState(false);   // barra de herramientas de lote visible
+  const [loteBar, setLoteBar] = useState(true);    // barra de herramientas de lote visible
   const fileRef = useRef(null);
 
   const past = useRef([]);
   const future = useRef([]);
   const drag = useRef(null);
 
-  // envolvente construible = lote − retiro
-  const footprint = lote && lote.pts.length >= 3 ? offsetPolygon(lote.pts, retiro) : null;
+  // envolvente construible = lote − retiros NORMATIVOS según tipo:
+  // medianera → retiro solo en el frente (los demás bordes son colindantes);
+  // esquina   → retiro en el frente + la calle lateral (borde siguiente al frente).
+  const footprint = (() => {
+    if (!lote || lote.pts.length < 3) return null;
+    const n = lote.pts.length;
+    const dists = lote.pts.map((_, i) =>
+      i === frontIdx ? retiro
+        : (tipoLote === "esquina" && i === (frontIdx + 1) % n) ? retiroLat
+          : 0);
+    return offsetEdges(lote.pts, dists);
+  })();
 
   // ── persistencia + brief desde cabida ─────────────────────
   useEffect(() => {
@@ -463,11 +549,11 @@ export default function EditorPlanos() {
 
   const cycleFront = () => lote && setFrontIdx((i) => (i + 1) % lote.pts.length);
 
-  // paso 3: genera las 5 opciones de distribución dentro del footprint
-  const abrirOpciones = useCallback(() => {
+  // paso 2: genera las distribuciones (partis) dentro del footprint
+  const abrirDistribuciones = useCallback(() => {
     if (!footprint) { setLoteBar(true); return; }
-    setOpciones(generarOpciones(footprint, frontIdx, brief));
-    setShowOpts(true);
+    setPartis(generarDistribuciones(footprint, frontIdx, brief));
+    setShowDistrib(true);
   }, [footprint, frontIdx, brief]);
 
   // mueble bajo el puntero (el más reciente primero)
@@ -542,11 +628,18 @@ export default function EditorPlanos() {
   }, [items, commit, toWorldRaw]);
 
   const useVariant = useCallback((v) => {
-    const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo }));
-    commit(nr, v.items.map((t) => ({ ...t })));
-    setShowGen(false); setShowOpts(false); setSelId(null); setSelItem(null); setDraft([]);
+    const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
+    commit(nr, (v.items || []).map((t) => ({ ...t })));
+    setShowGen(false); setShowDistrib(false); setShowTipo(false);
+    setSelId(null); setSelItem(null); setDraft([]);
     requestAnimationFrame(() => fitTo(nr));
   }, [commit, fitTo]);
+
+  // paso 2 → elegir un parti: bloques al lienzo y habilita el paso 3
+  const usarParti = useCallback((p) => {
+    setParti(p);
+    useVariant(p);
+  }, [useVariant]);
 
   // ── punteros ──────────────────────────────────────────────
   const onDown = (e) => {
@@ -667,7 +760,7 @@ export default function EditorPlanos() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
-      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowGen(false); setShowOpts(false); setShowLib(false); setCalib([]); }
+      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowGen(false); setShowDistrib(false); setShowTipo(false); setShowLib(false); setCalib([]); }
       if (e.key === "Enter" && tool === "wall") onDouble();
       if (e.key === "r" || e.key === "R") rotateSel();
       if (e.key === "Backspace" || e.key === "Delete") {
@@ -729,16 +822,17 @@ export default function EditorPlanos() {
           <BamLogo height={15} />
           <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>editor de planos</span>
         </span>
-        {/* flujo: 1 cabida → 2 lote → 3 generar (5 opciones) */}
-        <Btn active={cabidaBar} onClick={() => setCabidaBar((s) => !s)} title="Paso 1 · parámetros de cabida (NSE, mix, área objetivo)">
-          <b style={{ color: cabidaBar ? C.card : C.orange }}>1</b> cabida
+        {/* flujo: 1 lote (medianera/esquina + retiros) → 2 distribución → 3 tipologías */}
+        <Btn active={loteBar} onClick={() => setLoteBar((s) => !s)} title="Paso 1 · lote: medianera/esquina, retiros, calcar terreno">
+          <b style={{ color: loteBar ? C.card : lote ? C.peri : C.orange }}>1</b> lote {lote ? "✓" : ""}
         </Btn>
-        <Btn active={loteBar} onClick={() => setLoteBar((s) => !s)} title="Paso 2 · lote: subir plano, calibrar, calcar terreno">
-          <b style={{ color: loteBar ? C.card : lote ? C.peri : C.orange }}>2</b> lote {lote ? "✓" : ""}
+        <Btn onClick={abrirDistribuciones} disabled={!footprint}
+          title={footprint ? "Paso 2 · elegir la distribución de la planta (core, corredor, bloques)" : "Primero calca el lote (paso 1)"}>
+          <b style={{ color: footprint ? C.orange : C.line }}>2</b> distribución {parti ? "✓" : ""}
         </Btn>
-        <Btn accent onClick={abrirOpciones} disabled={!footprint}
-          title={footprint ? "Paso 3 · generar 5 opciones de distribución en el lote" : "Primero calca el lote (paso 2)"}>
-          <Sparkles size={13} /> <b>3</b> generar
+        <Btn accent onClick={() => setShowTipo(true)} disabled={!parti}
+          title={parti ? "Paso 3 · asignar tipologías y amoblar (NSE, terraza)" : "Primero elige una distribución (paso 2)"}>
+          <Sparkles size={13} /> <b>3</b> tipologías
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
@@ -786,47 +880,27 @@ export default function EditorPlanos() {
         </div>
       </div>
 
-      {/* paso 1 · barra de cabida */}
-      {cabidaBar && (() => {
-        const li = { display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft };
-        const inp = { fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 46, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" };
-        const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
-        return (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 16px", borderBottom: `1px solid ${C.line}`, background: "#F4F2EC" }}>
-            <span style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>1 · cabida ▸</span>
-            <label style={li}>NSE
-              <select value={brief.nse} onChange={(e) => setB("nse", e.target.value)}
-                style={{ ...inp, width: 44, textAlign: "left" }}>
-                {["A", "B", "C", "D"].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select></label>
-            <label style={li}>uds/piso
-              <input type="number" value={brief.udsPiso} step={1} min={1} onChange={(e) => setB("udsPiso", parseInt(e.target.value) || 1)} style={inp} /></label>
-            <label style={li}>área objetivo
-              <input type="number" value={brief.areaObjetivo} step={5} min={25} onChange={(e) => setB("areaObjetivo", parseInt(e.target.value) || 25)} style={inp} /> m²</label>
-            <label style={li}>1D%
-              <input type="number" value={brief.pct1} step={5} min={0} max={100} onChange={(e) => setB("pct1", parseInt(e.target.value) || 0)} style={inp} /></label>
-            <label style={li}>2D%
-              <input type="number" value={brief.pct2} step={5} min={0} max={100} onChange={(e) => setB("pct2", parseInt(e.target.value) || 0)} style={inp} /></label>
-            <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>3D {Math.max(0, 100 - brief.pct1 - brief.pct2)}%</span>
-            <label style={{ ...li, cursor: "pointer" }}>
-              <input type="checkbox" checked={!!brief.terraza} onChange={(e) => setB("terraza", e.target.checked)} />
-              terraza + jardineras a fachada
-            </label>
-            <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.soft }}>
-              tipologías de mercado: 2D 50-60 · 3D 60-70 · 1D 40-50 (Nexo jul-26)
-            </span>
-          </div>
-        );
-      })()}
-
-      {/* paso 2 · barra de lote */}
+      {/* paso 1 · barra de lote: tipo de lote → retiros normativos → calcar */}
       {loteBar && (() => {
         const li = { display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft };
         const inp = { fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 46, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" };
         const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 16px", borderBottom: `1px solid ${C.line}`, background: "#F4F2EC" }}>
-            <span style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>2 · lote ▸</span>
+            <span style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>1 · lote ▸</span>
+            <label style={li}>tipo
+              <select value={tipoLote} onChange={(e) => setTipoLote(e.target.value)}
+                style={{ ...inp, width: "auto", textAlign: "left" }}>
+                <option value="medianera">entre medianeras</option>
+                <option value="esquina">esquina</option>
+              </select></label>
+            <label style={li}>retiro frontal
+              <input type="number" value={retiro} step={0.5} min={0} onChange={(e) => setRetiro(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
+            {tipoLote === "esquina" && (
+              <label style={li}>retiro calle lateral
+                <input type="number" value={retiroLat} step={0.5} min={0} onChange={(e) => setRetiroLat(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
+            )}
+            <div style={{ width: 1, height: 20, background: C.line }} />
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPlano(f); e.target.value = ""; }} />
             <Btn onClick={() => fileRef.current?.click()} title="Subir el plano del terreno (imagen)"><Upload size={13} /> subir plano</Btn>
@@ -839,13 +913,10 @@ export default function EditorPlanos() {
             <Btn active={tool === "calibrate"} onClick={() => { setCalib([]); setTool("calibrate"); }} disabled={!plano}
               title="Calibrar escala: clic en 2 puntos de distancia conocida"><Crosshair size={13} /> calibrar</Btn>
             <Btn active={tool === "lote"} onClick={() => setTool("lote")} title="Calcar el contorno del terreno"><PenLine size={13} /> calcar lote</Btn>
-            <div style={{ width: 1, height: 20, background: C.line }} />
-            <label style={li}>retiro
-              <input type="number" value={retiro} step={0.5} min={0} onChange={(e) => setRetiro(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
-            <Btn onClick={cycleFront} disabled={!lote} title="Rotar el borde-frente (hacia la calle)"><RefreshCw size={12} /> frente</Btn>
+            <Btn onClick={cycleFront} disabled={!lote} title="Rotar el borde-frente (hacia la calle); en esquina, la calle lateral es el borde siguiente"><RefreshCw size={12} /> frente</Btn>
             {fr && <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>footprint {fmt(area(footprint), 0)} m² · {fmt(fr.frente, 1)}×{fmt(fr.fondo, 1)} m{isConvex(footprint) ? "" : " · no convexo"}</span>}
-            {lote && !footprint && <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>▲ el retiro deja el lote sin área construible — redúcelo</span>}
-            {footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>listo → 3 · generar</span>}
+            {lote && !footprint && <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>▲ los retiros dejan el lote sin área construible</span>}
+            {footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>listo → 2 · distribución</span>}
           </div>
         );
       })()}
@@ -989,9 +1060,9 @@ export default function EditorPlanos() {
         {!rooms.length && !draft.length && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <div style={{ textAlign: "center", fontFamily: mono, fontSize: 12, color: C.soft, lineHeight: 1.9 }}>
-              <b style={{ color: C.orange }}>1 cabida</b> define NSE, mix y área objetivo ·{" "}
-              <b style={{ color: C.orange }}>2 lote</b> sube el plano, calibra y calca el terreno<br />
-              <b style={{ color: C.orange }}>3 generar</b> te da 5 opciones de distribución dentro del lote<br />
+              <b style={{ color: C.orange }}>1 lote</b> elige medianera/esquina, retiros y calca el terreno ·{" "}
+              <b style={{ color: C.orange }}>2 distribución</b> elige el parti de la planta<br />
+              <b style={{ color: C.orange }}>3 tipologías</b> asigna y amuebla según NSE, con terraza y jardineras<br />
               <span style={{ fontSize: 10.5 }}>también puedes dibujar a mano con <b style={{ color: C.ink }}>muro</b> · R = rotar mueble · rueda = zoom · alt+arrastrar = paneo · ⌘Z = deshacer</span>
             </div>
           </div>
@@ -1026,14 +1097,23 @@ export default function EditorPlanos() {
       {showGen && (
         <GenModal brief={brief} setBrief={setBrief} onUse={useVariant} onClose={() => setShowGen(false)} />
       )}
-      {showOpts && (() => {
+      {showDistrib && (() => {
         const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
-        const info = fr ? `${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
+        const info = fr ? `${tipoLote} · ${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
         return (
-          <OpcionesModal opciones={opciones} brief={brief} loteInfo={info}
-            onUse={useVariant}
-            onRegen={() => setOpciones(generarOpciones(footprint, frontIdx, brief))}
-            onClose={() => setShowOpts(false)} />
+          <DistribModal partis={partis} brief={brief} setBrief={setBrief} loteInfo={info}
+            onUse={(p) => { usarParti(p); setShowTipo(true); }}
+            onRegen={() => setPartis(generarDistribuciones(footprint, frontIdx, brief))}
+            onClose={() => setShowDistrib(false)} />
+        );
+      })()}
+      {showTipo && parti && (() => {
+        const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
+        const info = fr ? `${tipoLote} · ${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
+        return (
+          <TipoModal parti={parti} brief={brief} setBrief={setBrief} loteInfo={info}
+            onAplicar={useVariant}
+            onClose={() => setShowTipo(false)} />
         );
       })()}
       {showFicha && <FichaModal ficha={ficha} setFicha={setFicha} onClose={() => setShowFicha(false)} />}
