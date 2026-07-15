@@ -176,6 +176,18 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "dropbox_move",
+    description: "Mueve o renombra un archivo/carpeta dentro de Dropbox. Usala para ordenar: llevar un archivo mal ubicado a su carpeta correcta bajo /Hygge. El destino DEBE estar bajo /Hygge. Si hay conflicto de nombre, renombra automáticamente.",
+    input_schema: {
+      type: "object",
+      properties: {
+        from_path: { type: "string", description: "Path actual completo del archivo (ej. /Hygge/04_FINANZAS/doc.pdf)" },
+        to_path:   { type: "string", description: "Path destino completo bajo /Hygge, incluyendo el nombre (ej. /Hygge/07_MARKETING/doc.pdf)" },
+      },
+      required: ["from_path", "to_path"],
+    },
+  },
+  {
     name: "dropbox_read",
     description: "Lee el contenido de un archivo de texto en Dropbox (contratos, docs, etc.).",
     input_schema: {
@@ -395,6 +407,13 @@ export async function executeTool(toolName, input, userId) {
       if (!dropboxAvailable()) return "Dropbox no configurado aún.";
       const content = await dropbox.getFileContent(input.file_path);
       return `Contenido de ${input.file_path}:\n\n${content.slice(0, 4000)}`;
+    }
+    case "dropbox_move": {
+      if (!dropboxAvailable()) return "Dropbox no configurado aún.";
+      const to = String(input.to_path || "").trim();
+      if (!/^\/Hygge\//i.test(to)) return "El destino debe estar bajo /Hygge (ej. /Hygge/07_MARKETING/archivo.pdf).";
+      const moved = await dropbox.moveFile(String(input.from_path || "").trim(), to);
+      return `📦 Movido: ${moved.path_display || to}. Ya se refleja en la tab Archivos del ERP.`;
     }
     case "dropbox_upload": {
       if (!dropboxAvailable()) return "Dropbox no configurado aún.";

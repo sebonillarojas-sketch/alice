@@ -124,6 +124,11 @@ export const dropbox = {
     return dbxFetch("/files/create_folder_v2", { path, autorename: false });
   },
 
+  moveFile: async (fromPath, toPath) => {
+    const data = await dbxFetch("/files/move_v2", { from_path: fromPath, to_path: toPath, autorename: true });
+    return data.metadata;
+  },
+
   deleteFolder: async (path) => {
     return dbxFetch("/files/delete_v2", { path });
   },
