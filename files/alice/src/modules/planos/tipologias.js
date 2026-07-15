@@ -33,6 +33,17 @@ export function tipologiaCercana(areaDisp, frenteDisp, dormsPref = null) {
     costo(a, areaDisp, frenteDisp, dormsPref) - costo(b, areaDisp, frenteDisp, dormsPref))[0];
 }
 
+/** las N tipologías candidatas para un recorte, de mejor a peor calce */
+export function tipologiasCandidatas(areaDisp, frenteDisp, n = 4) {
+  return [...TIPOLOGIAS]
+    .map((t) => ({ t, c: costo(t, areaDisp, frenteDisp, null) }))
+    .sort((a, b) => a.c - b.c)
+    .slice(0, n)
+    .map((x) => x.t);
+}
+
+export const porTipologia = Object.fromEntries(TIPOLOGIAS.map((t) => [t.id, t]));
+
 /** mezcla de tipologías para un piso: reparte n unidades según el mix pedido (VIS→más 2D/3D chico) */
 export function mixTipologias(n, { pct1 = 25, pct2 = 40, areaObjetivo = 60 } = {}) {
   const pct3 = Math.max(0, 100 - pct1 - pct2);
