@@ -6,7 +6,7 @@
 
 import { packFloor } from "./lote.js";
 import { layout } from "./distribucion.js";
-import { tipologiaCercana, mixTipologias } from "./tipologias.js";
+import { tipologiaCercana, mixTipologias, porTipologia } from "./tipologias.js";
 import { area } from "./geometry.js";
 import { porId, NSE } from "./mobiliario.js";
 
@@ -57,14 +57,17 @@ function layoutStudio(W, D, nse = "C") {
   return { rooms, items, warns };
 }
 
-/** amuebla una unidad rectangular del piso, transformando el layout local al mundo */
-function amoblarUnidad(unit, F, nse) {
+/** amuebla una unidad rectangular del piso, transformando el layout local al mundo.
+ *  override: { tipologiaId, banos } — elección manual del usuario para ESTE bloque. */
+function amoblarUnidad(unit, F, nse, override = null) {
   const { ua, ub, v0, v1, banda } = unit.frame;
   const W = ub - ua, D = v1 - v0;
-  let t = unit.tipologia || tipologiaCercana(W * D, W);
-  let L = layout(W, D, t.dorms, t.banos, { swap: false, nse })
+  const forzada = override?.tipologiaId ? porTipologia[override.tipologiaId] : null;
+  let t = forzada || unit.tipologia || tipologiaCercana(W * D, W);
+  const nb = override?.banos ?? t.banos;
+  let L = layout(W, D, t.dorms, nb, { swap: false, nse })
     || (t.dorms <= 2 ? layoutStudio(W, D, nse) : null);   // recorte poco profundo → studio compacto
-  if (!L) {
+  if (!L && !forzada) {
     // la tipología pedida no cabe en este recorte → probar la más cercana SIN preferencia de dorms
     const t2 = tipologiaCercana(W * D, W);
     if (t2.id !== t.id) {
@@ -168,11 +171,11 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
 }
 
 /**
- * FASE 2 — TIPOLOGÍAS: amuebla un parti elegido (asigna la tipología más cercana
- * a cada bloque y arma su interior con reglas + NSE) y suma terraza/jardineras.
+ * FASE 2 — TIPOLOGÍAS: amuebla un parti elegido y suma terraza/jardineras.
  * brief: { nse, terraza }
+ * overrides: { [unitId]: { tipologiaId, banos } } — elección/tweaks manuales por bloque.
  */
-export function amoblarParti(parti, brief = {}) {
+export function amoblarParti(parti, brief = {}, overrides = {}) {
   const { nse = "C", terraza = true } = brief;
   const { res } = parti;
   const rooms = [], items = [], notas = [];
@@ -185,7 +188,7 @@ export function amoblarParti(parti, brief = {}) {
       rooms.push({ id: `${u.id}a`, name: `depósito · ${u.areaReal.toFixed(0)}m²`, tipo: "servicio", pts: u.pts });
       return;
     }
-    const A = amoblarUnidad(u, res.F, nse);
+    const A = amoblarUnidad(u, res.F, nse, overrides[u.id]);
     if (A) {
       u.tipologia = A.tipologia;   // puede haber caído a la tipología que sí cabe
       rooms.push(...A.rooms.map((r) => ({ ...r, unidad: A.tipologia.id })));
@@ -205,9 +208,11 @@ export function amoblarParti(parti, brief = {}) {
   if (fx.rooms.length) notas.push(`sugerencia: ${fx.rooms.length} terrazas con jardinera a fachada`);
   else if (fx.items.length) notas.push("sugerencia: jardineras a fachada");
 
+  // resumen con las tipologías FINALES (incluye overrides del usuario)
+  const resumen = res.units.map((u) => `${u.tipologia?.id || "?"} ${u.areaReal.toFixed(0)}m²`).join(" · ");
   return {
     id: oid(), nombre: parti.nombre, rooms, items,
-    notas: [...parti.notas, ...notas],
+    notas: [resumen, ...parti.notas.slice(1), ...notas],
     stats: {
       uds: res.units.length, amobladas,
       areaPiso: rooms.filter((r) => r.tipo === "unidad" || r.unidad).reduce((a, r) => a + area(r.pts), 0),

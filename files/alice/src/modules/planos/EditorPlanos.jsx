@@ -11,8 +11,8 @@ import {
 } from "./geometry.js";
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
-import { generarDistribuciones as generarDepas } from "./distribucion.js";
 import { generarDistribuciones, amoblarParti } from "./plantas.js";
+import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
@@ -79,80 +79,6 @@ function VariantPreview({ v, W = 236, H = 170 }) {
         return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={false} />;
       })}
     </svg>
-  );
-}
-
-// ── modal generador ───────────────────────────────────────────
-function GenModal({ brief, setBrief, onUse, onClose }) {
-  const [vars, setVars] = useState(() => generarDepas(brief));
-  const regen = () => setVars(generarDepas(brief));
-  const In = ({ label, k, step = 0.5, min = 1 }) => (
-    <label style={{ display: "flex", alignItems: "baseline", gap: 6, fontFamily: sans, fontSize: 12, color: C.ink }}>
-      {label}
-      <input type="number" value={brief[k]} step={step} min={min}
-        onChange={(e) => setBrief({ ...brief, [k]: parseFloat(e.target.value) || 0 })}
-        style={{ fontFamily: mono, fontSize: 13, fontWeight: 600, color: C.ink, width: 62, textAlign: "right",
-          border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, outline: "none", padding: "4px 6px" }} />
-    </label>
-  );
-  return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(55,55,55,0.35)", zIndex: 50,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-      onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-        style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, maxWidth: 1080,
-          maxHeight: "92%", overflow: "auto", padding: "20px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
-          <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>✦</span>
-          <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
-            generar distribución
-          </h2>
-          <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>
-            mobiliario a escala real · medidas dimensions.com · muros al eje
-          </span>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
-            <X size={15} color={C.soft} />
-          </button>
-        </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 22px", alignItems: "center",
-          padding: "12px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 16 }}>
-          <In label="área depto" k="area" step={1} min={20} />
-          <span style={{ fontFamily: mono, fontSize: 10, color: C.soft, marginLeft: -14 }}>m²</span>
-          <In label="frente" k="frente" step={0.25} min={3} />
-          <span style={{ fontFamily: mono, fontSize: 10, color: C.soft, marginLeft: -14 }}>m</span>
-          <In label="dormitorios" k="dormitorios" step={1} min={1} />
-          <In label="baños" k="banos" step={1} min={1} />
-          <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>
-            fondo {fmt(brief.area / Math.max(brief.frente, 0.1), 1)} m
-          </span>
-          <Btn onClick={regen} accent title="Regenerar variantes"><Sparkles size={13} /> regenerar</Btn>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
-          {vars.map((v) => {
-            const total = v.rooms.reduce((a, r) => a + area(r.pts), 0);
-            return (
-              <div key={v.id} style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
-                <VariantPreview v={v} />
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
-                  <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, textTransform: "lowercase", color: C.ink }}>{v.nombre}</span>
-                  <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{fmt(total, 1)} m²</span>
-                </div>
-                {v.nota.map((n) => (
-                  <div key={n} style={{ fontFamily: mono, fontSize: 9, color: C.soft, lineHeight: 1.5 }}>· {n}</div>
-                ))}
-                <button onClick={() => onUse(v)}
-                  style={{ marginTop: 8, width: "100%", fontFamily: mono, fontSize: 11, color: C.card,
-                    background: C.orange, border: "none", borderRadius: 2, padding: "7px 0", cursor: "pointer" }}>
-                  usar esta →
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -258,12 +184,16 @@ function DistribModal({ partis, brief, setBrief, onUse, onRegen, onClose, loteIn
   );
 }
 
-// ── PASO 3 · tipologías: amoblar el parti elegido (NSE, terraza) ──
+// ── PASO 3 · tipologías: elegir la tipología POR BLOQUE entre candidatas
+//    y hacerle tweaks (baños, NSE, terraza) con preview en vivo ──
 function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
   const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
   const [alicia, setAlicia] = useState(null);
-  // el amoblado se recalcula al cambiar NSE/terraza
-  const amoblado = (() => { try { return amoblarParti(parti, brief); } catch { return null; } })();
+  const [overrides, setOverrides] = useState({});   // { unitId: { tipologiaId, banos } }
+  const unidades = parti.res.units.filter((u) => u.areaReal >= 16);
+  const setOv = (id, k, v) => setOverrides((o) => ({ ...o, [id]: { ...o[id], [k]: v } }));
+  // el amoblado se recalcula al cambiar tipología/baños/NSE/terraza
+  const amoblado = (() => { try { return amoblarParti(parti, brief, overrides); } catch { return null; } })();
   const consultar = async () => {
     if (!amoblado) return;
     setAlicia("cargando");
@@ -300,6 +230,33 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
         <Btn onClick={consultar} disabled={alicia === "cargando"} title="Pedir opinión al agente (Alicia)">
           <MessageCircle size={13} /> {alicia === "cargando" ? "consultando…" : "opinión de alicia"}
         </Btn>
+      </div>
+      {/* tipología POR BLOQUE: candidatas ordenadas por calce + tweak de baños */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: "6px 18px", marginBottom: 14 }}>
+        {unidades.map((u, i) => {
+          const W = u.frame.ub - u.frame.ua;
+          const cands = tipologiasCandidatas(u.areaReal, W, 4);
+          const sel = overrides[u.id]?.tipologiaId || u.tipologia?.id || cands[0].id;
+          const tSel = porTipologia[sel] || cands[0];
+          return (
+            <div key={u.id} style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: mono, fontSize: 10.5, color: C.soft }}>
+              <span style={{ color: C.orange, fontWeight: 700 }}>{i + 1}</span>
+              <span style={{ minWidth: 92 }}>{fmt(W, 1)}×{fmt(u.frame.v1 - u.frame.v0, 1)} · {fmt(u.areaReal, 0)} m²</span>
+              <select value={sel} onChange={(e) => setOv(u.id, "tipologiaId", e.target.value)}
+                style={{ ...inputStyle, width: "auto", textAlign: "left" }}>
+                {cands.map((t) => (
+                  <option key={t.id} value={t.id}>{t.id} · {t.nombre} · {t.dorms}D</option>
+                ))}
+                {!cands.some((t) => t.id === sel) && <option value={sel}>{sel}</option>}
+              </select>
+              <label style={{ display: "flex", alignItems: "baseline", gap: 3 }}>baños
+                <select value={overrides[u.id]?.banos ?? tSel.banos} onChange={(e) => setOv(u.id, "banos", parseInt(e.target.value))}
+                  style={{ ...inputStyle, width: 42, textAlign: "left" }}>
+                  {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select></label>
+            </div>
+          );
+        })}
       </div>
       {typeof alicia === "string" && alicia !== "cargando" && (
         <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, background: C.card, border: `1px solid ${C.peri}`,
@@ -381,14 +338,12 @@ export default function EditorPlanos() {
   const [dims, setDims] = useState(true);
   const [selId, setSelId] = useState(null);         // ambiente seleccionado
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
-  const [showGen, setShowGen] = useState(false);
   const [showLib, setShowLib] = useState(false);
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3
   const [partis, setPartis] = useState([]);
   const [parti, setParti] = useState(null);              // distribución elegida (en memoria, no persiste)
   const [brief, setBrief] = useState({
-    area: 65, frente: 6.5, dormitorios: 2, banos: 2,          // depa suelto (generador simple)
     areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // distribución en lote
     nse: "C", terraza: true,                                   // tipologías
   });
@@ -441,12 +396,13 @@ export default function EditorPlanos() {
       }
     } catch { /* storage corrupto */ }
     try {
+      // puente cabida → plano: pre-carga los parámetros; el flujo arranca en 1·lote
       const b = localStorage.getItem(BRIEF_KEY);
       if (b) {
         const parsed = JSON.parse(b);
         setBrief((prev) => ({ ...prev, ...parsed }));
         localStorage.removeItem(BRIEF_KEY);
-        setShowGen(true);
+        setLoteBar(true);
       }
     } catch { /* brief inválido */ }
   }, []);
@@ -630,7 +586,7 @@ export default function EditorPlanos() {
   const useVariant = useCallback((v) => {
     const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
     commit(nr, (v.items || []).map((t) => ({ ...t })));
-    setShowGen(false); setShowDistrib(false); setShowTipo(false);
+    setShowDistrib(false); setShowTipo(false);
     setSelId(null); setSelItem(null); setDraft([]);
     requestAnimationFrame(() => fitTo(nr));
   }, [commit, fitTo]);
@@ -760,7 +716,7 @@ export default function EditorPlanos() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
-      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowGen(false); setShowDistrib(false); setShowTipo(false); setShowLib(false); setCalib([]); }
+      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowDistrib(false); setShowTipo(false); setShowLib(false); setCalib([]); }
       if (e.key === "Enter" && tool === "wall") onDouble();
       if (e.key === "r" || e.key === "R") rotateSel();
       if (e.key === "Backspace" || e.key === "Delete") {
@@ -836,7 +792,6 @@ export default function EditorPlanos() {
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
-        <Btn onClick={() => setShowGen(true)} title="Generar un depa suelto (sin lote)">depa suelto</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
         <Btn active={tool === "wall"} onClick={() => setTool("wall")} title="Dibujar muros (W)"><PenLine size={13} /> muro</Btn>
@@ -1094,9 +1049,6 @@ export default function EditorPlanos() {
         </span>
       </div>
 
-      {showGen && (
-        <GenModal brief={brief} setBrief={setBrief} onUse={useVariant} onClose={() => setShowGen(false)} />
-      )}
       {showDistrib && (() => {
         const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
         const info = fr ? `${tipoLote} · ${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
