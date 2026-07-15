@@ -453,7 +453,10 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
 
   const isCEO = userId === CEO_ID;
   const model = isCEO ? "claude-fable-5" : "claude-sonnet-4-6";
-  const maxTokens = isCEO ? 3000 : 1200;
+  // Fable SIEMPRE razona internamente antes de responder y ese razonamiento
+  // consume del mismo max_tokens: con 3000 se lo comía entero y la respuesta
+  // llegaba vacía ("Hmm, algo falló" en el panel). 16000 deja espacio de sobra.
+  const maxTokens = isCEO ? 16000 : 1200;
   const tools = isCEO ? ALICIA_TOOLS : ALICIA_TOOLS.filter(t => COLLAB_TOOLS.has(t.name));
 
   const systemPrompt = buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId);
@@ -490,6 +493,9 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       resp = await anthropic.messages.create({
         model,
         max_tokens: maxTokens,
+        // Profundidad de razonamiento calibrada para chat: el default ("high")
+        // puede pensar minutos; "medium" mantiene la calidad con latencia de chat.
+        output_config: { effort: "medium" },
         system: systemBlocks,
         tools: cachedTools,
         tool_choice: { type: "auto" },
@@ -502,12 +508,20 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
         resp = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
           max_tokens: maxTokens,
+          output_config: { effort: "medium" },
           system: systemBlocks,
           tools: cachedTools,
           tool_choice: { type: "auto" },
           messages: loopMessages,
         });
       } else throw e;
+    }
+
+    // Los clasificadores de seguridad de Fable pueden rechazar un pedido:
+    // llega HTTP 200 con stop_reason "refusal" y contenido vacío/parcial.
+    if (resp.stop_reason === "refusal") {
+      finalText = "Prefiero no ayudarte con eso 🙈 ¿Seguimos con otra cosa?";
+      break;
     }
 
     const textBlock = resp.content.find(b => b.type === "text");

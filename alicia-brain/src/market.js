@@ -129,30 +129,92 @@ async function fetchNexoProjects() {
     }
   }
 
-  // Strategy 2: try scraping the HTML search page for embedded JSON
-  try {
-    const res = await fetch("https://nexoinmobiliario.pe/departamentos/lima", {
-      headers,
-      signal: AbortSignal.timeout(20000),
-    });
-    if (res.ok) {
-      const html = await res.text();
-      // Look for __NEXT_DATA__ or window.__data__ patterns common in Next.js/SSR sites
-      const match = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-      if (match) {
-        const nextData = JSON.parse(match[1]);
-        const projects = extractFromNextData(nextData);
-        if (projects.length > 0) {
-          console.log(`✅ Nexo SSR scrape: ${projects.length} proyectos`);
-          return projects;
-        }
+  // Strategy 2: la web de Nexo NO es Next.js — embebe los proyectos de cada página
+  // en `var search_data=[...]` (SSR + filtrado client-side, verificado jul 2026).
+  // Se recorren páginas por distrito (24 proyectos c/u) y se mergea por project_id.
+  const NEXO_PAGES = [
+    "venta-de-inmuebles", "departamentos/lima", "departamentos/miraflores",
+    "departamentos/san-isidro", "departamentos/barranco", "departamentos/santiago-de-surco",
+    "departamentos/jesus-maria", "departamentos/magdalena-del-mar", "departamentos/san-miguel",
+    "departamentos/lince", "departamentos/pueblo-libre", "departamentos/san-borja",
+  ];
+  const byId = new Map();
+  for (const slug of NEXO_PAGES) {
+    try {
+      const res = await fetch(`https://nexoinmobiliario.pe/${slug}`, {
+        headers, redirect: "follow", signal: AbortSignal.timeout(30000),
+      });
+      if (!res.ok) continue;
+      for (const p of extractSearchData(await res.text())) {
+        if (p.project_id && !byId.has(p.project_id)) byId.set(p.project_id, p);
       }
-    }
-  } catch (e) {
-    // ignore
+    } catch { /* siguiente página */ }
+  }
+  if (byId.size > 0) {
+    const projects = mapNexoSearchData([...byId.values()]);
+    console.log(`✅ Nexo search_data: ${projects.length} proyectos únicos (${NEXO_PAGES.length} páginas)`);
+    return projects;
   }
 
   return null; // scraping failed, will keep last known data
+}
+
+// Saca el array `var search_data=[...]` del HTML (scanner con estado de string,
+// porque los nombres de proyectos pueden traer corchetes).
+function extractSearchData(html) {
+  const i = html.indexOf("var search_data=");
+  if (i < 0) return [];
+  const start = html.indexOf("[", i);
+  if (start < 0) return [];
+  let depth = 0, inStr = false, esc = false;
+  for (let j = start; j < html.length; j++) {
+    const ch = html[j];
+    if (esc) { esc = false; continue; }
+    if (ch === "\\") { esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === "[") depth++;
+    else if (ch === "]" && --depth === 0) {
+      try { return JSON.parse(html.slice(start, j + 1)); } catch { return []; }
+    }
+  }
+  return [];
+}
+
+// Mapea los campos reales de Nexo al esquema del Radar. Precios a USD con el
+// tipo de cambio BCRP ya guardado en macro_data (fallback 3.4).
+function mapNexoSearchData(arr) {
+  let usdPen = 3.4;
+  try { usdPen = getMacroData()?.usd_pen?.value || usdPen; } catch {}
+  return arr.map((p) => {
+    const price = parseFloat(p.min_price) || null;
+    const isUSD = /\$/.test(p.coin || "") && !/S\//.test(p.coin || "");
+    const priceUsd = price == null ? null : (isUSD ? price : price / usdPen);
+    const areaMin = parseFloat(p.area_min) || null;
+    return {
+      id: `nexo_${p.project_id}`,
+      nexo_id: p.project_id,
+      source: "nexo",
+      url: p.url || "",
+      name: p.name || "",
+      developer: p.builder_name || "",
+      district: p.distrito || "",
+      zone: p.ubicacion_seo || "",
+      stage: p.project_phase || "",
+      address: p.direccion || "",
+      units: parseInt(p.cantidad) || null,
+      min_area_m2: areaMin,
+      max_area_m2: parseFloat(p.area_max) || null,
+      dorms_min: parseInt(p.room_min) || null,
+      dorms_max: parseInt(p.room_max) || null,
+      list_price_pen: isUSD ? null : price,
+      list_price_usd: priceUsd != null ? Math.round(priceUsd) : null,
+      list_price_m2_usd: priceUsd && areaMin ? Math.round(priceUsd / areaMin) : null,
+      lat: parseFloat(p.coord_lat) || null,
+      lng: parseFloat(p.long) || null,
+      scraped_at: new Date().toISOString(),
+    };
+  }).filter((p) => p.name && p.district);
 }
 
 function extractProjects(json) {
@@ -163,20 +225,6 @@ function extractProjects(json) {
   if (json?.results && Array.isArray(json.results)) return normalizeProjects(json.results);
   if (json?.items && Array.isArray(json.items)) return normalizeProjects(json.items);
   return [];
-}
-
-function extractFromNextData(nextData) {
-  const candidates = [];
-  const walk = (obj) => {
-    if (!obj || typeof obj !== "object") return;
-    if (Array.isArray(obj)) { obj.forEach(walk); return; }
-    if (obj.district && obj.name && (obj.list_price_m2_usd || obj.close_price_m2_usd)) {
-      candidates.push(obj);
-    }
-    Object.values(obj).forEach(walk);
-  };
-  walk(nextData);
-  return candidates;
 }
 
 function normalizeProjects(arr) {
