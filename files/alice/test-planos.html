@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>test · generador de planos BAM</title>
+<style>
+  :root { --ink:#373737; --peri:#95ABE8; --orange:#F7643B; --paper:#EFEDE8; --line:#E4E2DC; --soft:#9B998F; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:'Hanken Grotesk','Helvetica Neue',sans-serif; }
+  header { display:flex; align-items:baseline; gap:10px; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:14px; margin:0; text-transform:lowercase; letter-spacing:.06em; }
+  header span { font-family:monospace; font-size:10px; color:var(--soft); }
+  .bar { display:flex; flex-wrap:wrap; gap:14px; align-items:center; padding:10px 20px; border-bottom:1px solid var(--line); background:#F4F2EC; }
+  .bar .tag { font-family:monospace; font-size:10px; color:var(--peri); font-weight:700; min-width:110px; }
+  .bar label { display:flex; align-items:baseline; gap:5px; font-family:monospace; font-size:11px; color:var(--soft); }
+  .bar input, .bar select { font-family:monospace; font-size:12px; font-weight:600; color:var(--ink); width:58px;
+    text-align:right; border:1px solid var(--line); border-radius:2px; background:#fff; padding:4px 6px; outline:none; }
+  .bar select { width:auto; text-align:left; }
+  button.go { font-family:monospace; font-size:12px; color:#fff; background:var(--orange); border:none; border-radius:2px;
+    padding:8px 18px; cursor:pointer; }
+  button.sec { font-family:monospace; font-size:11px; color:var(--ink); background:#fff; border:1px solid var(--line);
+    border-radius:2px; padding:7px 12px; cursor:pointer; }
+  #status { font-family:monospace; font-size:10.5px; color:var(--soft); }
+  #alicia { margin:10px 20px 0; padding:10px 12px; background:#fff; border:1px solid var(--peri); border-left:3px solid var(--peri);
+    border-radius:3px; font-family:monospace; font-size:11px; line-height:1.55; white-space:pre-wrap; display:none; }
+  h2.paso { font-family:monospace; font-size:11px; color:var(--soft); margin:16px 20px 0; text-transform:lowercase; }
+  h2.paso b { color:var(--orange); }
+  #partis { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; padding:12px 20px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:3px; padding:10px; }
+  .card.sel { outline:2px solid var(--orange); }
+  .card h3 { display:flex; gap:8px; align-items:baseline; font-size:12px; margin:8px 0 4px; text-transform:lowercase; }
+  .card h3 .n { font-family:monospace; font-size:10px; color:var(--orange); }
+  .card h3 .uds { font-family:monospace; font-size:10px; color:var(--soft); font-weight:400; }
+  .card .nota { font-family:monospace; font-size:9px; color:var(--soft); line-height:1.5; }
+  .card button { margin-top:8px; width:100%; font-family:monospace; font-size:11px; color:#fff; background:var(--orange);
+    border:none; border-radius:2px; padding:7px 0; cursor:pointer; }
+  #resultado { padding:12px 20px 40px; display:none; }
+  #resultado .lam { background:#fff; border:1px solid var(--line); border-radius:3px; padding:10px; }
+  #resultado svg { width:100%; height:auto; display:block; cursor:zoom-in; }
+  #notas { font-family:monospace; font-size:10px; color:var(--soft); line-height:1.7; margin-top:8px; }
+  dialog { border:none; border-radius:4px; padding:0; max-width:96vw; box-shadow:0 12px 60px rgba(0,0,0,.4); }
+  dialog svg { width:min(1500px,95vw); height:auto; display:block; }
+</style>
+</head>
+<body>
+<header>
+  <h1><b style="color:var(--peri)">BAM</b> · banco de pruebas del generador de planos</h1>
+  <span>flujo: lote (medianera/esquina + retiros) → distribución → tipologías · módulos reales vía vite</span>
+</header>
+
+<!-- PASO 1 · LOTE -->
+<div class="bar">
+  <span class="tag">1 · lote ▸</span>
+  <label>tipo <select id="tipo">
+    <option value="medianera" selected>entre medianeras</option>
+    <option value="esquina">esquina</option>
+  </select></label>
+  <label>frente <input id="frente" type="number" value="17" step="0.5" min="5"> m</label>
+  <label>fondo <input id="fondo" type="number" value="27" step="0.5" min="5"> m</label>
+  <label>retiro frontal <input id="retiro" type="number" value="3" step="0.5" min="0"> m</label>
+  <label id="latWrap" style="display:none">retiro calle lateral <input id="retiroLat" type="number" value="3" step="0.5" min="0"> m</label>
+  <span id="footInfo" style="font-family:monospace;font-size:10.5px;color:var(--soft)"></span>
+</div>
+
+<!-- PASO 2 · DISTRIBUCIÓN -->
+<div class="bar">
+  <span class="tag">2 · distribución ▸</span>
+  <label>uds/piso <input id="uds" type="number" value="4" step="1" min="1"></label>
+  <label>área objetivo <input id="area" type="number" value="60" step="5" min="25"> m²</label>
+  <label>1D% <input id="p1" type="number" value="25" step="5" min="0" max="100"></label>
+  <label>2D% <input id="p2" type="number" value="40" step="5" min="0" max="100"></label>
+  <button class="go" id="gen">✦ distribuciones</button>
+  <span id="status"></span>
+</div>
+
+<!-- PASO 3 · TIPOLOGÍAS -->
+<div class="bar">
+  <span class="tag">3 · tipologías ▸</span>
+  <label>NSE <select id="nse"><option>A</option><option>B</option><option selected>C</option><option>D</option></select></label>
+  <label><input id="terr" type="checkbox" checked style="width:auto"> terraza+jardineras</label>
+  <button class="go" id="amoblar" disabled>amoblar parti elegido</button>
+  <button class="sec" id="ask">opinión de alicia</button>
+</div>
+
+<div id="alicia"></div>
+<h2 class="paso" id="tituloPartis" style="display:none"><b>elige una distribución</b> (bloques + core + corredor, sin tipologías aún)</h2>
+<div id="partis"></div>
+<h2 class="paso" id="tituloRes" style="display:none"><b>planta amoblada</b> · clic para zoom</h2>
+<div id="resultado"><div class="lam" id="lam"></div><div id="notas"></div></div>
+<dialog id="zoom"><div id="zoomIn"></div></dialog>
+
+<script type="module" src="/src/test-planos.js"></script>
+</body>
+</html>
