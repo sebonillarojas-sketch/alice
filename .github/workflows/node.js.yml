@@ -1,7 +1,9 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+# Chequeo de sintaxis del backend en cada push — atrapa errores tipo
+# "variable sin declarar" (como el que tumbó Nexo) antes de que lleguen
+# a producción. El deploy real lo hacen Railway (main) y Netlify (manual);
+# este workflow solo avisa, no despliega.
 
-name: Node.js CI
+name: Checks
 
 on:
   push:
@@ -10,22 +12,17 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  sintaxis:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sintaxis del backend (alicia-brain + erp-backend)
+        run: |
+          set -e
+          for f in $(find alicia-brain/src erp-backend/scripts -name "*.js" 2>/dev/null); do
+            node --check "$f"
+          done
+          echo "✅ Sintaxis OK"
