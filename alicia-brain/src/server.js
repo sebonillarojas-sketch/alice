@@ -452,11 +452,14 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   ]);
 
   const isCEO = userId === CEO_ID;
-  const model = isCEO ? "claude-fable-5" : "claude-sonnet-4-6";
-  // Fable SIEMPRE razona internamente antes de responder y ese razonamiento
-  // consume del mismo max_tokens: con 3000 se lo comía entero y la respuesta
-  // llegaba vacía ("Hmm, algo falló" en el panel). 16000 deja espacio de sobra.
-  const maxTokens = isCEO ? 16000 : 1200;
+  // Por defecto TODOS van con Sonnet (rápido, estable, barato). "Maximum effort" 🦸
+  // (a lo Deadpool) activa Fable 5 SOLO para ese turno de Sebastián. Fable razona
+  // internamente consumiendo del mismo max_tokens — con presupuesto chico el
+  // razonamiento se lo come entero y la respuesta llega vacía, de ahí los 16000.
+  const maximumEffort = isCEO && /(maximum|m[aá]ximo)\s+effort|m[aá]ximo\s+esfuerzo/i.test(userText);
+  const model = maximumEffort ? "claude-fable-5" : "claude-sonnet-4-6";
+  const maxTokens = maximumEffort ? 16000 : (isCEO ? 3000 : 1200);
+  if (maximumEffort) console.log(`🦸 [${userId}] MAXIMUM EFFORT — turno con Fable 5`);
   const tools = isCEO ? ALICIA_TOOLS : ALICIA_TOOLS.filter(t => COLLAB_TOOLS.has(t.name));
 
   const systemPrompt = buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId);
@@ -493,9 +496,10 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       resp = await anthropic.messages.create({
         model,
         max_tokens: maxTokens,
-        // Profundidad de razonamiento calibrada para chat: el default ("high")
-        // puede pensar minutos; "medium" mantiene la calidad con latencia de chat.
-        output_config: { effort: "medium" },
+        // Profundidad de razonamiento: "medium" para chat normal (latencia de chat);
+        // en maximum effort sube a "high" (el tope "max" puede pensar minutos y
+        // el panel corta a los 60s).
+        output_config: { effort: maximumEffort ? "high" : "medium" },
         system: systemBlocks,
         tools: cachedTools,
         tool_choice: { type: "auto" },
@@ -503,12 +507,12 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       });
     } catch (e) {
       // Si Fable no está disponible para esta cuenta, caemos a Sonnet sin romper el chat
-      if (isCEO && /model|not_found/i.test(e.message)) {
+      if (maximumEffort && /model|not_found/i.test(e.message)) {
         console.warn("Fable no disponible, fallback a Sonnet:", e.message.slice(0, 80));
         resp = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
           max_tokens: maxTokens,
-          output_config: { effort: "medium" },
+          output_config: { effort: maximumEffort ? "high" : "medium" },
           system: systemBlocks,
           tools: cachedTools,
           tool_choice: { type: "auto" },

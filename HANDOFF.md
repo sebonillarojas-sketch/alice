@@ -16,7 +16,7 @@ Repos git (dueño: sebonillarojas-sketch):
 
 ## 2. ROLES DE ALICIA (decisión de producto, inamovible)
 
-- **Con Sebastián (userId `sb`)**: SUB-CEO / second in command. Modelo **claude-fable-5** (fallback sonnet), 3000 tokens, TODAS las herramientas, acceso total a info. Propone, desafía, ejecuta con autorización.
+- **Con Sebastián (userId `sb`)**: SUB-CEO / second in command. Modelo **claude-sonnet-4-6** por defecto; si el mensaje incluye "maximum effort" (o "máximo esfuerzo"), ese turno corre con **claude-fable-5** (16000 tokens, effort high, fallback sonnet). TODAS las herramientas, acceso total a info. Propone, desafía, ejecuta con autorización.
 - **Con el resto (vd·jt·jm·aa·ac·jmg)**: asistente de productividad. Sonnet, allowlist de tools (tareas, calendar, SU gmail, dropbox, web_search, zoom, skills, disponibilidad). Estrategia/finanzas/datos de otros → redirige a Sebastián.
 - Implementado en `alicia-brain/src/server.js` (COLLAB_TOOLS + modeBlock).
 
