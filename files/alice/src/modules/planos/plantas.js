@@ -12,6 +12,10 @@ import { porId, NSE } from "./mobiliario.js";
 
 let _n = 1;
 const oid = () => `o${_n++}_${Math.random().toString(36).slice(2, 5)}`;
+// etiqueta legible de una tipología: "2D", "3D", "studio", "depósito" (nada de códigos)
+const etiqueta = (t) => !t ? "?" : t.id === "depósito" ? "depósito" : t.dorms === 1 && t.area?.[1] <= 38 ? "studio" : `${t.dorms}D`;
+// recorte inservible como vivienda (chico O astilla angosta junto al core) → depósito
+export const esDeposito = (u) => u.areaReal < 16 || (u.frame.ub - u.frame.ua) < 2.8 || (u.frame.v1 - u.frame.v0) < 3.2;
 const round = (n) => +n.toFixed(3);
 const rect = (x, y, w, h) => [{ x: round(x), y: round(y) }, { x: round(x + w), y: round(y) }, { x: round(x + w), y: round(y + h) }, { x: round(x), y: round(y + h) }];
 const it = (ref, x, y, rot = 0, over = {}) => {
@@ -154,14 +158,14 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
     if (res.core) rooms.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });
     if (res.corridor) rooms.push({ id: res.corridor.id, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
     res.units.forEach((u) => {
-      const t = u.areaReal < 16 ? { id: "depósito" } : tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms);
+      const t = esDeposito(u) ? { id: "depósito" } : tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms);
       u.tipologia = t;
-      rooms.push({ id: u.id, name: `${t.id} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
+      rooms.push({ id: u.id, name: `${etiqueta(t)} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
     });
     partis.push({
       id: oid(), nombre: c.nombre, rooms, res,
       notas: [
-        res.units.map((u) => `${u.tipologia.id} ${u.areaReal.toFixed(0)}m²`).join(" · "),
+        res.units.map((u) => `${etiqueta(u.tipologia)} ${u.areaReal.toFixed(0)}m²`).join(" · "),
         res.doble ? "doble crujía" : "crujía simple",
       ],
       stats: { uds: res.units.length },
@@ -184,7 +188,7 @@ export function amoblarParti(parti, brief = {}, overrides = {}) {
 
   let amobladas = 0;
   res.units.forEach((u) => {
-    if (u.areaReal < 16) {
+    if (esDeposito(u)) {
       rooms.push({ id: `${u.id}a`, name: `depósito · ${u.areaReal.toFixed(0)}m²`, tipo: "servicio", pts: u.pts });
       return;
     }
@@ -194,10 +198,10 @@ export function amoblarParti(parti, brief = {}, overrides = {}) {
       rooms.push(...A.rooms.map((r) => ({ ...r, unidad: A.tipologia.id })));
       items.push(...A.items);
       amobladas++;
-      if (A.warns.length) notas.push(`${A.tipologia.id}: ${A.warns[0]}`);
+      if (A.warns.length) notas.push(`${etiqueta(A.tipologia)} ${u.areaReal.toFixed(0)}m²: ${A.warns[0]}`);
     } else {
-      rooms.push({ id: `${u.id}a`, name: `${u.tipologia.id} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
-      notas.push(`${u.tipologia.id}: recorte ${u.areaReal.toFixed(0)}m² sin distribución interna`);
+      rooms.push({ id: `${u.id}a`, name: `${etiqueta(u.tipologia)} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
+      notas.push(`${etiqueta(u.tipologia)} ${u.areaReal.toFixed(0)}m²: recorte sin distribución interna`);
     }
   });
 
@@ -209,7 +213,7 @@ export function amoblarParti(parti, brief = {}, overrides = {}) {
   else if (fx.items.length) notas.push("sugerencia: jardineras a fachada");
 
   // resumen con las tipologías FINALES (incluye overrides del usuario)
-  const resumen = res.units.map((u) => `${u.tipologia?.id || "?"} ${u.areaReal.toFixed(0)}m²`).join(" · ");
+  const resumen = res.units.map((u) => `${etiqueta(u.tipologia)} ${u.areaReal.toFixed(0)}m²`).join(" · ");
   return {
     id: oid(), nombre: parti.nombre, rooms, items,
     notas: [resumen, ...parti.notas.slice(1), ...notas],

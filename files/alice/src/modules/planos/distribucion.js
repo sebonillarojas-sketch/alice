@@ -199,22 +199,30 @@ export function layout(W, D, nd, nb, opts = {}) {
   return { rooms, items, warns, W, D, areaTotal };
 }
 
-// ── layout PROFUNDO (unidad angosta y profunda, típica de doble crujía) ──
+// ── layout SIMPLE (el caballito de batalla: SIEMPRE parte el bloque) ──
 // parti de referencia BAM: DORMITORIOS a la fachada/pozo de luz (y=0) a todo el ancho,
 // banda de servicio con baños + HALL DE DISTRIBUCIÓN al medio, social+cocina hacia
 // el corredor de ingreso (y=D). convención: y=0 fachada · y=D ingreso.
-function layoutProfundo(W, D, nd, nb, opts = {}) {
+// bandas PROPORCIONALES: se adaptan al bloque en vez de rendirse — si los dormitorios
+// pedidos no caben en el ancho, baja la cantidad y lo avisa en las notas.
+export function layoutProfundo(W, D, nd, nb, opts = {}) {
   const warns = [];
   const rooms = [], items = [];
+  if (W < 4.2 || D < 5.4) return null;              // por debajo de esto: studio
+  // ¿cuántos dormitorios caben de verdad en el ancho? (≥2.25 m cada uno)
+  const ndMax = Math.max(1, Math.floor(W / 2.25));
+  if (nd > ndMax) { warns.push(`${nd}D no cabe en ${W.toFixed(1)}m de frente → ${ndMax}D`); nd = ndMax; }
   const wWet = clamp(W * 0.34, 2.0, 2.6);
-  const hs = 2.05;                                  // banda de servicio (baños + hall)
-  let dP = clamp(D * 0.34, 2.9, 4.0);               // dormitorios (banda de fachada)
+  const hs = clamp(D * 0.18, 1.7, 2.2);             // banda de servicio (baños + hall)
+  let dP = clamp(D * 0.36, 2.6, 4.2);               // dormitorios (banda de fachada)
   let dS = D - hs - dP;                             // social + cocina (banda de ingreso)
-  if (dS < 3.2) { dS = 3.2; dP = D - hs - dS; }
-  if (dP < 2.8 || dS < 3.2 || W < 4.6) return null;
+  if (dS < 2.6) { dS = 2.6; dP = D - hs - dS; }
+  if (dP < 2.3) return null;                        // bloque demasiado poco profundo → studio
 
   // banda fachada: dormitorios a TODO el ancho, ventanas al frente (pozo/fachada)
-  const anchos = nd === 2 ? [W * 0.54, W * 0.46] : [W * 0.4, W * 0.3, W * 0.3];
+  const anchos = nd === 1 ? [W]
+    : nd === 2 ? [W * 0.54, W * 0.46]
+      : [W * 0.4, W * 0.3, W * 0.3];
   // baño 2 al extremo derecho de la banda servicio; hall al centro
   const hall0 = wWet, hall1 = nb >= 2 && W - wWet - 1.7 >= HOLGURA.corredorMin + 0.2 ? W - 1.7 : W;
   let dx = 0;

@@ -113,7 +113,7 @@ function generarPartis() {
 function renderUnidades() {
   const box = $("unidades");
   box.innerHTML = `<span class="tag">bloques ▸</span>`;
-  const unidades = elegido.res.units.filter((u) => u.areaReal >= 16);
+  const unidades = elegido.res.units.filter((u) => !mods.plantas.esDeposito(u));
   unidades.forEach((u, i) => {
     const W = u.frame.ub - u.frame.ua;
     const cands = mods.tipologias.tipologiasCandidatas(u.areaReal, W, 4);
@@ -122,7 +122,7 @@ function renderUnidades() {
     wrap.innerHTML = `<b style="color:var(--orange)">${i + 1}</b>
       <span>${W.toFixed(1)}×${(u.frame.v1 - u.frame.v0).toFixed(1)} · ${u.areaReal.toFixed(0)} m²</span>
       <select data-k="tipologiaId">${cands.map((t) =>
-        `<option value="${t.id}" ${t.id === selId ? "selected" : ""}>${t.id} · ${t.nombre} · ${t.dorms}D</option>`).join("")}
+        `<option value="${t.id}" ${t.id === selId ? "selected" : ""}>${t.dorms}D · ${t.nombre} · ~${t.area[1]} m²</option>`).join("")}
       </select>
       baños <select data-k="banos">${[1, 2, 3].map((n) =>
         `<option value="${n}" ${n === (mods.tipologias.porTipologia[selId]?.banos || 2) ? "selected" : ""}>${n}</option>`).join("")}
