@@ -11,7 +11,7 @@ import {
 } from "./geometry.js";
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
-import { generarDistribuciones, amoblarParti } from "./plantas.js";
+import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
 import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
@@ -190,7 +190,7 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
   const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
   const [alicia, setAlicia] = useState(null);
   const [overrides, setOverrides] = useState({});   // { unitId: { tipologiaId, banos } }
-  const unidades = parti.res.units.filter((u) => u.areaReal >= 16);
+  const unidades = parti.res.units.filter((u) => !esDeposito(u));
   const setOv = (id, k, v) => setOverrides((o) => ({ ...o, [id]: { ...o[id], [k]: v } }));
   // el amoblado se recalcula al cambiar tipología/baños/NSE/terraza
   const amoblado = (() => { try { return amoblarParti(parti, brief, overrides); } catch { return null; } })();
@@ -245,7 +245,7 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
               <select value={sel} onChange={(e) => setOv(u.id, "tipologiaId", e.target.value)}
                 style={{ ...inputStyle, width: "auto", textAlign: "left" }}>
                 {cands.map((t) => (
-                  <option key={t.id} value={t.id}>{t.id} · {t.nombre} · {t.dorms}D</option>
+                  <option key={t.id} value={t.id}>{t.dorms}D · {t.nombre} · ~{t.area[1]} m²</option>
                 ))}
                 {!cands.some((t) => t.id === sel) && <option value={sel}>{sel}</option>}
               </select>
