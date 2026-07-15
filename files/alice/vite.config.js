@@ -12,5 +12,12 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: false,
     chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        // banco de pruebas del generador de planos BAM (/test-planos.html)
+        "test-planos": "test-planos.html",
+      },
+    },
   },
 });
