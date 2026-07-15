@@ -106,6 +106,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
         ];
         if (clip) { const c = clipConvex(poly, clip); if (c.length >= 3) poly = c; else return; }
         poly = poly.map(round);
+        if (area(poly) < 2) return;   // esquirla junto al core: ni depósito merece
         units.push({
           id: rid(), tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
           tipologia: unit.tipologia || null, partida: segs.length > 1 ? si : null,

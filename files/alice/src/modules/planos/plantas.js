@@ -30,22 +30,24 @@ function layoutStudio(W, D, nse = "C") {
   if (W < 2.8 || D < 3.2) return null;
   const rooms = [], items = [], warns = [];
   const bw = Math.min(1.7, W * 0.35), bd = Math.min(2.0, D * 0.48);
-  // baño (esquina izquierda del corredor)
+  // baño lineal (esquina del corredor): entras → lavatorio → inodoro → ducha al fondo,
+  // todo contra el muro húmedo izquierdo; la puerta en el extremo opuesto, barrido libre
   rooms.push({ id: oid(), name: "baño", tipo: "baño", pts: rect(0, D - bd, bw, bd) });
-  items.push(it("inodoro", 0.34, D - 0.42, 180));
-  items.push(it("lavamanos", bw - 0.32, D - bd + 0.32, 90));
-  if (bd >= 1.8) items.push(it("ducha", 0.45, D - bd + 0.45, 0, { w: 0.8, d: 0.8 }));
-  items.push(it("puerta-70", bw / 2, D - bd, 0));
+  const bTop = D - bd;
+  if (bd >= 1.8) items.push(it("ducha", 0.43, D - 0.43, 0, { w: 0.78, d: 0.78 }));
+  items.push(it("inodoro", 0.36, D - 1.24, -90));
+  items.push(it("lavamanos", 0.3, bTop + 0.32, 0));
+  items.push(it("puerta-70", Math.max(bw - 0.42, 0.4), bTop, 0));
   // ambiente único en L alrededor del baño
   rooms.push({
     id: oid(), name: "studio", tipo: "social",
     pts: [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: D }, { x: round(bw), y: D },
       { x: round(bw), y: round(D - bd) }, { x: 0, y: round(D - bd) }].map((p) => ({ x: round(p.x), y: round(p.y) })),
   });
-  // kitchenette contra el muro del corredor
+  // kitchenette contra el muro del corredor, dejando LIBRE el ingreso (puerta al extremo)
   const p = (NSE[nse] || NSE.C).cocina;
-  const kw = Math.min(p.w, W - bw - 1.2);
-  if (kw >= 1.5) items.push(it("cocina", bw + 0.35 + kw / 2, D - 0.31, 180, { w: kw, hornillas: 2, refriW: Math.min(p.refriW, 0.65) }));
+  const kw = Math.min(p.w, W - bw - 1.6);
+  if (kw >= 1.5) items.push(it("cocina", bw + 0.3 + kw / 2, D - 0.31, 180, { w: kw, hornillas: 2, refriW: Math.min(p.refriW, 0.65) }));
   // cama a fachada + velador
   const cama = W >= 4.2 ? "cama-2plz" : "cama-15plz";
   const cw = porId[cama].w;
@@ -55,8 +57,8 @@ function layoutStudio(W, D, nse = "C") {
     items.push(it("sofa-2c", 1.15, 0.6, 0, { w: 1.5 }));
     items.push(it("mesa-centro", 1.15, 1.55, 0, { w: 0.8, d: 0.45 }));
   }
-  // ingreso desde el corredor + ventana a fachada
-  items.push(it("puerta-90", Math.min(bw + 0.75, W - 0.6), D, 0));
+  // ingreso desde el corredor (extremo opuesto a la kitchenette) + ventana a fachada
+  items.push(it("puerta-90", W - 0.6, D, 0));
   items.push(it(W >= 3.4 ? "ventana-180" : "ventana-120", W / 2, 0, 0));
   return { rooms, items, warns };
 }

@@ -19,52 +19,106 @@ const it = (ref, x, y, rot = 0, over = {}) => {
 // ── amueblado por ambiente (holguras reales) ───────────────
 // convención: y=0 fachada frente (calle) · y=D fachada fondo (patio) · muro húmedo en x=0
 
-function amoblarDorm(R, principal, puertaLado /* 'hall-abajo'|'hall-arriba' */, ventanaLado /* 'frente'|'fondo' */, nse = "C", doorX = null) {
+// ── dormitorio VIVIBLE ────────────────────────────────────────
+// la puerta y la ventana están en muros opuestos (puerta al hall, ventana a fachada).
+// cabecera contra el muro LATERAL más lejano de la puerta (nunca contra la puerta ni
+// tapando la ventana) → entras y tienes paso libre a lo largo de la cama.
+// veladores en la cabecera · closet junto a la puerta FUERA de su barrido ·
+// escritorio bajo la ventana en el espacio que deja la cama.
+function amoblarDorm(R, principal, puertaLado /* 'hall-abajo'|'hall-arriba' */, ventanaLado, nse = "C", doorX = null) {
   const out = [];
   const key = principal ? "dormPrincipal" : "dormitorio";
   let bedRef = camaPara(key, R.w);
   // el NSE puede subir la cama principal (king/queen) si el ancho lo permite
   if (principal) {
     const up = (NSE[nse] || NSE.C).camaPpal;
-    if (porId[up] && R.w >= porId[up].w + 1.1) bedRef = up;
+    if (porId[up] && R.w >= porId[up].d + 1.3) bedRef = up;
   }
   const bed = porId[bedRef];
-  // cabecera contra el muro sin ventana ni puerta
-  const headAbajo = ventanaLado === "frente"; // ventana al frente → cabecera al fondo
-  const bedCy = headAbajo ? R.y + R.h - bed.d / 2 - 0.08 : R.y + bed.d / 2 + 0.08;
-  const bedCx = R.x + R.w / 2;
-  if (R.h >= bed.d + HOLGURA.paseCama + 0.3) {
-    out.push(it(bedRef, bedCx, bedCy, headAbajo ? 0 : 180));
+  const doorAbajo = puertaLado === "hall-abajo";
+  const doorWallY = doorAbajo ? R.y + R.h : R.y;         // muro de la puerta
+  const winWallY = doorAbajo ? R.y : R.y + R.h;          // muro de la ventana (opuesto)
+  const dx = doorX ?? R.x + 0.5;
+  // cabecera al muro lateral MÁS LEJANO de la puerta
+  const headIzq = dx > R.x + R.w / 2;
+  // la cama rotada 90°: largo (bed.d) corre en X desde la cabecera, ancho (bed.w) en Y
+  const bedCx = headIzq ? R.x + bed.d / 2 + 0.04 : R.x + R.w - bed.d / 2 - 0.04;
+  // centrada en la franja libre que deja el closet (0.65 junto al muro de la puerta)
+  const libre0 = doorAbajo ? R.y : R.y + 0.65;
+  const libre1 = doorAbajo ? R.y + R.h - 0.65 : R.y + R.h;
+  const bedCy = (libre0 + libre1) / 2;
+  const cabe = bed.d + 0.1 <= R.w && bed.w + 0.5 <= (libre1 - libre0);
+  if (cabe) {
+    out.push(it(bedRef, bedCx, bedCy, headIzq ? 270 : 90));
+    // veladores en la cabecera, a ambos lados de la cama si caben
     const vel = porId.velador;
-    const vy = headAbajo ? R.y + R.h - vel.d / 2 - 0.08 : R.y + vel.d / 2 + 0.08;
-    if (bedCx - bed.w / 2 - vel.w > R.x + 0.05) out.push(it("velador", bedCx - bed.w / 2 - vel.w / 2 - 0.04, vy, 0));
-    if (bedCx + bed.w / 2 + vel.w < R.x + R.w - 0.05) out.push(it("velador", bedCx + bed.w / 2 + vel.w / 2 + 0.04, vy, 0));
+    const vx = headIzq ? R.x + vel.d / 2 + 0.05 : R.x + R.w - vel.d / 2 - 0.05;
+    if (bedCy - bed.w / 2 - vel.w / 2 - 0.04 > libre0 + 0.05)
+      out.push(it("velador", vx, bedCy - bed.w / 2 - vel.w / 2 - 0.04, headIzq ? 270 : 90));
+    if (bedCy + bed.w / 2 + vel.w / 2 + 0.04 < libre1 - 0.05)
+      out.push(it("velador", vx, bedCy + bed.w / 2 + vel.w / 2 + 0.04, headIzq ? 270 : 90));
+  } else if (bed.d + 0.1 <= R.h && bed.w + 0.4 <= R.w) {
+    // cuarto más profundo que ancho: cama clásica, cabecera al muro de la ventana
+    const cy2 = doorAbajo ? R.y + bed.d / 2 + 0.06 : R.y + R.h - bed.d / 2 - 0.06;
+    out.push(it(bedRef, R.x + R.w / 2, cy2, doorAbajo ? 180 : 0));
   }
-  // clóset en el muro opuesto a la ventana, corriendo el ancho
-  const clw = Math.min(1.8, R.w - 0.4);
-  if (clw >= 0.9) {
-    const cy = headAbajo ? R.y + 0.31 : R.y + R.h - 0.31;
-    out.push(it("closet", R.x + R.w / 2, cy, headAbajo ? 180 : 0, { w: clw }));
+  // closet en el muro de la puerta, del lado de la cabecera, FUERA del barrido (0.85)
+  const cl0 = headIzq ? R.x + 0.08 : dx + 0.85;
+  const cl1 = headIzq ? dx - 0.85 : R.x + R.w - 0.08;
+  const clw = Math.min(1.8, cl1 - cl0);
+  if (clw >= 0.8) {
+    const ccy = doorAbajo ? R.y + R.h - 0.31 : R.y + 0.31;
+    out.push(it("closet", (cl0 + cl1) / 2, ccy, doorAbajo ? 0 : 180, { w: clw }));
   }
-  // escritorio en dormitorios secundarios cuando el ancho lo permite
-  if (!principal && R.w >= 2.9 && R.h >= 3.1) {
-    out.push(it("escritorio", R.x + R.w - 0.36, R.y + R.h / 2, 90));
+  // escritorio bajo la ventana, en el espacio libre a los pies de la cama
+  const freeX = R.w - bed.d - 0.15;
+  if (cabe && freeX >= 1.3 && R.h >= 3.0) {
+    const ex = headIzq ? R.x + bed.d + 0.1 + freeX / 2 : R.x + freeX / 2 + 0.05;
+    const ecy = doorAbajo ? R.y + 0.32 : R.y + R.h - 0.32;
+    out.push(it("escritorio", ex, ecy, doorAbajo ? 180 : 0, { w: Math.min(1.2, freeX - 0.1) }));
   }
-  // puerta desde el hall (doorX permite alinearla con el tramo real del hall)
-  const doorY = puertaLado === "hall-abajo" ? R.y + R.h : R.y;
-  out.push(it("puerta-80", doorX ?? R.x + 0.5, doorY, puertaLado === "hall-abajo" ? 0 : 180));
+  // puerta desde el hall
+  out.push(it("puerta-80", dx, doorWallY, doorAbajo ? 0 : 180));
   return out;
 }
 
-function amoblarBano(R, completo, puertaLado) {
+// ── baño VIVIBLE ──────────────────────────────────────────────
+// door = { wall: 'left'|'right'|'top'|'bottom' } — el muro que da al hall.
+// secuencia real de uso: entras → lavatorio inmediato → inodoro → ducha al fondo
+// (franja completa en el muro opuesto a la puerta). nada dentro del barrido (0.75).
+function amoblarBano(R, completo, door = { wall: "top" }) {
   const out = [];
-  // aparatos contra el muro húmedo x = R.x (izq)
-  out.push(it("inodoro", R.x + 0.34, R.y + R.h - 0.4, -90));
-  out.push(it("lavamanos", R.x + 0.28, R.y + 0.4, -90));
-  if (completo && R.w >= 1.4 && R.h >= 1.8) out.push(it("ducha", R.x + R.w - 0.47, R.y + R.h - 0.47, 0));
-  else if (completo) out.push(it("ducha", R.x + R.w - 0.47, R.y + 0.47, 0));
-  const doorY = puertaLado === "hall-abajo" ? R.y + R.h : R.y;
-  out.push(it("puerta-70", R.x + R.w - 0.5, doorY, puertaLado === "hall-abajo" ? 0 : 180));
+  const w = R.w, h = R.h;
+  // ejes según el muro de la puerta: "profundidad" = perpendicular a la puerta
+  const horizontal = door.wall === "top" || door.wall === "bottom";
+  // posición de la puerta: pegada a una esquina (0.45 del muro lateral)
+  let dxp, dyp, rot;
+  if (door.wall === "top") { dxp = R.x + 0.45; dyp = R.y; rot = 180; }
+  else if (door.wall === "bottom") { dxp = R.x + 0.45; dyp = R.y + h; rot = 0; }
+  else if (door.wall === "left") { dxp = R.x; dyp = R.y + h - 0.45; rot = 90; }
+  else { dxp = R.x + w; dyp = R.y + h - 0.45; rot = 270; }
+  out.push(it("puerta-70", dxp, dyp, rot));
+
+  if (horizontal) {
+    const far = door.wall === "top" ? R.y + h : R.y;           // muro opuesto (ducha)
+    const sgn = door.wall === "top" ? 1 : -1;
+    // ducha: franja completa al fondo
+    if (completo && h >= 1.9) out.push(it("ducha", R.x + w / 2, far - sgn * 0.45, 0, { w: w - 0.12, d: 0.85 }));
+    else if (completo) out.push(it("ducha", R.x + w - 0.45, far - sgn * 0.42, 0, { w: 0.8, d: 0.8 }));
+    // lavatorio junto a la puerta, en el muro lateral opuesto a ella
+    out.push(it("lavamanos", R.x + w - 0.26, dyp + sgn * 0.42, 90));
+    // inodoro al medio contra el muro húmedo (lejos del barrido de la puerta)
+    out.push(it("inodoro", R.x + 0.36, R.y + h / 2 + (door.wall === "top" ? 0.1 : -0.1), -90));
+  } else {
+    const izq = door.wall === "left";
+    // ducha: franja completa contra el muro y superior (lejos de la puerta, que va abajo)
+    if (completo && w >= 1.9) out.push(it("ducha", R.x + w / 2, R.y + 0.45, 0, { w: w - 0.12, d: 0.85 }));
+    else if (completo) out.push(it("ducha", izq ? R.x + w - 0.45 : R.x + 0.45, R.y + 0.45, 0, { w: 0.8, d: 0.8 }));
+    // lavatorio apenas entras, contra el muro de abajo
+    out.push(it("lavamanos", izq ? R.x + w - 0.28 : R.x + 0.28, R.y + h - 0.26, 0));
+    // inodoro entre ducha y lavatorio, contra el muro lateral opuesto a la puerta
+    out.push(it("inodoro", izq ? R.x + w - 0.36 : R.x + 0.36, R.y + h / 2 - 0.05, izq ? 90 : -90));
+  }
   return out;
 }
 
@@ -173,14 +227,14 @@ export function layout(W, D, nd, nb, opts = {}) {
   const banoY = clamp(hallY - 0.5, dK, D - 2.0);
   const bano = room("baño", "baño", 0, banoY, wWet, 2.0);
   rooms.push(bano);
-  items.push(...amoblarBano(bano._box, true, opts.swap ? "hall-arriba" : "hall-abajo"));
+  items.push(...amoblarBano(bano._box, true, { wall: "right" }));  // acceso desde el hall (franja habitable)
 
   if (nb >= 2) {
     const b2y = clamp(banoY + 2.05, dK, D - 1.9);
     if (b2y + 1.9 <= D + 0.01 && b2y >= dK) {
       const bano2 = room("baño 2", "baño", 0, b2y, wWet, Math.min(1.9, D - b2y));
       rooms.push(bano2);
-      items.push(...amoblarBano(bano2._box, true, "hall-arriba"));
+      items.push(...amoblarBano(bano2._box, true, { wall: "right" }));
     } else warns.push("2º baño no entró en la franja húmeda");
   }
   if (nd >= 2) {
@@ -238,16 +292,16 @@ export function layoutProfundo(W, D, nd, nb, opts = {}) {
     dx += w2;
   });
 
-  // banda servicio: baño(s) + hall de distribución
+  // banda servicio: baño(s) con puerta HACIA el hall de distribución (muros laterales)
   const bano = room("baño", "baño", 0, dP, wWet, hs);
   rooms.push(bano);
-  items.push(...amoblarBano(bano._box, true, "hall-arriba"));
+  items.push(...amoblarBano(bano._box, true, { wall: "right" }));
   if (hall1 < W) {
     const b2 = room("baño 2", "baño", hall1, dP, W - hall1, hs);
     rooms.push(b2);
-    items.push(...amoblarBano(b2._box, true, "hall-arriba"));
+    items.push(...amoblarBano(b2._box, true, { wall: "left" }));
   } else if (nb >= 2) warns.push("2º baño no entró — hall mínimo");
-  rooms.push(room("hall de distribución", "pasillo", hall0, dP, hall1 - hall0, hs));
+  rooms.push(room("hall", "pasillo", hall0, dP, hall1 - hall0, hs));
 
   // banda ingreso: cocina (+lavandería) en la franja húmeda + social hacia el corredor
   const sy = dP + hs;
