@@ -28,14 +28,35 @@ app.use(express.static(join(__dirname, "../public")));
 const PANEL_PASSWORD = process.env.PANEL_PASSWORD || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || PANEL_PASSWORD;
 const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
-// Rutas /api públicas (relativas al mount /api): las que NO son del panel.
-// /agents/* → report|findings usan x-agent-key; status|runs|tea-table los lee el Lab del ERP.
-// /market-refresh|import → tienen su propio bearer (MARKET_REFRESH_TOKEN, los usa scrape.js local).
-// /chat, /tts, /dropbox → los consume el ERP (alice.bam.pe) sin token de panel: estado pre-gate.
-//   ⚠️ Deuda consciente (auditoría 13 jul): chat tiene userId falsificable (IDOR) y dropbox
-//   expone browse/delete sin auth. Fix real = ERP manda JWT de Supabase y acá se valida
-//   (sesión supercomputadora). No re-gatear sin resolver eso o se rompe el ERP.
-const PANEL_PUBLIC = ["/login", "/agents", "/calendar", "/market-refresh", "/market-import", "/market-data", "/chat", "/tts", "/dropbox", "/analyze"];
+// Rutas /api públicas (relativas al mount /api) — deuda #9 SALDADA (14 jul 2026):
+// el ERP ahora manda el JWT de Supabase en Authorization y el gate lo valida.
+// Quedan públicas solo: /login (emite token del panel), /market-data (lectura,
+// la consume radar.html sin sesión) y /market-refresh|import (self-auth con su
+// propio bearer MARKET_REFRESH_TOKEN adentro del handler).
+// /agents/report|findings pasan el gate con x-agent-key (requireAgentKey valida el valor).
+const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/market-import"];
+
+// Valida el access_token de Supabase contra /auth/v1/user (con cache) — así el
+// backend no necesita el JWT secret ni JWKS: Supabase confirma sesión viva.
+const SUPABASE_URL  = process.env.SUPABASE_URL || "https://apnzitklhxrcszectbxx.supabase.co";
+const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwbnppdGtsaHhyY3N6ZWN0Ynh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MjUzNjcsImV4cCI6MjA5OTQwMTM2N30.OdUe_GuchvgjoDxklh_nKxxNb_rPD_IpQzj8f_XyETI"; // anon key: pública por diseño
+const _jwtCache = new Map(); // token → { ok, until }
+async function verifySupabaseJWT(token) {
+  if (!token || token.length < 100) return false; // los JWT de Supabase son largos; los del panel no llegan acá
+  const hit = _jwtCache.get(token);
+  if (hit && Date.now() < hit.until) return hit.ok;
+  let ok = false;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    ok = r.ok;
+  } catch { ok = false; }
+  if (_jwtCache.size > 500) _jwtCache.clear();
+  _jwtCache.set(token, { ok, until: Date.now() + (ok ? 10 * 60_000 : 60_000) });
+  return ok;
+}
 
 function signToken(exp) {
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(String(exp)).digest("base64url");
@@ -49,13 +70,17 @@ function verifyToken(tok) {
   const expected = crypto.createHmac("sha256", SESSION_SECRET).update(expStr).digest("base64url");
   try { return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)); } catch { return false; }
 }
-function panelGate(req, res, next) {
+async function panelGate(req, res, next) {
   const p = req.path; // relativo al mount /api (ej: /chat, /calendar/team)
   if (PANEL_PUBLIC.some(x => p === x || p.startsWith(x + "/"))) return next();
+  // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
+  // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
+  if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "panel_locked", detail: "PANEL_PASSWORD no configurado en Railway" });
   const auth = req.headers.authorization || "";
   const tok = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (verifyToken(tok)) return next();
+  if (verifyToken(tok)) return next();                 // token del panel (sb)
+  if (await verifySupabaseJWT(tok)) return next();     // sesión del ERP (equipo logueado)
   return res.status(401).json({ error: "no_auth" });
 }
 app.use("/api", panelGate);
