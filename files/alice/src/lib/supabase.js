@@ -5,6 +5,27 @@ const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 
 export const supabase = createClient(URL, ANON);
 
+// ── JWT hacia aliceai (deuda #9, 14 jul 2026) ────────────────────────────────
+// Toda llamada del ERP al backend de Alicia viaja con el access_token de la
+// sesión: el gate del backend lo valida contra Supabase. Interceptor global
+// para cubrir los ~15 call-sites (HyggeOS, AliciaView, módulos) sin tocarlos.
+// En `vite dev` con el bypass no hay sesión → las rutas gateadas devuelven 401
+// (esperado: el dev local es para UI; la IA se prueba en producción).
+const _origFetch = window.fetch.bind(window);
+window.fetch = async (input, init) => {
+  try {
+    const url = typeof input === "string" ? input : (input?.url || "");
+    if (url.includes("aliceai.bam.pe")) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        init = { ...(init || {}) };
+        init.headers = { ...(init.headers || {}), Authorization: `Bearer ${session.access_token}` };
+      }
+    }
+  } catch { /* sin sesión → sigue sin header y el backend decide */ }
+  return _origFetch(input, init);
+};
+
 // ─── tasks ───────────────────────────────────────────────────
 export const db = {
   async getTasks() {
