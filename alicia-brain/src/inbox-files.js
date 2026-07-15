@@ -1,22 +1,38 @@
-// Buzón en memoria del último archivo que cada usuario mandó por WhatsApp.
-// Alicia lo consume con la tool dropbox_upload ("guardá eso en 08_GROWTH").
+// Buzón del último archivo que cada usuario mandó por WhatsApp.
+// Alicia lo consume con dropbox_upload ("guardá eso en 08_GROWTH").
+// PERSISTE EN DISCO (volumen /data en Railway): los redeploys ya no lo evaporan
+// — así se perdió el Tangram de sb el 14 jul (buzón en RAM + 6 deploys ese día).
 // TTL 30 min — es un handoff inmediato, no storage (los archivos viven en Dropbox).
 
+import fs from "node:fs";
+import path from "node:path";
+
 const TTL_MS = 30 * 60 * 1000;
-const _inbox = new Map(); // userId → { buffer, mediaType, filename, ts }
+const DIR = fs.existsSync("/data") ? "/data/inbox" : path.join(process.cwd(), ".inbox");
+fs.mkdirSync(DIR, { recursive: true });
+
+const fileFor = (userId) => path.join(DIR, `${String(userId).replace(/[^a-z0-9_-]/gi, "")}.bin`);
+const metaFor = (userId) => fileFor(userId) + ".json";
 
 export function setLastFile(userId, { buffer, mediaType, filename }) {
-  _inbox.set(userId, { buffer, mediaType, filename, ts: Date.now() });
+  try {
+    fs.writeFileSync(fileFor(userId), buffer);
+    fs.writeFileSync(metaFor(userId), JSON.stringify({ mediaType, filename, ts: Date.now() }));
+  } catch (e) { console.error("inbox setLastFile:", e.message); }
 }
 
 export function getLastFile(userId) {
-  const f = _inbox.get(userId);
-  if (!f) return null;
-  if (Date.now() - f.ts > TTL_MS) { _inbox.delete(userId); return null; }
-  return f;
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaFor(userId), "utf8"));
+    if (Date.now() - meta.ts > TTL_MS) { clearLastFile(userId); return null; }
+    return { buffer: fs.readFileSync(fileFor(userId)), ...meta };
+  } catch { return null; }
 }
 
-export function clearLastFile(userId) { _inbox.delete(userId); }
+export function clearLastFile(userId) {
+  try { fs.unlinkSync(fileFor(userId)); } catch {}
+  try { fs.unlinkSync(metaFor(userId)); } catch {}
+}
 
 export const extForMime = (mime = "") => ({
   "application/pdf": "pdf",
