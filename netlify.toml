@@ -1,0 +1,15 @@
+# Netlify buildea el ERP (files/alice), no el backend de Railway que vive en la raíz.
+# Este archivo existe para que el deploy funcione aunque el site no tenga
+# configurado el base directory en la UI de Netlify.
+[build]
+  base    = "files/alice"
+  command = "npm run build"
+  publish = "files/alice/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
