@@ -1,0 +1,16 @@
+# El sitio de Netlify (alice.bam.pe) es el ERP, que vive en files/alice.
+# Sin esto, Netlify buildea desde la raíz y corre el package.json de la agente
+# (alicia-brain) → no genera dist → "Deploy directory 'dist' does not exist".
+# La agente (aliceai.bam.pe) se despliega aparte (Railway), no por aquí.
+[build]
+  base    = "files/alice"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
