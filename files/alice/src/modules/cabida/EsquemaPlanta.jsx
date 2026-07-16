@@ -1,5 +1,23 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, lazy, Suspense, Component } from "react";
 import { computeEsquema } from "./esquema.js";
+
+const Masa3D = lazy(() => import("./Masa3D.jsx"));
+
+class Masa3DBoundary extends Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  render() {
+    if (this.state.err) {
+      return (
+        <div style={{ height: 460, padding: 16, background: "#FFF4F0", border: "1px solid #F7643B",
+          borderRadius: 3, fontFamily: "monospace", fontSize: 11, color: "#B23", overflow: "auto", whiteSpace: "pre-wrap" }}>
+          {"⚠ masa 3D falló\n\n" + String(this.state.err?.stack || this.state.err?.message || this.state.err)}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const C = {
   ink: "#373737",
@@ -165,6 +183,7 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
   const [retiroFrontal, setRetiroFrontal] = useState(5);
   const [retiroLateral, setRetiroLateral] = useState(0);
   const [briefSent, setBriefSent] = useState(null);
+  const [show3D, setShow3D] = useState(false);
   const svgRef = useRef(null);
 
   const e = useMemo(
@@ -204,12 +223,21 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
         <MiniNum label="frente del lote" value={frente} onChange={setFrente} unit="m" step={1} />
         <MiniNum label="retiro frontal" value={retiroFrontal} onChange={setRetiroFrontal} unit="m" />
         <MiniNum label="retiro lateral" value={retiroLateral} onChange={setRetiroLateral} unit="m" />
-        <button onClick={descargar} style={{
-          marginLeft: "auto", fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper,
-          border: `1px solid ${C.line}`, borderRadius: 2, padding: "6px 12px", cursor: "pointer",
-        }}>
-          ↓ svg
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button onClick={() => setShow3D((v) => !v)} style={{
+            fontFamily: mono, fontSize: 10.5, color: show3D ? C.card : C.ink,
+            background: show3D ? C.ink : C.paper, border: `1px solid ${show3D ? C.ink : C.line}`,
+            borderRadius: 2, padding: "6px 12px", cursor: "pointer",
+          }}>
+            {show3D ? "▣ masa 3D" : "◱ masa 3D"}
+          </button>
+          <button onClick={descargar} style={{
+            fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper,
+            border: `1px solid ${C.line}`, borderRadius: 2, padding: "6px 12px", cursor: "pointer",
+          }}>
+            ↓ svg
+          </button>
+        </div>
       </div>
 
       {/* warnings */}
@@ -230,6 +258,27 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
           <Corte e={e} pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada} />
         </div>
       </div>
+
+      {/* masa volumétrica 3D orbitable */}
+      {show3D && (
+        <div style={{ paddingTop: 16 }}>
+          <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>
+            masa 3D · arrastra para orbitar · rueda para zoom
+          </div>
+          <Masa3DBoundary>
+            <Suspense fallback={
+              <div style={{ height: 460, display: "flex", alignItems: "center", justifyContent: "center",
+                background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3,
+                fontFamily: mono, fontSize: 11, color: C.soft }}>
+                cargando volumen…
+              </div>
+            }>
+              <Masa3D e={e} frente={frente} retiroFrontal={retiroFrontal} retiroLateral={retiroLateral}
+                pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada} />
+            </Suspense>
+          </Masa3DBoundary>
+        </div>
+      )}
 
       {/* leyenda + métricas */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 22px", alignItems: "baseline", paddingTop: 14, borderTop: `1px dotted ${C.line}`, marginTop: 8 }}>
