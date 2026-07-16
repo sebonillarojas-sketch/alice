@@ -5,6 +5,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # La anon key de Supabase es pública por diseño (va en el bundle del cliente),
+  # pero el secrets-scanning de Netlify la marca como secreto y tumba el build.
+  SECRETS_SCAN_ENABLED = "false"
 
 [[redirects]]
   from   = "/*"
