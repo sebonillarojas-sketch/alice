@@ -161,6 +161,17 @@ const GAMES = [
     url: '/invaders.html',
   },
   {
+    id: 'pacman',
+    name: 'PAC-MAN',
+    sub: 'BAMBOY · C64',
+    dot: '#FACC15',
+    badge: 'C64',
+    desc: 'El Pac-Man real corriendo en un Commodore 64 emulado · flechas = joystick · espacio = fire',
+    scoreKey: null,
+    scoreLabel: null,
+    url: '/pacman.html',
+  },
+  {
     id: 'lander',
     name: 'LUNAR LANDER',
     sub: 'BAM EDITION',
@@ -198,7 +209,7 @@ function buildGrid() {
       <div class="card-badge">${g.badge}</div>
       <div class="card-name">${g.name}<small>${g.sub}</small></div>
       <div class="card-desc">${g.desc}</div>
-      <div class="card-score">${g.scoreLabel}: <em>${best !== null ? String(best).padStart(5,'0') : '—'}</em></div>
+      <div class="card-score">${g.scoreLabel ? `${g.scoreLabel}: <em>${best !== null ? String(best).padStart(5,'0') : '—'}</em>` : '&nbsp;'}</div>
       <div class="card-cta">JUGAR →</div>
     `;
     card.addEventListener('click', () => openGame(g.url));
