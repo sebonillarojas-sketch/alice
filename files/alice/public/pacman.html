@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#000" />
+<title>PAC-MAN · BAMBOY</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; width: 100%; background: #000; overflow: hidden; }
+
+  /* canvas del emulador C64 (id fijo requerido por c64.js) */
+  #canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+  }
+
+  /* loader BAMBOY */
+  #loader {
+    position: fixed; inset: 0; z-index: 10;
+    background: #000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Courier New', monospace; color: #fff;
+    transition: opacity 0.5s;
+  }
+  #loader.done { opacity: 0; pointer-events: none; }
+  #loader .eyebrow {
+    font-size: 10px; letter-spacing: 0.18em; color: #444;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  #loader h1 { font-size: 34px; font-weight: 400; letter-spacing: 0.05em; }
+  #loader h1 span { color: #A855F7; }
+  #loader .bar {
+    width: 180px; height: 2px; background: #181820;
+    margin-top: 26px; overflow: hidden; border-radius: 2px;
+  }
+  #loader .bar i {
+    display: block; height: 100%; width: 40%;
+    background: #A855F7; animation: slide 1s infinite linear;
+  }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(280%); } }
+
+  /* hint de controles (se desvanece solo) */
+  #hint {
+    position: fixed; left: 50%; bottom: 16px; z-index: 5;
+    transform: translateX(-50%);
+    font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #555; background: rgba(0,0,0,0.72);
+    border: 1px solid #1c1c24; border-radius: 3px;
+    padding: 7px 14px; white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.8s;
+  }
+  #hint em { color: #A855F7; font-style: normal; }
+
+  /* tapa la línea de stats de debug que el emulador dibuja al borde inferior del canvas */
+  #statscover {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 20px;
+    background: #000; z-index: 4; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+
+<div id="loader">
+  <div class="eyebrow">Bamboy · Commodore 64</div>
+  <h1>PAC-MAN<span>.</span></h1>
+  <div class="bar"><i></i></div>
+</div>
+
+<div id="statscover"></div>
+<div id="hint"><em>flechas</em> = joystick &nbsp;·&nbsp; <em>espacio</em> = fire / start &nbsp;·&nbsp; click para activar sonido</div>
+
+<script>
+  // sokol_args lee los parámetros del query string: forzamos carga del PRG + joystick.
+  // OJO: digital_1 (mapea a $DC01/56321) — el juego espera fire==239 ahí; el valor 111
+  // que acepta en $DC00 es de hardware real y el emulador chips nunca lo produce.
+  if (!window.location.search) {
+    window.location.replace(window.location.pathname + '?file=bamboy/pacman.prg&joystick=digital_1');
+  }
+
+  var Module = {
+    preRun: [],
+    print: function() { console.log(Array.prototype.slice.call(arguments).join(' ')); },
+    printErr: function() { console.error(Array.prototype.slice.call(arguments).join(' ')); },
+    onRuntimeInitialized: function() {
+      document.getElementById('loader').classList.add('done');
+      setTimeout(function() {
+        document.getElementById('hint').style.opacity = '0';
+      }, 10000);
+    },
+  };
+  window.onerror = function(e) { console.log('onerror: ' + e); };
+
+  // el iframe necesita foco para que el teclado llegue al emulador
+  window.addEventListener('click', function() { window.focus(); });
+</script>
+<script async src="bamboy/c64.js"></script>
+</body>
+</html>
