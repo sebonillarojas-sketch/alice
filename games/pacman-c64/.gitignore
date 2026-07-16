@@ -1,0 +1,5 @@
+# Artefactos de build cc65 — se conserva solo C64PAC.prg (binario upstream de referencia)
+*.prg
+!C64PAC.prg
+*.o
+*.map
