@@ -409,7 +409,7 @@ const APPS = [
     icon: StickyNote,
     dot: "#373737",
     url: null,
-    description: "Tablero colaborativo BAM · concepto, inspo, croquis, planos y votación",
+    description: "Workspace BAM · portada, growth, 3D, planos y concepto · exporta presentación",
     badge: "v1.0",
     native: true,
   },

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Comp
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, MessageCircle, Box, Sword,
+  Upload, Crosshair, RefreshCw, MessageCircle, Box,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
