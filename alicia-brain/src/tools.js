@@ -270,6 +270,22 @@ export const ALICIA_TOOLS = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "disenar_plano",
+    description: "Delegá el diseño de una planta residencial a Feyd-Rautha 🗡️, el arquitecto de BAM (agente aparte, crítico implacable, con su propio conocimiento Neufert+RNE+mercado limeño — si él aprueba un plano, es porque está excelente). Usala cuando pidan diseñar, generar o distribuir un plano/planta/tipología de departamento. Vos NO diseñás planos: él sí. Devolvé su layout JSON tal cual, presentándolo en una línea.",
+    input_schema: {
+      type: "object",
+      properties: {
+        dormitorios: { type: "number", description: "Cantidad de dormitorios" },
+        banos:       { type: "number", description: "Cantidad de baños (2.5 = 2 completos + visita)" },
+        area_m2:     { type: "number", description: "Área techada objetivo en m²" },
+        frente_m:    { type: "number", description: "Frente del lote/unidad en metros" },
+        fondo_m:     { type: "number", description: "Fondo en metros" },
+        fachadas:    { type: "array", items: { type: "string", enum: ["frente", "fondo", "izquierda", "derecha"] }, description: "Lados con fachada libre (default: solo frente)" },
+        notas:       { type: "string", description: "Pedidos especiales del brief (ej. cocina cerrada, home office)" },
+      },
+    },
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -475,6 +491,13 @@ export async function executeTool(toolName, input, userId) {
         WHERE status IN ('open','escalated') ORDER BY created_at DESC LIMIT 20`);
       if (!lastRuns.length) return "Ningún agente ha corrido todavía.";
       return JSON.stringify({ ultima_corrida_por_agente: lastRuns, hallazgos_abiertos: open });
+    }
+
+    case "disenar_plano": {
+      const { disenarPlano, arquitectoDisponible } = await import("./arquitecto.js");
+      if (!arquitectoDisponible()) return "Feyd-Rautha no está disponible: la skill arquitecto-residencial-lima no está en este deploy (seteá ARQUITECTO_SKILL_DIR).";
+      const layout = await disenarPlano(input);
+      return JSON.stringify(layout);
     }
 
     case "use_skill": {

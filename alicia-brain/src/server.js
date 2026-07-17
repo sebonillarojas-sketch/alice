@@ -1598,6 +1598,31 @@ app.post("/api/analyze", async (req, res) => {
   }
 });
 
+// Feyd-Rautha 🗡️ · diseño de plantas residenciales (agente aparte de Alicia, ver src/arquitecto.js).
+// Para que el ERP (EditorPlanos) pueda pedir un layout directo, sin pasar por el chat de Alicia.
+app.post("/api/arquitecto/disenar", async (req, res) => {
+  try {
+    const { disenarPlano, arquitectoDisponible } = await import("./arquitecto.js");
+    if (!arquitectoDisponible()) return res.status(503).json({ error: "skill arquitecto-residencial-lima no disponible en este deploy" });
+    res.json({ layout: await disenarPlano(req.body || {}) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Feyd audita/corrige una planta existente del Editor de Planos (rooms → layout).
+app.post("/api/arquitecto/corregir", async (req, res) => {
+  try {
+    const { corregirPlano, arquitectoDisponible } = await import("./arquitecto.js");
+    if (!arquitectoDisponible()) return res.status(503).json({ error: "skill arquitecto-residencial-lima no disponible en este deploy" });
+    const { layout, notas } = req.body || {};
+    if (!layout?.ambientes?.length) return res.status(400).json({ error: "layout.ambientes requerido" });
+    res.json(await corregirPlano(layout, notas));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/health", async (_, res) => {
   let dropbox = false;
   try { ({ dropboxAvailable: dropbox } = await import("./integrations/dropbox.js")); dropbox = dropbox(); } catch { dropbox = false; }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Comp
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, MessageCircle, Box,
+  Upload, Crosshair, RefreshCw, MessageCircle, Box, Sword,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
@@ -27,6 +27,7 @@ import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
+import { corregirConFeyd } from "./feyd.js";
 
 const FICHA_DEF = {
   proyecto: "Nuevo proyecto", tipo: "Edificio Multifamiliar", ubicacion: "", cliente: "",
@@ -846,6 +847,22 @@ export default function EditorPlanos() {
   const aberturas = items.filter((t) => porId[t.ref]?.cat === "abertura");
   const muebles = items.filter((t) => porId[t.ref]?.cat !== "abertura");
 
+  // Feyd-Rautha 🗡️ · null | "cargando" | { veredicto, problemas, rooms }
+  const [feyd, setFeyd] = useState(null);
+  const consultarFeyd = async () => {
+    if (!rooms.length || feyd === "cargando") return;
+    setFeyd("cargando");
+    try {
+      setFeyd(await corregirConFeyd(rooms, brief));
+    } catch (e) {
+      setFeyd({ veredicto: `no se pudo consultar: ${e.message}`, problemas: [], rooms: null });
+    }
+  };
+  const aplicarFeyd = () => {
+    if (feyd?.rooms?.length) commit(feyd.rooms, items);
+    setFeyd(null);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.paper, minHeight: 520, position: "relative" }}>
       {/* toolbar */}
@@ -900,6 +917,10 @@ export default function EditorPlanos() {
         <Btn onClick={fitView} title="Encuadrar"><Maximize2 size={13} /></Btn>
         <Btn onClick={() => setShowFicha(true)} title="Editar membrete de la lámina">membrete</Btn>
         <Btn onClick={exportSVG} disabled={!rooms.length} title="Exportar lámina BAM (.svg)"><Download size={13} /> lámina</Btn>
+        <Btn onClick={consultarFeyd} disabled={!rooms.length || feyd === "cargando"}
+          title="Feyd-Rautha 🗡️ audita la planta contra RNE + Neufert + checklist BAM y propone la corrección">
+          <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd-rautha"}
+        </Btn>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
           {selId && !selItem && (
@@ -919,6 +940,36 @@ export default function EditorPlanos() {
           <button onClick={clearAll} style={{ fontFamily: mono, fontSize: 10.5, color: C.soft, background: "none", border: "none", cursor: "pointer" }}>limpiar</button>
         </div>
       </div>
+
+      {/* veredicto de Feyd-Rautha 🗡️ */}
+      {feyd && feyd !== "cargando" && (
+        <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
+          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
+          padding: "12px 14px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <Sword size={12} color="#A85B5B" />
+            <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>feyd-rautha</span>
+            <button onClick={() => setFeyd(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}><X size={13} color={C.soft} /></button>
+          </div>
+          <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, lineHeight: 1.55, marginBottom: feyd.problemas.length ? 8 : 0, whiteSpace: "pre-wrap" }}>
+            {feyd.veredicto}
+          </div>
+          {feyd.problemas.slice(0, 8).map((p, i) => (
+            <div key={i} style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, lineHeight: 1.6 }}>· {p}</div>
+          ))}
+          {feyd.problemas.length > 8 && (
+            <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>… y {feyd.problemas.length - 8} más</div>
+          )}
+          {feyd.rooms?.length > 0 && (
+            <button onClick={aplicarFeyd}
+              style={{ width: "100%", marginTop: 10, fontFamily: mono, fontSize: 11.5, color: C.card,
+                background: "#A85B5B", border: "none", borderRadius: 2, padding: "8px 0", cursor: "pointer" }}
+              title="Reemplaza los ambientes por la corrección de Feyd (⌘Z deshace)">
+              aplicar corrección de feyd →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* paso 1 · barra de lote: tipo de lote → retiros normativos → calcar */}
       {loteBar && (() => {
