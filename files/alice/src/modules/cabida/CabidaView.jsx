@@ -298,6 +298,7 @@ export default function CabidaView({ initialTerreno, compact }) {
               )}
             </div>
             {cadErr && <div style={{ fontFamily: mono, fontSize: 10.5, color: C.orange, paddingBottom: 6, lineHeight: 1.5 }}>▲ {cadErr}</div>}
+            {cadInfo?.unitNote && <div style={{ fontFamily: mono, fontSize: 10, color: C.peri, paddingBottom: 6, lineHeight: 1.5 }}>◇ {cadInfo.unitNote}</div>}
 
             <Num label="área de terreno" value={terreno} onChange={setTerreno} unit="m²" step={10} disabled={cadLock} hint="del plano" />
             <Num label="frente del lote" value={frente} onChange={setFrente} unit="m" step={1} disabled={cadLock} hint="del plano" />
