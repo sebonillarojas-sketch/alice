@@ -70,12 +70,33 @@ function elegirEscala(rawArea, mpu, unitCode) {
   return { mpu: (unitCode in UNIT_M) ? mpu : 1, fixed: false };
 }
 
+// quita vértices redundantes: duplicados (< 1 cm) y colineales (desvío < 1 cm),
+// típicos de linderos dibujados en varios segmentos — rompen los offsets de retiro.
+function simplificar(pts, tol = 0.01) {
+  let out = pts.filter((p, i) => {
+    const q = pts[(i + 1) % pts.length];
+    return Math.hypot(p.x - q.x, p.y - q.y) > tol;
+  });
+  for (let pass = 0; pass < 2; pass++) {
+    out = out.filter((b, i) => {
+      const a = out[(i - 1 + out.length) % out.length], c = out[(i + 1) % out.length];
+      const lac = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+      // distancia perpendicular de b a la recta a—c
+      const d = Math.abs((c.x - a.x) * (a.y - b.y) - (a.x - b.x) * (c.y - a.y)) / lac;
+      return d > tol;
+    });
+    if (out.length < 3) return pts; // no degradar
+  }
+  return out;
+}
+
 // recentra a origen (centro del bbox) y devuelve métricas
 function finalize(polyRaw, mpuDecl, unitCode, layer, source) {
   const rawArea = Math.abs(shoelace(polyRaw));
   const esc = elegirEscala(rawArea, mpuDecl, unitCode);
   const mpu = esc.mpu;
-  const poly = polyRaw.map((p) => ({ x: p.x * mpu, y: p.y * mpu }));
+  // simplificar DESPUÉS de escalar: la tolerancia (1 cm) es en metros
+  const poly = simplificar(polyRaw.map((p) => ({ x: p.x * mpu, y: p.y * mpu })));
   const xs = poly.map((p) => p.x), ys = poly.map((p) => p.y);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);

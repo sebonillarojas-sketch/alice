@@ -127,8 +127,10 @@ export function offsetEdges(pts, dists) {
   const out = [];
   for (let i = 0; i < n; i++) {
     const prev = lines[(i - 1 + n) % n], cur = lines[i];
-    const hit = lineIntersect(prev.p, prev.dir, cur.p, cur.dir);
-    if (!hit) return null;
+    // bordes consecutivos colineales (p.ej. un lindero dibujado en dos segmentos):
+    // las rectas offset son paralelas → sin intersección; el arranque de la recta
+    // actual ES el vértice correcto cuando ambos llevan el mismo offset.
+    const hit = lineIntersect(prev.p, prev.dir, cur.p, cur.dir) || { x: cur.p.x, y: cur.p.y };
     out.push(hit);
   }
   if (Math.sign(signedArea(out)) !== Math.sign(signedArea(pts)) || area(out) < 0.5) return null;
@@ -168,8 +170,10 @@ export function offsetPolygon(pts, d) {
   const out = [];
   for (let i = 0; i < n; i++) {
     const prev = lines[(i - 1 + n) % n], cur = lines[i];
-    const hit = lineIntersect(prev.p, prev.dir, cur.p, cur.dir);
-    if (!hit) return null;
+    // bordes consecutivos colineales (p.ej. un lindero dibujado en dos segmentos):
+    // las rectas offset son paralelas → sin intersección; el arranque de la recta
+    // actual ES el vértice correcto cuando ambos llevan el mismo offset.
+    const hit = lineIntersect(prev.p, prev.dir, cur.p, cur.dir) || { x: cur.p.x, y: cur.p.y };
     out.push(hit);
   }
   // validación: si el área se invirtió o colapsó, no sirve
