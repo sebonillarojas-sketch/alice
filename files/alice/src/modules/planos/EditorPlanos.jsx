@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
@@ -12,6 +12,7 @@ import {
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
+import { validarPlan } from "./validacion.js";
 import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
@@ -792,6 +793,12 @@ export default function EditorPlanos() {
 
   const sel = rooms.find((r) => r.id === selId);
   const selItemObj = items.find((t) => t.id === selItem);
+
+  // reglas duras en vivo: nada fuera del lote · nada sin piso · flujos efectivos
+  const val = useMemo(
+    () => validarPlan({ rooms, items, limite: lote?.pts || footprint || null }),
+    [rooms, items, lote, footprint]
+  );
   const totalArea = rooms.reduce((a, r) => a + area(r.pts), 0);
   const preview = (tool === "wall" || tool === "lote") && draft.length > 0 && cursor
     ? { a: draft[draft.length - 1], b: cursor } : null;
@@ -861,6 +868,14 @@ export default function EditorPlanos() {
                 border: `1px solid ${C.line}`, borderRadius: 2, padding: "5px 8px", outline: "none" }} />
           )}
           {(selId || selItem) && <Btn onClick={deleteSel} title="Eliminar (Supr)"><Trash2 size={13} /></Btn>}
+          {(rooms.length > 0 || items.length > 0) && (
+            <span title={val.ok ? "cumple las reglas: nada fuera del lote · nada sin piso · flujos efectivos" : val.mensajes.join(" · ")}
+              style={{ fontFamily: mono, fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 2, whiteSpace: "nowrap",
+                color: val.ok ? "#2E7D32" : C.card, background: val.ok ? "#E7F1E8" : C.orange,
+                border: `1px solid ${val.ok ? "#B6D4B8" : C.orange}` }}>
+              {val.ok ? "✓ reglas" : `▲ ${val.total} · ${val.mensajes.join(" · ")}`}
+            </span>
+          )}
           <button onClick={clearAll} style={{ fontFamily: mono, fontSize: 10.5, color: C.soft, background: "none", border: "none", cursor: "pointer" }}>limpiar</button>
         </div>
       </div>
@@ -998,6 +1013,21 @@ export default function EditorPlanos() {
             const s = toScreen({ x: t.x, y: t.y });
             return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={t.id === selItem} />;
           })}
+
+          {/* reglas — resalta lo que incumple (fuera del lote / sin piso / sin acceso) */}
+          {val.ids.size > 0 && (
+            <g pointerEvents="none">
+              {rooms.filter((r) => val.ids.has(r.id)).map((r) => (
+                <polygon key={`v-${r.id}`} points={r.pts.map(toScreen).map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="#F7643B" fillOpacity={0.12} stroke="#F7643B" strokeWidth={2.2} strokeDasharray="7 4" strokeLinejoin="miter" />
+              ))}
+              {items.filter((t) => val.ids.has(t.id)).map((t) => {
+                const s = toScreen({ x: t.x, y: t.y });
+                const rr = Math.max((t.w || 0.6) * k, (t.d || 0.6) * k) / 2 + 6;
+                return <circle key={`v-${t.id}`} cx={s.x} cy={s.y} r={rr} fill="none" stroke="#F7643B" strokeWidth={2.2} strokeDasharray="6 4" />;
+              })}
+            </g>
+          )}
 
           {/* cotas + etiquetas */}
           {rooms.map((r) => {
