@@ -4,6 +4,7 @@ import AliciaView from "./modules/alicia/AliciaView";
 import MercadoView from "./modules/mercado/MercadoView";
 import CabidaView from "./modules/cabida/CabidaView";
 import EditorPlanos from "./modules/planos/EditorPlanos";
+import { proyectosStore } from "./modules/cabida/proyectos.js";
 import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { DISTRICTS_DATA, COMPETITORS_DB, TREND_LABEL } from "./modules/mercado/sectorData";
@@ -385,6 +386,7 @@ const APPS = [
   },
   {
     id: "app-cabida",
+    parent: "growth",
     label: "Cabida",
     icon: Building2,
     dot: "#F7643B",
@@ -395,6 +397,7 @@ const APPS = [
   },
   {
     id: "app-editor",
+    parent: "growth",
     label: "Editor de Planos",
     icon: Pencil,
     dot: "#95ABE8",
@@ -405,6 +408,7 @@ const APPS = [
   },
   {
     id: "app-mesa",
+    parent: "growth",
     label: "Mesa de Trabajo",
     icon: StickyNote,
     dot: "#373737",
@@ -1078,7 +1082,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
               <Eyebrow>Apps</Eyebrow>
             </div>
             <nav className="space-y-0.5 mb-6">
-              {visibleApps.map(a => {
+              {visibleApps.filter(a => !a.parent).map(a => {
                 const Icon = a.icon;
                 const isActive = a.id === currentSpace;
                 return (
@@ -1093,6 +1097,39 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
                   </button>
                 );
               })}
+              {/* Growth es el parent del flujo terreno → cabida → planos → mesa */}
+              {(() => {
+                const growthApps = visibleApps.filter(a => a.parent === "growth");
+                if (!growthApps.length) return null;
+                const growthActive = currentSpace === "growth";
+                const childActive = growthApps.some(a => a.id === currentSpace);
+                return (
+                  <div>
+                    <button onClick={() => setSpace("growth")}
+                      className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:opacity-90"
+                      title="Growth · terrenos en evaluación · parent de Cabida, Planos y Mesa"
+                      style={{ backgroundColor: growthActive ? C.surface : "transparent", border: `1px solid ${growthActive ? C.lineSoft : "transparent"}`, borderRadius: 2 }}>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: "#B8C8E5" }} />
+                      <span className="text-[12px] flex-1 text-left" style={{ color: (growthActive || childActive) ? C.ink : C.inkSoft, fontWeight: (growthActive || childActive) ? 600 : 500 }}>Growth</span>
+                      <ChevronRight size={11} style={{ color: C.muted, transform: "rotate(90deg)" }} />
+                    </button>
+                    <div className="ml-4 mt-0.5 space-y-0.5" style={{ borderLeft: `1px solid ${C.lineSoft}` }}>
+                      {growthApps.map(a => {
+                        const Icon = a.icon;
+                        const isActive = a.id === currentSpace;
+                        return (
+                          <button key={a.id} onClick={() => setSpace(a.id)} title={a.description}
+                            className="w-full flex items-center gap-2 pl-3 pr-2 py-1 text-left hover:opacity-80"
+                            style={{ backgroundColor: isActive ? C.surface : "transparent", border: `1px solid ${isActive ? C.lineSoft : "transparent"}`, borderRadius: 2 }}>
+                            <Icon size={11} style={{ color: isActive ? a.dot : C.muted, flexShrink: 0 }} />
+                            <span className="text-[11px] flex-1 truncate" style={{ color: isActive ? C.ink : C.inkSoft, fontWeight: isActive ? 600 : 400 }}>{a.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </nav>
           </>
         )}
@@ -4937,7 +4974,13 @@ function NewTerrenoModal({ onClose, onCreate, initial }) {
   );
 }
 
-function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
+function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete, navigate }) {
+  // Growth como parent: el terreno abre SU proyecto en las apps hijas
+  const abrirEnApp = (appId) => {
+    proyectosStore.abrirParaTerreno(terreno);
+    onClose();
+    navigate && navigate(appId);
+  };
   const confirm = useConfirm();
   const askDelete = async () => {
     const ok = await confirm({ title: `Eliminar terreno "${terreno.name}"`, message: "Sale del pipeline de scouting · acción reversible con Cmd+Z.", danger: true, confirmLabel: "Eliminar terreno" });
@@ -5004,6 +5047,22 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
             )}
             <button onClick={askDelete} className="text-[10px] px-2 py-1 hover:opacity-90" style={{ color: C.brick, border: `1px solid ${C.brick}33`, borderRadius: 2 }}><Trash2 size={9} /></button>
           </div>
+          {navigate && (
+            <div className="flex items-center gap-1.5 flex-wrap mt-3">
+              <span className="text-[9px] uppercase" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>Abrir en</span>
+              {[
+                { id: "app-cabida", label: "Cabida", icon: Building2 },
+                { id: "app-editor", label: "Editor de Planos", icon: Pencil },
+                { id: "app-mesa", label: "Mesa de Trabajo", icon: StickyNote },
+              ].map(a => { const Ic = a.icon; return (
+                <button key={a.id} onClick={() => abrirEnApp(a.id)} title={`Abrir el proyecto de "${terreno.name}" en ${a.label}`}
+                  className="flex items-center gap-1 text-[10px] px-2 py-1 hover:opacity-90"
+                  style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>
+                  <Ic size={10} /> {a.label}
+                </button>
+              ); })}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1 px-5 lg:px-6 flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
@@ -15351,7 +15410,7 @@ REGLAS:
       />
       <AIChatPanel open={chatOpen} onClose={() => setChatOpen(false)} conversation={conversation} sending={chatSending} sendMessage={sendToHygge} />
       <TaskDetailPanel task={detailTask} allTasks={tasks} allSpaces={allSpaces} onClose={() => setDetailTaskId(null)} onUpdate={updateTask} onToggle={toggleTask} onAddComment={addComment} onAddAttachment={addAttachment} onRemoveAttachment={removeAttachment} onAddSubtask={addSubtask} onDuplicate={duplicateTask} setTaskStatus={setTaskStatus} onDelete={deleteTaskCascade} />
-      <TerrenoDetailPanel terreno={terrenos.find(t => t.id === selectedTerrenoId)} users={users} onClose={() => setSelectedTerrenoId(null)} onUpdate={updateTerreno} onDelete={deleteTerreno} />
+      <TerrenoDetailPanel terreno={terrenos.find(t => t.id === selectedTerrenoId)} users={users} onClose={() => setSelectedTerrenoId(null)} onUpdate={updateTerreno} onDelete={deleteTerreno} navigate={navigate} />
       {customViewEditOpen && (
         <CustomViewConfigModal initial={customViewEditInitial}
           onClose={() => { setCustomViewEditOpen(false); setCustomViewEditInitial(null); }}
