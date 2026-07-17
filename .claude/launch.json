@@ -2,11 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "alice",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173,
-      "cwd": "/Users/eduardobonilla/Desktop/ALICE/files/alice"
+      "name": "ALICE Cockpit",
+      "cwd": ".",
+      "runtimeExecutable": "/Users/eduardobonilla/.volta/bin/npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/eduardobonilla/Desktop/ALICE/files/alice"],
+      "autoPort": true
+    },
+    {
+      "name": "BAMboy deploy",
+      "cwd": ".",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "/Users/eduardobonilla/Downloads/deploy"],
+      "port": 8765
     }
   ]
 }
