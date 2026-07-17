@@ -4,7 +4,7 @@
 // y se exporta como presentación (imprimir → PDF, una lámina por hoja A4 apaisada).
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Save, Printer, RefreshCw, Trash2 } from "lucide-react";
+import { Save, Printer, RefreshCw, Trash2, Download, Upload } from "lucide-react";
 import ConceptoBam from "./ConceptoBam.jsx";
 import {
   calcCabida, loadTerrenos, loadProyectos, saveProyecto, cargarProyecto, borrarProyecto, loadLS, K,
@@ -82,6 +82,36 @@ export default function MesaDeTrabajo() {
   }, [nombre, terrenoId, portadaImg, snap3d]);
 
   const flash = (msg) => { setAviso(msg); setTimeout(() => setAviso(null), 2600); };
+  const importRef = useRef(null);
+
+  // estado completo hygge:* ⇄ .json — el archivo se commitea al repo y la otra
+  // máquina lo importa (el sync de app_state en Supabase está roto por RLS)
+  const exportarEstado = useCallback(() => {
+    const data = Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith("hygge:")));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `hygge-estado-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    flash(`Estado exportado · ${Object.keys(data).length} claves`);
+  }, []);
+
+  const importarEstado = useCallback((file) => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const data = JSON.parse(rd.result);
+        const ks = Object.keys(data).filter((k) => k.startsWith("hygge:"));
+        ks.forEach((k) => localStorage.setItem(k, data[k]));
+        flash(`Estado importado · ${ks.length} claves — recargando`);
+        setTimeout(() => window.location.reload(), 900);
+      } catch {
+        flash("Ese archivo no es un estado válido");
+      }
+    };
+    rd.readAsText(file);
+  }, []);
 
   const guardar = useCallback(() => {
     const p = saveProyecto(nombreEf, { terreno, portadaImg, snap3d });
@@ -168,6 +198,11 @@ export default function MesaDeTrabajo() {
           <button onClick={() => { borrarProyecto(nombreEf); flash(`“${nombreEf}” borrado`); }} style={btn(false)} title="Borrar snapshot guardado"><Trash2 size={12} /></button>
         )}
         <button onClick={() => setTick((t) => t + 1)} style={btn(false)} title="Releer cabida / planos"><RefreshCw size={12} /></button>
+        {/* estado completo hygge:* como .json — para mover el trabajo entre máquinas vía repo */}
+        <button onClick={exportarEstado} style={btn(false)} title="Descarga todo el estado local (hygge:*) como .json"><Download size={12} /> Estado</button>
+        <button onClick={() => importRef.current?.click()} style={btn(false)} title="Carga un .json de estado exportado en otra máquina"><Upload size={12} /></button>
+        <input ref={importRef} type="file" accept="application/json,.json" style={{ display: "none" }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) importarEstado(f); e.target.value = ""; }} />
         <button onClick={() => setPrinting(true)} style={{ ...btn(true), marginLeft: "auto" }}><Printer size={12} /> Exportar presentación</button>
       </div>
 
