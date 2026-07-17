@@ -1,10 +1,22 @@
-// Dropbox · OAuth con refresh token (los access tokens de Dropbox vencen a las 4h)
+// Dropbox · dos modos, mismo contrato:
+//  - API (default): OAuth con refresh token (los access tokens vencen a las 4h).
+//    Es el modo de Railway/producción.
+//  - local (DROPBOX_MODE=local + DROPBOX_LOCAL_ROOT): la app de Dropbox de la
+//    máquina mantiene el team space sincronizado en disco y acá se opera el
+//    filesystem directo — sin tokens ni rate limits; el sync con el equipo lo
+//    hace la app. Los paths siguen siendo estilo API ("/Hygge/...") relativos
+//    a la raíz del equipo, así todos los consumidores quedan iguales.
 import dotenv from "dotenv";
 dotenv.config();
 import { query } from "../db.js";
+import { promises as fs, existsSync } from "fs";
+import nodePath from "path";
 
 const APP_KEY = process.env.DROPBOX_APP_KEY;
 const APP_SECRET = process.env.DROPBOX_APP_SECRET;
+
+const LOCAL_MODE = process.env.DROPBOX_MODE === "local";
+const LOCAL_ROOT = process.env.DROPBOX_LOCAL_ROOT ? nodePath.resolve(process.env.DROPBOX_LOCAL_ROOT) : "";
 
 function getDropboxRefreshToken() {
   if (process.env.DROPBOX_REFRESH_TOKEN) return process.env.DROPBOX_REFRESH_TOKEN;
@@ -79,7 +91,7 @@ async function dbxFetch(path, body) {
   return res.json();
 }
 
-export const dropbox = {
+const apiDropbox = {
   search: async ({ query, path = "", maxResults = 10 }) => {
     const data = await dbxFetch("/files/search_v2", {
       query,
@@ -156,4 +168,123 @@ export const dropbox = {
   },
 };
 
-export const dropboxAvailable = () => !!(process.env.DROPBOX_ACCESS_TOKEN || (APP_KEY && APP_SECRET && getDropboxRefreshToken()));
+// ── Modo local · filesystem contra la carpeta que sincroniza la app ──────────
+
+// Basura de macOS/Dropbox que no es contenido del equipo
+const FS_IGNORE = new Set([".DS_Store", ".dropbox", ".dropbox.cache", "Icon\r"]);
+
+// "/Hygge/x" (estilo API, case-insensitive) → path absoluto DENTRO de LOCAL_ROOT
+function toLocal(apiPath) {
+  const rel = String(apiPath || "").replace(/^\/+/, "");
+  const abs = nodePath.resolve(LOCAL_ROOT, rel);
+  if (abs !== LOCAL_ROOT && !abs.startsWith(LOCAL_ROOT + nodePath.sep)) {
+    throw new Error(`Path fuera del Dropbox local: ${apiPath}`);
+  }
+  return abs;
+}
+
+function toApi(absPath) {
+  return "/" + nodePath.relative(LOCAL_ROOT, absPath).split(nodePath.sep).join("/");
+}
+
+async function statEntry(abs, name) {
+  const st = await fs.stat(abs);
+  const folder = st.isDirectory();
+  return {
+    name,
+    path: toApi(abs),
+    type: folder ? "folder" : "file",
+    modified: st.mtime.toISOString(),
+    ...(folder ? {} : { size: st.size }),
+  };
+}
+
+// Si el destino existe, busca "nombre (1).ext", "nombre (2).ext"… (semántica autorename)
+async function freeName(absPath) {
+  if (!existsSync(absPath)) return absPath;
+  const dir = nodePath.dirname(absPath);
+  const ext = nodePath.extname(absPath);
+  const base = nodePath.basename(absPath, ext);
+  for (let i = 1; i < 100; i++) {
+    const candidate = nodePath.join(dir, `${base} (${i})${ext}`);
+    if (!existsSync(candidate)) return candidate;
+  }
+  throw new Error(`Sin nombre libre para ${absPath}`);
+}
+
+const localDropbox = {
+  search: async ({ query, path = "", maxResults = 10 }) => {
+    const q = String(query || "").toLowerCase();
+    if (!q) return [];
+    const results = [];
+    const queue = [toLocal(path)];
+    let visited = 0;
+    while (queue.length && results.length < maxResults && visited < 20000) {
+      const dir = queue.shift();
+      let entries;
+      try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { continue; }
+      for (const e of entries) {
+        if (FS_IGNORE.has(e.name) || e.name.startsWith(".")) continue;
+        visited++;
+        const abs = nodePath.join(dir, e.name);
+        if (e.name.toLowerCase().includes(q)) {
+          try { results.push(await statEntry(abs, e.name)); } catch {}
+          if (results.length >= maxResults) break;
+        }
+        if (e.isDirectory()) queue.push(abs);
+      }
+    }
+    return results;
+  },
+
+  getFileContent: async (filePath) => {
+    // Archivos online-only: macOS los materializa solo al leer (puede tardar la 1ª vez)
+    return fs.readFile(toLocal(filePath), "utf8");
+  },
+
+  listFolder: async (path = "") => {
+    const dir = toLocal(path);
+    const names = await fs.readdir(dir, { withFileTypes: true });
+    const out = [];
+    for (const e of names) {
+      if (FS_IGNORE.has(e.name) || e.name.startsWith(".")) continue;
+      try { out.push(await statEntry(nodePath.join(dir, e.name), e.name)); } catch {}
+    }
+    return out;
+  },
+
+  createFolder: async (path) => {
+    await fs.mkdir(toLocal(path), { recursive: true });
+    return { metadata: { path_display: path } };
+  },
+
+  moveFile: async (fromPath, toPath) => {
+    const dest = await freeName(toLocal(toPath));
+    await fs.mkdir(nodePath.dirname(dest), { recursive: true });
+    await fs.rename(toLocal(fromPath), dest);
+    return { path_display: toApi(dest), name: nodePath.basename(dest) };
+  },
+
+  deleteFolder: async (path) => {
+    const abs = toLocal(path);
+    if (abs === LOCAL_ROOT) throw new Error("No se borra la raíz del Dropbox");
+    await fs.rm(abs, { recursive: true });
+    return { ok: true };
+  },
+
+  uploadFile: async (path, content, { mode = "overwrite", autorename = false } = {}) => {
+    let abs = toLocal(path);
+    if (mode !== "overwrite" && autorename) abs = await freeName(abs);
+    else if (mode !== "overwrite" && existsSync(abs)) throw new Error(`Ya existe: ${path}`);
+    await fs.mkdir(nodePath.dirname(abs), { recursive: true });
+    await fs.writeFile(abs, Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8"));
+    const st = await fs.stat(abs);
+    return { name: nodePath.basename(abs), path_display: toApi(abs), size: st.size };
+  },
+};
+
+export const dropbox = LOCAL_MODE ? localDropbox : apiDropbox;
+
+export const dropboxAvailable = () => LOCAL_MODE
+  ? !!(LOCAL_ROOT && existsSync(LOCAL_ROOT))
+  : !!(process.env.DROPBOX_ACCESS_TOKEN || (APP_KEY && APP_SECRET && getDropboxRefreshToken()));
