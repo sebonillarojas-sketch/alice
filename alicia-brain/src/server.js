@@ -885,14 +885,13 @@ async function ttsGroq(text, voice) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// Voz con fallback real: OpenAI primero; si falla o no hay crédito, cae a Groq (nunca queda muda)
-async function generateSpeech(text, voice = "diana") {
-  if (process.env.OPENAI_API_KEY) {
-    try { return await ttsOpenAI(text, voice); }
-    catch (e) { console.error("OpenAI TTS falló, cae a Groq:", e.message); }
-  }
-  if (process.env.GROQ_API_KEY) return ttsGroq(text, voice);
-  throw new Error("Sin proveedor de voz configurado (ni OpenAI ni Groq)");
+// Voz SOLO por OpenAI (tts-1, multilingüe). NO se cae a Groq: su modelo Orpheus es
+// SOLO-INGLÉS y destroza el español de Alicia ("no se le entiende nada"). Una voz
+// ininteligible es peor que ninguna: si OpenAI falla, el cliente usa su propia voz
+// es-PE del navegador (español claro). ttsGroq queda en el código pero sin usarse.
+async function generateSpeech(text, voice = "nova") {
+  if (!process.env.OPENAI_API_KEY) throw new Error("OpenAI TTS no configurado (OPENAI_API_KEY)");
+  return ttsOpenAI(text, voice);
 }
 
 app.post("/api/tts", async (req, res) => {
@@ -905,9 +904,9 @@ app.post("/api/tts", async (req, res) => {
       try {
         const buf = await ttsOpenAI(text, voice, "mp3");
         return res.set("Content-Type", "audio/mpeg").send(buf);
-      } catch (e) { console.error("OpenAI TTS mp3 falló, cae a wav/Groq:", e.message); }
+      } catch (e) { console.error("OpenAI TTS mp3 falló, reintenta wav:", e.message); }
     }
-    const buf = await generateSpeech(text, voice);
+    const buf = await generateSpeech(text, voice);  // OpenAI wav; si falla, 500 → cliente usa voz es-PE del navegador
     res.set("Content-Type", "audio/wav").send(buf);
   } catch (e) {
     console.error("TTS error:", e.message);
