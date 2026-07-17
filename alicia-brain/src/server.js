@@ -1023,6 +1023,33 @@ app.get("/api/dropbox/download", async (req, res) => {
   }
 });
 
+// Fuente Flujo ERP · convención por proyecto: asegura la carpeta
+// "{raízProyecto}/Fuente Flujo ERP" (la crea si no existe), busca el CSV/TSV más
+// reciente y lo devuelve. Así Finanzas arma el link directo sin tipear rutas: la
+// fuente es solo verla y aprobarla. Idempotente (si la carpeta ya existe, sigue).
+app.post("/api/dropbox/flujo", async (req, res) => {
+  try {
+    const { projectRoot } = req.body || {};
+    if (!projectRoot) return res.status(400).json({ error: "projectRoot requerido" });
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    const folder = `${String(projectRoot).replace(/\/+$/, "")}/Fuente Flujo ERP`;
+    try { await dropbox.createFolder(folder); }
+    catch (e) { if (!/conflict|already exists|409/i.test(e.message || "")) throw e; } // ya existía → ok
+    let entries = [];
+    try { entries = await dropbox.listFolder(folder); } catch { entries = []; }
+    const csvs = entries
+      .filter((e) => e.type === "file" && /\.(csv|tsv)$/i.test(e.name))
+      .sort((a, b) => new Date(b.modified || 0) - new Date(a.modified || 0));
+    if (!csvs.length) return res.json({ folder, file: null });
+    const file = csvs[0];
+    const content = await dropbox.getFileContent(file.path);
+    res.json({ folder, file, content, otros: csvs.slice(1).map((f) => ({ name: f.name, path: f.path, modified: f.modified })) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post("/api/dropbox/create_folder", async (req, res) => {
   try {
     const { path } = req.body || {};

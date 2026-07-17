@@ -198,7 +198,7 @@ const SYNCED_KEYS = new Set([
   "hygge:smartViews", "hygge:users", "hygge:spaceAccess", "hygge:customViews",
   "hygge:spvs", "hygge:hq:cifras", "hygge:whiteboards", "hygge:knowledgeLinks",
   "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:ceoBlocks", "hygge:hqWidgets",
-  "hygge:hqSummaries", "hygge:finanzas:source", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
+  "hygge:hqSummaries", "hygge:finanzas:source", "hygge:finanzas:approved", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
 ]);
 
 async function loadStored(key, fallback) {
@@ -3899,10 +3899,23 @@ function dropboxGateError(res) {
   return null;
 }
 
+// Proyectos con flujo financiero en Dropbox. La raíz sale del mapeo real de carpetas;
+// el backend crea/lee "{raíz}/Fuente Flujo ERP" → link directo, sin tipear rutas.
+const FINANZAS_PROYECTOS = [
+  { id: "dc01", code: "DC01", label: "Del Castillo" },
+  { id: "pu01", code: "PU01", label: "Paula Ugarriza" },
+  { id: "tg01", code: "TG01", label: "De la Torre" },
+  { id: "l36",  code: "L36",  label: "Larco 1036" },
+  { id: "finanzas", code: "Gral", label: "General" },
+].map(p => ({ ...p, root: SPACE_DROPBOX_PATHS[p.id] })).filter(p => p.root);
+
 function FinanzasDashboard() {
   const [source, setSource] = useState(() => {
     try { return JSON.parse(localStorage.getItem(FZ_SOURCE_KEY) || "null"); } catch { return null; }
   });
+  const [project, setProject] = useState(() => { try { return localStorage.getItem("hygge:finanzas:project") || null; } catch { return null; } });
+  const [flujo, setFlujo] = useState(null);   // { folder, file } de la fuente por proyecto
+  const [approved, setApproved] = useState(() => { try { return JSON.parse(localStorage.getItem("hygge:finanzas:approved") || "{}"); } catch { return {}; } });
   const [configOpen, setConfigOpen] = useState(false);
   const [pathInput, setPathInput] = useState(source?.path || "");
   const [labelInput, setLabelInput] = useState(source?.label || "");
@@ -3934,6 +3947,51 @@ function FinanzasDashboard() {
   }, []);
 
   useEffect(() => { if (source) fetchCSV(source); }, [source, fetchCSV]);
+
+  // fuente por proyecto: el backend asegura la carpeta "Fuente Flujo ERP" y devuelve
+  // el CSV más reciente. Link directo, la fuente es solo verla y aprobarla.
+  const fetchFlujo = useCallback(async (projId) => {
+    const p = FINANZAS_PROYECTOS.find(x => x.id === projId);
+    if (!p) return;
+    setLoading(true); setError(null); setData(null); setFlujo(null);
+    try {
+      const res = await fetch(`${BACKEND}/api/dropbox/flujo`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectRoot: p.root }),
+      });
+      if (!res.ok) throw dropboxGateError(res) || new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
+      const j = await res.json();
+      setFlujo({ folder: j.folder, file: j.file });
+      if (j.file && j.content != null) {
+        const parsed = parseCSV(j.content);
+        if (parsed.headers.length === 0) throw new Error("El archivo no tiene columnas reconocibles");
+        setData(parsed);
+        setLastFetched(new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }));
+      }
+    } catch (e) {
+      setError({ message: e.message, kind: e.kind });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const selectProject = (id) => {
+    setProject(id); setSource(null);
+    try { localStorage.setItem("hygge:finanzas:project", id); } catch { /* cuota */ }
+    fetchFlujo(id);
+  };
+
+  // aprobar el flujo mostrado (se sincroniza: Joel/Sebastián lo ven aprobado en cualquier dispositivo)
+  const approveFlujo = () => {
+    if (!project || !flujo?.file) return;
+    const next = { ...approved, [project]: { path: flujo.file.path, modified: flujo.file.modified, approvedAt: new Date().toISOString() } };
+    setApproved(next);
+    saveStored("hygge:finanzas:approved", next);
+  };
+  const flujoAprobado = project && flujo?.file && approved[project]?.modified === flujo.file.modified;
+
+  // al entrar, si había un proyecto elegido, recargar su flujo
+  useEffect(() => { if (project && !source) fetchFlujo(project); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveSource = () => {
     if (!pathInput.trim()) { blob.onError(); return; }
@@ -3987,6 +4045,54 @@ function FinanzasDashboard() {
         </div>
       </div>
 
+      {/* Selector de proyecto · fuente directa "Fuente Flujo ERP" en Dropbox */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Flujo por proyecto</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {FINANZAS_PROYECTOS.map(p => {
+            const active = project === p.id;
+            const ap = approved[p.id];
+            return (
+              <button key={p.id} onClick={() => selectProject(p.id)}
+                title={`${p.root}/Fuente Flujo ERP`}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 3, cursor: "pointer",
+                  border: `1px solid ${active ? C.ink : C.line}`, background: active ? C.ink : C.paper,
+                  color: active ? C.bg : C.ink, fontSize: 12, fontWeight: active ? 600 : 500 }}>
+                {p.code}
+                {ap && <span title={`Aprobado ${new Date(ap.approvedAt).toLocaleDateString("es-PE")}`} style={{ color: active ? "#9BD3A6" : C.green, fontSize: 11 }}>✓</span>}
+              </button>
+            );
+          })}
+        </div>
+        {project && flujo && (
+          <div style={{ marginTop: 12, padding: "12px 14px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {flujo.file ? (
+              <>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 600 }}>{flujo.file.name}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted, fontFamily: "monospace", marginTop: 3 }}>{flujo.folder}</div>
+                </div>
+                {flujoAprobado ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.green }}>
+                    <Check size={13} /> Aprobado
+                  </span>
+                ) : (
+                  <button onClick={approveFlujo}
+                    style={{ padding: "8px 16px", background: C.green, color: "white", border: "none", borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    Aprobar flujo
+                  </button>
+                )}
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+                Carpeta lista en Dropbox — dejá tu CSV de flujo acá y volvé a entrar:
+                <div style={{ fontFamily: "monospace", color: C.ink, marginTop: 4 }}>{flujo.folder}</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Config modal */}
       {configOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 500, backgroundColor: "rgba(10,11,15,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
@@ -4037,19 +4143,19 @@ function FinanzasDashboard() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!source && (
+      {/* Empty state · solo cuando no hay ni proyecto elegido ni fuente manual */}
+      {!source && !project && (
         <div style={{ textAlign: "center", padding: "80px 0" }}>
           <div style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <BarChart3 size={22} style={{ color: C.muted }} />
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginBottom: 8 }}>Sin fuente conectada</div>
-          <p style={{ fontSize: 13, color: C.muted, maxWidth: 340, margin: "0 auto 24px", lineHeight: 1.65 }}>
-            Exportá tu reporte desde tu software contable a Dropbox como CSV. ALICE lo lee y genera los widgets automáticamente.
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginBottom: 8 }}>Elegí un proyecto</div>
+          <p style={{ fontSize: 13, color: C.muted, maxWidth: 360, margin: "0 auto 24px", lineHeight: 1.65 }}>
+            Elegí un proyecto arriba y ALICE abre su flujo directo desde la carpeta "Fuente Flujo ERP" en Dropbox. O conectá un CSV manual.
           </p>
           <button onClick={() => setConfigOpen(true)}
             style={{ padding: "10px 20px", backgroundColor: C.navy, color: "white", border: "none", borderRadius: 3, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            Conectar fuente CSV
+            Conectar fuente CSV manual
           </button>
         </div>
       )}
@@ -14182,6 +14288,7 @@ export default function HyggeOS({ authUser } = {}) {
       loadStored("hygge:hqWidgets", null);
       loadStored("hygge:hqSummaries", null);
       loadStored("hygge:finanzas:source", null);
+      loadStored("hygge:finanzas:approved", {});   // aprobaciones de flujo: hidratar desde la nube (cross-device)
       const [t, m, wb, tm, sp, vw, cs, sv, us, sa, tr, cv, rpc, act, cp, cn, ft, vp, kl, spv, hqcf, dds] = await Promise.all([
         db.getTasks().catch(() => loadStored("hygge:tasks", INITIAL_TASKS)), loadStored("hygge:messages", INITIAL_MESSAGES),
         loadStored("hygge:whiteboards", INITIAL_WHITEBOARDS), loadStored("hygge:timer", timer),
