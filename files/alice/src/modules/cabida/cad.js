@@ -120,9 +120,24 @@ export async function importCAD(file) {
     return parseDXF(await file.text());
   }
   if (name.endsWith(".dwg")) {
-    // DWG es binario propietario. La conversión DWG→DXF en el navegador (LibreDWG WASM)
-    // se agregará como paso aparte, verificado. Por ahora se pide el DXF (un clic).
-    throw new Error("DWG-directo en camino. Por ahora expórtalo como DXF desde AutoCAD/Civil3D (Guardar como → DXF) y súbelo — sale con las mismas medidas reales.");
+    // DWG binario → DXF vía LibreDWG (WASM), luego el mismo parser. Fallback: pedir DXF.
+    const dxfText = await dwgToDXF(await file.arrayBuffer());
+    return { ...parseDXF(dxfText), source: "dwg" };
   }
-  throw new Error("formato no soportado — sube .dxf");
+  throw new Error("formato no soportado — sube .dxf o .dwg");
+}
+
+// convierte DWG→DXF en el navegador (LibreDWG WASM); se carga bajo demanda (no pesa el bundle inicial)
+let _dwgLib = null;
+async function dwgToDXF(buf) {
+  try {
+    const mod = await import("@mlightcad/libredwg-web");
+    const LibreDwg = mod.LibreDwg || mod.default?.LibreDwg;
+    if (!_dwgLib) _dwgLib = await LibreDwg.create();
+    const bytes = _dwgLib.dwg_write_dxf(buf);
+    if (!bytes || !bytes.length) throw new Error("conversión vacía");
+    return new TextDecoder().decode(bytes);
+  } catch (e) {
+    throw new Error(`no pude leer el DWG (${e?.message || e}). Expórtalo como DXF desde AutoCAD/Civil3D (Guardar como → DXF) y súbelo — sale igual con medidas reales.`);
+  }
 }

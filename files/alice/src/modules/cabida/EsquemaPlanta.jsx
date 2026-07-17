@@ -262,7 +262,7 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
               ✓ lote real {fmt(cadInfo.area)} m² · quitar
             </button>
           ) : (
-            <button onClick={() => fileRef.current?.click()} title="Importar el contorno del terreno desde CAD (.dxf · .dwg→exporta .dxf)"
+            <button onClick={() => fileRef.current?.click()} title="Importar el contorno del terreno desde CAD (.dxf · .dwg)"
               style={{ fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper, border: `1px solid ${C.line}`,
                 borderRadius: 2, padding: "6px 12px", cursor: "pointer" }}>
               ↑ importar CAD

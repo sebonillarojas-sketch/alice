@@ -10,6 +10,7 @@
     "deploy": "vite build && npx netlify-cli deploy --prod --dir=dist"
   },
   "dependencies": {
+    "@mlightcad/libredwg-web": "^0.7.7",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.110.2",
