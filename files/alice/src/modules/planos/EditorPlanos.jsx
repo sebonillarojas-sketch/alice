@@ -940,6 +940,26 @@ export default function EditorPlanos() {
                   </g>
                 );
               })()}
+              {/* cotas de los linderos (medidas reales en metros) */}
+              {dims && (() => {
+                const n = lote.pts.length;
+                const c0 = lote.pts.reduce((s, p) => ({ x: s.x + p.x / n, y: s.y + p.y / n }), { x: 0, y: 0 });
+                return lote.pts.map((p, i) => {
+                  const q = lote.pts[(i + 1) % n];
+                  const L = dist(p, q);
+                  const a = toScreen(p), z = toScreen(q);
+                  if (Math.hypot(z.x - a.x, z.y - a.y) < 30) return null;
+                  const mw = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+                  const ox = mw.x - c0.x, oy = mw.y - c0.y; const oL = Math.hypot(ox, oy) || 1;
+                  const t = toScreen({ x: mw.x + (ox / oL) * (14 / view.scale) * 1.2, y: mw.y + (oy / oL) * (14 / view.scale) * 1.2 });
+                  return (
+                    <text key={`lc${i}`} x={t.x} y={t.y + 3} fontFamily={mono} fontSize={9.5} fontWeight={600}
+                      fill={C.peri} textAnchor="middle" stroke={C.card} strokeWidth={3} paintOrder="stroke">
+                      {fmt(L, 2)}
+                    </text>
+                  );
+                });
+              })()}
             </>
           )}
           {footprint && (
