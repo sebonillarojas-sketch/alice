@@ -28,6 +28,8 @@ import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
 import { corregirConFeyd } from "./feyd.js";
+import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
+import { useProyectos } from "../cabida/proyectos.js";
 
 const FICHA_DEF = {
   proyecto: "Nuevo proyecto", tipo: "Edificio Multifamiliar", ubicacion: "", cliente: "",
@@ -350,14 +352,30 @@ function FichaModal({ ficha, setFicha, onClose }) {
   );
 }
 
+// Wrapper: pestañas de proyecto (mismas que Cabida) + el editor keyed por proyecto.
+// Al saltar de pestaña se re-lee el plano de ESE proyecto; el dibujo ya no se borra.
 export default function EditorPlanos() {
+  const { activo, store } = useProyectos();
+  const guardar = useCallback((snap) => store.guardarPlano(activo.id, snap), [store, activo.id]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 520 }}>
+      <ProyectoTabs />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <EditorPlanosInner key={activo.id} proyecto={activo} onSavePlano={guardar} />
+      </div>
+    </div>
+  );
+}
+
+function EditorPlanosInner({ proyecto, onSavePlano }) {
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
+  const P = proyecto?.plano || {};                  // plano guardado del proyecto activo
 
-  const [rooms, setRooms] = useState([]);           // ambientes: { id, name, pts, tipo? }
-  const [items, setItems] = useState([]);           // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
-  const [muro, setMuro] = useState(0.15);           // espesor de muro (m)
-  const [altura, setAltura] = useState(2.4);        // altura libre (m)
+  const [rooms, setRooms] = useState(P.rooms || []);   // ambientes: { id, name, pts, tipo? }
+  const [items, setItems] = useState(P.items || []);   // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
+  const [muro, setMuro] = useState(P.muro ?? 0.15);    // espesor de muro (m)
+  const [altura, setAltura] = useState(P.altura ?? 2.4); // altura libre (m)
   const [tool, setTool] = useState("select");
   const [snapOn, setSnapOn] = useState(true);
   const [orthoOn, setOrthoOn] = useState(true);
@@ -373,8 +391,9 @@ export default function EditorPlanos() {
   const [brief, setBrief] = useState({
     areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // distribución en lote
     nse: "C", terraza: true,                                   // tipologías
+    ...(P.brief || {}),
   });
-  const [ficha, setFicha] = useState(FICHA_DEF);
+  const [ficha, setFicha] = useState(P.ficha ? { ...FICHA_DEF, ...P.ficha } : FICHA_DEF);
   const [showFicha, setShowFicha] = useState(false);
 
   const [draft, setDraft] = useState([]);
@@ -383,11 +402,11 @@ export default function EditorPlanos() {
 
   // ── paso 1: lote ──
   const [plano, setPlano] = useState(null);        // { src, ox, oy, mpp, w, h, opacity }
-  const [lote, setLote] = useState(null);          // { pts } polígono del terreno (metros)
-  const [tipoLote, setTipoLote] = useState("medianera"); // medianera | esquina
-  const [retiro, setRetiro] = useState(3);         // retiro frontal (m)
-  const [retiroLat, setRetiroLat] = useState(3);   // retiro de la calle lateral (solo esquina)
-  const [frontIdx, setFrontIdx] = useState(0);     // borde-frente del lote
+  const [lote, setLote] = useState(P.lote ?? null);          // { pts } polígono del terreno (metros)
+  const [tipoLote, setTipoLote] = useState(P.tipoLote ?? "medianera"); // medianera | esquina
+  const [retiro, setRetiro] = useState(P.retiro ?? 3);         // retiro frontal (m)
+  const [retiroLat, setRetiroLat] = useState(P.retiroLat ?? 3);   // retiro de la calle lateral (solo esquina)
+  const [frontIdx, setFrontIdx] = useState(P.frontIdx ?? 0);     // borde-frente del lote
   const [calib, setCalib] = useState([]);          // puntos de calibración en curso
   const [loteBar, setLoteBar] = useState(true);    // barra de herramientas de lote visible
   const [cabidaMsg, setCabidaMsg] = useState(null); // aviso al importar desde cabida
@@ -410,21 +429,10 @@ export default function EditorPlanos() {
     return offsetEdges(lote.pts, dists);
   })();
 
-  // ── persistencia + brief desde cabida ─────────────────────
+  // El estado inicial ya salió del proyecto activo (P). Acá solo consumimos el
+  // puente cabida→plano (one-shot) para pre-cargar el brief en proyectos nuevos.
   useEffect(() => {
     try {
-      // el plano arranca SIEMPRE vacío; solo se restauran preferencias (no el dibujo)
-      const raw = localStorage.getItem(STORE);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (typeof saved?.muro === "number") setMuro(saved.muro);
-        if (typeof saved?.altura === "number") setAltura(saved.altura);
-        if (saved?.brief) setBrief((b) => ({ ...b, ...saved.brief }));
-        if (saved?.ficha) setFicha({ ...FICHA_DEF, ...saved.ficha });
-      }
-    } catch { /* storage corrupto */ }
-    try {
-      // puente cabida → plano: pre-carga los parámetros; el flujo arranca en 1·lote
       const b = localStorage.getItem(BRIEF_KEY);
       if (b) {
         const parsed = JSON.parse(b);
@@ -435,12 +443,13 @@ export default function EditorPlanos() {
     } catch { /* brief inválido */ }
   }, []);
 
+  // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
+  // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
   useEffect(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, brief, ficha })); }
-    catch { /* cuota — la imagen base puede exceder; se guarda el resto igual */
-      try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, lote, retiro, frontIdx, brief, ficha })); } catch { /* nada */ }
-    }
-  }, [rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, brief, ficha]);
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha };
+    if (onSavePlano) onSavePlano(snap);
+    else { try { localStorage.setItem(STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
+  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha]);
 
   // ── historial ─────────────────────────────────────────────
   const snapshot = useCallback(() => ({ rooms, items }), [rooms, items]);

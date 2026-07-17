@@ -1,6 +1,8 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
+import ProyectoTabs from "./ProyectoTabs.jsx";
+import { useProyectos } from "./proyectos.js";
 
 const C = {
   ink: "#373737",
@@ -127,8 +129,27 @@ function Kpi({ label, value, unit, accent }) {
 const CABIDA_STORE = "hygge:cabidaState";
 const loadCabida = () => { try { return JSON.parse(localStorage.getItem(CABIDA_STORE) || "null") || {}; } catch { return {}; } };
 
+// Wrapper: en modo standalone muestra las pestañas de proyecto y monta el cuerpo
+// keyed por proyecto (al saltar de pestaña se re-lee el estado de ese proyecto).
+// En modo compact (dentro de un terreno de Growth) mantiene el comportamiento previo.
 export default function CabidaView({ initialTerreno, compact }) {
-  const S = useRef(loadCabida()).current;                     // snapshot guardado (ida y vuelta al editor)
+  if (compact) return <CabidaInner initialTerreno={initialTerreno} compact />;
+  return <CabidaConProyectos initialTerreno={initialTerreno} />;
+}
+
+function CabidaConProyectos({ initialTerreno }) {
+  const { activo, store } = useProyectos();
+  const guardar = useCallback((snap) => store.guardarCabida(activo.id, snap), [store, activo.id]);
+  return (
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+      <ProyectoTabs />
+      <CabidaInner key={activo.id} initialTerreno={initialTerreno} proyecto={activo} onSaveCabida={guardar} />
+    </div>
+  );
+}
+
+function CabidaInner({ initialTerreno, compact, proyecto, onSaveCabida }) {
+  const S = useRef(proyecto?.cabida && Object.keys(proyecto.cabida).length ? proyecto.cabida : loadCabida()).current; // snapshot del proyecto (ida y vuelta al editor)
   const [terreno, setTerreno] = useState(S.terreno ?? (initialTerreno || 693));
   const [areaLibre, setAreaLibre] = useState(S.areaLibre ?? 35);
   const [pisos, setPisos] = useState(S.pisos ?? 8);
@@ -245,16 +266,18 @@ export default function CabidaView({ initialTerreno, compact }) {
 
   const mixWarn = mix1 + mix2 > 100;
 
-  // persiste TODO el estado de la cabida (sobrevive ir/volver del editor de planos)
+  // persiste TODO el estado de la cabida (sobrevive ir/volver del editor de planos).
+  // en modo proyectos escribe al proyecto activo (instantáneo local + sync nube);
+  // en modo terreno (compact) escribe al store legacy.
   useEffect(() => {
-    try {
-      localStorage.setItem(CABIDA_STORE, JSON.stringify({
-        terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
-        frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
-        areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2,
-      }));
-    } catch { /* cuota */ }
-  }, [terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
+    const snap = {
+      terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
+      frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
+      areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2,
+    };
+    if (onSaveCabida) onSaveCabida(snap);
+    else { try { localStorage.setItem(CABIDA_STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
+  }, [onSaveCabida, terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
       frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
       areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2]);
 
