@@ -79,3 +79,20 @@ export async function disenarPlano(brief, { autocritica = true } = {}) {
   }
   return extraerJSON(texto);
 }
+
+// El Editor de Planos del ERP manda una planta existente (a veces solo ambientes,
+// sin muros/puertas/ventanas): Feyd la audita contra su checklist y la corrige.
+export async function corregirPlano(layout, notas = "") {
+  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill()}`, cache_control: { type: "ephemeral" } }];
+  const messages = [{
+    role: "user",
+    content: `Auditá y corregí esta planta que viene del editor de BAM.${notas ? ` Contexto: ${notas}.` : ""}
+${JSON.stringify(layout)}
+
+Recorré references/checklist-validacion.md ítem por ítem contra la planta. Después corregila: mantené la huella, el frente y la intención del parti todo lo posible — cirugía, no demolición (salvo que esté indefendible, y en ese caso decilo en tu veredicto). Respondé ÚNICAMENTE con este JSON:
+{"veredicto": "<1-2 líneas en tu voz: qué opinás de la planta>", "problemas": ["<problema concreto + regla citada (RNE Art. / Neufert p. / CHK-XX)>", ...], "layout": <la planta corregida en tu formato estricto de layout>}
+Si la planta ya está impecable, decilo en el veredicto (sin regalar elogios) y devolvé el layout igual.`,
+  }];
+  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 8000, system, messages });
+  return extraerJSON(r.content.find(b => b.type === "text")?.text || "");
+}
