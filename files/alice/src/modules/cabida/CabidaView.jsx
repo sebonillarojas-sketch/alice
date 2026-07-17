@@ -175,20 +175,22 @@ export default function CabidaView({ initialTerreno, compact }) {
 
   const efFrenteIdx = frenteIdx ?? cadInfo?.frenteIdx ?? 0;   // frente efectivo (override manual > CAD)
 
-  // deja el lote disponible para el editor de planos ("importar desde cabida")
+  const [areaDpto, setAreaDpto] = useState(90);
+  const [mix1, setMix1] = useState(20);
+  const [mix2, setMix2] = useState(60);
+
+  // deja el lote + el PRODUCTO (área promedio y mix de dorms) para el editor de planos.
+  // así el editor ofrece depas cercanos a lo que ya definiste en cabida, no defaults.
   useEffect(() => {
     if (!lotePoly) return;
     try {
       localStorage.setItem("hygge:loteCabida", JSON.stringify({
         pts: lotePoly, area: cadInfo?.area, frente: cadInfo?.frente, frenteIdx: efFrenteIdx,
-        tipoLote, retiros, pisos, units: cadInfo?.units, ts: Date.now(),
+        tipoLote, retiros, pisos, units: cadInfo?.units,
+        areaDpto, mix1, mix2, ts: Date.now(),
       }));
     } catch { /* cuota */ }
-  }, [lotePoly, cadInfo, tipoLote, retiros, pisos, efFrenteIdx]);
-
-  const [areaDpto, setAreaDpto] = useState(90);
-  const [mix1, setMix1] = useState(20);
-  const [mix2, setMix2] = useState(60);
+  }, [lotePoly, cadInfo, tipoLote, retiros, pisos, efFrenteIdx, areaDpto, mix1, mix2]);
 
   const [est1, setEst1] = useState(1);
   const [est23, setEst23] = useState(2);

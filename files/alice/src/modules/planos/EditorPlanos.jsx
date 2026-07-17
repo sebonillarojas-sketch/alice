@@ -628,6 +628,15 @@ export default function EditorPlanos() {
     else if (typeof c.retiroFrontal === "number") setRetiro(c.retiroFrontal); // formato viejo
     const rl = c.retiros?.derecha?.on ? c.retiros.derecha : c.retiros?.izquierda?.on ? c.retiros.izquierda : null;
     if (rl && typeof rl.v === "number") setRetiroLat(rl.v);
+    // hereda el PRODUCTO de cabida: área promedio y mix de dorms → el editor ofrece
+    // depas cercanos a eso (uds/piso se re-deriva del footprint al abrir distribución).
+    setBrief((br) => ({
+      ...br,
+      areaObjetivo: Number(c.areaDpto) > 0 ? Math.round(c.areaDpto) : br.areaObjetivo,
+      pct1: Number.isFinite(c.mix1) ? c.mix1 : br.pct1,
+      pct2: Number.isFinite(c.mix2) ? c.mix2 : br.pct2,
+      udsPiso: 4,
+    }));
     setLoteBar(true);
     setTool("select");
     setCabidaMsg(`lote importado · ${Math.round(c.area || 0)} m²`);
