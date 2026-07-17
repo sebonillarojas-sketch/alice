@@ -135,6 +135,21 @@ export function offsetEdges(pts, dists) {
   return out;
 }
 
+// ochavo: chaflán normativo en la esquina `cornerIdx` — recorta el vértice con un
+// corte de longitud L (la arista nueva mide ~L). Devuelve el polígono con un vértice más.
+export function ochavar(pts, cornerIdx, L) {
+  const n = pts.length;
+  if (n < 3 || L <= 0) return pts;
+  const V = pts[cornerIdx % n], A = pts[(cornerIdx - 1 + n) % n], B = pts[(cornerIdx + 1) % n];
+  const c = L / Math.SQRT2; // distancia de corte sobre cada lado (esquina ~90°)
+  const lA = Math.hypot(V.x - A.x, V.y - A.y) || 1, lB = Math.hypot(B.x - V.x, B.y - V.y) || 1;
+  const cA = Math.min(c, lA * 0.45), cB = Math.min(c, lB * 0.45); // no comerse el lado
+  const P1 = { x: V.x - ((V.x - A.x) / lA) * cA, y: V.y - ((V.y - A.y) / lA) * cA };
+  const P2 = { x: V.x + ((B.x - V.x) / lB) * cB, y: V.y + ((B.y - V.y) / lB) * cB };
+  const i = cornerIdx % n;
+  return [...pts.slice(0, i), P1, P2, ...pts.slice(i + 1)];
+}
+
 export function offsetPolygon(pts, d) {
   const n = pts.length;
   if (n < 3 || d <= 0) return pts.map((p) => ({ ...p }));

@@ -588,9 +588,15 @@ export default function EditorPlanos() {
     const minX = Math.min(...xs), minY = Math.min(...ys);
     const pts = c.pts.map((p) => ({ x: +(p.x - minX + 2).toFixed(3), y: +(p.y - minY + 2).toFixed(3) }));
     setLote({ pts });
-    setFrontIdx(0);
+    setFrontIdx(c.frenteIdx ?? 0);
     setDraft([]);
-    if (typeof c.retiroFrontal === "number") setRetiro(c.retiroFrontal);
+    // hereda lo definido en cabida: tipo de lote + retiros (frontal y calle lateral)
+    if (c.tipoLote === "esquina" || c.tipoLote === "medianera") setTipoLote(c.tipoLote);
+    const rf = c.retiros?.frontal;
+    if (rf?.on && typeof rf.v === "number") setRetiro(rf.v);
+    else if (typeof c.retiroFrontal === "number") setRetiro(c.retiroFrontal); // formato viejo
+    const rl = c.retiros?.derecha?.on ? c.retiros.derecha : c.retiros?.izquierda?.on ? c.retiros.izquierda : null;
+    if (rl && typeof rl.v === "number") setRetiroLat(rl.v);
     setLoteBar(true);
     setTool("select");
     setCabidaMsg(`lote importado · ${Math.round(c.area || 0)} m²`);

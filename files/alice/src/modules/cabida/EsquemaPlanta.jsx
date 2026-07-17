@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, lazy, Suspense, Component } from "react";
 import { computeEsquema } from "./esquema.js";
-import { importCAD } from "./cad.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -36,32 +35,14 @@ const TIP_COLOR = { "1D": "#D8E0F7", "2D": "#95ABE8", "3D": "#F7936F" };
 const fmt = (n, d = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-function MiniNum({ label, value, onChange, unit, step = 0.5 }) {
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-      <label style={{ fontFamily: sans, fontSize: 12, color: C.ink, textTransform: "lowercase" }}>{label}</label>
-      <input
-        type="number" value={value} step={step} min={0}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        style={{
-          fontFamily: mono, fontSize: 13, fontWeight: 600, color: C.ink,
-          width: 66, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2,
-          background: C.paper, outline: "none", padding: "4px 6px",
-        }}
-      />
-      <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{unit}</span>
-    </div>
-  );
-}
-
-// planta típica esquemática
-function Planta({ e, frente, retiroFrontal, retiroLateral, svgRef }) {
+// planta típica esquemática (rectangular — el 3D y el editor usan la forma real)
+function Planta({ e, frente, rf, ri, svgRef }) {
   const PAD = 34;
   const s = Math.min(600 / Math.max(frente, 1), 420 / Math.max(e.fondo, 1));
   const W = frente * s + PAD * 2;
   const H = e.fondo * s + PAD * 2;
   const lx = PAD, ly = PAD; // origen del lote (calle arriba)
-  const ex = lx + retiroLateral * s, ey = ly + retiroFrontal * s; // origen del edificio
+  const ex = lx + ri * s, ey = ly + rf * s; // origen del edificio
 
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}
@@ -98,8 +79,8 @@ function Planta({ e, frente, retiroFrontal, retiroLateral, svgRef }) {
           const big = u.rects.reduce((a, r) => (r.w > a.w ? r : a), u.rects[0]);
           return (
             <g key={`${fi}-${ui}`}>
-              {u.rects.map((r, ri) => (
-                <rect key={ri} x={ex + r.x * s} y={ey + fila.y * s} width={r.w * s} height={fila.depth * s}
+              {u.rects.map((r, ri2) => (
+                <rect key={ri2} x={ex + r.x * s} y={ey + fila.y * s} width={r.w * s} height={fila.depth * s}
                   fill={TIP_COLOR[u.tip]} stroke={C.card} strokeWidth="1.5" />
               ))}
               {big.w * s > 26 && (
@@ -179,45 +160,23 @@ function Corte({ e, pisos, pisosSot, azoteaTechada }) {
   );
 }
 
-export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada, onArea }) {
-  const [frente, setFrente] = useState(Math.round(Math.sqrt(terreno * 1.4)));
-  const [retiroFrontal, setRetiroFrontal] = useState(5);
-  const [retiroLateral, setRetiroLateral] = useState(0);
+export default function EsquemaPlanta({
+  terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
+  frente, tipoLote, retiros, lotePoly, cadInfo,
+}) {
   const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
-  const [lotePoly, setLotePoly] = useState(null);
-  const [cadInfo, setCadInfo] = useState(null);
-  const [cadErr, setCadErr] = useState(null);
   const svgRef = useRef(null);
-  const fileRef = useRef(null);
 
-  // importa DXF/DWG → contorno real del lote (metros); alimenta área, frente y masa 3D
-  const onCAD = async (file) => {
-    if (!file) return;
-    setCadErr(null);
-    try {
-      const r = await importCAD(file);
-      setLotePoly(r.pts);
-      setCadInfo(r);
-      if (r.area > 0) onArea?.(r.area);
-      if (r.frente > 0) setFrente(Math.round(r.frente));
-      setShow3D(true);
-      try {
-        localStorage.setItem("hygge:loteCabida", JSON.stringify({
-          pts: r.pts, area: r.area, frente: r.frente, retiroFrontal, retiroLateral,
-          pisos, pisosSot, units: r.units, ts: Date.now(),
-        }));
-      } catch { /* cuota */ }
-    } catch (e) {
-      setLotePoly(null); setCadInfo(null);
-      setCadErr(e?.message || String(e));
-    }
-  };
-  const quitarCAD = () => { setLotePoly(null); setCadInfo(null); setCadErr(null); };
+  // retiros efectivos (solo los activos cuentan); vienen definidos en el card 01
+  const rf = retiros?.frontal?.on ? retiros.frontal.v : 0;
+  const ri = retiros?.izquierda?.on ? retiros.izquierda.v : 0;
+  const rd = retiros?.derecha?.on ? retiros.derecha.v : 0;
+  const rp = retiros?.posterior?.on ? retiros.posterior.v : 0;
 
   const e = useMemo(
-    () => computeEsquema({ terreno, frente, retiroFrontal, retiroLateral, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion }),
-    [terreno, frente, retiroFrontal, retiroLateral, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion]
+    () => computeEsquema({ terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion }),
+    [terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion]
   );
 
   // envía la tipología como brief al generador del Editor de Planos
@@ -247,27 +206,18 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
 
   return (
     <div>
-      {/* controles */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 24px", alignItems: "center", paddingBottom: 14, borderBottom: `1px solid ${C.line}` }}>
-        <MiniNum label="frente del lote" value={frente} onChange={setFrente} unit="m" step={1} />
-        <MiniNum label="retiro frontal" value={retiroFrontal} onChange={setRetiroFrontal} unit="m" />
-        <MiniNum label="retiro lateral" value={retiroLateral} onChange={setRetiroLateral} unit="m" />
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-          <input ref={fileRef} type="file" accept=".dxf,.dwg" style={{ display: "none" }}
-            onChange={(ev) => { onCAD(ev.target.files?.[0]); ev.target.value = ""; }} />
-          {cadInfo ? (
-            <button onClick={quitarCAD} title={`lote real · ${fmt(cadInfo.area)} m² · ${cadInfo.verts} vértices · ${cadInfo.units}`}
-              style={{ fontFamily: mono, fontSize: 10.5, color: C.card, background: C.peri, border: `1px solid ${C.peri}`,
-                borderRadius: 2, padding: "6px 12px", cursor: "pointer" }}>
-              ✓ lote real {fmt(cadInfo.area)} m² · quitar
-            </button>
-          ) : (
-            <button onClick={() => fileRef.current?.click()} title="Importar el contorno del terreno desde CAD (.dxf · .dwg)"
-              style={{ fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper, border: `1px solid ${C.line}`,
-                borderRadius: 2, padding: "6px 12px", cursor: "pointer" }}>
-              ↑ importar CAD
-            </button>
-          )}
+      {/* resumen del lote (se define en 01 · terreno y normativa) */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px", alignItems: "center", paddingBottom: 14, borderBottom: `1px solid ${C.line}` }}>
+        <span style={{ fontFamily: mono, fontSize: 10.5, color: C.soft }}>
+          {lotePoly
+            ? <>lote real del CAD · {fmt(cadInfo?.area || terreno)} m² · {cadInfo?.verts} vértices</>
+            : <>lote por proporciones · {fmt(terreno)} m² · frente {fmt(frente, 1)} m</>}
+          {" · "}{tipoLote === "esquina" ? "esquina" : "entre medianeras"}
+          {" · retiros: "}
+          {[["frontal", rf], ["izq", ri], ["der", rd], ["post", rp]].filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}m`).join(" · ") || "ninguno"}
+          {retiros?.ochavo?.on && tipoLote === "esquina" ? ` · ochavo ${retiros.ochavo.v}m` : ""}
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button onClick={() => setShow3D((v) => !v)} style={{
             fontFamily: mono, fontSize: 10.5, color: show3D ? C.card : C.ink,
             background: show3D ? C.ink : C.paper, border: `1px solid ${show3D ? C.ink : C.line}`,
@@ -284,18 +234,6 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
         </div>
       </div>
 
-      {/* estado del CAD importado */}
-      {cadErr && (
-        <div style={{ fontFamily: mono, fontSize: 11, color: C.orange, padding: "10px 0 0", lineHeight: 1.5 }}>▲ {cadErr}</div>
-      )}
-      {cadInfo && (
-        <div style={{ fontFamily: mono, fontSize: 10.5, color: C.peri, padding: "10px 0 0" }}>
-          ◇ lote real del CAD · {fmt(cadInfo.area)} m² · {fmt(cadInfo.bbox.w, 1)}×{fmt(cadInfo.bbox.h, 1)} m · {cadInfo.verts} vértices
-          {cadInfo.assumedMeters ? " · (asumí metros — verifica escala)" : ` · unidades ${cadInfo.units}`}
-          {" · "}la masa 3D usa esta forma
-        </div>
-      )}
-
       {/* warnings */}
       {e.warns.map((w) => (
         <div key={w} style={{ fontFamily: mono, fontSize: 11, color: C.orange, padding: "10px 0 0" }}>▲ {w}</div>
@@ -306,8 +244,9 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
         <div>
           <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>
             planta típica · {e.uPorPiso} unids/piso · {e.doble ? "doble crujía" : "crujía simple"}
+            {lotePoly ? " · esquemática rectangular (el 3D usa la forma real)" : ""}
           </div>
-          <Planta e={e} frente={frente} retiroFrontal={retiroFrontal} retiroLateral={retiroLateral} svgRef={svgRef} />
+          <Planta e={e} frente={frente} rf={rf} ri={ri} svgRef={svgRef} />
         </div>
         <div>
           <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>corte esquemático</div>
@@ -319,7 +258,7 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
       {show3D && (
         <div style={{ paddingTop: 16 }}>
           <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>
-            masa 3D · arrastra para orbitar · rueda para zoom
+            masa 3D · arrastra para orbitar · rueda para zoom{lotePoly ? " · forma real del lote" : ""}
           </div>
           <Masa3DBoundary>
             <Suspense fallback={
@@ -329,8 +268,9 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
                 cargando volumen…
               </div>
             }>
-              <Masa3D e={e} frente={frente} retiroFrontal={retiroFrontal} retiroLateral={retiroLateral}
-                pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada} lotePoly={lotePoly} />
+              <Masa3D e={e} frente={frente} pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada}
+                lotePoly={lotePoly} frenteIdx={cadInfo?.frenteIdx ?? 0}
+                tipoLote={tipoLote} retiros={retiros} />
             </Suspense>
           </Masa3DBoundary>
         </div>
@@ -357,7 +297,7 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
 
       <p style={{ fontFamily: mono, fontSize: 9, color: C.soft, marginTop: 14, marginBottom: 0, lineHeight: 1.6 }}>
         distribución esquemática automática — proporciones reales, arquitectura referencial.
-        fondo = terreno / frente · core central · tipologías 0.65× / 1× / 1.35× del área promedio.
+        el lote (área, frente, tipo y retiros) se define en 01 · terreno y normativa.
       </p>
     </div>
   );
