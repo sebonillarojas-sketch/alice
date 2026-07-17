@@ -492,7 +492,7 @@ function ComparableTable({ comps, setComps, liveComps = [], district = null, mar
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <span style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-          Proyectos comparables{live.length > 0 ? ` · ${live.length} reales (Nexo)` : ""}
+          Proyectos comparables{live.length > 0 ? ` · ${live.length} cercanos (Nexo, ±35% precio)` : ""}
         </span>
         <button onClick={() => setComps(c => [...c, EMPTY_COMP()])}
           style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: C.cobalt,
@@ -721,6 +721,25 @@ export default function MercadoView() {
   }, [factors.preciom2, marketRef]);
   // factores efectivos con el priceDelta calculado (lo que consume el modelo)
   const vFactors = useMemo(() => ({ ...factors, priceDelta }), [factors, priceDelta]);
+
+  // comparables CERCANOS: no todo el distrito, sino los próximos al perfil del proyecto
+  // (precio/m² dentro de ±35% del tuyo — o del mercado si aún no ingresas precio).
+  const nearComps = useMemo(() => {
+    const all = selectedDistrict?.liveProjects || [];
+    if (!all.length) return [];
+    const ref = Number(factors.preciom2) || marketRef;
+    const priceOf = (p) => p.close_price_m2_usd || p.list_price_m2_usd || p.list_price_m2 || null;
+    const dref = Number(factors.tipologia); // 0..n (proxy de tamaño/dorms)
+    const scored = all.map((p) => {
+      const pm = priceOf(p);
+      const dPrice = pm && ref ? Math.abs(pm - ref) / ref : 99;
+      const dDorm = (Number.isFinite(dref) && p.dorms_min != null) ? Math.abs(p.dorms_min - (dref || 2)) : 0;
+      return { p, pm, dPrice, score: dPrice + dDorm * 0.08 };
+    });
+    let list = ref ? scored.filter((s) => s.pm && s.dPrice <= 0.35) : scored;
+    if (!list.length) list = scored.filter((s) => s.pm).length ? scored.filter((s) => s.pm) : scored;
+    return list.sort((a, b) => a.score - b.score).slice(0, 8).map((s) => s.p);
+  }, [selectedDistrict, factors.preciom2, factors.tipologia, marketRef]);
 
   // Computed
   const velocity     = useMemo(() => calcVelocity(selectedDistrict, vFactors), [selectedDistrict, vFactors]);
@@ -1068,9 +1087,9 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                   style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
                     letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showComps ? 12 : 0 }}>
                   {showComps ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  Comparables ({(selectedDistrict?.liveProjects?.length || 0) + comps.length})
+                  Comparables ({nearComps.length + comps.length})
                 </button>
-                {showComps && <ComparableTable comps={comps} setComps={setComps} liveComps={selectedDistrict?.liveProjects} district={selectedDistrict} marketRef={marketRef} />}
+                {showComps && <ComparableTable comps={comps} setComps={setComps} liveComps={nearComps} district={selectedDistrict} marketRef={marketRef} />}
               </div>
             </div>
 
