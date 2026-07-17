@@ -64,7 +64,19 @@ function calcVelocity(district, f) {
   const viewMult       = f.specialView ? 1.15 : 1.0;
   const trendMult      = district.trendScore;
   const v = district.base * priceMult * acabadosMult * storyMult * mediaMult * archMult * devMult * exclusiveMult * viewMult * trendMult;
-  return Math.max(0.3, Math.min(v, district.base * 3.2));
+  // techo 2.2× la base del sector: un proyecto rara vez vende más del doble de lo típico
+  // por marketing/producto. Antes 3.2× dejaba salir velocidades irreales.
+  return Math.max(0.3, Math.min(v, district.base * 2.2));
+}
+
+// velocidad ESTIMADA de un comparable a partir de lo único que varía por proyecto en
+// la data de Nexo: su precio/m² vs el mercado (+ tendencia del distrito). Es estimación,
+// no venta real — Nexo no publica unidades vendidas por proyecto.
+function estVelComp(district, priceM2, marketRef) {
+  if (!district || !priceM2 || !marketRef) return null;
+  const delta = ((priceM2 - marketRef) / marketRef) * 100;
+  const v = district.base * Math.pow(0.968, delta) * district.trendScore;
+  return Math.max(0.3, Math.min(v, district.base * 2.2));
 }
 
 function calcStoryScore(f) {
@@ -473,7 +485,7 @@ function NewsPanel({ news, setNews }) {
 // ─── COMPARABLE ROW ──────────────────────────────────────────────────────────
 const EMPTY_COMP = () => ({ id: Date.now(), nombre: "", precio: "", velocidad: "", acabados: "Estándar", nota: "" });
 
-function ComparableTable({ comps, setComps, liveComps = [] }) {
+function ComparableTable({ comps, setComps, liveComps = [], district = null, marketRef = null }) {
   const live = (liveComps || []).slice(0, 12);
   return (
     <div>
@@ -494,22 +506,30 @@ function ComparableTable({ comps, setComps, liveComps = [] }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.line}` }}>
-                {["Proyecto (Nexo)", "$/m²", "Dorm", "Área m²"].map(h => (
+                {["Proyecto (Nexo)", "$/m²", "Dorm", "Área m²", "Vel. est."].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "4px 6px", color: C.muted, fontWeight: 600, fontSize: 10 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {live.map((p, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                  <td style={{ padding: "4px 6px", color: C.ink }}>{p.project_name || p.name || p.title || "—"}</td>
-                  <td style={{ padding: "4px 6px", color: C.ink }}>{(p.close_price_m2_usd || p.list_price_m2_usd) ? `$${Math.round(p.close_price_m2_usd || p.list_price_m2_usd)}` : "—"}</td>
-                  <td style={{ padding: "4px 6px", color: C.muted }}>{p.bedrooms ?? p.dorms ?? "—"}</td>
-                  <td style={{ padding: "4px 6px", color: C.muted }}>{p.area_m2 ? Math.round(p.area_m2) : "—"}</td>
-                </tr>
-              ))}
+              {live.map((p, i) => {
+                const pm2 = p.close_price_m2_usd || p.list_price_m2_usd || p.list_price_m2 || null;
+                const vel = estVelComp(district, pm2, marketRef);
+                return (
+                  <tr key={i} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                    <td style={{ padding: "4px 6px", color: C.ink }}>{p.name || p.project_name || p.title || "—"}</td>
+                    <td style={{ padding: "4px 6px", color: C.ink }}>{pm2 ? `$${Math.round(pm2)}` : "—"}</td>
+                    <td style={{ padding: "4px 6px", color: C.muted }}>{p.dorms_min ? `${p.dorms_min}${p.dorms_max && p.dorms_max !== p.dorms_min ? `–${p.dorms_max}` : ""}` : "—"}</td>
+                    <td style={{ padding: "4px 6px", color: C.muted }}>{p.min_area_m2 ? Math.round(p.min_area_m2) : "—"}</td>
+                    <td style={{ padding: "4px 6px", color: vel ? C.cobalt : C.muted, fontWeight: 600 }}>{vel ? `${vel.toFixed(1)} u/mes` : "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <div style={{ fontSize: 9.5, color: C.muted, marginTop: 6, fontStyle: "italic" }}>
+            Vel. est. = estimación del modelo por precio vs mercado. Nexo no publica unidades vendidas por proyecto.
+          </div>
         </div>
       )}
 
@@ -1049,7 +1069,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                   {showComps ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                   Comparables ({(selectedDistrict?.liveProjects?.length || 0) + comps.length})
                 </button>
-                {showComps && <ComparableTable comps={comps} setComps={setComps} liveComps={selectedDistrict?.liveProjects} />}
+                {showComps && <ComparableTable comps={comps} setComps={setComps} liveComps={selectedDistrict?.liveProjects} district={selectedDistrict} marketRef={marketRef} />}
               </div>
             </div>
 
