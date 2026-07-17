@@ -312,6 +312,7 @@ export default function CabidaView({ initialTerreno, compact }) {
             terreno={terreno} huella={r.huella} pisos={pisos} dptos={r.dptos}
             mix1={mix1} mix2={mix2} areaDpto={areaDpto} circulacion={circulacion}
             pisosSot={r.pisosSot} azoteaTechada={azoteaTechada}
+            onArea={(a) => setTerreno(Math.round(a))}
           />
         </Card>
       </div>
