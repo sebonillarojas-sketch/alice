@@ -46,6 +46,7 @@ const DEVELOPER_OPTS = ["Primer proyecto", "Track record local", "Developer cons
 const STORY_LABELS   = ["Sin concepto", "Básico", "Bien definido", "Sólido y diferenciado", "Exceptional — storytelling de marca"];
 const TIPOLOGIA_OPTS = ["Flats", "Dúplex", "Mix tipologías", "Penthouses", "Vivienda social"];
 
+const CASTIGO        = 0.75; // haircut conservador: -25% sobre toda velocidad (bases optimistas)
 const ACABADOS_MULT  = [0.82, 1.0, 1.18, 0.88]; // luxury = mercado chico
 const MEDIA_MULT     = [0.78, 1.0, 1.24, 1.48];
 const ARCH_MULT      = [1.0, 1.14, 1.30];
@@ -64,9 +65,9 @@ function calcVelocity(district, f) {
   const viewMult       = f.specialView ? 1.15 : 1.0;
   const trendMult      = district.trendScore;
   const v = district.base * priceMult * acabadosMult * storyMult * mediaMult * archMult * devMult * exclusiveMult * viewMult * trendMult;
-  // techo 2.2× la base del sector: un proyecto rara vez vende más del doble de lo típico
-  // por marketing/producto. Antes 3.2× dejaba salir velocidades irreales.
-  return Math.max(0.3, Math.min(v, district.base * 2.2));
+  // techo 2.2× la base del sector: un proyecto rara vez vende más del doble de lo típico.
+  // CASTIGO 0.75: haircut conservador del 25% sobre TODA velocidad (bases optimistas).
+  return Math.max(0.3, Math.min(v, district.base * 2.2) * CASTIGO);
 }
 
 // velocidad ESTIMADA de un comparable a partir de lo único que varía por proyecto en
@@ -76,7 +77,7 @@ function estVelComp(district, priceM2, marketRef) {
   if (!district || !priceM2 || !marketRef) return null;
   const delta = ((priceM2 - marketRef) / marketRef) * 100;
   const v = district.base * Math.pow(0.968, delta) * district.trendScore;
-  return Math.max(0.3, Math.min(v, district.base * 2.2));
+  return Math.max(0.3, Math.min(v, district.base * 2.2) * CASTIGO);
 }
 
 function calcStoryScore(f) {
