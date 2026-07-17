@@ -6,6 +6,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Save, Printer, RefreshCw, Trash2, Download, Upload } from "lucide-react";
 import ConceptoBam from "./ConceptoBam.jsx";
+import { useProyectos } from "../cabida/proyectos.js";
 import {
   calcCabida, loadTerrenos, loadProyectos, saveProyecto, cargarProyecto, borrarProyecto, loadLS, K,
 } from "./proyecto.js";
@@ -55,9 +56,19 @@ function Laminas({ children }) {
 
 export default function MesaDeTrabajo() {
   const meta0 = loadLS(META_STORE, {}) || {};
+  // Growth es el parent: la Mesa arranca con el proyecto activo de Cabida/Planos
+  // (nombre + terreno vinculado) salvo que ya tengas una meta propia guardada.
+  const { activo: proyectoActivo } = useProyectos();
   const [tab, setTab] = useState("portada");
-  const [nombre, setNombre] = useState(meta0.nombre || "");
-  const [terrenoId, setTerrenoId] = useState(meta0.terrenoId ?? "");
+  const [nombre, setNombre] = useState(meta0.nombre || proyectoActivo?.nombre || "");
+  const [terrenoId, setTerrenoId] = useState(meta0.terrenoId ?? proyectoActivo?.terrenoId ?? "");
+  // si desde Growth abriste otro terreno, la Mesa lo sigue
+  useEffect(() => {
+    if (proyectoActivo?.terrenoId != null && String(proyectoActivo.terrenoId) !== String(terrenoId)) {
+      setTerrenoId(proyectoActivo.terrenoId);
+      if (proyectoActivo.nombre) setNombre(proyectoActivo.nombre);
+    }
+  }, [proyectoActivo?.terrenoId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [portadaImg, setPortadaImg] = useState(meta0.portadaImg || null);
   const [snap3d, setSnap3d] = useState(meta0.snap3d || null);
   const [printing, setPrinting] = useState(false);

@@ -132,6 +132,36 @@ export const proyectosStore = {
     commit(next);
   },
 
+  // Growth es el parent: un terreno del pipeline abre SU proyecto (cabida+plano+mesa).
+  // Si aún no existe, se crea con el nombre del terreno y el área sembrada en cabida.
+  abrirParaTerreno(terreno) {
+    if (!terreno?.id) return null;
+    let p = _proyectos.find((x) => x.terrenoId === terreno.id);
+    if (!p) {
+      const id = uid();
+      p = {
+        id, terrenoId: terreno.id,
+        nombre: (terreno.name || "").trim() || `Proyecto ${_proyectos.length + 1}`,
+        updatedAt: now(), createdOrder: now(),
+        cabida: terreno.areaM2 ? { terreno: terreno.areaM2 } : {},
+        plano: {},
+      };
+      commit([..._proyectos, p]);
+      // CabidaView y la Mesa todavía leen el estado legacy global: sembrar el
+      // área del terreno ahí solo al crear (reabrir no pisa tus ajustes).
+      if (terreno.areaM2) {
+        const legacy = readLS(LEGACY_CABIDA, {}) || {};
+        writeLS(LEGACY_CABIDA, { ...legacy, terreno: terreno.areaM2, frente: Math.round(Math.sqrt(terreno.areaM2 * 1.4)) });
+      }
+    }
+    _activo = p.id; writeLS(K_ACT, _activo); emit();
+    return p.id;
+  },
+
+  vincularTerreno(id, terrenoId) {
+    commit(_proyectos.map((p) => (p.id === id ? { ...p, terrenoId, updatedAt: now() } : p)));
+  },
+
   // guardar parcial del estado de cabida / del plano en un proyecto
   guardarCabida(id, cabida) {
     commit(_proyectos.map((p) => (p.id === id ? { ...p, cabida, updatedAt: now() } : p)));
