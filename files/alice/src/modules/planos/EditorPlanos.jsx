@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Component } from "react";
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, MessageCircle,
+  Upload, Crosshair, RefreshCw, MessageCircle, Box,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
@@ -13,6 +13,16 @@ import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
 import { validarPlan } from "./validacion.js";
+
+const Vista3D = lazy(() => import("./Vista3D.jsx"));
+class Vista3DBoundary extends Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  render() {
+    if (this.state.err) return <div style={{ padding: 14, fontFamily: "monospace", fontSize: 10, color: "#B23", whiteSpace: "pre-wrap", overflow: "auto", height: "100%" }}>{"⚠ 3D falló\n" + String(this.state.err?.message || this.state.err)}</div>;
+    return this.props.children;
+  }
+}
 import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
@@ -340,6 +350,7 @@ export default function EditorPlanos() {
   const [selId, setSelId] = useState(null);         // ambiente seleccionado
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
   const [showLib, setShowLib] = useState(false);
+  const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3
   const [partis, setPartis] = useState([]);
@@ -829,6 +840,7 @@ export default function EditorPlanos() {
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
+        <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
         <Btn active={tool === "wall"} onClick={() => setTool("wall")} title="Dibujar muros (W)"><PenLine size={13} /> muro</Btn>
@@ -1108,6 +1120,28 @@ export default function EditorPlanos() {
         )}
 
         {showLib && <LibPanel onAdd={addItem} onClose={() => setShowLib(false)} />}
+
+        {/* visor 3D vivo — flota abajo a la derecha, reacciona al plano en vivo */}
+        {show3D && (
+          <div style={{ position: "absolute", right: 14, bottom: 14, width: 380, height: 300, background: C.card,
+            border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 30px rgba(0,0,0,0.18)", overflow: "hidden", zIndex: 30 }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", zIndex: 2, pointerEvents: "none" }}>
+              <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, background: "rgba(255,255,255,0.7)", padding: "2px 6px", borderRadius: 2 }}>3D · vivo · arrastra para orbitar</span>
+              <button onClick={() => setShow3D(false)} style={{ marginLeft: "auto", pointerEvents: "auto", background: "rgba(255,255,255,0.8)", border: "none", borderRadius: 2, cursor: "pointer", padding: 2, lineHeight: 0 }}><X size={13} color={C.soft} /></button>
+            </div>
+            {rooms.length ? (
+              <Vista3DBoundary>
+                <Suspense fallback={<div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 10, color: C.soft }}>cargando 3D…</div>}>
+                  <Vista3D rooms={rooms} items={items} muro={muro} altura={altura} />
+                </Suspense>
+              </Vista3DBoundary>
+            ) : (
+              <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 10, color: C.soft, textAlign: "center", padding: 20 }}>
+                dibuja o genera ambientes<br />y aparecen aquí en 3D
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* barra de estado */}
