@@ -71,7 +71,8 @@ function amoblarUnidad(unit, F, nse, override = null) {
   const forzada = override?.tipologiaId ? porTipologia[override.tipologiaId] : null;
   let t = forzada || unit.tipologia || tipologiaCercana(W * D, W);
   const nb = override?.banos ?? t.banos;
-  let L = layout(W, D, t.dorms, nb, { swap: false, nse })
+  const visita = override?.visita ?? false;               // ½ baño de visita (opcional)
+  let L = layout(W, D, t.dorms, nb, { swap: false, nse, visita })
     || (t.dorms <= 2 ? layoutStudio(W, D, nse) : null);   // recorte poco profundo → studio compacto
   if (!L && !forzada) {
     // la tipología pedida no cabe en este recorte → probar la más cercana SIN preferencia de dorms

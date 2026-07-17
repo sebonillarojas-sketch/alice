@@ -265,6 +265,10 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
                   style={{ ...inputStyle, width: 42, textAlign: "left" }}>
                   {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select></label>
+              <label style={{ display: "flex", alignItems: "center", gap: 3, cursor: "pointer" }} title="Agregar medio baño de visita (inodoro + lavamanos, sin ducha)">
+                <input type="checkbox" checked={!!overrides[u.id]?.visita} onChange={(e) => setOv(u.id, "visita", e.target.checked)} />
+                ½ visita
+              </label>
             </div>
           );
         })}
