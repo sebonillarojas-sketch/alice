@@ -182,7 +182,8 @@ export default function Masa3D(props) {
 
   return (
     <div style={{ width: "100%", height: 460, borderRadius: 3, overflow: "hidden", background: C.paper, border: `1px solid ${C.line}` }}>
-      <Canvas shadows dpr={[1, 2]} camera={{ position: [span * 1.2, span * 1.0, span * 1.5], fov: 42, near: 0.1, far: span * 30 }}>
+      {/* preserveDrawingBuffer: la Mesa de Trabajo captura esta vista para la presentación */}
+      <Canvas shadows dpr={[1, 2]} gl={{ preserveDrawingBuffer: true }} camera={{ position: [span * 1.2, span * 1.0, span * 1.5], fov: 42, near: 0.1, far: span * 30 }}>
         <color attach="background" args={[C.paper]} />
         {usaPoly ? <EscenaPoly {...props} /> : <EscenaCaja {...props} />}
         <OrbitControls makeDefault enableDamping dampingFactor={0.08}
