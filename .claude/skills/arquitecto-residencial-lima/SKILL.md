@@ -49,7 +49,7 @@ Patrones probados: banda húmeda posterior corrida (T03/T04), eje vertical later
 Minimizá el pasillo; el patrón dominante del mercado es **cero pasillo**: la sala-comedor central distribuye todo (T01–T04, T08, T12). Reglas:
 
 - Hall como distribuidor cuando el bloque de noche tiene 3+ piezas: 2 m² sirven 4 puertas (Neufert p. 246). El hall debe conectar de inmediato las piezas de mayor tráfico (Neufert p. 245).
-- Pasillo solo en 3D profundos (T07, T9, T10, T11); ancho ≥ 0.90 m entre paramentos (RNE A.020 Art. 13), tramos cortos y rectos.
+- Pasillo solo en 3D profundos (T07, T09, T10, T11); ancho ≥ 0.90 m entre paramentos (RNE A.020 Art. 13), tramos cortos y rectos.
 - **Regla dura: circulación (pasillos + halls) ≤ 10% del área techada** (tipologias-lima.md §7; los ejemplares rinden 0–8%).
 - Puertas abren hacia los cuartos, nunca hacia el pasillo (Neufert p. 245).
 - En 2D+, al menos un baño alcanzable sin atravesar dormitorios (RNE A.020 Art. 10.2).
@@ -79,7 +79,7 @@ Proporciones: dormitorios ≤ 2.0 largo/corto, social ≤ 2.6 (reglas.js AMBIENT
 
 **Puertas**: anchos de vano — 0.90 acceso principal a la unidad; 0.80 dormitorios, estar, cocina, comedor; 0.70 baños (RNE A.020 Art. 12.2.b, Cuadro 06); altura de vano 2.10 (Art. 12.2.a). Sentido de giro: hacia el ambiente servido (el `a` de la puerta), nunca hacia el pasillo (Neufert p. 245); baños giran hacia adentro salvo diseño accesible, que gira hacia afuera (Neufert p. 298). El JSON no lleva campo de giro: se asume giro hacia `a`.
 
-**Ventanas**: dimensioná el vano con **área ≥ 1/8 de la superficie del ambiente servido** (criterio de proyecto; el piso normativo es 10%, RNE A.020 Art. 12.4) y parte operable ≥ 1/12 con abertura al exterior ≥ 5% (RNE A.010 Art. 38.2). **Alféizar 1.00 m** (RNE A.020 Art. 12.5.c); mamparas de piso a techo (alfeizar 0) solo hacia terraza propia, con vidrio fijo templado o baranda en el tramo bajo. Ventanas SOLO en aristas del ambiente que tocan fachada o pozo. Alturas típicas de hoja: 1.10–1.40 m con dintel a 2.10–2.40.
+**Ventanas**: dimensioná el vano con **área ≥ 1/8 de la superficie del ambiente servido** (criterio de proyecto; el piso normativo es 10%, RNE A.020 Art. 12.4), vano de ventilación ≥ 1/12 y abertura operable al exterior ≥ 5% del área servida — con corredera estándar (50% operable), una hoja individual de vano ≥ 10% del área la cubre (RNE A.010 Art. 38.2). **Alféizar 1.00 m** (RNE A.020 Art. 12.5.c); mamparas de piso a techo (alfeizar 0) solo hacia terraza propia, con vidrio fijo templado o baranda en el tramo bajo. Ventanas SOLO en aristas del ambiente que tocan fachada o pozo. Alturas típicas de hoja: 1.10–1.40 m con dintel a 2.10–2.40.
 
 ## Paso 7 — Emitir el layout como JSON ESTRICTO
 

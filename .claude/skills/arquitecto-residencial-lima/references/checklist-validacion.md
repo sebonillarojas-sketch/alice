@@ -82,9 +82,9 @@ Reglas verificables mecánicamente sobre el JSON del layout (esquema documentado
 
 ## CHK-09 [B] Ventilación ≥ 1/12 con abertura al exterior ≥ 5%
 
-- **Enunciado**: para cada ambiente habitable, la superficie de ventana operable ≥ área/12 (8.3%) y al menos una ventana individual con `ancho` × `alto` ≥ 5% del área del ambiente (abertura al exterior).
-- **Verificación**: si el JSON no distingue hoja fija de operable, asumir 50% operable: Σ(ancho×alto) × 0.5 ≥ área/12; y max(ancho×alto por ventana) ≥ 0.05 × área. Cumplir CHK-08 casi siempre implica cumplir esta, pero verificarla igual.
-- **Fuente**: criterio de proyecto (reglas.js VANO.ventilacion = 1/12); piso normativo RNE A.010 Art. 38.2 / A.020 Art. 12.4 (abertura al exterior ≥ 5% de la superficie que se ventila).
+- **Enunciado**: para cada ambiente habitable, (a) Σ(`ancho` × `alto`) de sus ventanas ≥ área/12 (8.3%, vano de ventilación — queda implícito si pasa CHK-08, pero se verifica aparte porque una corrección de CHK-08 puede tocar solo una ventana); y (b) al menos una ventana individual cuya superficie OPERABLE ≥ 5% del área del ambiente (abertura al exterior).
+- **Verificación**: (a) misma suma de CHK-08 comparada contra área/12. (b) Si el JSON no distingue hoja fija de operable, asumir corredera estándar al 50%: max(ancho×alto por ventana) × 0.5 ≥ 0.05 × área. Calibrado: los ejemplares T01–T12 pasan ambas.
+- **Fuente**: criterio de proyecto (reglas.js VANO.ventilacion = 1/12, medido sobre el vano); piso normativo RNE A.010 Art. 38.2 / A.020 Art. 12.4 (abertura al exterior ≥ 5% de la superficie que se ventila).
 
 ## CHK-10 [B] Todo habitable tiene luz y ventana; los de servicio pueden no tenerla
 
@@ -142,8 +142,8 @@ Reglas verificables mecánicamente sobre el JSON del layout (esquema documentado
 
 ## CHK-19 [B] Húmedos apilados al muro húmedo
 
-- **Enunciado**: todo ambiente húmedo (cocina, baños, lavandería) tiene al menos una arista de su polígono a distancia ≤ 0.30 m del segmento `muro_humedo`, con solape proyectado ≥ 0.60 m (frente útil para aparatos). El campo `muro_humedo` es obligatorio.
-- **Verificación**: distancia punto-segmento entre las aristas del polígono y el segmento `muro_humedo`, más solape proyectado.
+- **Enunciado**: el campo `muro_humedo` es obligatorio, y todo ambiente húmedo (cocina, baños, lavandería) tiene distancia mínima polígono→segmento `muro_humedo` ≤ 0.30 m (en ningún caso > 1.00 m: el WC no puede alejarse más de eso de la montante). Además [A]: cada húmedo debería tener una arista con solape proyectado ≥ 0.60 m sobre el segmento (frente útil para colgar aparatos); tocar solo la esquina/extremo del muro húmedo (cocinas de T05/T07) se admite justificando que el aparato más lejano queda a ≤ 1.00 m de la montante.
+- **Verificación**: mínimo de la distancia punto-segmento entre todos los vértices/aristas del polígono y el segmento `muro_humedo` (≤ 0.30 → pasa [B]); proyección del polígono sobre la dirección del segmento para el solape [A]. Calibrado: los 12 ejemplares pasan el [B].
 - **Fuente**: Neufert p. 266 y 277 (baño, WC y cocina comparten ductos; todos los servicios en un solo montante vertical); Neufert p. 57 (WC a máx. 1.00 m de la bajante); RNE A.020 Art. 23.3 (montantes en ductos exclusivos o muros divisorios).
 
 ## CHK-20 [B] Espesores y coherencia de muros

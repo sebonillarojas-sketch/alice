@@ -79,9 +79,8 @@ Regla práctica: dormitorio principal 10.5–13 m², secundario 8–10 m², bañ
 
 ### T01 — 1D/1B estándar Lima Moderna — sala-comedor con kitchenette abierta (1D/1B, 40.6 m²)
 
-Planta casi cuadrada dividida en dos crujías por un tabique central: banda social a la izquierda (sala-comedor con kitchenette abierta) y banda íntima a la derecha.
-Muro húmedo horizontal corrido contra la fachada posterior agrupa baño y lavandería espalda con espalda.
-Circulación nula: la sala-comedor distribuye directamente a dormitorio, baño y lavandería.
+Partición binaria pura: un solo tabique central divide la mitad social (sala-comedor con kitchenette abierta, al frente) de la mitad íntima (dormitorio en el otro frente). Baño y lavandería se recuestan contra el muro posterior, que concentra todo el muro húmedo; la sala distribuye directamente a los tres ambientes sin pasillo.
+Circulación mínima (<5%): el sweet spot de 40.6 m² coincide con la mediana 1D/1B de Lima Moderna.
 
 ```json
 {
@@ -143,9 +142,8 @@ Circulación nula: la sala-comedor distribuye directamente a dormitorio, baño y
 
 ### T02 — 1D/1B amplio con terraza (1D/1B, 46.2 m²)
 
-Social al frente con terraza y cocina cerrada; el dormitorio principal ocupa el fondo como suite con baño propio.
-Muro húmedo vertical corto que apila cocina y baño espalda con espalda en el centro de la planta.
-La sala-comedor es el único distribuidor; no hay pasillo.
+Zonificación en dos bandas: social al frente (sala + terraza que muerde la planta en el vértice del dormitorio) y servicios al fondo (cocina cerrada y baño espalda con espalda contra el tabique central, que es el muro húmedo compartido). El dormitorio funciona en suite: el baño se accede desde el dormitorio, no desde la sala.
+La terraza retranqueada da profundidad a la fachada sin sacrificar área techada útil.
 
 ```json
 {
@@ -214,9 +212,8 @@ La sala-comedor es el único distribuidor; no hay pasillo.
 
 ### T03 — 2D/2B compacto de volumen — sala central distribuidora, banda húmeda posterior (Surquillo/Lince) (2D/2B, 55.4 m²)
 
-Frente ancho y poco fondo: los tres ambientes con luz (dos dormitorios flanqueando la sala) se alinean a la fachada única.
-Banda húmeda posterior completa (cocina, lavandería y ambos baños) sobre un muro húmedo horizontal corrido al fondo.
-Sala central distribuidora: todo abre a ella, cero metros de pasillo.
+Frente ancho (9.55 m) y poco fondo (5.8 m): los tres ambientes que necesitan luz —dormitorio 2, sala y dormitorio principal— se alinean en la banda de fachada, con la sala al centro como distribuidora (sin pasillo). Toda la banda posterior es servicio: lavandería-cocina-baño 2-baño 1 en fila sobre un único muro húmedo continuo al fondo.
+Parti típico de edificio de volumen en Surquillo/Lince: máxima eficiencia con circulación casi nula.
 
 ```json
 {
@@ -301,9 +298,8 @@ Sala central distribuidora: todo abre a ella, cero metros de pasillo.
 
 ### T04 — 2D/2B mediana de mercado — sala central distribuidora, banda húmeda al fondo, fachada única (2D/2B, 58.0 m²)
 
-La mediana exacta del mercado (58 m²): fachada única, sala-comedor central con dormitorios a ambos lados.
-Banda húmeda al fondo con muro húmedo corrido de más de 10 m que sirve cocina, lavandería y los dos baños; baño 1 en suite.
-Zonificación día/noche resuelta sin pasillo — la sala distribuye todo.
+La mediana exacta del mercado (58 m², combo dominante 34.7%). Fachada única de 10.45 m: sala-comedor central de frente a fondo que distribuye a los dos dormitorios laterales sin ningún pasillo. Banda húmeda al fondo partida en dos paquetes: baños gemelos detrás del principal (uno en suite) y cocina-lavandería detrás del dormitorio 2.
+El muro posterior portante concentra todas las montantes: un solo muro húmedo para 4 ambientes de servicio.
 
 ```json
 {
@@ -387,9 +383,8 @@ Zonificación día/noche resuelta sin pasillo — la sala distribuye todo.
 
 ### T05 — 2D/2B con terraza en esquina (2D/2B, 62.0 m²)
 
-Lote en esquina: la terraza toma el vértice y el social se abre en L hacia las dos fachadas; íntimo hacia el fondo.
-Muro húmedo vertical en el tercio derecho concentra baños, cocina y lavandería en una banda lateral de servicio.
-Un hall compacto distribuye dormitorio principal y ambos baños, acotando la circulación a un solo punto.
+Esquinero con terraza mordida en el vértice: la sala en L abraza la terraza y toma luz de dos frentes. Hall central corto que separa el paquete íntimo (dormitorio principal al fondo) del social, y sirve a ambos baños. Núcleo húmedo apilado en franja vertical derecha: cocina, baño 1, baño 2 y lavandería comparten el muro húmedo del medianero.
+Los dos dormitorios quedan en esquinas opuestas: máxima privacidad acústica entre ellos.
 
 ```json
 {
@@ -494,16 +489,15 @@ Un hall compacto distribuye dormitorio principal y ambos baños, acotando la cir
 }
 ```
 
-### T06 — 2D/2B amplio Lima Top — fachada única, terraza y suite con walk-in (2D/2B, 67.02 m²)
+### T06 — 2D/2B amplio Lima Top — fachada única, terraza y dormitorio en suite (2D/2B, 67.02 m²)
 
-Fachada única de segmento alto: social con terraza en la mitad izquierda del frente, dormitorios a la derecha con suite con walk-in.
-Muro húmedo horizontal al fondo ordena la banda de servicio (cocina, lavandería, baños).
-Un hall íntimo separa el bloque de noche del social y da acceso a cocina y baño 2.
+Producto Lima Top (67 m², p75 del combo 2D/2B): fachada única con tres paquetes claros — íntimo a la izquierda (principal en suite + dormitorio 2 sobre hall propio), social a la derecha (sala vertical con terraza retranqueada y mampara de piso a techo). Banda de servicio completa al fondo: baño 1, lavandería, cocina y baño 2 en fila sobre el muro húmedo posterior.
+El hall íntimo aísla los dormitorios del área social: zonificación de segmento alto.
 
 ```json
 {
   "id": "T06",
-  "nombre": "2D/2B amplio Lima Top — fachada única, terraza y suite con walk-in",
+  "nombre": "2D/2B amplio Lima Top — fachada única, terraza y dormitorio en suite",
   "area_techada": 67.02,
   "frente_m": 9.9,
   "fondo_m": 6.77,
@@ -591,7 +585,7 @@ Un hall íntimo separa el bloque de noche del social y da acceso a cocina y bañ
   "ventanas": [
     { "ambiente": "dormitorio principal", "ancho": 2.2, "alto": 1.2, "alfeizar": 1.0 },
     { "ambiente": "dormitorio 2", "ancho": 1.8, "alto": 1.2, "alfeizar": 1.0 },
-    { "ambiente": "sala-comedor", "ancho": 2.1, "alto": 2.1, "alfeizar": 0.0 }
+    { "ambiente": "sala-comedor", "ancho": 1.0, "alto": 2.1, "alfeizar": 0.0 }
   ],
   "muro_humedo": { "a": [0.25, 6.52], "b": [6.3, 6.52] }
 }
@@ -599,9 +593,8 @@ Un hall íntimo separa el bloque de noche del social y da acceso a cocina y bañ
 
 ### T07 — 3D/2B esencial en peine — fachada única, muro húmedo central (3D/2B, 75.3 m²)
 
-Parti en peine sobre fachada única muy ancha (12.75 m): sala y los tres dormitorios cuelgan del frente, todos con luz.
-Muro húmedo central horizontal contra el pasillo agrupa ambos baños y la lavandería con terraza tendedero.
-Circulación lineal: sala en el extremo → pasillo paralelo al fondo → dormitorios y baños.
+El 3D esencial en peine: fachada única larga (12.75 m) con los tres dormitorios en fila sobre la fachada y la sala-comedor en el extremo izquierdo, con cocina abierta detrás. Un pasillo posterior de 0.90 m recorre la zona íntima y sirve a los dos baños, lavandería y terraza técnica alineados sobre el muro húmedo central.
+Estructura clara de muros portantes transversales: parti repetible en edificios de vivienda masiva.
 
 ```json
 {
@@ -710,9 +703,8 @@ Circulación lineal: sala en el extremo → pasillo paralelo al fondo → dormit
 
 ### T08 — 3D/2B familiar estándar — esquinero, sala central distribuidora y banda húmeda al lado derecho (3D/2B, 74.0 m²)
 
-Esquinero: las dos fachadas permiten iluminar sala y tres dormitorios sin pasillo alguno.
-Muro húmedo vertical en la banda derecha apila cocina y los dos baños (baño 2 en suite del principal).
-Sala-comedor central distribuidora: los siete ambientes abren a ella o a la suite.
+El familiar estándar (74 m², cerca de la mediana 3D/2B de 71): esquinero con sala-comedor central que distribuye a TODO —tres dormitorios, cocina y baño social— sin un solo metro de pasillo. Dormitorios en frente y fondo; baños apilados al centro-derecha (principal en suite) y cocina al fondo.
+Todo el paquete sanitario cuelga del medianero derecho: un solo muro húmedo vertical de 6.3 m.
 
 ```json
 {
@@ -798,9 +790,8 @@ Sala-comedor central distribuidora: los siete ambientes abren a ella o a la suit
 
 ### T09 — 3D/2B con estar íntimo — fachada única profunda, núcleo húmedo central con ducto, hall ensanchado como mini-estar/escritorio, dormitorios al patio posterior y pozo lateral (3D/2B, 78.4 m²)
 
-Lote angosto y profundo (6.85 × 11.45): social con terraza al frente, dormitorios al patio posterior y pozo lateral.
-Núcleo húmedo central con ducto — muro húmedo transversal a media profundidad que sirve cocina, lavandería y ambos baños.
-Circulación en dos tiempos: pasillo junto al núcleo y hall ensanchado que funciona como mini-estar/escritorio del bloque de noche.
+Fachada única muy profunda (6.85 × 11.45 m) resuelta en cuatro franjas: social+terraza al frente, núcleo húmedo central (cocina-lavandería-baño 2) con ducto, franja de dormitorio 3 + hall ensanchado que funciona como mini-estar/escritorio + baño 1, y dormitorios principal y 2 al fondo ventilando a patio posterior y pozo lateral.
+El muro húmedo central minimiza recorridos de montantes en un lote profundo, el caso difícil típico de Lima.
 
 ```json
 {
@@ -918,9 +909,8 @@ Circulación en dos tiempos: pasillo junto al núcleo y hall ensanchado que func
 
 ### T10 — 3D/2B amplio Lima Top — esquina, social en el vértice (3D/2B, 85 m²)
 
-Esquina Lima Top: el social con terraza toma el vértice; la barra íntima ocupa la mitad posterior de la planta profunda.
-Muro húmedo vertical lateral de casi 9 m concentra cocina, lavandería y ambos baños en una sola banda instalada.
-Pasillo lineal sirve los tres dormitorios; la suite al fondo cierra con baño propio.
+Producto amplio Lima Top (85 m², p75 del 3D) en esquina: el social ocupa el vértice con terraza y ventanas a dos frentes. Un pasillo vertical único distribuye a los tres dormitorios de la banda izquierda (todos con luz) y toda la banda de servicios —cocina, lavandería, baño 2, baño 1 en suite— se apila contra el medianero derecho.
+Muro húmedo único de 9 m sobre el medianero: registro sanitario perfecto piso a piso.
 
 ```json
 {
@@ -1031,9 +1021,8 @@ Pasillo lineal sirve los tres dormitorios; la suite al fondo cierra con baño pr
 
 ### T11 — 3D/3B premium en esquina — Lima Top (3D/3B, 95.06 m²)
 
-Planta casi cuadrada en esquina, segmento premium: social en L con terraza hacia las dos fachadas y baño de visita junto al ingreso.
-Muro húmedo vertical central apila los tres baños, cocina y lavandería en un solo eje sanitario.
-Dormitorio 2 abre directo a la sala; un pasillo corto sirve dormitorio 3, baño 2 y la suite principal.
+Premium Lima Top (95 m², mediana del 3D/3B): social en el vértice de la esquina con terraza, baño de visita junto a la sala como tercer baño (el sello del segmento alto). Los tres baños + cocina + lavandería se apilan en un núcleo central sobre un solo muro húmedo vertical; pasillo corto que sirve al bloque íntimo de la banda izquierda, con principal en suite ampliado.
+Doble circulación mínima (sala distribuye a dormitorio 2, pasillo al resto): jerarquía social/íntima muy marcada.
 
 ```json
 {
@@ -1154,9 +1143,8 @@ Dormitorio 2 abre directo a la sala; un pasillo corto sirve dormitorio 3, baño 
 
 ### T12 — 1D/1B compacto de inversión — sala-kitchenette integrada, núcleo húmedo apilado junto al ingreso (1D/1B, 33.0 m²)
 
-Mínimo de inversión (33 m²): sala-comedor con kitchenette integrada y dormitorio contiguo, ambos a la fachada.
-Núcleo húmedo apilado (baño + lavandería) en banda sobre el muro húmedo corrido del fondo, junto al ingreso.
-Sin circulación: los tres ambientes servidos abren directamente a la sala.
+La planta mínima de inversión/renta (33 m², cola baja del 1D): sala-kitchenette en L junto al ingreso, dormitorio en el frente opuesto. Baño y lavandería ocupan los extremos de la banda posterior, ambos colgados del muro húmedo del fondo; la L de la sala absorbe toda la circulación.
+Dos ambientes con luz sobre un solo frente de 6.6 m: el mínimo viable con ventilación normativa.
 
 ```json
 {

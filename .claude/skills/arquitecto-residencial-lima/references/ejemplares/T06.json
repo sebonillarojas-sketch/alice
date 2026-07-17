@@ -1,6 +1,6 @@
 {
   "id": "T06",
-  "nombre": "2D/2B amplio Lima Top — fachada única, terraza y suite con walk-in",
+  "nombre": "2D/2B amplio Lima Top — fachada única, terraza y dormitorio en suite",
   "area_techada": 67.02,
   "frente_m": 9.9,
   "fondo_m": 6.77,
@@ -88,7 +88,7 @@
   "ventanas": [
     { "ambiente": "dormitorio principal", "ancho": 2.2, "alto": 1.2, "alfeizar": 1.0 },
     { "ambiente": "dormitorio 2", "ancho": 1.8, "alto": 1.2, "alfeizar": 1.0 },
-    { "ambiente": "sala-comedor", "ancho": 2.1, "alto": 2.1, "alfeizar": 0.0 }
+    { "ambiente": "sala-comedor", "ancho": 1.0, "alto": 2.1, "alfeizar": 0.0 }
   ],
   "muro_humedo": { "a": [0.25, 6.52], "b": [6.3, 6.52] }
 }

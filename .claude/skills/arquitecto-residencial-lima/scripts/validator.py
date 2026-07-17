@@ -17,12 +17,12 @@ from collections import defaultdict, deque
 
 GRID = 0.05  # rasterización a 5 cm
 
-AREA_MIN = {  # m2 — RNE A.020 + reglas.js
-    "sala": 11, "comedor": 8, "sala-comedor": 16,
-    "cocina": 4.5, "lavanderia": 2.0, "lavandería": 2.0,
+AREA_MIN = {  # m2 — umbrales canónicos de references/checklist-validacion.md CHK-05
+    "sala": 11, "comedor": 8, "sala-comedor": 10.5,
+    "cocina": 4.0, "lavanderia": 1.6, "lavandería": 1.6,
     "dormitorio principal": 9.5, "dormitorio ppal": 9.5, "dormitorio": 6.5,
-    "estudio": 5, "baño": 2.5, "bano": 2.5, "baño visita": 1.5,
-    "hall": 1.0, "pasillo": 0.8, "terraza": 1.5, "balcon": 1.5, "balcón": 1.5,
+    "estudio": 6, "baño visita": 1.05, "baño": 2.4, "bano": 2.4,
+    "hall": 1.4, "pasillo": 0, "terraza": 0, "balcon": 0, "balcón": 0,
 }
 ANCHO_PUERTA_MIN = {"exterior": 0.90, "baño": 0.70, "bano": 0.70, "default": 0.80}
 HUMEDOS = ("baño", "bano", "cocina", "lavander")
@@ -57,8 +57,10 @@ def raster(pts):
 
 
 def canon(n):
+    # clave más larga primero: "baño visita" debe ganar sobre "baño",
+    # "sala-comedor" sobre "sala", "dormitorio principal" sobre "dormitorio"
     n = n.lower().strip()
-    for k in AREA_MIN:
+    for k in sorted(AREA_MIN, key=len, reverse=True):
         if n.startswith(k):
             return k
     return n
