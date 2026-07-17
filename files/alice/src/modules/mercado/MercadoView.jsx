@@ -473,12 +473,13 @@ function NewsPanel({ news, setNews }) {
 // ─── COMPARABLE ROW ──────────────────────────────────────────────────────────
 const EMPTY_COMP = () => ({ id: Date.now(), nombre: "", precio: "", velocidad: "", acabados: "Estándar", nota: "" });
 
-function ComparableTable({ comps, setComps }) {
+function ComparableTable({ comps, setComps, liveComps = [] }) {
+  const live = (liveComps || []).slice(0, 12);
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <span style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-          Proyectos comparables
+          Proyectos comparables{live.length > 0 ? ` · ${live.length} reales (Nexo)` : ""}
         </span>
         <button onClick={() => setComps(c => [...c, EMPTY_COMP()])}
           style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: C.cobalt,
@@ -486,9 +487,35 @@ function ComparableTable({ comps, setComps }) {
           <Plus size={12} /> Agregar comp
         </button>
       </div>
-      {comps.length === 0 && (
+
+      {/* comparables reales del sector (de Nexo) — solo lectura */}
+      {live.length > 0 && (
+        <div style={{ overflowX: "auto", marginBottom: comps.length ? 14 : 0 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.line}` }}>
+                {["Proyecto (Nexo)", "$/m²", "Dorm", "Área m²"].map(h => (
+                  <th key={h} style={{ textAlign: "left", padding: "4px 6px", color: C.muted, fontWeight: 600, fontSize: 10 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {live.map((p, i) => (
+                <tr key={i} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                  <td style={{ padding: "4px 6px", color: C.ink }}>{p.project_name || p.name || p.title || "—"}</td>
+                  <td style={{ padding: "4px 6px", color: C.ink }}>{(p.close_price_m2_usd || p.list_price_m2_usd) ? `$${Math.round(p.close_price_m2_usd || p.list_price_m2_usd)}` : "—"}</td>
+                  <td style={{ padding: "4px 6px", color: C.muted }}>{p.bedrooms ?? p.dorms ?? "—"}</td>
+                  <td style={{ padding: "4px 6px", color: C.muted }}>{p.area_m2 ? Math.round(p.area_m2) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {live.length === 0 && comps.length === 0 && (
         <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "20px 0", borderTop: `1px solid ${C.line}` }}>
-          Sin comparables — agregá proyectos del sector para enriquecer el análisis
+          Sin comparables de Nexo en este distrito — agregá proyectos a mano para enriquecer el análisis
         </div>
       )}
       {comps.length > 0 && (
@@ -557,10 +584,13 @@ function buildLiveDistricts(staticDistricts, liveProjects) {
     const sorted = [...prices].sort((a, b) => a - b);
     return {
       ...d,
-      base: matches.length > 0 ? +(matches.length / 4).toFixed(1) : d.base,
+      // OJO: `base` (velocidad u/mes) queda como el valor calibrado del distrito.
+      // Antes salía de matches.length/4 (# de proyectos scrapeados) → velocidades absurdas.
+      // El # de comparables NO es absorción; solo enriquece precios y comparables.
       priceRange: sorted.length >= 2 ? [Math.round(sorted[0]), Math.round(sorted[sorted.length - 1])] : d.priceRange,
       liveAvgM2: avg ? Math.round(avg) : null,
       liveCount: matches.length,
+      liveProjects: matches,   // comparables reales del sector (Nexo)
     };
   });
 }
@@ -655,11 +685,27 @@ export default function MercadoView() {
     return () => window.removeEventListener("message", handler);
   }, [districts]);
 
+  // ── Precio relativo al mercado: lo CALCULA el software (no un slider) ──
+  // referencia = promedio real de Nexo si existe, si no el punto medio del rango del sector.
+  const marketRef = useMemo(() => {
+    if (!selectedDistrict) return null;
+    if (selectedDistrict.liveAvgM2) return selectedDistrict.liveAvgM2;
+    const [lo, hi] = selectedDistrict.priceRange || [];
+    return lo && hi ? Math.round((lo + hi) / 2) : null;
+  }, [selectedDistrict]);
+  const priceDelta = useMemo(() => {
+    const p = Number(factors.preciom2);
+    if (!p || !marketRef) return 0;
+    return Math.round(((p - marketRef) / marketRef) * 100);
+  }, [factors.preciom2, marketRef]);
+  // factores efectivos con el priceDelta calculado (lo que consume el modelo)
+  const vFactors = useMemo(() => ({ ...factors, priceDelta }), [factors, priceDelta]);
+
   // Computed
-  const velocity     = useMemo(() => calcVelocity(selectedDistrict, factors), [selectedDistrict, factors]);
+  const velocity     = useMemo(() => calcVelocity(selectedDistrict, vFactors), [selectedDistrict, vFactors]);
   const absorption   = useMemo(() => calcAbsorption(velocity, factors.totalUnits), [velocity, factors.totalUnits]);
-  const tornado      = useMemo(() => calcTornado(selectedDistrict, factors), [selectedDistrict, factors]);
-  const spider       = useMemo(() => calcSpider(selectedDistrict, factors), [selectedDistrict, factors]);
+  const tornado      = useMemo(() => calcTornado(selectedDistrict, vFactors), [selectedDistrict, vFactors]);
+  const spider       = useMemo(() => calcSpider(selectedDistrict, vFactors), [selectedDistrict, vFactors]);
   const storyScore   = useMemo(() => calcStoryScore(factors), [factors]);
   const absMonths    = useMemo(() => absorption.length ? absorption.length - 1 : null, [absorption]);
   const revenueEst   = useMemo(() => {
@@ -689,7 +735,7 @@ DATOS MACRO REALES (BCRP${macro?.tasa_hip_pen?.period ? " · " + macro.tasa_hip_
 
 PROYECTO:
 - Tipología: ${TIPOLOGIA_OPTS[factors.tipologia]}
-- Precio relativo al mercado: ${factors.priceDelta > 0 ? "+" : ""}${factors.priceDelta}%${factors.preciom2 ? ` (USD ${factors.preciom2}/m²)` : ""}
+- Precio relativo al mercado: ${priceDelta > 0 ? "+" : ""}${priceDelta}% (calculado)${factors.preciom2 ? ` — proyecto USD ${factors.preciom2}/m² vs mercado USD ${marketRef}/m²` : ""}
 - Acabados: ${ACABADOS_OPTS[factors.acabados]}
 - Total unidades: ${factors.totalUnits}
 ${revenueEst ? `- Revenue estimado: USD ${revenueEst}M` : ""}
@@ -735,7 +781,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
     } finally {
       setAnalyzing(false);
     }
-  }, [selectedDistrict, factors, velocity, absMonths, storyScore, comps, revenueEst]);
+  }, [selectedDistrict, factors, velocity, absMonths, storyScore, comps, revenueEst, priceDelta, marketRef]);
 
   // Velocity color
   const velocityColor = !velocity ? C.muted
@@ -848,10 +894,22 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                 style={{ width: "100%", padding: "7px 8px", fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, color: C.ink, boxSizing: "border-box" }} />
             </div>
             <div>
-              <Slider label="Precio relativo al mercado" value={factors.priceDelta} min={-25} max={25} step={5}
-                onChange={v => setF("priceDelta", v)}
-                format={v => v === 0 ? "En mercado" : `${v > 0 ? "+" : ""}${v}%`}
-                hint={factors.priceDelta > 10 ? "⚠ Sobre-precio" : factors.priceDelta < -10 ? "✓ Precio agresivo" : ""} />
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 5 }}>Precio relativo al mercado</div>
+              <div style={{ padding: "7px 8px", border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, minHeight: 32, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                {!marketRef || !factors.preciom2 ? (
+                  <span style={{ fontSize: 11, color: C.muted, fontStyle: "italic" }}>ingresa el USD/m² del proyecto</span>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: priceDelta > 10 ? C.ochre : priceDelta < -10 ? C.green : C.ink }}>
+                      {priceDelta === 0 ? "En mercado" : `${priceDelta > 0 ? "+" : ""}${priceDelta}%`}
+                      {priceDelta > 10 ? " · sobre-precio" : priceDelta < -10 ? " · agresivo" : ""}
+                    </span>
+                    <span style={{ fontSize: 9.5, color: C.muted }}>
+                      vs {selectedDistrict?.liveAvgM2 ? `prom. Nexo USD ${marketRef}/m²` : `mediana sector USD ${marketRef}/m²`}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -989,9 +1047,9 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
                   style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted, fontWeight: 600,
                     letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, marginBottom: showComps ? 12 : 0 }}>
                   {showComps ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  Comparables ({comps.length})
+                  Comparables ({(selectedDistrict?.liveProjects?.length || 0) + comps.length})
                 </button>
-                {showComps && <ComparableTable comps={comps} setComps={setComps} />}
+                {showComps && <ComparableTable comps={comps} setComps={setComps} liveComps={selectedDistrict?.liveProjects} />}
               </div>
             </div>
 
