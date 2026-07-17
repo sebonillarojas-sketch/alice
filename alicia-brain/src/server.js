@@ -676,6 +676,72 @@ async function downloadWACloudMedia(mediaId) {
   return { buffer: Buffer.from(await fileRes.arrayBuffer()), mediaType: meta.mime_type || "audio/ogg" };
 }
 
+// ── WhatsApp Web (el teléfono propio de Alicia, siempre conectado) ────────────
+// Mismo pipeline que los webhooks: allowlist → transcribir audio / archivo al
+// buzón → processAliciaMessage → respuesta por el mismo canal.
+
+async function handleWAWebIncoming({ phone, text, media }) {
+  const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, "")).filter(Boolean);
+  if (!allowed.includes(phone.replace(/\D/g, ""))) return;
+  const userId = phoneToUserId(phone);
+  if (!userId) return;
+
+  let userText = text, inputWasAudio = false;
+  if (media?.kind === "audio") {
+    console.log(`🎤 WA Web audio [${userId}]`);
+    userText = await transcribeBuffer(media.buffer, media.mediaType) || "[audio no entendido]";
+    inputWasAudio = true;
+    console.log(`📝 Transcripción: ${userText}`);
+  } else if (media?.kind === "file") {
+    const { setLastFile, extForMime } = await import("./inbox-files.js");
+    const filename = media.filename || `whatsapp-${Date.now()}.${extForMime(media.mediaType)}`;
+    setLastFile(userId, { buffer: media.buffer, mediaType: media.mediaType, filename });
+    userText = `[Adjunté un archivo: ${filename} · ${media.mediaType} · ${Math.round(media.buffer.length / 1024)} KB]${text ? ` ${text}` : " ¿Qué hacés con esto?"}`;
+    console.log(`📎 WA Web archivo [${userId}]: ${filename} (${Math.round(media.buffer.length / 1024)} KB)`);
+  }
+  if (!userText) return;
+
+  console.log(`📱 WA Web [${userId}] ${userText}`);
+  const { sendWAWebText, sendWAWebAudio } = await import("./waweb.js");
+  const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
+    onThinking: () => sendWAWebText(phone, pickAck()).catch(() => {}),
+  });
+
+  // Nota de voz de vuelta si la entrada fue audio (paridad con Cloud/Twilio).
+  // El TTS emite wav — va como audio normal, no como nota de voz (eso pide ogg/opus).
+  if (inputWasAudio) {
+    try {
+      const audioBuf = await generateSpeech(reply);
+      await sendWAWebAudio(phone, audioBuf, "audio/wav");
+      return;
+    } catch (ttsErr) { console.error("WA Web TTS falló, respondiendo texto:", ttsErr.message); }
+  }
+  await sendWAWebText(phone, reply);
+}
+
+app.get("/api/waweb/status", async (_, res) => {
+  try {
+    const { getWAWebStatus } = await import("./waweb.js");
+    res.json(getWAWebStatus());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/waweb/restart", async (_, res) => {
+  try {
+    const { restartWAWeb } = await import("./waweb.js");
+    await restartWAWeb();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/waweb/logout", async (_, res) => {
+  try {
+    const { logoutWAWeb } = await import("./waweb.js");
+    await logoutWAWeb();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Twilio webhook ────────────────────────────────────────────────────────────
 
 // Acks naturales cuando Alicia sale a buscar/hacer algo (no dejar al usuario esperando)
@@ -1535,6 +1601,8 @@ app.post("/api/analyze", async (req, res) => {
 app.get("/health", async (_, res) => {
   let dropbox = false;
   try { ({ dropboxAvailable: dropbox } = await import("./integrations/dropbox.js")); dropbox = dropbox(); } catch { dropbox = false; }
+  let waweb = { status: "off" };
+  try { const { getWAWebStatus } = await import("./waweb.js"); waweb = getWAWebStatus(); } catch {}
   res.json({
     ok: true, service: "alicia-brain",
     erp: process.env.ERP_URL || "http://localhost:3002",
@@ -1545,6 +1613,9 @@ app.get("/health", async (_, res) => {
       tavily:  !!(process.env.TAVILY_API_KEY),
       openai:  !!(process.env.OPENAI_API_KEY),  // voz TTS/Whisper primaria
       groq:    !!(process.env.GROQ_API_KEY),    // fallback de voz
+      // chequeo real de socket, no presencia de env vars (lección Dropbox)
+      whatsappWeb: waweb.status === "connected",
+      whatsappWebStatus: waweb.status,
     }
   });
 });
@@ -1573,6 +1644,11 @@ app.listen(PORT, async () => {
 
   // Fetch real macro data from BCRP on startup (non-blocking)
   refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
+
+  // WhatsApp Web: el teléfono de Alicia, conectado 24/7 (QR en el panel si falta vincular)
+  import("./waweb.js")
+    .then(({ startWAWeb }) => startWAWeb(handleWAWebIncoming))
+    .catch(e => console.warn("WA Web no disponible:", e.message));
 
   startCron();
 });
