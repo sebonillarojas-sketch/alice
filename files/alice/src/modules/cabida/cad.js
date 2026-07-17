@@ -57,8 +57,24 @@ function polysFromLines(lines) {
   return polys;
 }
 
+// las plantillas de AutoCAD suelen declarar unidades que no son las del dibujo
+// (p.ej. acad.dwt imperial marca pulgadas aunque dibujes en metros). Si el área
+// resultante es absurda para un lote, se prueba la interpretación plausible.
+function elegirEscala(rawArea, mpu, unitCode) {
+  const plausible = (a) => a >= 25 && a <= 500000; // de lotecito a manzana
+  if ((unitCode in UNIT_M) && plausible(rawArea * mpu * mpu)) return { mpu, fixed: false };
+  if (!(unitCode in UNIT_M) && plausible(rawArea)) return { mpu: 1, fixed: false }; // sin unidades → metros
+  for (const [m, label] of [[1, "metros"], [0.001, "mm"], [0.01, "cm"], [0.3048, "pies"], [0.0254, "pulgadas"]]) {
+    if (plausible(rawArea * m * m)) return { mpu: m, fixed: true, fixedTo: label };
+  }
+  return { mpu: (unitCode in UNIT_M) ? mpu : 1, fixed: false };
+}
+
 // recentra a origen (centro del bbox) y devuelve métricas
-function finalize(polyRaw, mpu, unitCode, layer, source) {
+function finalize(polyRaw, mpuDecl, unitCode, layer, source) {
+  const rawArea = Math.abs(shoelace(polyRaw));
+  const esc = elegirEscala(rawArea, mpuDecl, unitCode);
+  const mpu = esc.mpu;
   const poly = polyRaw.map((p) => ({ x: p.x * mpu, y: p.y * mpu }));
   const xs = poly.map((p) => p.x), ys = poly.map((p) => p.y);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -78,7 +94,11 @@ function finalize(polyRaw, mpu, unitCode, layer, source) {
     pts, frenteIdx, area: +area.toFixed(1),
     bbox: { w: +(maxX - minX).toFixed(2), h: +(maxY - minY).toFixed(2) },
     frente: +frente.toFixed(2),
-    units: UNIT_LABEL[unitCode] ?? "m", assumedMeters: !(unitCode in UNIT_M),
+    units: esc.fixed ? (esc.fixedTo || "m") : (UNIT_LABEL[unitCode] ?? "m"),
+    assumedMeters: !(unitCode in UNIT_M) && !esc.fixed,
+    unitNote: esc.fixed
+      ? `el archivo declaraba ${UNIT_LABEL[unitCode] ?? "s/u"} pero el tamaño no cuadraba — interpreté ${esc.fixedTo}; verifica el área`
+      : null,
     layer, source, verts: pts.length,
   };
 }
