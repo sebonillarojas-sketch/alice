@@ -14,6 +14,7 @@ import { TimerView } from "./modules/timer/TimerView";
 import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 import { db } from "./lib/supabase";
+import { useAuth } from "./auth/AuthContext.jsx";
 
 // Toda llamada AI del ERP pasa por el backend (aliceai) — el browser JAMÁS toca
 // Anthropic directo ni guarda keys (así se filtró la key el 13 jul 2026).
@@ -3877,6 +3878,26 @@ function autoWidgets(headers, rows) {
 const BACKEND = "https://aliceai.bam.pe";
 const FZ_SOURCE_KEY = "hygge:finanzas:source";
 
+// Los endpoints /api/dropbox/* de alicia-brain van detrás del panelGate: un 401
+// es sesión Supabase vencida (el interceptor de lib/supabase.js no pudo adjuntar
+// token) y un 503 es Dropbox sin configurar en el backend. Sin esta traducción
+// el usuario lee el body crudo y le echa la culpa a Dropbox.
+// Compartido por Finanzas y WikiHygge/Archivos. Devuelve null si no es un error
+// del gate (el call-site conserva su manejo de siempre).
+function dropboxGateError(res) {
+  if (res.status === 401) {
+    const err = new Error("Tu sesión venció — cerrá sesión y volvé a entrar para recargar los datos.");
+    err.kind = "auth";
+    return err;
+  }
+  if (res.status === 503) {
+    const err = new Error("Dropbox no está configurado en el backend — no es un problema del archivo. Avisale al admin.");
+    err.kind = "config";
+    return err;
+  }
+  return null;
+}
+
 function FinanzasDashboard() {
   const [source, setSource] = useState(() => {
     try { return JSON.parse(localStorage.getItem(FZ_SOURCE_KEY) || "null"); } catch { return null; }
@@ -3889,6 +3910,7 @@ function FinanzasDashboard() {
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
   const blob = useModalBlob();
+  const { logout } = useAuth();
 
   useEffect(() => { if (configOpen) blob.reset(); }, [configOpen]);
 
@@ -3897,14 +3919,14 @@ function FinanzasDashboard() {
     setLoading(true); setError(null);
     try {
       const res = await fetch(`${BACKEND}/api/dropbox/download?path=${encodeURIComponent(src.path)}`);
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw dropboxGateError(res) || new Error(await res.text());
       const text = await res.text();
       const parsed = parseCSV(text);
       if (parsed.headers.length === 0) throw new Error("El archivo no tiene columnas reconocibles");
       setData(parsed);
       setLastFetched(new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }));
     } catch (e) {
-      setError(e.message);
+      setError({ message: e.message, kind: e.kind });
     } finally {
       setLoading(false);
     }
@@ -4034,7 +4056,13 @@ function FinanzasDashboard() {
       {/* Error */}
       {error && (
         <div style={{ padding: "14px 16px", backgroundColor: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 3, marginBottom: 24, fontSize: 12.5, color: "#B91C1C" }}>
-          Error al leer el archivo: {error}
+          {error.kind ? error.message : `Error al leer el archivo: ${error.message}`}
+          {error.kind === "auth" && (
+            <button onClick={logout}
+              style={{ display: "block", marginTop: 10, padding: "7px 14px", backgroundColor: C.navy, color: "white", border: "none", borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              Cerrar sesión
+            </button>
+          )}
         </div>
       )}
 
@@ -7241,6 +7269,8 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
     try {
       const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(path)}`);
       if (!res.ok) {
+        const gateErr = dropboxGateError(res);
+        if (gateErr) throw gateErr;
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Error ${res.status}`);
       }
@@ -7729,7 +7759,7 @@ function SpaceArchivosView({ spaceId }) {
     setLoading(true); setError(null); setSelectedFile(null); setSearchResults(null);
     try {
       const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(path)}`);
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
+      if (!res.ok) throw dropboxGateError(res) || new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
       const data = await res.json();
       setEntries(data.entries || []);
     } catch (e) { setError(e.message); setEntries([]); }
