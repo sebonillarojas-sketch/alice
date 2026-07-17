@@ -73,6 +73,13 @@ function verifyToken(tok) {
 async function panelGate(req, res, next) {
   const p = req.path; // relativo al mount /api (ej: /chat, /calendar/team)
   if (PANEL_PUBLIC.some(x => p === x || p.startsWith(x + "/"))) return next();
+  // Dev local (la bestia): GATE_DEV_OPEN=1 deja pasar SOLO requests de loopback
+  // con Host localhost — el vite dev del ERP no tiene sesión Supabase (bypass).
+  // Doble condición a propósito: si el flag se filtra a un deploy público,
+  // detrás del tunnel el Host llega como aliceai.bam.pe y el gate sigue cerrado.
+  if (process.env.GATE_DEV_OPEN === "1"
+    && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket?.remoteAddress || "")
+    && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || ""))) return next();
   // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
   // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
   if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();

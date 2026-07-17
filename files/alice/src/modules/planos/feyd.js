@@ -3,6 +3,7 @@
 // El na-Barón audita la planta contra su checklist (RNE + Neufert + mercado)
 // y devuelve veredicto + layout corregido, que acá se traduce de vuelta a rooms.
 import { snapPt, area } from "./geometry.js";
+import { ALICIA_URL } from "../../lib/brain.js";
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
@@ -64,7 +65,7 @@ export async function corregirConFeyd(rooms, brief = {}) {
   const layout = roomsALayout(rooms, brief);
   if (!layout.ambientes.length) throw new Error("no hay ambientes que auditar");
   const notas = [brief.nse && `NSE ${brief.nse}`, brief.terraza && "con terraza a fachada"].filter(Boolean).join(" · ");
-  const res = await fetch("https://aliceai.bam.pe/api/arquitecto/corregir", {
+  const res = await fetch(`${ALICIA_URL}/api/arquitecto/corregir`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ layout, notas }),

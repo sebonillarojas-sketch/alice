@@ -15,12 +15,13 @@ import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 import { db } from "./lib/supabase";
 import { useAuth } from "./auth/AuthContext.jsx";
+import { ALICIA_URL } from "./lib/brain.js";
 
 // Toda llamada AI del ERP pasa por el backend (aliceai) — el browser JAMÁS toca
 // Anthropic directo ni guarda keys (así se filtró la key el 13 jul 2026).
 // Devuelve el texto de la respuesta o lanza Error con el mensaje del server.
 async function aliciaAnalyze({ system, prompt, messages, max_tokens }) {
-  const res = await fetch("https://aliceai.bam.pe/api/analyze", {
+  const res = await fetch(`${ALICIA_URL}/api/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ system, prompt, messages, max_tokens }),
@@ -3875,7 +3876,7 @@ function autoWidgets(headers, rows) {
   return widgets;
 }
 
-const BACKEND = "https://aliceai.bam.pe";
+const BACKEND = ALICIA_URL;
 const FZ_SOURCE_KEY = "hygge:finanzas:source";
 
 // Los endpoints /api/dropbox/* de alicia-brain van detrás del panelGate: un 401
@@ -7213,7 +7214,7 @@ function WikiLinkEditModal({ initial, onSave, onClose }) {
   );
 }
 
-const ALICIA_BRAIN_URL = "https://aliceai.bam.pe";
+const ALICIA_BRAIN_URL = ALICIA_URL;
 
 // ── Sync tarea ↔ Google Calendar (bidireccional) ────────────────────────────
 // Primera fecha válida YYYY-MM-DD de la tarea (due > endDate > startDate).
@@ -10702,7 +10703,7 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
       { id: "leaflet-css", label: "Leaflet CSS (unpkg.com)", url: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
       { id: "carto-tile", label: "Map tiles (basemaps.cartocdn.com)", url: "https://a.basemaps.cartocdn.com/light_all/13/2336/3759.png", isImage: true },
       { id: "openstreetmap", label: "OSM tiles (tile.openstreetmap.org)", url: "https://tile.openstreetmap.org/13/2336/3759.png", isImage: true },
-      { id: "alicia-brain", label: "Alicia backend (aliceai.bam.pe)", url: "https://aliceai.bam.pe/health" },
+      { id: "alicia-brain", label: "Alicia backend (aliceai.bam.pe)", url: `${ALICIA_URL}/health` },
       { id: "google-fonts", label: "Google Fonts (fonts.googleapis.com)", url: "https://fonts.googleapis.com/css2?family=DM+Sans" },
     ];
 
