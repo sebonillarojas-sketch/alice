@@ -237,8 +237,21 @@ export function layout(W, D, nd, nb, opts = {}) {
       items.push(...amoblarBano(bano2._box, true, { wall: "right" }));
     } else warns.push("2º baño no entró en la franja húmeda");
   }
+  // baño de visita (medio baño: inodoro + lavamanos, SIN ducha) cerca del social/ingreso,
+  // en el hueco de la franja húmeda entre la cocina y el baño íntimo.
+  let gapV = dK;
+  if (opts.visita) {
+    const vh = 1.5;
+    if (banoY - dK >= vh - 0.05) {
+      const vis = room("baño visita", "baño", 0, dK, wWet, vh);
+      rooms.push(vis);
+      items.push(...amoblarBano(vis._box, false, { wall: "right" }));  // completo=false → sin ducha
+      gapV = dK + vh + 0.02;
+    } else warns.push("el baño de visita no entró — recorte poco profundo");
+  }
+
   if (nd >= 2) {
-    const gap0 = dK, gap1 = banoY; // lavandería entre cocina y baño si hay hueco
+    const gap0 = gapV, gap1 = banoY; // lavandería entre visita/cocina y baño íntimo si hay hueco
     if (gap1 - gap0 >= 1.3) {
       const lav = room("lavandería", "servicio", 0, gap0, wWet, gap1 - gap0);
       rooms.push(lav);
