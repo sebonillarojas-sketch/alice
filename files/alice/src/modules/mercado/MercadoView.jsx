@@ -10,6 +10,7 @@ import {
   RefreshCw, ExternalLink, Target, Building,
   Image, Newspaper, Link, Tag, X, Globe,
 } from "lucide-react";
+import { ALICIA_URL } from "../../lib/brain.js";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const C = {
@@ -590,7 +591,7 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ─── MAIN VIEW ───────────────────────────────────────────────────────────────
-const BRAIN_URL = "https://aliceai.bam.pe";
+const BRAIN_URL = ALICIA_URL;
 
 // Merge live project data into district definitions
 function buildLiveDistricts(staticDistricts, liveProjects) {
@@ -808,7 +809,7 @@ Sé directa. No des listas genéricas. Hablá de Lima, de este distrito, de este
 
     try {
       // Una sola puerta: el backend de Alicia (la key jamás vive en el browser)
-      const res = await fetch("https://aliceai.bam.pe/api/analyze", {
+      const res = await fetch(`${BRAIN_URL}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, max_tokens: 1200 }),

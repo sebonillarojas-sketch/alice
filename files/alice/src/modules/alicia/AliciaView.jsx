@@ -6,6 +6,8 @@ import {
   Zap, BookOpen
 } from "lucide-react";
 
+import { ALICIA_URL } from "../../lib/brain.js";
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BAM = "#A855F7";
 const PROFILES_KEY = "alicia_profiles_v1";
@@ -609,7 +611,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   // Chequear backend al montar
   useEffect(() => {
     // OJO: antes pegaba a localhost hardcodeado → en prod nunca detectaba el backend y pedía API key
-    const base = import.meta.env.VITE_ALICIA_URL || "http://localhost:3001";
+    const base = ALICIA_URL;
     fetch(`${base}/health`, { signal: AbortSignal.timeout(5000) })
       .then(r => r.ok && setBackendAvailable(true))
       .catch(() => {});
@@ -645,7 +647,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     const clean = text.replace(/[*_`#]/g, "").trim();
     if (!clean) return;
     try {
-      const brainUrl = import.meta.env.VITE_ALICIA_URL || "http://localhost:3001";
+      const brainUrl = ALICIA_URL;
       const res = await fetch(`${brainUrl}/api/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -788,7 +790,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   }, [addTask, createEvent, allSpaces, currentUserId, selectedUserId]);
 
   // Send message to Alicia
-  const BRAIN_URL = import.meta.env.VITE_ALICIA_URL || "http://localhost:3001";
+  const BRAIN_URL = ALICIA_URL;
 
   const send = useCallback(async (text) => {
     if (!text.trim() || sending) return;

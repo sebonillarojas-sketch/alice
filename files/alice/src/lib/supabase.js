@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { ALICIA_URL } from "./brain.js";
 
 const URL  = "https://apnzitklhxrcszectbxx.supabase.co";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwbnppdGtsaHhyY3N6ZWN0Ynh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MjUzNjcsImV4cCI6MjA5OTQwMTM2N30.OdUe_GuchvgjoDxklh_nKxxNb_rPD_IpQzj8f_XyETI";
@@ -15,7 +16,7 @@ const _origFetch = window.fetch.bind(window);
 window.fetch = async (input, init) => {
   try {
     const url = typeof input === "string" ? input : (input?.url || "");
-    if (url.includes("aliceai.bam.pe")) {
+    if (url.includes("aliceai.bam.pe") || url.startsWith(ALICIA_URL)) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
         init = { ...(init || {}) };

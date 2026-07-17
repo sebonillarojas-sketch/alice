@@ -27,6 +27,9 @@ import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
+import { corregirConFeyd } from "./feyd.js";
+import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
+import { useProyectos } from "../cabida/proyectos.js";
 
 const FICHA_DEF = {
   proyecto: "Nuevo proyecto", tipo: "Edificio Multifamiliar", ubicacion: "", cliente: "",
@@ -349,14 +352,30 @@ function FichaModal({ ficha, setFicha, onClose }) {
   );
 }
 
+// Wrapper: pestañas de proyecto (mismas que Cabida) + el editor keyed por proyecto.
+// Al saltar de pestaña se re-lee el plano de ESE proyecto; el dibujo ya no se borra.
 export default function EditorPlanos() {
+  const { activo, store } = useProyectos();
+  const guardar = useCallback((snap) => store.guardarPlano(activo.id, snap), [store, activo.id]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 520 }}>
+      <ProyectoTabs />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <EditorPlanosInner key={activo.id} proyecto={activo} onSavePlano={guardar} />
+      </div>
+    </div>
+  );
+}
+
+function EditorPlanosInner({ proyecto, onSavePlano }) {
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
+  const P = proyecto?.plano || {};                  // plano guardado del proyecto activo
 
-  const [rooms, setRooms] = useState([]);           // ambientes: { id, name, pts, tipo? }
-  const [items, setItems] = useState([]);           // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
-  const [muro, setMuro] = useState(0.15);           // espesor de muro (m)
-  const [altura, setAltura] = useState(2.4);        // altura libre (m)
+  const [rooms, setRooms] = useState(P.rooms || []);   // ambientes: { id, name, pts, tipo? }
+  const [items, setItems] = useState(P.items || []);   // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
+  const [muro, setMuro] = useState(P.muro ?? 0.15);    // espesor de muro (m)
+  const [altura, setAltura] = useState(P.altura ?? 2.4); // altura libre (m)
   const [tool, setTool] = useState("select");
   const [snapOn, setSnapOn] = useState(true);
   const [orthoOn, setOrthoOn] = useState(true);
@@ -372,8 +391,9 @@ export default function EditorPlanos() {
   const [brief, setBrief] = useState({
     areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // distribución en lote
     nse: "C", terraza: true,                                   // tipologías
+    ...(P.brief || {}),
   });
-  const [ficha, setFicha] = useState(FICHA_DEF);
+  const [ficha, setFicha] = useState(P.ficha ? { ...FICHA_DEF, ...P.ficha } : FICHA_DEF);
   const [showFicha, setShowFicha] = useState(false);
 
   const [draft, setDraft] = useState([]);
@@ -382,11 +402,11 @@ export default function EditorPlanos() {
 
   // ── paso 1: lote ──
   const [plano, setPlano] = useState(null);        // { src, ox, oy, mpp, w, h, opacity }
-  const [lote, setLote] = useState(null);          // { pts } polígono del terreno (metros)
-  const [tipoLote, setTipoLote] = useState("medianera"); // medianera | esquina
-  const [retiro, setRetiro] = useState(3);         // retiro frontal (m)
-  const [retiroLat, setRetiroLat] = useState(3);   // retiro de la calle lateral (solo esquina)
-  const [frontIdx, setFrontIdx] = useState(0);     // borde-frente del lote
+  const [lote, setLote] = useState(P.lote ?? null);          // { pts } polígono del terreno (metros)
+  const [tipoLote, setTipoLote] = useState(P.tipoLote ?? "medianera"); // medianera | esquina
+  const [retiro, setRetiro] = useState(P.retiro ?? 3);         // retiro frontal (m)
+  const [retiroLat, setRetiroLat] = useState(P.retiroLat ?? 3);   // retiro de la calle lateral (solo esquina)
+  const [frontIdx, setFrontIdx] = useState(P.frontIdx ?? 0);     // borde-frente del lote
   const [calib, setCalib] = useState([]);          // puntos de calibración en curso
   const [loteBar, setLoteBar] = useState(true);    // barra de herramientas de lote visible
   const [cabidaMsg, setCabidaMsg] = useState(null); // aviso al importar desde cabida
@@ -409,21 +429,10 @@ export default function EditorPlanos() {
     return offsetEdges(lote.pts, dists);
   })();
 
-  // ── persistencia + brief desde cabida ─────────────────────
+  // El estado inicial ya salió del proyecto activo (P). Acá solo consumimos el
+  // puente cabida→plano (one-shot) para pre-cargar el brief en proyectos nuevos.
   useEffect(() => {
     try {
-      // el plano arranca SIEMPRE vacío; solo se restauran preferencias (no el dibujo)
-      const raw = localStorage.getItem(STORE);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (typeof saved?.muro === "number") setMuro(saved.muro);
-        if (typeof saved?.altura === "number") setAltura(saved.altura);
-        if (saved?.brief) setBrief((b) => ({ ...b, ...saved.brief }));
-        if (saved?.ficha) setFicha({ ...FICHA_DEF, ...saved.ficha });
-      }
-    } catch { /* storage corrupto */ }
-    try {
-      // puente cabida → plano: pre-carga los parámetros; el flujo arranca en 1·lote
       const b = localStorage.getItem(BRIEF_KEY);
       if (b) {
         const parsed = JSON.parse(b);
@@ -434,12 +443,13 @@ export default function EditorPlanos() {
     } catch { /* brief inválido */ }
   }, []);
 
+  // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
+  // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
   useEffect(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, brief, ficha })); }
-    catch { /* cuota — la imagen base puede exceder; se guarda el resto igual */
-      try { localStorage.setItem(STORE, JSON.stringify({ rooms, items, muro, altura, view, lote, retiro, frontIdx, brief, ficha })); } catch { /* nada */ }
-    }
-  }, [rooms, items, muro, altura, view, plano, lote, retiro, frontIdx, brief, ficha]);
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha };
+    if (onSavePlano) onSavePlano(snap);
+    else { try { localStorage.setItem(STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
+  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha]);
 
   // ── historial ─────────────────────────────────────────────
   const snapshot = useCallback(() => ({ rooms, items }), [rooms, items]);
@@ -846,6 +856,22 @@ export default function EditorPlanos() {
   const aberturas = items.filter((t) => porId[t.ref]?.cat === "abertura");
   const muebles = items.filter((t) => porId[t.ref]?.cat !== "abertura");
 
+  // Feyd-Rautha 🗡️ · null | "cargando" | { veredicto, problemas, rooms }
+  const [feyd, setFeyd] = useState(null);
+  const consultarFeyd = async () => {
+    if (!rooms.length || feyd === "cargando") return;
+    setFeyd("cargando");
+    try {
+      setFeyd(await corregirConFeyd(rooms, brief));
+    } catch (e) {
+      setFeyd({ veredicto: `no se pudo consultar: ${e.message}`, problemas: [], rooms: null });
+    }
+  };
+  const aplicarFeyd = () => {
+    if (feyd?.rooms?.length) commit(feyd.rooms, items);
+    setFeyd(null);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.paper, minHeight: 520, position: "relative" }}>
       {/* toolbar */}
@@ -900,6 +926,10 @@ export default function EditorPlanos() {
         <Btn onClick={fitView} title="Encuadrar"><Maximize2 size={13} /></Btn>
         <Btn onClick={() => setShowFicha(true)} title="Editar membrete de la lámina">membrete</Btn>
         <Btn onClick={exportSVG} disabled={!rooms.length} title="Exportar lámina BAM (.svg)"><Download size={13} /> lámina</Btn>
+        <Btn onClick={consultarFeyd} disabled={!rooms.length || feyd === "cargando"}
+          title="Feyd-Rautha 🗡️ audita la planta contra RNE + Neufert + checklist BAM y propone la corrección">
+          <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd-rautha"}
+        </Btn>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
           {selId && !selItem && (
@@ -919,6 +949,36 @@ export default function EditorPlanos() {
           <button onClick={clearAll} style={{ fontFamily: mono, fontSize: 10.5, color: C.soft, background: "none", border: "none", cursor: "pointer" }}>limpiar</button>
         </div>
       </div>
+
+      {/* veredicto de Feyd-Rautha 🗡️ */}
+      {feyd && feyd !== "cargando" && (
+        <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
+          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
+          padding: "12px 14px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <Sword size={12} color="#A85B5B" />
+            <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>feyd-rautha</span>
+            <button onClick={() => setFeyd(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}><X size={13} color={C.soft} /></button>
+          </div>
+          <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, lineHeight: 1.55, marginBottom: feyd.problemas.length ? 8 : 0, whiteSpace: "pre-wrap" }}>
+            {feyd.veredicto}
+          </div>
+          {feyd.problemas.slice(0, 8).map((p, i) => (
+            <div key={i} style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, lineHeight: 1.6 }}>· {p}</div>
+          ))}
+          {feyd.problemas.length > 8 && (
+            <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>… y {feyd.problemas.length - 8} más</div>
+          )}
+          {feyd.rooms?.length > 0 && (
+            <button onClick={aplicarFeyd}
+              style={{ width: "100%", marginTop: 10, fontFamily: mono, fontSize: 11.5, color: C.card,
+                background: "#A85B5B", border: "none", borderRadius: 2, padding: "8px 0", cursor: "pointer" }}
+              title="Reemplaza los ambientes por la corrección de Feyd (⌘Z deshace)">
+              aplicar corrección de feyd →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* paso 1 · barra de lote: tipo de lote → retiros normativos → calcar */}
       {loteBar && (() => {

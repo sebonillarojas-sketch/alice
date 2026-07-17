@@ -73,6 +73,13 @@ function verifyToken(tok) {
 async function panelGate(req, res, next) {
   const p = req.path; // relativo al mount /api (ej: /chat, /calendar/team)
   if (PANEL_PUBLIC.some(x => p === x || p.startsWith(x + "/"))) return next();
+  // Dev local (la bestia): GATE_DEV_OPEN=1 deja pasar SOLO requests de loopback
+  // con Host localhost — el vite dev del ERP no tiene sesión Supabase (bypass).
+  // Doble condición a propósito: si el flag se filtra a un deploy público,
+  // detrás del tunnel el Host llega como aliceai.bam.pe y el gate sigue cerrado.
+  if (process.env.GATE_DEV_OPEN === "1"
+    && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket?.remoteAddress || "")
+    && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || ""))) return next();
   // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
   // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
   if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();
@@ -878,14 +885,13 @@ async function ttsGroq(text, voice) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// Voz con fallback real: OpenAI primero; si falla o no hay crédito, cae a Groq (nunca queda muda)
-async function generateSpeech(text, voice = "diana") {
-  if (process.env.OPENAI_API_KEY) {
-    try { return await ttsOpenAI(text, voice); }
-    catch (e) { console.error("OpenAI TTS falló, cae a Groq:", e.message); }
-  }
-  if (process.env.GROQ_API_KEY) return ttsGroq(text, voice);
-  throw new Error("Sin proveedor de voz configurado (ni OpenAI ni Groq)");
+// Voz SOLO por OpenAI (tts-1, multilingüe). NO se cae a Groq: su modelo Orpheus es
+// SOLO-INGLÉS y destroza el español de Alicia ("no se le entiende nada"). Una voz
+// ininteligible es peor que ninguna: si OpenAI falla, el cliente usa su propia voz
+// es-PE del navegador (español claro). ttsGroq queda en el código pero sin usarse.
+async function generateSpeech(text, voice = "nova") {
+  if (!process.env.OPENAI_API_KEY) throw new Error("OpenAI TTS no configurado (OPENAI_API_KEY)");
+  return ttsOpenAI(text, voice);
 }
 
 app.post("/api/tts", async (req, res) => {
@@ -898,9 +904,9 @@ app.post("/api/tts", async (req, res) => {
       try {
         const buf = await ttsOpenAI(text, voice, "mp3");
         return res.set("Content-Type", "audio/mpeg").send(buf);
-      } catch (e) { console.error("OpenAI TTS mp3 falló, cae a wav/Groq:", e.message); }
+      } catch (e) { console.error("OpenAI TTS mp3 falló, reintenta wav:", e.message); }
     }
-    const buf = await generateSpeech(text, voice);
+    const buf = await generateSpeech(text, voice);  // OpenAI wav; si falla, 500 → cliente usa voz es-PE del navegador
     res.set("Content-Type", "audio/wav").send(buf);
   } catch (e) {
     console.error("TTS error:", e.message);
@@ -1011,6 +1017,33 @@ app.get("/api/dropbox/download", async (req, res) => {
     // Return as plain text so the frontend can parse CSV/TSV
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.send(content);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Fuente Flujo ERP · convención por proyecto: asegura la carpeta
+// "{raízProyecto}/Fuente Flujo ERP" (la crea si no existe), busca el CSV/TSV más
+// reciente y lo devuelve. Así Finanzas arma el link directo sin tipear rutas: la
+// fuente es solo verla y aprobarla. Idempotente (si la carpeta ya existe, sigue).
+app.post("/api/dropbox/flujo", async (req, res) => {
+  try {
+    const { projectRoot } = req.body || {};
+    if (!projectRoot) return res.status(400).json({ error: "projectRoot requerido" });
+    const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+    if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
+    const folder = `${String(projectRoot).replace(/\/+$/, "")}/Fuente Flujo ERP`;
+    try { await dropbox.createFolder(folder); }
+    catch (e) { if (!/conflict|already exists|409/i.test(e.message || "")) throw e; } // ya existía → ok
+    let entries = [];
+    try { entries = await dropbox.listFolder(folder); } catch { entries = []; }
+    const csvs = entries
+      .filter((e) => e.type === "file" && /\.(csv|tsv)$/i.test(e.name))
+      .sort((a, b) => new Date(b.modified || 0) - new Date(a.modified || 0));
+    if (!csvs.length) return res.json({ folder, file: null });
+    const file = csvs[0];
+    const content = await dropbox.getFileContent(file.path);
+    res.json({ folder, file, content, otros: csvs.slice(1).map((f) => ({ name: f.name, path: f.path, modified: f.modified })) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -1593,6 +1626,31 @@ app.post("/api/analyze", async (req, res) => {
       messages: msgs,
     });
     res.json({ text: resp.content.find(b => b.type === "text")?.text || "" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Feyd-Rautha 🗡️ · diseño de plantas residenciales (agente aparte de Alicia, ver src/arquitecto.js).
+// Para que el ERP (EditorPlanos) pueda pedir un layout directo, sin pasar por el chat de Alicia.
+app.post("/api/arquitecto/disenar", async (req, res) => {
+  try {
+    const { disenarPlano, arquitectoDisponible } = await import("./arquitecto.js");
+    if (!arquitectoDisponible()) return res.status(503).json({ error: "skill arquitecto-residencial-lima no disponible en este deploy" });
+    res.json({ layout: await disenarPlano(req.body || {}) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Feyd audita/corrige una planta existente del Editor de Planos (rooms → layout).
+app.post("/api/arquitecto/corregir", async (req, res) => {
+  try {
+    const { corregirPlano, arquitectoDisponible } = await import("./arquitecto.js");
+    if (!arquitectoDisponible()) return res.status(503).json({ error: "skill arquitecto-residencial-lima no disponible en este deploy" });
+    const { layout, notas } = req.body || {};
+    if (!layout?.ambientes?.length) return res.status(400).json({ error: "layout.ambientes requerido" });
+    res.json(await corregirPlano(layout, notas));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

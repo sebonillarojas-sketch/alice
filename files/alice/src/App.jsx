@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthContext.jsx";
 import LoginScreen from "./auth/LoginScreen.jsx";
 import HyggeOS from "./HyggeOS.jsx";
+import { ALICIA_URL as BRAIN_ALICIA_URL } from "./lib/brain.js";
 
 const C = {
   bg: "#EEEBE3",
@@ -137,7 +138,7 @@ function OnboardingOverlay({ children }) {
   );
 }
 
-const ALICIA_URL = import.meta.env.VITE_ALICIA_URL || "https://aliceai.bam.pe";
+const ALICIA_URL = BRAIN_ALICIA_URL;
 
 function CalendarConsentModal({ user, onGrant }) {
   const [blobState, setBlobState] = useState("idle");

@@ -1,0 +1,55 @@
+{
+  "id": "T12",
+  "nombre": "1D/1B compacto de inversión — sala-kitchenette integrada, núcleo húmedo apilado junto al ingreso",
+  "area_techada": 33.0,
+  "frente_m": 6.6,
+  "fondo_m": 5.0,
+  "ambientes": [
+    {
+      "nombre": "sala-comedor",
+      "poligono": [[3.85, 0.15], [6.35, 0.15], [6.35, 2.95], [4.95, 2.95], [4.95, 4.75], [2.45, 4.75], [2.45, 3.10], [3.85, 3.10]],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [[0.25, 0.15], [3.70, 0.15], [3.70, 2.95], [0.25, 2.95]],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [[0.25, 3.10], [2.30, 3.10], [2.30, 4.75], [0.25, 4.75]],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavandería",
+      "poligono": [[5.10, 3.10], [6.35, 3.10], [6.35, 4.75], [5.10, 4.75]],
+      "zona": "servicio",
+      "luz": false
+    }
+  ],
+  "muros": [
+    {"a": [0.0, 0.0], "b": [6.6, 0.0], "espesor": 0.15, "portante": false},
+    {"a": [0.0, 0.0], "b": [0.0, 5.0], "espesor": 0.25, "portante": true},
+    {"a": [0.0, 5.0], "b": [6.6, 5.0], "espesor": 0.25, "portante": true},
+    {"a": [6.6, 0.0], "b": [6.6, 5.0], "espesor": 0.25, "portante": true},
+    {"a": [0.0, 3.025], "b": [3.85, 3.025], "espesor": 0.15, "portante": true},
+    {"a": [4.95, 3.025], "b": [6.6, 3.025], "espesor": 0.15, "portante": true},
+    {"a": [2.375, 3.10], "b": [2.375, 4.75], "espesor": 0.15, "portante": false},
+    {"a": [3.775, 0.15], "b": [3.775, 2.95], "espesor": 0.15, "portante": false},
+    {"a": [5.025, 3.10], "b": [5.025, 4.75], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "baño 1", "ancho": 0.70},
+    {"de": "sala-comedor", "a": "lavandería", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "sala-comedor", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio principal", "ancho": 1.60, "alto": 1.30, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.0, 5.0], "b": [6.6, 5.0]}
+}
