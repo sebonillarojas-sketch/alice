@@ -38,8 +38,9 @@ const TIP_COLOR = { "1D": "#D8E0F7", "2D": "#95ABE8", "3D": "#F7936F" };
 const fmt = (n, d = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-// planta típica sobre la FORMA REAL del lote (mismo motor que el editor de planos)
-function PlantaReal({ lote, footprint, parti, frenteIdx, svgRef }) {
+// planta típica sobre la FORMA REAL del lote (mismo motor que el editor de planos).
+// interactiva: clic en un lindero = frente · arrastra un bloque para moverlo.
+function PlantaReal({ lote, footprint, parti, frenteIdx, partiIdx, movs, onFrenteClick, onMove, svgRef }) {
   const b = polyBbox(lote);
   const w = Math.max(b.maxX - b.minX, 1), h = Math.max(b.maxY - b.minY, 1);
   const PAD = 44;
@@ -51,10 +52,36 @@ function PlantaReal({ lote, footprint, parti, frenteIdx, svgRef }) {
   const cx = PAD + w * s / 2, cy = PAD + h * s / 2;
   const fillFor = (r) => r.tipo === "core" ? C.ink : r.tipo === "pasillo" ? C.paper
     : TIP_COLOR[r.name?.split(" ")[0]] || "#E4E2DC";
+  const key = (i) => `${partiIdx}:${i}`;
+  const shift = (pts, i) => { const m = movs[key(i)]; return m ? pts.map((p) => ({ x: p.x + m.dx, y: p.y + m.dy })) : pts; };
+
+  // clientXY → mundo (metros), vía la matriz del SVG
+  const toWorld = (ev) => {
+    const svg = svgRef.current; const pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const v = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: b.minX + (v.x - PAD) / s, y: b.minY + (v.y - PAD) / s };
+  };
+  const drag = useRef(null);
+  const down = (i) => (ev) => {
+    ev.stopPropagation();
+    const wpt = toWorld(ev);
+    drag.current = { i, sx: wpt.x, sy: wpt.y, base: movs[key(i)] || { dx: 0, dy: 0 } };
+    try { svgRef.current.setPointerCapture(ev.pointerId); } catch { /* ok */ }
+  };
+  const move = (ev) => {
+    if (!drag.current) return;
+    const wpt = toWorld(ev);
+    onMove?.(key(drag.current.i), {
+      dx: +(drag.current.base.dx + wpt.x - drag.current.sx).toFixed(2),
+      dy: +(drag.current.base.dy + wpt.y - drag.current.sy).toFixed(2),
+    });
+  };
+  const up = (ev) => { drag.current = null; try { svgRef.current.releasePointerCapture(ev.pointerId); } catch { /* ok */ } };
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}
-      xmlns="http://www.w3.org/2000/svg" fontFamily={mono}>
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block", touchAction: "none" }}
+      xmlns="http://www.w3.org/2000/svg" fontFamily={mono} onPointerMove={move} onPointerUp={up} onPointerLeave={up}>
       <defs>
         <pattern id="hatchR" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
           <line x1="0" y1="0" x2="0" y2="6" stroke={C.line} strokeWidth="1.4" />
@@ -67,58 +94,52 @@ function PlantaReal({ lote, footprint, parti, frenteIdx, svgRef }) {
       {/* footprint construible */}
       <polygon points={P(footprint)} fill={C.card} stroke={C.peri} strokeWidth="1.2" strokeDasharray="4 3" />
 
-      {/* distribución (core / corredor / unidades) */}
-      {parti?.rooms?.map((r) => {
-        const c = T(centroid(r.pts));
-        const a = polyArea(r.pts);
+      {/* distribución (core / corredor / unidades) — arrastrables */}
+      {parti?.rooms?.map((r, i) => {
+        const pts = shift(r.pts, i);
+        const c = T(centroid(pts));
+        const a = polyArea(pts);
         const label = r.tipo === "unidad" && a * s * s > 900;
         return (
-          <g key={r.id}>
-            <polygon points={P(r.pts)} fill={fillFor(r)} stroke={C.card} strokeWidth="1.5"
+          <g key={i} onPointerDown={down(i)} style={{ cursor: "grab" }}>
+            <polygon points={P(pts)} fill={fillFor(r)} stroke={C.card} strokeWidth="1.5"
               fillOpacity={r.tipo === "core" ? 1 : 0.92} />
             {label && (
-              <text x={c.x} y={c.y} fontSize="9.5" fontWeight="700" fill={C.ink} textAnchor="middle">
+              <text x={c.x} y={c.y} fontSize="9.5" fontWeight="700" fill={C.ink} textAnchor="middle" pointerEvents="none">
                 {r.name.split(" · ")[0]}
                 <tspan x={c.x} dy="11" fontSize="8" fontWeight="400">{r.name.split(" · ")[1] || ""}</tspan>
               </text>
             )}
             {r.tipo === "core" && a * s * s > 400 && (
-              <text x={c.x} y={c.y + 3} fontSize="8" fill={C.paper} textAnchor="middle">core</text>
+              <text x={c.x} y={c.y + 3} fontSize="8" fill={C.paper} textAnchor="middle" pointerEvents="none">core</text>
             )}
           </g>
         );
       })}
 
-      {/* frente (calle) resaltado */}
-      {(() => {
-        const a = T(lote[frenteIdx % n]), q = T(lote[(frenteIdx + 1) % n]);
-        const m = { x: (a.x + q.x) / 2, y: (a.y + q.y) / 2 };
-        const out = { x: m.x - cx, y: m.y - cy }; const L0 = Math.hypot(out.x, out.y) || 1;
-        return (
-          <g>
-            <line x1={a.x} y1={a.y} x2={q.x} y2={q.y} stroke={C.orange} strokeWidth="3" />
-            <text x={m.x + (out.x / L0) * 34} y={m.y + (out.y / L0) * 34} fontSize="9" fill={C.orange} textAnchor="middle"
-              stroke={C.paper} strokeWidth="2.5" paintOrder="stroke">
-              calle · frente
-            </text>
-          </g>
-        );
-      })()}
-
-      {/* cotas de cada lindero (medidas reales) */}
+      {/* linderos CLICABLES para elegir el frente + cota de cada uno */}
       {lote.map((p, i) => {
         const q = lote[(i + 1) % n];
-        const L = dist(p, q);
-        if (L * s < 24) return null;
         const a = T(p), z = T(q);
         const m = { x: (a.x + z.x) / 2, y: (a.y + z.y) / 2 };
         const out = { x: m.x - cx, y: m.y - cy }; const L0 = Math.hypot(out.x, out.y) || 1;
-        const tx = m.x + (out.x / L0) * 13, ty = m.y + (out.y / L0) * 13;
+        const esFrente = i === frenteIdx % n;
         return (
-          <text key={i} x={tx} y={ty + 3} fontSize="8.5" fill={C.soft} textAnchor="middle"
-            stroke={C.paper} strokeWidth="2.5" paintOrder="stroke">
-            {fmt(L, 2)}
-          </text>
+          <g key={`e${i}`}>
+            {esFrente && <line x1={a.x} y1={a.y} x2={z.x} y2={z.y} stroke={C.orange} strokeWidth="3" pointerEvents="none" />}
+            {/* zona de clic ancha e invisible sobre el borde */}
+            <line x1={a.x} y1={a.y} x2={z.x} y2={z.y} stroke="transparent" strokeWidth="14"
+              style={{ cursor: "pointer" }} onClick={() => onFrenteClick?.(i)}>
+              <title>marcar este lindero como frente (calle)</title>
+            </line>
+            {dist(p, q) * s >= 24 && (
+              <text x={m.x + (out.x / L0) * 15} y={m.y + (out.y / L0) * 15 + 3} fontSize="8.5"
+                fill={esFrente ? C.orange : C.soft} textAnchor="middle" pointerEvents="none"
+                stroke={C.paper} strokeWidth="2.5" paintOrder="stroke">
+                {fmt(dist(p, q), 2)}{esFrente ? " · frente" : ""}
+              </text>
+            )}
+          </g>
         );
       })}
     </svg>
@@ -253,6 +274,7 @@ function Corte({ e, pisos, pisosSot, azoteaTechada }) {
 export default function EsquemaPlanta({
   terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
   frente, tipoLote, retiros, lotePoly, cadInfo,
+  frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
 }) {
   const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
@@ -269,11 +291,11 @@ export default function EsquemaPlanta({
     [terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion]
   );
 
-  // con lote real: footprint (ochavo + retiros por borde) + distribución del motor del editor
-  const [partiIdx, setPartiIdx] = useState(0);
+  // con lote real: footprint (ochavo + retiros por borde) + distribución del motor del editor.
+  // frenteIdx efectivo = override manual (clic en lindero) > el que dedujo el CAD.
+  const frenteIdx = frenteIdxOverride ?? cadInfo?.frenteIdx ?? 0;
   const real = useMemo(() => {
     if (!lotePoly || lotePoly.length < 3) return null;
-    const frenteIdx = cadInfo?.frenteIdx ?? 0;
     const { lote, footprint } = footprintReal(lotePoly, frenteIdx, tipoLote, retiros);
     let partis = [];
     try {
@@ -281,9 +303,15 @@ export default function EsquemaPlanta({
         udsPiso: e.uPorPiso, pct1: mix1, pct2: mix2, areaObjetivo: areaDpto,
       }) || [];
     } catch { partis = []; }
-    return { lote, footprint, frenteIdx, partis };
-  }, [lotePoly, cadInfo, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
+    return { lote, footprint, partis };
+  }, [lotePoly, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
   const parti = real?.partis?.[Math.min(partiIdx, Math.max((real?.partis?.length || 1) - 1, 0))] || null;
+
+  // cambia el frente al clic en un lindero (y actualiza el frente numérico = largo del borde)
+  const elegirFrente = (i) => {
+    onFrente?.(i);
+    if (real?.lote) { const q = real.lote[(i + 1) % real.lote.length], p = real.lote[i]; onFrenteReal?.(Math.round(dist(p, q))); }
+  };
 
   // envía la tipología como brief al generador del Editor de Planos
   const enviarBrief = (tip) => {
@@ -354,9 +382,16 @@ export default function EsquemaPlanta({
                 <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>
                   planta sobre forma real · {parti.stats?.uds ?? "?"} unids/piso · footprint {fmt(polyArea(real.footprint))} m²
                 </span>
-                <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                <span style={{ marginLeft: "auto", display: "flex", gap: 4, alignItems: "center" }}>
+                  {Object.keys(movs).some((k) => k.startsWith(`${partiIdx}:`)) && (
+                    <button onClick={() => onMovs?.(Object.fromEntries(Object.entries(movs).filter(([k]) => !k.startsWith(`${partiIdx}:`))))}
+                      title="volver los bloques a su posición generada"
+                      style={{ fontFamily: mono, fontSize: 9, padding: "2px 8px", borderRadius: 2, cursor: "pointer", color: C.orange, background: "transparent", border: `1px solid ${C.orange}` }}>
+                      ↺ reset
+                    </button>
+                  )}
                   {real.partis.map((p, i) => (
-                    <button key={p.id} onClick={() => setPartiIdx(i)} title={p.notas?.join(" · ")}
+                    <button key={i} onClick={() => onParti?.(i)} title={p.notas?.join(" · ")}
                       style={{ fontFamily: mono, fontSize: 9, padding: "2px 8px", borderRadius: 2, cursor: "pointer",
                         color: i === partiIdx ? C.card : C.ink, background: i === partiIdx ? C.ink : C.paper,
                         border: `1px solid ${i === partiIdx ? C.ink : C.line}` }}>
@@ -365,7 +400,12 @@ export default function EsquemaPlanta({
                   ))}
                 </span>
               </div>
-              <PlantaReal lote={real.lote} footprint={real.footprint} parti={parti} frenteIdx={real.frenteIdx} svgRef={svgRef} />
+              <PlantaReal lote={real.lote} footprint={real.footprint} parti={parti} frenteIdx={frenteIdx}
+                partiIdx={partiIdx} movs={movs} onFrenteClick={elegirFrente}
+                onMove={(k, d) => onMovs?.({ ...movs, [k]: d })} svgRef={svgRef} />
+              <div style={{ fontFamily: mono, fontSize: 9, color: C.soft, marginTop: 6 }}>
+                clic en un lindero = marcarlo como frente · arrastra un bloque para moverlo
+              </div>
             </>
           ) : (
             <>
@@ -398,7 +438,7 @@ export default function EsquemaPlanta({
               </div>
             }>
               <Masa3D e={e} frente={frente} pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada}
-                lotePoly={lotePoly} frenteIdx={cadInfo?.frenteIdx ?? 0}
+                lotePoly={lotePoly} frenteIdx={frenteIdx}
                 tipoLote={tipoLote} retiros={retiros} />
             </Suspense>
           </Masa3DBoundary>
