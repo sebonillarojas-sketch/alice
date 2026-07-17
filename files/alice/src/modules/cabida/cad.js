@@ -68,13 +68,14 @@ function finalize(polyRaw, mpu, unitCode, layer, source) {
   const pts = poly.map((p) => ({ x: +(p.x - cx).toFixed(3), y: +(cy - p.y).toFixed(3) }));
   const area = Math.abs(shoelace(pts));
   // borde más largo = frente probable (hacia la calle)
-  let frente = 0;
+  let frente = 0, frenteIdx = 0;
   for (let i = 0; i < pts.length; i++) {
     const q = pts[(i + 1) % pts.length];
-    frente = Math.max(frente, Math.hypot(pts[i].x - q.x, pts[i].y - q.y));
+    const len = Math.hypot(pts[i].x - q.x, pts[i].y - q.y);
+    if (len > frente) { frente = len; frenteIdx = i; }
   }
   return {
-    pts, area: +area.toFixed(1),
+    pts, frenteIdx, area: +area.toFixed(1),
     bbox: { w: +(maxX - minX).toFixed(2), h: +(maxY - minY).toFixed(2) },
     frente: +frente.toFixed(2),
     units: UNIT_LABEL[unitCode] ?? "m", assumedMeters: !(unitCode in UNIT_M),

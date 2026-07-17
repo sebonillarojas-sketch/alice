@@ -5,9 +5,33 @@ import { useMemo } from "react";
 import { Shape, ExtrudeGeometry, DoubleSide } from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Edges, Grid, ContactShadows, Html } from "@react-three/drei";
-import { offsetPolygon, area as polyArea, bbox as polyBbox } from "../planos/geometry.js";
+import { offsetEdges, ochavar, area as polyArea, bbox as polyBbox } from "../planos/geometry.js";
 
 const wh = (pts) => { const b = polyBbox(pts); return { w: b.maxX - b.minX, h: b.maxY - b.minY }; };
+
+// clasifica cada borde del lote respecto al frente (por su normal exterior):
+// frontal / posterior / izquierda / derecha (mirando el lote desde la calle)
+function clasificarBordes(pts, frenteIdx) {
+  const n = pts.length;
+  const cx = pts.reduce((a, p) => a + p.x, 0) / n, cy = pts.reduce((a, p) => a + p.y, 0) / n;
+  const normalOut = (i) => {
+    const a = pts[i], b = pts[(i + 1) % n];
+    const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+    let nx = dy / L, ny = -dx / L;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    if (nx * (mx - cx) + ny * (my - cy) < 0) { nx = -nx; ny = -ny; }
+    return { nx, ny };
+  };
+  const nf = normalOut(frenteIdx % n);
+  return pts.map((_, i) => {
+    if (i === frenteIdx % n) return "frontal";
+    const ni = normalOut(i);
+    const dot = ni.nx * nf.nx + ni.ny * nf.ny;
+    if (dot > 0.5) return "frontal";
+    if (dot < -0.5) return "posterior";
+    return (nf.nx * ni.ny - nf.ny * ni.nx) > 0 ? "derecha" : "izquierda";
+  });
+}
 
 const C = {
   ink: "#373737", peri: "#95ABE8", orange: "#F7643B",
@@ -62,49 +86,72 @@ function Luces({ span, h }) {
 }
 
 // —— masa desde la FORMA REAL del lote (polígono del CAD) ——
-function EscenaPoly({ lotePoly, retiroLateral, retiroFrontal, pisos, pisosSot }) {
+function EscenaPoly({ lotePoly, frenteIdx = 0, tipoLote, retiros, pisos, pisosSot }) {
   const alturaTorre = pisos * H_PISO;
-  const bb = wh(lotePoly);
-  const span = Math.max(bb.w, bb.h);
-  // huella edificable = retiro hacia adentro (uniforme; usa el mayor retiro disponible)
-  const retiro = Math.max(retiroLateral || 0, 0);
-  let footprint = lotePoly;
-  if (retiro > 0.05) {
-    const off = offsetPolygon(lotePoly, retiro);
-    if (off && off.length >= 3 && Math.abs(polyArea(off)) > 1) footprint = off;
+
+  // ochavo (solo esquina): recorta el vértice entre el frente y la calle lateral (borde siguiente)
+  let lote = lotePoly;
+  if (tipoLote === "esquina" && retiros?.ochavo?.on && retiros.ochavo.v > 0) {
+    lote = ochavar(lotePoly, (frenteIdx + 1) % lotePoly.length, retiros.ochavo.v);
   }
+
+  // huella = lote − retiros por borde según su orientación (frontal/izq/der/post)
+  const clases = clasificarBordes(lote, frenteIdx);
+  const dists = clases.map((c) => {
+    const r = c === "frontal" ? retiros?.frontal
+      : c === "posterior" ? retiros?.posterior
+      : c === "izquierda" ? retiros?.izquierda : retiros?.derecha;
+    return r?.on ? r.v : 0;
+  });
+  let footprint = lote;
+  const off = offsetEdges(lote, dists);
+  if (off && off.length >= 3 && Math.abs(polyArea(off)) > 1) footprint = off;
+
+  const bb = wh(lote);
+  const span = Math.max(bb.w, bb.h);
+
   return (
     <group>
       <Luces span={span} h={alturaTorre} />
-      {/* plancha del lote (forma real) */}
-      <Prisma pts={lotePoly} height={0.18} base={-0.18} color={C.paper} edge={C.line} />
-      {/* torre = huella extruida a la altura total */}
-      <Prisma pts={footprint} height={alturaTorre} base={0} color={C.card} edge={C.ink} />
-      {/* primer piso resaltado */}
-      <Prisma pts={footprint} height={H_PISO} base={0} color={C.paper} edge={C.ink} />
+      {/* plancha del lote (forma real, con ochavo si aplica) */}
+      <Prisma pts={lote} height={0.18} base={-0.18} color={C.paper} edge={C.line} />
+      {/* torre: un prisma por piso (las juntas dan las líneas de nivel) */}
+      {Array.from({ length: Math.max(pisos, 0) }, (_, i) => (
+        <Prisma key={i} pts={footprint} height={H_PISO} base={i * H_PISO}
+          color={i === 0 ? C.paper : C.card} edge={C.ink} />
+      ))}
       {/* sótanos a huella completa del lote */}
       {pisosSot > 0 && (
-        <Prisma pts={lotePoly} height={pisosSot * H_SOT} base={-(pisosSot * H_SOT) - 0.18}
+        <Prisma pts={lote} height={pisosSot * H_SOT} base={-(pisosSot * H_SOT) - 0.18}
           color={C.soft} edge={C.soft} opacity={0.16} edgeOpacity={0.5} />
       )}
       <Html position={[bb.w / 2 + 1.5, alturaTorre / 2, 0]} center distanceFactor={span * 1.1}
         style={{ fontFamily: mono, fontSize: 11, color: C.ink, whiteSpace: "nowrap", pointerEvents: "none" }}>
         {pisos} pisos · ±{fmt(alturaTorre + H_PISO, 1)} m
       </Html>
+      {pisosSot > 0 && (
+        <Html position={[bb.w / 2 + 1.5, -(pisosSot * H_SOT) / 2, 0]} center distanceFactor={span * 1.1}
+          style={{ fontFamily: mono, fontSize: 11, color: C.soft, whiteSpace: "nowrap", pointerEvents: "none" }}>
+          {pisosSot} sót · −{fmt(pisosSot * H_SOT, 1)} m
+        </Html>
+      )}
       <ContactShadows position={[0, 0.02, 0]} scale={span * 2} far={alturaTorre + 5} blur={2.4} opacity={0.28} color={C.ink} />
     </group>
   );
 }
 
 // —— masa desde el rectángulo frente×fondo (sin CAD) ——
-function EscenaCaja({ e, frente, retiroFrontal, pisos, pisosSot, azoteaTechada }) {
+function EscenaCaja({ e, frente, retiros, pisos, pisosSot, azoteaTechada }) {
+  const rf = retiros?.frontal?.on ? retiros.frontal.v : 0;
+  const ri = retiros?.izquierda?.on ? retiros.izquierda.v : 0;
   const fondo = e.fondo || 1;
   const anchoEdif = Math.max(e.anchoEdif, 0.1);
   const fondoEdif = Math.max(e.fondoEdif, 0.1);
   const alturaTorre = pisos * H_PISO;
   const azW = anchoEdif * Math.min(Math.max(azoteaTechada, 0), 100) / 100;
-  const edifCz = -fondo / 2 + retiroFrontal + fondoEdif / 2;
-  const coreCx = -anchoEdif / 2 + (e.core?.x || 0) + (e.core?.w || 0) / 2;
+  const edifCz = -fondo / 2 + rf + fondoEdif / 2;
+  const edifCx = -frente / 2 + ri + anchoEdif / 2;   // corrido según retiros izq/der
+  const coreCx = edifCx - anchoEdif / 2 + (e.core?.x || 0) + (e.core?.w || 0) / 2;
   const span = Math.max(frente, fondo);
 
   return (
@@ -118,13 +165,13 @@ function EscenaCaja({ e, frente, retiroFrontal, pisos, pisosSot, azoteaTechada }
       </Html>
       {Array.from({ length: Math.max(pisos, 0) }, (_, i) => (
         <Caja key={i} size={[anchoEdif, H_PISO, fondoEdif]}
-          position={[0, i * H_PISO + H_PISO / 2, edifCz]} color={i === 0 ? C.paper : C.card} edge={C.ink} />
+          position={[edifCx, i * H_PISO + H_PISO / 2, edifCz]} color={i === 0 ? C.paper : C.card} edge={C.ink} />
       ))}
       <Caja size={[Math.max(e.core?.w || 0, 0.1), alturaTorre + H_PISO * 0.6, fondoEdif + 0.25]}
         position={[coreCx, (alturaTorre + H_PISO * 0.6) / 2, edifCz]} color={C.ink} edge="#1f1f1f" />
       {azW > 0.2 && (
         <Caja size={[azW, H_PISO, fondoEdif]}
-          position={[-anchoEdif / 2 + azW / 2, alturaTorre + H_PISO / 2, edifCz]} color={C.peri} edge={C.ink} />
+          position={[edifCx - anchoEdif / 2 + azW / 2, alturaTorre + H_PISO / 2, edifCz]} color={C.peri} edge={C.ink} />
       )}
       {pisosSot > 0 && (
         <Caja size={[frente, pisosSot * H_SOT, fondo]} position={[0, -(pisosSot * H_SOT) / 2 - 0.18, 0]}

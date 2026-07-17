@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import EsquemaPlanta from "./EsquemaPlanta.jsx";
+import { importCAD } from "./cad.js";
 
 const C = {
   ink: "#373737",
@@ -30,24 +31,46 @@ function Card({ n, title, children, style }) {
   );
 }
 
-function Num({ label, value, onChange, unit, step = 1, accent }) {
+function Num({ label, value, onChange, unit, step = 1, accent, disabled, hint }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "9px 0" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "9px 0", opacity: disabled ? 0.55 : 1 }}>
       <label style={{ fontFamily: sans, fontSize: 12.5, color: C.ink, textTransform: "lowercase", flex: 1, lineHeight: 1.3 }}>
-        {label}
+        {label}{disabled && hint ? <span style={{ fontFamily: mono, fontSize: 9, color: C.peri }}> · {hint}</span> : null}
       </label>
       <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexShrink: 0 }}>
         <input
-          type="number" value={value} step={step} min={0}
+          type="number" value={value} step={step} min={0} disabled={disabled}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           style={{
-            fontFamily: mono, fontSize: 14, fontWeight: 600, color: accent || C.ink,
+            fontFamily: mono, fontSize: 14, fontWeight: 600, color: disabled ? C.peri : (accent || C.ink),
             width: 86, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2,
             background: C.paper, outline: "none", padding: "5px 8px",
           }}
         />
         <span style={{ fontFamily: mono, fontSize: 10, color: C.soft, width: 30 }}>{unit}</span>
       </div>
+    </div>
+  );
+}
+
+// fila de retiro: switch + valor (el valor solo cuenta si está activo)
+function RetiroRow({ label, ret, onChange, disabled, hint }) {
+  const off = disabled || !ret.on;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", opacity: disabled ? 0.45 : 1 }}>
+      <button onClick={() => !disabled && onChange({ ...ret, on: !ret.on })} title={hint}
+        style={{ width: 30, height: 16, borderRadius: 9, border: `1px solid ${ret.on && !disabled ? C.ink : C.line}`,
+          background: ret.on && !disabled ? C.ink : C.paper, position: "relative", cursor: disabled ? "not-allowed" : "pointer", flexShrink: 0, padding: 0 }}>
+        <span style={{ position: "absolute", top: 1.5, left: ret.on && !disabled ? 15 : 2, width: 11, height: 11, borderRadius: "50%", background: ret.on && !disabled ? C.card : C.soft, transition: "left .12s" }} />
+      </button>
+      <label style={{ fontFamily: sans, fontSize: 12, color: off ? C.soft : C.ink, textTransform: "lowercase", flex: 1 }} title={hint}>
+        {label}
+      </label>
+      <input type="number" value={ret.v} step={0.5} min={0} disabled={off}
+        onChange={(e) => onChange({ ...ret, v: parseFloat(e.target.value) || 0 })}
+        style={{ fontFamily: mono, fontSize: 13, fontWeight: 600, color: off ? C.soft : C.ink, width: 62, textAlign: "right",
+          border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, outline: "none", padding: "4px 6px" }} />
+      <span style={{ fontFamily: mono, fontSize: 10, color: C.soft, width: 14 }}>m</span>
     </div>
   );
 }
@@ -107,6 +130,51 @@ export default function CabidaView({ initialTerreno, compact }) {
   const [pisos, setPisos] = useState(8);
   const [azoteaTechada, setAzoteaTechada] = useState(30);
   const [circulacion, setCirculacion] = useState(12);
+
+  // ── lote: proporciones (números) o plano CAD (forma real manda) ──
+  const [modoLote, setModoLote] = useState("prop");          // "prop" | "cad"
+  const [lotePoly, setLotePoly] = useState(null);            // contorno real (m)
+  const [cadInfo, setCadInfo] = useState(null);
+  const [cadErr, setCadErr] = useState(null);
+  const [frente, setFrente] = useState(Math.round(Math.sqrt((initialTerreno || 693) * 1.4)));
+  const [tipoLote, setTipoLote] = useState("medianera");     // medianera | esquina
+  const [retiros, setRetiros] = useState({
+    frontal:   { on: true,  v: 5 },
+    izquierda: { on: false, v: 3 },
+    derecha:   { on: false, v: 3 },
+    posterior: { on: false, v: 3 },
+    ochavo:    { on: false, v: 4 },
+  });
+  const cadRef = useRef(null);
+  const cadLock = modoLote === "cad" && !!lotePoly;          // con CAD, los números salen del plano
+
+  const onCAD = async (file) => {
+    if (!file) return;
+    setCadErr(null);
+    try {
+      const r = await importCAD(file);
+      setLotePoly(r.pts);
+      setCadInfo(r);
+      setTerreno(Math.round(r.area));
+      setFrente(Math.round(r.frente));
+    } catch (e) {
+      setLotePoly(null); setCadInfo(null);
+      setCadErr(e?.message || String(e));
+    }
+  };
+  const quitarCAD = () => { setLotePoly(null); setCadInfo(null); setCadErr(null); };
+  const setRet = (k) => (ret) => setRetiros((rs) => ({ ...rs, [k]: ret }));
+
+  // deja el lote disponible para el editor de planos ("importar desde cabida")
+  useEffect(() => {
+    if (!lotePoly) return;
+    try {
+      localStorage.setItem("hygge:loteCabida", JSON.stringify({
+        pts: lotePoly, area: cadInfo?.area, frente: cadInfo?.frente, frenteIdx: cadInfo?.frenteIdx ?? 0,
+        tipoLote, retiros, pisos, units: cadInfo?.units, ts: Date.now(),
+      }));
+    } catch { /* cuota */ }
+  }, [lotePoly, cadInfo, tipoLote, retiros, pisos]);
 
   const [areaDpto, setAreaDpto] = useState(90);
   const [mix1, setMix1] = useState(20);
@@ -199,11 +267,64 @@ export default function CabidaView({ initialTerreno, compact }) {
         {/* inputs */}
         <div style={{ display: "grid", gap: 20 }}>
           <Card n="01" title="terreno y normativa">
-            <Num label="área de terreno" value={terreno} onChange={setTerreno} unit="m²" step={10} />
+            {/* fuente del lote: números a mano o plano CAD (el plano manda) */}
+            <div style={{ display: "flex", gap: 6, paddingBottom: 8 }}>
+              {[["prop", "proporciones"], ["cad", "plano CAD"]].map(([k, lbl]) => (
+                <button key={k} onClick={() => setModoLote(k)}
+                  style={{ fontFamily: mono, fontSize: 10.5, padding: "5px 12px", borderRadius: 2, cursor: "pointer",
+                    color: modoLote === k ? C.card : C.ink, background: modoLote === k ? C.ink : C.paper,
+                    border: `1px solid ${modoLote === k ? C.ink : C.line}` }}>
+                  {lbl}
+                </button>
+              ))}
+              {modoLote === "cad" && (
+                <>
+                  <input ref={cadRef} type="file" accept=".dxf,.dwg" style={{ display: "none" }}
+                    onChange={(ev) => { onCAD(ev.target.files?.[0]); ev.target.value = ""; }} />
+                  {cadInfo ? (
+                    <button onClick={quitarCAD} title={`${cadInfo.verts} vértices · ${cadInfo.units} · clic para quitar`}
+                      style={{ fontFamily: mono, fontSize: 10.5, padding: "5px 12px", borderRadius: 2, cursor: "pointer",
+                        color: C.card, background: C.peri, border: `1px solid ${C.peri}`, marginLeft: "auto" }}>
+                      ✓ {fmt(cadInfo.area)} m² · quitar
+                    </button>
+                  ) : (
+                    <button onClick={() => cadRef.current?.click()}
+                      style={{ fontFamily: mono, fontSize: 10.5, padding: "5px 12px", borderRadius: 2, cursor: "pointer",
+                        color: C.orange, background: "transparent", border: `1px solid ${C.orange}`, marginLeft: "auto" }}>
+                      ↑ importar .dxf / .dwg
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            {cadErr && <div style={{ fontFamily: mono, fontSize: 10.5, color: C.orange, paddingBottom: 6, lineHeight: 1.5 }}>▲ {cadErr}</div>}
+
+            <Num label="área de terreno" value={terreno} onChange={setTerreno} unit="m²" step={10} disabled={cadLock} hint="del plano" />
+            <Num label="frente del lote" value={frente} onChange={setFrente} unit="m" step={1} disabled={cadLock} hint="del plano" />
             <Num label="número de pisos" value={pisos} onChange={setPisos} unit="pisos" />
             <Pct label="área libre (no techada 1er piso)" value={areaLibre} onChange={setAreaLibre} max={70} accent={C.peri} />
             <Pct label="azotea techada (% de huella)" value={azoteaTechada} onChange={setAzoteaTechada} accent={C.peri} />
             <Pct label="circulación + áreas comunes" value={circulacion} onChange={setCirculacion} max={30} accent={C.orange} />
+
+            {/* lote: tipo + retiros normativos (heredan a la masa 3D y al editor) */}
+            <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 6, paddingTop: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 4 }}>
+                <span style={{ fontFamily: sans, fontSize: 12.5, color: C.ink, textTransform: "lowercase", flex: 1 }}>tipo de lote</span>
+                <select value={tipoLote} onChange={(e) => setTipoLote(e.target.value)}
+                  style={{ fontFamily: mono, fontSize: 12, color: C.ink, background: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, padding: "4px 8px", outline: "none" }}>
+                  <option value="medianera">entre medianeras</option>
+                  <option value="esquina">esquina</option>
+                </select>
+              </div>
+              <RetiroRow label="retiro frontal" ret={retiros.frontal} onChange={setRet("frontal")} />
+              <RetiroRow label="retiro izquierda" ret={retiros.izquierda} onChange={setRet("izquierda")}
+                hint={tipoLote === "medianera" ? "colindante — solo si la normativa lo pide" : "mirando el lote desde la calle"} />
+              <RetiroRow label="retiro derecha" ret={retiros.derecha} onChange={setRet("derecha")}
+                hint={tipoLote === "medianera" ? "colindante — solo si la normativa lo pide" : "mirando el lote desde la calle"} />
+              <RetiroRow label="retiro posterior" ret={retiros.posterior} onChange={setRet("posterior")} />
+              <RetiroRow label="ochavo" ret={retiros.ochavo} onChange={setRet("ochavo")}
+                disabled={tipoLote !== "esquina"} hint={tipoLote !== "esquina" ? "solo lotes en esquina" : "chaflán en la esquina de calles"} />
+            </div>
           </Card>
 
           <Card n="02" title="producto y estacionamientos">
@@ -312,7 +433,8 @@ export default function CabidaView({ initialTerreno, compact }) {
             terreno={terreno} huella={r.huella} pisos={pisos} dptos={r.dptos}
             mix1={mix1} mix2={mix2} areaDpto={areaDpto} circulacion={circulacion}
             pisosSot={r.pisosSot} azoteaTechada={azoteaTechada}
-            onArea={(a) => setTerreno(Math.round(a))}
+            frente={frente} tipoLote={tipoLote} retiros={retiros}
+            lotePoly={modoLote === "cad" ? lotePoly : null} cadInfo={modoLote === "cad" ? cadInfo : null}
           />
         </Card>
       </div>

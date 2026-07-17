@@ -12,15 +12,15 @@ function repartir(total, mix1, mix2) {
 }
 
 export function computeEsquema({
-  terreno, frente, retiroFrontal, retiroLateral,
+  terreno, frente, rf = 0, ri = 0, rd = 0, rp = 0,   // retiros: frontal, izquierda, derecha, posterior
   huella, pisos, dptos, mix1, mix2, areaDpto, circulacion,
 }) {
   const warns = [];
   const fondo = frente > 0 ? terreno / frente : 0;
 
-  const anchoEdif = Math.max(frente - 2 * retiroLateral, 0);
+  const anchoEdif = Math.max(frente - ri - rd, 0);
   const fondoEdif = anchoEdif > 0 ? huella / anchoEdif : 0;
-  const fondoLibre = fondo - retiroFrontal - fondoEdif;
+  const fondoLibre = fondo - rf - fondoEdif - rp;
 
   if (fondoLibre < -0.05) {
     warns.push("la huella no entra en el lote con estos retiros — reduce retiros, frente o % área libre");
