@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, lazy, Suspense, Component } from "react";
 import { computeEsquema } from "./esquema.js";
+import { importCAD } from "./cad.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -178,13 +179,41 @@ function Corte({ e, pisos, pisosSot, azoteaTechada }) {
   );
 }
 
-export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada }) {
+export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada, onArea }) {
   const [frente, setFrente] = useState(Math.round(Math.sqrt(terreno * 1.4)));
   const [retiroFrontal, setRetiroFrontal] = useState(5);
   const [retiroLateral, setRetiroLateral] = useState(0);
   const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
+  const [lotePoly, setLotePoly] = useState(null);
+  const [cadInfo, setCadInfo] = useState(null);
+  const [cadErr, setCadErr] = useState(null);
   const svgRef = useRef(null);
+  const fileRef = useRef(null);
+
+  // importa DXF/DWG → contorno real del lote (metros); alimenta área, frente y masa 3D
+  const onCAD = async (file) => {
+    if (!file) return;
+    setCadErr(null);
+    try {
+      const r = await importCAD(file);
+      setLotePoly(r.pts);
+      setCadInfo(r);
+      if (r.area > 0) onArea?.(r.area);
+      if (r.frente > 0) setFrente(Math.round(r.frente));
+      setShow3D(true);
+      try {
+        localStorage.setItem("hygge:loteCabida", JSON.stringify({
+          pts: r.pts, area: r.area, frente: r.frente, retiroFrontal, retiroLateral,
+          pisos, pisosSot, units: r.units, ts: Date.now(),
+        }));
+      } catch { /* cuota */ }
+    } catch (e) {
+      setLotePoly(null); setCadInfo(null);
+      setCadErr(e?.message || String(e));
+    }
+  };
+  const quitarCAD = () => { setLotePoly(null); setCadInfo(null); setCadErr(null); };
 
   const e = useMemo(
     () => computeEsquema({ terreno, frente, retiroFrontal, retiroLateral, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion }),
@@ -223,7 +252,22 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
         <MiniNum label="frente del lote" value={frente} onChange={setFrente} unit="m" step={1} />
         <MiniNum label="retiro frontal" value={retiroFrontal} onChange={setRetiroFrontal} unit="m" />
         <MiniNum label="retiro lateral" value={retiroLateral} onChange={setRetiroLateral} unit="m" />
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <input ref={fileRef} type="file" accept=".dxf,.dwg" style={{ display: "none" }}
+            onChange={(ev) => { onCAD(ev.target.files?.[0]); ev.target.value = ""; }} />
+          {cadInfo ? (
+            <button onClick={quitarCAD} title={`lote real · ${fmt(cadInfo.area)} m² · ${cadInfo.verts} vértices · ${cadInfo.units}`}
+              style={{ fontFamily: mono, fontSize: 10.5, color: C.card, background: C.peri, border: `1px solid ${C.peri}`,
+                borderRadius: 2, padding: "6px 12px", cursor: "pointer" }}>
+              ✓ lote real {fmt(cadInfo.area)} m² · quitar
+            </button>
+          ) : (
+            <button onClick={() => fileRef.current?.click()} title="Importar el contorno del terreno desde CAD (.dxf · .dwg→exporta .dxf)"
+              style={{ fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper, border: `1px solid ${C.line}`,
+                borderRadius: 2, padding: "6px 12px", cursor: "pointer" }}>
+              ↑ importar CAD
+            </button>
+          )}
           <button onClick={() => setShow3D((v) => !v)} style={{
             fontFamily: mono, fontSize: 10.5, color: show3D ? C.card : C.ink,
             background: show3D ? C.ink : C.paper, border: `1px solid ${show3D ? C.ink : C.line}`,
@@ -239,6 +283,18 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
           </button>
         </div>
       </div>
+
+      {/* estado del CAD importado */}
+      {cadErr && (
+        <div style={{ fontFamily: mono, fontSize: 11, color: C.orange, padding: "10px 0 0", lineHeight: 1.5 }}>▲ {cadErr}</div>
+      )}
+      {cadInfo && (
+        <div style={{ fontFamily: mono, fontSize: 10.5, color: C.peri, padding: "10px 0 0" }}>
+          ◇ lote real del CAD · {fmt(cadInfo.area)} m² · {fmt(cadInfo.bbox.w, 1)}×{fmt(cadInfo.bbox.h, 1)} m · {cadInfo.verts} vértices
+          {cadInfo.assumedMeters ? " · (asumí metros — verifica escala)" : ` · unidades ${cadInfo.units}`}
+          {" · "}la masa 3D usa esta forma
+        </div>
+      )}
 
       {/* warnings */}
       {e.warns.map((w) => (
@@ -274,7 +330,7 @@ export default function EsquemaPlanta({ terreno, huella, pisos, dptos, mix1, mix
               </div>
             }>
               <Masa3D e={e} frente={frente} retiroFrontal={retiroFrontal} retiroLateral={retiroLateral}
-                pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada} />
+                pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada} lotePoly={lotePoly} />
             </Suspense>
           </Masa3DBoundary>
         </div>

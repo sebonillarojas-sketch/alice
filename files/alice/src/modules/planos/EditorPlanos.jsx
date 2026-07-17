@@ -363,6 +363,7 @@ export default function EditorPlanos() {
   const [frontIdx, setFrontIdx] = useState(0);     // borde-frente del lote
   const [calib, setCalib] = useState([]);          // puntos de calibración en curso
   const [loteBar, setLoteBar] = useState(true);    // barra de herramientas de lote visible
+  const [cabidaMsg, setCabidaMsg] = useState(null); // aviso al importar desde cabida
   const fileRef = useRef(null);
 
   const past = useRef([]);
@@ -573,6 +574,29 @@ export default function EditorPlanos() {
     setView({ scale, tx: box.width / 2 - (b.minX + w / 2) * scale, ty: box.height / 2 - (b.minY + h / 2) * scale });
   }, []);
   const fitView = useCallback(() => fitTo(rooms), [fitTo, rooms]);
+
+  // importa el contorno real del lote desde la cabida (lo dejó el import CAD allá)
+  const importarCabida = useCallback(() => {
+    let c;
+    try { c = JSON.parse(localStorage.getItem("hygge:loteCabida") || "null"); } catch { c = null; }
+    if (!c || !Array.isArray(c.pts) || c.pts.length < 3) {
+      setCabidaMsg("no hay lote en la cabida — importa un CAD (.dxf) allá primero");
+      setTimeout(() => setCabidaMsg(null), 5000);
+      return;
+    }
+    const xs = c.pts.map((p) => p.x), ys = c.pts.map((p) => p.y);
+    const minX = Math.min(...xs), minY = Math.min(...ys);
+    const pts = c.pts.map((p) => ({ x: +(p.x - minX + 2).toFixed(3), y: +(p.y - minY + 2).toFixed(3) }));
+    setLote({ pts });
+    setFrontIdx(0);
+    setDraft([]);
+    if (typeof c.retiroFrontal === "number") setRetiro(c.retiroFrontal);
+    setLoteBar(true);
+    setTool("select");
+    setCabidaMsg(`lote importado · ${Math.round(c.area || 0)} m²`);
+    setTimeout(() => setCabidaMsg(null), 4000);
+    requestAnimationFrame(() => fitTo([{ pts }]));
+  }, [fitTo]);
 
   const addItem = useCallback((ref) => {
     const box = wrapRef.current?.getBoundingClientRect();
@@ -868,6 +892,10 @@ export default function EditorPlanos() {
             <Btn active={tool === "calibrate"} onClick={() => { setCalib([]); setTool("calibrate"); }} disabled={!plano}
               title="Calibrar escala: clic en 2 puntos de distancia conocida"><Crosshair size={13} /> calibrar</Btn>
             <Btn active={tool === "lote"} onClick={() => setTool("lote")} title="Calcar el contorno del terreno"><PenLine size={13} /> calcar lote</Btn>
+            <div style={{ width: 1, height: 20, background: C.line }} />
+            <Btn onClick={importarCabida} accent title="Traer el contorno real del lote desde la cabida (el que importaste por CAD)"><Download size={13} /> importar desde cabida</Btn>
+            {cabidaMsg && <span style={{ fontFamily: mono, fontSize: 10, color: C.peri }}>{cabidaMsg}</span>}
+            <div style={{ width: 1, height: 20, background: C.line }} />
             <Btn onClick={cycleFront} disabled={!lote} title="Rotar el borde-frente (hacia la calle); en esquina, la calle lateral es el borde siguiente"><RefreshCw size={12} /> frente</Btn>
             {fr && <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>footprint {fmt(area(footprint), 0)} m² · {fmt(fr.frente, 1)}×{fmt(fr.fondo, 1)} m{isConvex(footprint) ? "" : " · no convexo"}</span>}
             {lote && !footprint && <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>▲ los retiros dejan el lote sin área construible</span>}
