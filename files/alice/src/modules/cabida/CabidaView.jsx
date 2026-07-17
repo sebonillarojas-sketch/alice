@@ -124,27 +124,34 @@ function Kpi({ label, value, unit, accent }) {
   );
 }
 
+const CABIDA_STORE = "hygge:cabidaState";
+const loadCabida = () => { try { return JSON.parse(localStorage.getItem(CABIDA_STORE) || "null") || {}; } catch { return {}; } };
+
 export default function CabidaView({ initialTerreno, compact }) {
-  const [terreno, setTerreno] = useState(initialTerreno || 693);
-  const [areaLibre, setAreaLibre] = useState(35);
-  const [pisos, setPisos] = useState(8);
-  const [azoteaTechada, setAzoteaTechada] = useState(30);
-  const [circulacion, setCirculacion] = useState(12);
+  const S = useRef(loadCabida()).current;                     // snapshot guardado (ida y vuelta al editor)
+  const [terreno, setTerreno] = useState(S.terreno ?? (initialTerreno || 693));
+  const [areaLibre, setAreaLibre] = useState(S.areaLibre ?? 35);
+  const [pisos, setPisos] = useState(S.pisos ?? 8);
+  const [azoteaTechada, setAzoteaTechada] = useState(S.azoteaTechada ?? 30);
+  const [circulacion, setCirculacion] = useState(S.circulacion ?? 12);
 
   // ── lote: proporciones (números) o plano CAD (forma real manda) ──
-  const [modoLote, setModoLote] = useState("prop");          // "prop" | "cad"
-  const [lotePoly, setLotePoly] = useState(null);            // contorno real (m)
-  const [cadInfo, setCadInfo] = useState(null);
+  const [modoLote, setModoLote] = useState(S.modoLote ?? "prop");   // "prop" | "cad"
+  const [lotePoly, setLotePoly] = useState(S.lotePoly ?? null);     // contorno real (m)
+  const [cadInfo, setCadInfo] = useState(S.cadInfo ?? null);
   const [cadErr, setCadErr] = useState(null);
-  const [frente, setFrente] = useState(Math.round(Math.sqrt((initialTerreno || 693) * 1.4)));
-  const [tipoLote, setTipoLote] = useState("medianera");     // medianera | esquina
-  const [retiros, setRetiros] = useState({
+  const [frente, setFrente] = useState(S.frente ?? Math.round(Math.sqrt((initialTerreno || 693) * 1.4)));
+  const [tipoLote, setTipoLote] = useState(S.tipoLote ?? "medianera");   // medianera | esquina
+  const [retiros, setRetiros] = useState(S.retiros ?? {
     frontal:   { on: true,  v: 5 },
     izquierda: { on: false, v: 3 },
     derecha:   { on: false, v: 3 },
     posterior: { on: false, v: 3 },
     ochavo:    { on: false, v: 4 },
   });
+  const [frenteIdx, setFrenteIdx] = useState(S.frenteIdx ?? null);  // override manual del frente (clic en lindero)
+  const [partiIdx, setPartiIdx] = useState(S.partiIdx ?? 0);       // parti elegido en la planta
+  const [movs, setMovs] = useState(S.movs ?? {});                 // desplazamientos manuales de bloques {roomId:{dx,dy}}
   const cadRef = useRef(null);
   const cadLock = modoLote === "cad" && !!lotePoly;          // con CAD, los números salen del plano
 
@@ -157,6 +164,7 @@ export default function CabidaView({ initialTerreno, compact }) {
       setCadInfo(r);
       setTerreno(Math.round(r.area));
       setFrente(Math.round(r.frente));
+      setFrenteIdx(null); setMovs({}); setPartiIdx(0);   // lote nuevo → empieza limpio
     } catch (e) {
       setLotePoly(null); setCadInfo(null);
       setCadErr(e?.message || String(e));
@@ -165,16 +173,18 @@ export default function CabidaView({ initialTerreno, compact }) {
   const quitarCAD = () => { setLotePoly(null); setCadInfo(null); setCadErr(null); };
   const setRet = (k) => (ret) => setRetiros((rs) => ({ ...rs, [k]: ret }));
 
+  const efFrenteIdx = frenteIdx ?? cadInfo?.frenteIdx ?? 0;   // frente efectivo (override manual > CAD)
+
   // deja el lote disponible para el editor de planos ("importar desde cabida")
   useEffect(() => {
     if (!lotePoly) return;
     try {
       localStorage.setItem("hygge:loteCabida", JSON.stringify({
-        pts: lotePoly, area: cadInfo?.area, frente: cadInfo?.frente, frenteIdx: cadInfo?.frenteIdx ?? 0,
+        pts: lotePoly, area: cadInfo?.area, frente: cadInfo?.frente, frenteIdx: efFrenteIdx,
         tipoLote, retiros, pisos, units: cadInfo?.units, ts: Date.now(),
       }));
     } catch { /* cuota */ }
-  }, [lotePoly, cadInfo, tipoLote, retiros, pisos]);
+  }, [lotePoly, cadInfo, tipoLote, retiros, pisos, efFrenteIdx]);
 
   const [areaDpto, setAreaDpto] = useState(90);
   const [mix1, setMix1] = useState(20);
@@ -232,6 +242,19 @@ export default function CabidaView({ initialTerreno, compact }) {
       est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2]);
 
   const mixWarn = mix1 + mix2 > 100;
+
+  // persiste TODO el estado de la cabida (sobrevive ir/volver del editor de planos)
+  useEffect(() => {
+    try {
+      localStorage.setItem(CABIDA_STORE, JSON.stringify({
+        terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
+        frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
+        areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2,
+      }));
+    } catch { /* cuota */ }
+  }, [terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
+      frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
+      areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2]);
 
   return (
     <div style={{ minHeight: "100%", background: C.paper, color: C.ink, paddingBottom: 48 }}>
@@ -436,6 +459,9 @@ export default function CabidaView({ initialTerreno, compact }) {
             pisosSot={r.pisosSot} azoteaTechada={azoteaTechada}
             frente={frente} tipoLote={tipoLote} retiros={retiros}
             lotePoly={modoLote === "cad" ? lotePoly : null} cadInfo={modoLote === "cad" ? cadInfo : null}
+            frenteIdxOverride={frenteIdx} onFrente={setFrenteIdx}
+            partiIdx={partiIdx} onParti={setPartiIdx}
+            movs={movs} onMovs={setMovs} onFrenteReal={setFrente}
           />
         </Card>
       </div>
