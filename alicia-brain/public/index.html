@@ -480,6 +480,34 @@
   <h2>Configuración</h2>
   <div style="margin-bottom:24px"></div>
   <div class="grid grid-2">
+    <div class="card" style="grid-column:1/-1">
+      <h3>📱 Teléfono de Alicia · WhatsApp Web</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        El número propio de Alicia, vinculado como dispositivo de WhatsApp Web y conectado 24/7 desde Railway.
+        La sesión vive en el volumen persistente — sobrevive deploys y se reconecta sola.
+      </div>
+      <div class="status-row">
+        <span class="status-label">Estado</span>
+        <span class="badge off" id="waweb-badge">Cargando…</span>
+      </div>
+      <div class="status-row" id="waweb-me-row" style="display:none">
+        <span class="status-label">Número vinculado</span>
+        <span style="font-size:13px;color:var(--soft)" id="waweb-me">—</span>
+      </div>
+      <div id="waweb-qr-box" style="display:none;text-align:center;padding:14px 0">
+        <img id="waweb-qr" alt="QR de WhatsApp" style="width:260px;height:260px;border-radius:8px;background:#fff;padding:8px">
+        <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">
+          En el teléfono de Alicia: <b>WhatsApp → Ajustes → Dispositivos vinculados → Vincular un dispositivo</b> y escaneá este QR.<br>
+          El QR se renueva solo — si vence, esperá unos segundos.
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="loadWAWeb()">↻ Actualizar</button>
+        <button class="btn btn-ghost" onclick="wawebRestart()">Reconectar</button>
+        <button class="btn btn-ghost" style="color:#f87171" onclick="wawebLogout()">Desvincular</button>
+      </div>
+    </div>
+
     <div class="card">
       <h3>WhatsApp / Webhook</h3>
       <div class="control-row">
@@ -597,6 +625,7 @@ async function loadSistema() {
 
     // Integraciones
     const ints = [
+      { label: 'WhatsApp Web (teléfono de Alicia)', key: 'whatsappWeb', status: h.integrations?.whatsappWeb ? 'ok' : 'warn', detail: h.integrations?.whatsappWeb ? 'Conectado 24/7' : ('Sin conectar · ' + (h.integrations?.whatsappWebStatus || 'off') + ' — QR en Configuración') },
       { label: 'WhatsApp Business', key: 'whatsapp', status: 'warn', detail: 'Pendiente aprobación Meta' },
       { label: 'Google Calendar', key: 'google', status: h.integrations?.google ? 'ok' : 'off', detail: h.integrations?.google ? 'Conectado' : 'Sin credenciales' },
       { label: 'Zoom', key: 'zoom', status: h.integrations?.zoom ? 'ok' : 'off', detail: h.integrations?.zoom ? 'Conectado' : 'Sin credenciales' },
@@ -812,6 +841,54 @@ async function loadConfig() {
   const h = await fetch('/health').then(r=>r.json()).catch(()=>({}));
   const phones = Object.entries(process?.env||{}).filter(([k])=>k.startsWith('PHONE_'));
   document.getElementById('phones-list').innerHTML = '<div style="color:var(--muted);font-size:13px">Los teléfonos se configuran como variables de entorno en Railway (PHONE_vd, PHONE_jt, etc.)</div>';
+  loadWAWeb();
+}
+
+// ── WhatsApp Web · teléfono de Alicia ──────────────────────────────────────
+let wawebPoll = null;
+const WAWEB_LABELS = {
+  connected:   ['ok',   'Conectado'],
+  pairing:     ['warn', 'Esperando QR'],
+  reconnecting:['warn', 'Reconectando…'],
+  starting:    ['warn', 'Arrancando…'],
+  logged_out:  ['off',  'Desvinculado'],
+  error:       ['off',  'Error'],
+  off:         ['off',  'Desactivado'],
+};
+async function loadWAWeb() {
+  const badge = document.getElementById('waweb-badge');
+  try {
+    const s = await fetch('/api/waweb/status').then(r=>r.json());
+    const [cls, label] = WAWEB_LABELS[s.status] || ['off', s.status];
+    badge.className = 'badge ' + cls;
+    badge.textContent = label + (s.status==='error' && s.lastError ? ' · ' + s.lastError.slice(0,60) : '');
+    const meRow = document.getElementById('waweb-me-row');
+    if (s.me?.id) { meRow.style.display=''; document.getElementById('waweb-me').textContent = s.me.id.split(':')[0].split('@')[0] + (s.me.name ? ' · ' + s.me.name : ''); }
+    else meRow.style.display='none';
+    const qrBox = document.getElementById('waweb-qr-box');
+    if (s.status === 'pairing' && s.qr) { qrBox.style.display=''; document.getElementById('waweb-qr').src = s.qr; }
+    else qrBox.style.display='none';
+    // Mientras no esté conectado, refresca solo (el QR rota cada ~20s)
+    clearInterval(wawebPoll);
+    if (document.getElementById('page-config').classList.contains('active') && s.status !== 'connected' && s.status !== 'off') {
+      wawebPoll = setInterval(loadWAWeb, 5000);
+    }
+  } catch(e) {
+    badge.className = 'badge off';
+    badge.textContent = 'Sin conexión al servidor';
+    clearInterval(wawebPoll);
+  }
+}
+async function wawebRestart() {
+  toast('Reconectando WhatsApp Web…');
+  await fetch('/api/waweb/restart', {method:'POST'}).catch(()=>{});
+  setTimeout(loadWAWeb, 1500);
+}
+async function wawebLogout() {
+  if (!confirm('¿Desvincular el teléfono de Alicia? Habrá que escanear el QR de nuevo.')) return;
+  await fetch('/api/waweb/logout', {method:'POST'}).catch(()=>{});
+  toast('Sesión desvinculada — generando QR nuevo');
+  setTimeout(loadWAWeb, 2000);
 }
 async function triggerBriefing() {
   const btn = event.target;
