@@ -1,5 +1,8 @@
 import { useState, useMemo, useRef, lazy, Suspense, Component } from "react";
 import { computeEsquema } from "./esquema.js";
+import { footprintReal } from "./loteReal.js";
+import { generarDistribuciones } from "../planos/plantas.js";
+import { bbox as polyBbox, centroid, dist, area as polyArea } from "../planos/geometry.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -34,6 +37,93 @@ const TIP_COLOR = { "1D": "#D8E0F7", "2D": "#95ABE8", "3D": "#F7936F" };
 
 const fmt = (n, d = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// planta típica sobre la FORMA REAL del lote (mismo motor que el editor de planos)
+function PlantaReal({ lote, footprint, parti, frenteIdx, svgRef }) {
+  const b = polyBbox(lote);
+  const w = Math.max(b.maxX - b.minX, 1), h = Math.max(b.maxY - b.minY, 1);
+  const PAD = 44;
+  const s = Math.min(600 / w, 420 / h);
+  const W = w * s + PAD * 2, H = h * s + PAD * 2;
+  const T = (p) => ({ x: PAD + (p.x - b.minX) * s, y: PAD + (p.y - b.minY) * s });
+  const P = (pts) => pts.map(T).map((p) => `${p.x},${p.y}`).join(" ");
+  const n = lote.length;
+  const cx = PAD + w * s / 2, cy = PAD + h * s / 2;
+  const fillFor = (r) => r.tipo === "core" ? C.ink : r.tipo === "pasillo" ? C.paper
+    : TIP_COLOR[r.name?.split(" ")[0]] || "#E4E2DC";
+
+  return (
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}
+      xmlns="http://www.w3.org/2000/svg" fontFamily={mono}>
+      <defs>
+        <pattern id="hatchR" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="0" y2="6" stroke={C.line} strokeWidth="1.4" />
+        </pattern>
+      </defs>
+
+      {/* lote real (línea de propiedad) */}
+      <polygon points={P(lote)} fill="url(#hatchR)" stroke={C.ink} strokeWidth="1.2" strokeDasharray="5 3" />
+
+      {/* footprint construible */}
+      <polygon points={P(footprint)} fill={C.card} stroke={C.peri} strokeWidth="1.2" strokeDasharray="4 3" />
+
+      {/* distribución (core / corredor / unidades) */}
+      {parti?.rooms?.map((r) => {
+        const c = T(centroid(r.pts));
+        const a = polyArea(r.pts);
+        const label = r.tipo === "unidad" && a * s * s > 900;
+        return (
+          <g key={r.id}>
+            <polygon points={P(r.pts)} fill={fillFor(r)} stroke={C.card} strokeWidth="1.5"
+              fillOpacity={r.tipo === "core" ? 1 : 0.92} />
+            {label && (
+              <text x={c.x} y={c.y} fontSize="9.5" fontWeight="700" fill={C.ink} textAnchor="middle">
+                {r.name.split(" · ")[0]}
+                <tspan x={c.x} dy="11" fontSize="8" fontWeight="400">{r.name.split(" · ")[1] || ""}</tspan>
+              </text>
+            )}
+            {r.tipo === "core" && a * s * s > 400 && (
+              <text x={c.x} y={c.y + 3} fontSize="8" fill={C.paper} textAnchor="middle">core</text>
+            )}
+          </g>
+        );
+      })}
+
+      {/* frente (calle) resaltado */}
+      {(() => {
+        const a = T(lote[frenteIdx % n]), q = T(lote[(frenteIdx + 1) % n]);
+        const m = { x: (a.x + q.x) / 2, y: (a.y + q.y) / 2 };
+        const out = { x: m.x - cx, y: m.y - cy }; const L0 = Math.hypot(out.x, out.y) || 1;
+        return (
+          <g>
+            <line x1={a.x} y1={a.y} x2={q.x} y2={q.y} stroke={C.orange} strokeWidth="3" />
+            <text x={m.x + (out.x / L0) * 34} y={m.y + (out.y / L0) * 34} fontSize="9" fill={C.orange} textAnchor="middle"
+              stroke={C.paper} strokeWidth="2.5" paintOrder="stroke">
+              calle · frente
+            </text>
+          </g>
+        );
+      })()}
+
+      {/* cotas de cada lindero (medidas reales) */}
+      {lote.map((p, i) => {
+        const q = lote[(i + 1) % n];
+        const L = dist(p, q);
+        if (L * s < 24) return null;
+        const a = T(p), z = T(q);
+        const m = { x: (a.x + z.x) / 2, y: (a.y + z.y) / 2 };
+        const out = { x: m.x - cx, y: m.y - cy }; const L0 = Math.hypot(out.x, out.y) || 1;
+        const tx = m.x + (out.x / L0) * 13, ty = m.y + (out.y / L0) * 13;
+        return (
+          <text key={i} x={tx} y={ty + 3} fontSize="8.5" fill={C.soft} textAnchor="middle"
+            stroke={C.paper} strokeWidth="2.5" paintOrder="stroke">
+            {fmt(L, 2)}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
 
 // planta típica esquemática (rectangular — el 3D y el editor usan la forma real)
 function Planta({ e, frente, rf, ri, svgRef }) {
@@ -179,6 +269,22 @@ export default function EsquemaPlanta({
     [terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion]
   );
 
+  // con lote real: footprint (ochavo + retiros por borde) + distribución del motor del editor
+  const [partiIdx, setPartiIdx] = useState(0);
+  const real = useMemo(() => {
+    if (!lotePoly || lotePoly.length < 3) return null;
+    const frenteIdx = cadInfo?.frenteIdx ?? 0;
+    const { lote, footprint } = footprintReal(lotePoly, frenteIdx, tipoLote, retiros);
+    let partis = [];
+    try {
+      partis = generarDistribuciones(footprint, frenteIdx, {
+        udsPiso: e.uPorPiso, pct1: mix1, pct2: mix2, areaObjetivo: areaDpto,
+      }) || [];
+    } catch { partis = []; }
+    return { lote, footprint, frenteIdx, partis };
+  }, [lotePoly, cadInfo, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
+  const parti = real?.partis?.[Math.min(partiIdx, Math.max((real?.partis?.length || 1) - 1, 0))] || null;
+
   // envía la tipología como brief al generador del Editor de Planos
   const enviarBrief = (tip) => {
     const depth = e.filas[0]?.depth || 4.5;
@@ -242,11 +348,34 @@ export default function EsquemaPlanta({
       {/* planta + corte */}
       <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 2.4fr) minmax(140px, 1fr)", gap: 20, paddingTop: 16, alignItems: "start" }}>
         <div>
-          <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>
-            planta típica · {e.uPorPiso} unids/piso · {e.doble ? "doble crujía" : "crujía simple"}
-            {lotePoly ? " · esquemática rectangular (el 3D usa la forma real)" : ""}
-          </div>
-          <Planta e={e} frente={frente} rf={rf} ri={ri} svgRef={svgRef} />
+          {real && parti ? (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>
+                  planta sobre forma real · {parti.stats?.uds ?? "?"} unids/piso · footprint {fmt(polyArea(real.footprint))} m²
+                </span>
+                <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                  {real.partis.map((p, i) => (
+                    <button key={p.id} onClick={() => setPartiIdx(i)} title={p.notas?.join(" · ")}
+                      style={{ fontFamily: mono, fontSize: 9, padding: "2px 8px", borderRadius: 2, cursor: "pointer",
+                        color: i === partiIdx ? C.card : C.ink, background: i === partiIdx ? C.ink : C.paper,
+                        border: `1px solid ${i === partiIdx ? C.ink : C.line}` }}>
+                      {p.nombre}
+                    </button>
+                  ))}
+                </span>
+              </div>
+              <PlantaReal lote={real.lote} footprint={real.footprint} parti={parti} frenteIdx={real.frenteIdx} svgRef={svgRef} />
+            </>
+          ) : (
+            <>
+              <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>
+                planta típica · {e.uPorPiso} unids/piso · {e.doble ? "doble crujía" : "crujía simple"}
+                {lotePoly ? " · ▲ el footprint no admite la distribución — revisa retiros o unids/piso" : ""}
+              </div>
+              <Planta e={e} frente={frente} rf={rf} ri={ri} svgRef={svgRef} />
+            </>
+          )}
         </div>
         <div>
           <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>corte esquemático</div>
