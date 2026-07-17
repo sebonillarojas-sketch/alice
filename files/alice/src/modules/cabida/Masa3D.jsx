@@ -62,12 +62,24 @@ function Luces({ span, h }) {
   );
 }
 
+const VERDE = "#8AA678";      // verde tropical apagado (jardineras BAM)
+const VERDE_E = "#6f8a5e";
+
 // —— masa desde la FORMA REAL del lote (polígono del CAD) ——
+// estilo BAM: concreto pálido + losas marcadas + jardineras que vuelan por piso (verde cascada)
 function EscenaPoly({ lotePoly, frenteIdx = 0, tipoLote, retiros, pisos, pisosSot }) {
   const alturaTorre = pisos * H_PISO;
   const { lote, footprint } = footprintReal(lotePoly, frenteIdx, tipoLote, retiros);
   const bb = wh(lote);
   const span = Math.max(bb.w, bb.h);
+  // anillo que vuela del cuerpo = borde de losa / balcón. Empuje desde el centroide
+  // (siempre válido, a diferencia del offset por aristas que falla con lados ~paralelos)
+  const fcx = footprint.reduce((a, p) => a + p.x, 0) / footprint.length;
+  const fcy = footprint.reduce((a, p) => a + p.y, 0) / footprint.length;
+  const volado = footprint.map((p) => {
+    const dx = p.x - fcx, dy = p.y - fcy, L = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (dx / L) * 0.28, y: p.y + (dy / L) * 0.28 };
+  });
 
   return (
     <group>
@@ -79,6 +91,15 @@ function EscenaPoly({ lotePoly, frenteIdx = 0, tipoLote, retiros, pisos, pisosSo
         <Prisma key={i} pts={footprint} height={H_PISO} base={i * H_PISO}
           color={i === 0 ? C.paper : C.card} edge={C.ink} />
       ))}
+      {/* estilo BAM: losa marcada + jardinera verde volando en cada nivel */}
+      {Array.from({ length: Math.max(pisos, 0) }, (_, i) => (
+        <group key={`b${i}`}>
+          <Prisma pts={volado} height={0.16} base={(i + 1) * H_PISO - 0.16} color={C.paper} edge={C.line} />
+          <Prisma pts={volado} height={0.16} base={(i + 1) * H_PISO} color={VERDE} edge={VERDE_E} />
+        </group>
+      ))}
+      {/* azotea ajardinada */}
+      <Prisma pts={footprint} height={0.35} base={alturaTorre} color={VERDE} edge={VERDE_E} opacity={0.92} />
       {/* sótanos a huella completa del lote */}
       {pisosSot > 0 && (
         <Prisma pts={lote} height={pisosSot * H_SOT} base={-(pisosSot * H_SOT) - 0.18}
