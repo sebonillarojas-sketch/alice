@@ -1,0 +1,94 @@
+{
+  "id": "T06",
+  "nombre": "2D/2B amplio Lima Top — fachada única, terraza y suite con walk-in",
+  "area_techada": 67.02,
+  "frente_m": 9.9,
+  "fondo_m": 6.77,
+  "ambientes": [
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [[0.25, 0.15], [3.45, 0.15], [3.45, 4.27], [0.25, 4.27]],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "dormitorio 2",
+      "poligono": [[3.6, 0.15], [6.3, 0.15], [6.3, 3.22], [3.6, 3.22]],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "hall",
+      "poligono": [[3.6, 3.37], [6.3, 3.37], [6.3, 4.27], [3.6, 4.27]],
+      "zona": "intima",
+      "luz": false
+    },
+    {
+      "nombre": "terraza",
+      "poligono": [[6.45, 0.15], [8.6, 0.15], [8.6, 2.0], [6.45, 2.0]],
+      "zona": "social",
+      "luz": false
+    },
+    {
+      "nombre": "sala-comedor",
+      "poligono": [[8.6, 0.15], [9.65, 0.15], [9.65, 6.52], [6.45, 6.52], [6.45, 2.0], [8.6, 2.0]],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [[0.25, 4.42], [1.5, 4.42], [1.5, 6.52], [0.25, 6.52]],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavandería",
+      "poligono": [[1.65, 4.42], [2.65, 4.42], [2.65, 6.52], [1.65, 6.52]],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "cocina",
+      "poligono": [[2.8, 4.42], [4.95, 4.42], [4.95, 6.52], [2.8, 6.52]],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "baño 2",
+      "poligono": [[5.1, 4.42], [6.3, 4.42], [6.3, 6.52], [5.1, 6.52]],
+      "zona": "servicio",
+      "luz": false
+    }
+  ],
+  "muros": [
+    { "a": [0.0, 0.075], "b": [6.45, 0.075], "espesor": 0.15, "portante": false },
+    { "a": [8.6, 0.075], "b": [9.9, 0.075], "espesor": 0.15, "portante": false },
+    { "a": [0.125, 0.0], "b": [0.125, 6.77], "espesor": 0.25, "portante": true },
+    { "a": [9.775, 0.0], "b": [9.775, 6.77], "espesor": 0.25, "portante": true },
+    { "a": [0.0, 6.645], "b": [9.9, 6.645], "espesor": 0.25, "portante": true },
+    { "a": [3.525, 0.15], "b": [3.525, 4.42], "espesor": 0.15, "portante": false },
+    { "a": [6.375, 0.15], "b": [6.375, 6.52], "espesor": 0.15, "portante": true },
+    { "a": [0.25, 4.345], "b": [6.3, 4.345], "espesor": 0.15, "portante": false },
+    { "a": [3.6, 3.295], "b": [6.3, 3.295], "espesor": 0.15, "portante": false },
+    { "a": [1.575, 4.42], "b": [1.575, 6.52], "espesor": 0.15, "portante": false },
+    { "a": [2.725, 4.42], "b": [2.725, 6.52], "espesor": 0.15, "portante": false },
+    { "a": [5.025, 4.42], "b": [5.025, 6.52], "espesor": 0.15, "portante": false }
+  ],
+  "puertas": [
+    { "de": "exterior", "a": "sala-comedor", "ancho": 0.9 },
+    { "de": "sala-comedor", "a": "terraza", "ancho": 1.8 },
+    { "de": "sala-comedor", "a": "hall", "ancho": 0.9 },
+    { "de": "hall", "a": "dormitorio 2", "ancho": 0.8 },
+    { "de": "hall", "a": "dormitorio principal", "ancho": 0.8 },
+    { "de": "hall", "a": "baño 2", "ancho": 0.7 },
+    { "de": "hall", "a": "cocina", "ancho": 0.8 },
+    { "de": "dormitorio principal", "a": "baño 1", "ancho": 0.7 },
+    { "de": "cocina", "a": "lavandería", "ancho": 0.8 }
+  ],
+  "ventanas": [
+    { "ambiente": "dormitorio principal", "ancho": 2.2, "alto": 1.2, "alfeizar": 1.0 },
+    { "ambiente": "dormitorio 2", "ancho": 1.8, "alto": 1.2, "alfeizar": 1.0 },
+    { "ambiente": "sala-comedor", "ancho": 2.1, "alto": 2.1, "alfeizar": 0.0 }
+  ],
+  "muro_humedo": { "a": [0.25, 6.52], "b": [6.3, 6.52] }
+}

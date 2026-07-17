@@ -5,6 +5,7 @@ dist/
 *.db-shm
 *.db-wal
 .DS_Store
-.claude/
+.claude/*
+!.claude/skills/
 ALICE-handoff-*.tar.gz
 handoff-memory/
