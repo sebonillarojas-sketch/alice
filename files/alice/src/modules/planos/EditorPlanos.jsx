@@ -202,6 +202,8 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
   const [alicia, setAlicia] = useState(null);
   const [overrides, setOverrides] = useState({});   // { unitId: { tipologiaId, banos } }
   const unidades = parti.res.units.filter((u) => !esDeposito(u));
+  // recortes chicos → solo cabe studio; cambiar dorms/½visita no hace nada aquí
+  const soloStudio = unidades.length > 0 && unidades.every((u) => u.areaReal < 42);
   const setOv = (id, k, v) => setOverrides((o) => ({ ...o, [id]: { ...o[id], [k]: v } }));
   // el amoblado se recalcula al cambiar tipología/baños/NSE/terraza
   const amoblado = (() => { try { return amoblarParti(parti, brief, overrides); } catch { return null; } })();
@@ -242,6 +244,14 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
           <MessageCircle size={13} /> {alicia === "cargando" ? "consultando…" : "opinión de alicia"}
         </Btn>
       </div>
+      {soloStudio && (
+        <div style={{ fontFamily: mono, fontSize: 10.5, color: C.orange, background: "#FFF4F0", border: `1px solid ${C.orange}`,
+          borderRadius: 3, padding: "8px 10px", marginBottom: 12, lineHeight: 1.5 }}>
+          ▲ recortes de ~{Math.round(unidades[0]?.areaReal || 0)} m² → solo cabe studio. Cambiar dorms / ½ visita no hará efecto aquí.
+          Volvé al <b>paso 2 · distribución</b> y bajá <b>uds/piso</b> para depas más grandes (2–3 dorm).
+        </div>
+      )}
+
       {/* tipología POR BLOQUE: candidatas ordenadas por calce + tweak de baños */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: "6px 18px", marginBottom: 14 }}>
         {unidades.map((u, i) => {
@@ -522,10 +532,15 @@ export default function EditorPlanos() {
 
   const cycleFront = () => lote && setFrontIdx((i) => (i + 1) % lote.pts.length);
 
-  // paso 2: genera las distribuciones (partis) dentro del footprint
+  // paso 2: genera las distribuciones (partis) dentro del footprint.
+  // uds/piso arranca DERIVADO del footprint ÷ área objetivo (para no dar studios por
+  // defecto); si el usuario ya lo tocó (≠4), se respeta su valor.
   const abrirDistribuciones = useCallback(() => {
     if (!footprint) { setLoteBar(true); return; }
-    setPartis(generarDistribuciones(footprint, frontIdx, brief));
+    const sugerido = Math.max(1, Math.min(8, Math.round(area(footprint) / Math.max(brief.areaObjetivo * 1.3, 30))));
+    const b = brief.udsPiso === 4 && sugerido !== 4 ? { ...brief, udsPiso: sugerido } : brief;
+    if (b !== brief) setBrief(b);
+    setPartis(generarDistribuciones(footprint, frontIdx, b));
     setShowDistrib(true);
   }, [footprint, frontIdx, brief]);
 
