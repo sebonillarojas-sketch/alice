@@ -398,22 +398,71 @@ export function LamEconomico({ nombre, cab, terreno }) {
   );
 }
 
-// ── 5 · Distribución esquemática (interactiva, hereda de cabida) ──
-export function LamDistribucion({ nombre, cab }) {
+// ── 5 · Volumetría: distribución esquemática + masa 3D al costado (una lámina horizontal) ──
+// Interactiva: los clics de parti / frente / mover bloques se persisten vía los callbacks
+// (la Mesa los guarda en hygge:cabidaState). En print usa la captura 3D (el WebGL no imprime).
+export function LamVolumetria({ nombre, cab, snap, onSnap, onParti, onMovs, onFrente, onFrenteReal, print = false }) {
   const { s, r } = cab;
+  const rf = s.retiros?.frontal?.on ? s.retiros.frontal.v : 0;
+  const ri = s.retiros?.izquierda?.on ? s.retiros.izquierda.v : 0;
+  const rd = s.retiros?.derecha?.on ? s.retiros.derecha.v : 0;
+  const rp = s.retiros?.posterior?.on ? s.retiros.posterior.v : 0;
+  const e = computeEsquema({ terreno: s.terreno, frente: s.frente, rf, ri, rd, rp, huella: r.huella, pisos: s.pisos, dptos: r.dptos, mix1: s.mix1, mix2: s.mix2, areaDpto: s.areaDpto, circulacion: s.circulacion });
+  const boxRef = useRef(null);
+  const noop = () => {};
+  const capturar = () => {
+    const cv = boxRef.current?.querySelector("canvas");
+    if (cv) { try { onSnap?.(cv.toDataURL("image/png")); } catch { /* tainted */ } }
+  };
   return (
     <A4 seccion="( 3 ) Volumetría" titulo="Distribución esquemática" proyecto={nombre} folio="V-01" bg={PAPER}>
-      <div style={{ padding: "12px 24px", height: "100%", boxSizing: "border-box", overflow: "auto" }}>
-        <EsquemaPlanta
-          terreno={s.terreno} huella={r.huella} pisos={s.pisos} dptos={r.dptos}
-          mix1={s.mix1} mix2={s.mix2} areaDpto={s.areaDpto} circulacion={s.circulacion}
-          pisosSot={r.pisosSot} azoteaTechada={s.azoteaTechada}
-          frente={s.frente} tipoLote={s.tipoLote} retiros={s.retiros}
-          lotePoly={s.modoLote === "cad" ? s.lotePoly : null} cadInfo={s.modoLote === "cad" ? s.cadInfo : null}
-          frenteIdxOverride={s.frenteIdx} onFrente={() => {}}
-          partiIdx={s.partiIdx || 0} onParti={() => {}}
-          movs={s.movs || {}} onMovs={() => {}} onFrenteReal={() => {}}
-        />
+      <div style={{ position: "absolute", inset: 0, display: "flex", gap: 18, padding: "12px 24px", boxSizing: "border-box" }}>
+        {/* distribución esquemática (izquierda) */}
+        <div style={{ flex: "1 1 56%", minWidth: 0, overflow: "hidden" }}>
+          <EsquemaPlanta
+            terreno={s.terreno} huella={r.huella} pisos={s.pisos} dptos={r.dptos}
+            mix1={s.mix1} mix2={s.mix2} areaDpto={s.areaDpto} circulacion={s.circulacion}
+            pisosSot={r.pisosSot} azoteaTechada={s.azoteaTechada}
+            frente={s.frente} tipoLote={s.tipoLote} retiros={s.retiros}
+            lotePoly={s.modoLote === "cad" ? s.lotePoly : null} cadInfo={s.modoLote === "cad" ? s.cadInfo : null}
+            frenteIdxOverride={s.frenteIdx} onFrente={print ? noop : (onFrente || noop)}
+            partiIdx={s.partiIdx || 0} onParti={print ? noop : (onParti || noop)}
+            movs={s.movs || {}} onMovs={print ? noop : (onMovs || noop)} onFrenteReal={print ? noop : (onFrenteReal || noop)}
+            soloPlanta
+          />
+        </div>
+        {/* masa 3D al costado (derecha) */}
+        <div ref={boxRef} style={{ flex: "1 1 44%", minWidth: 0, borderLeft: `1px solid ${INK}`, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", color: "rgba(0,0,0,.5)" }}>
+              masa 3D · {s.pisos} pisos · {r.pisosSot} sótanos{print ? "" : " — orbita con el mouse"}
+            </span>
+            {!print && (
+              <button className="mesa-noprint" onClick={capturar}
+                style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center", fontFamily: MONO, fontSize: 10, textTransform: "uppercase", border: `1px solid ${INK}`, background: snap ? INK : "transparent", color: snap ? BG : INK, padding: "5px 10px", cursor: "pointer" }}>
+                <Camera size={11} /> {snap ? "recapturar" : "capturar vista"}
+              </button>
+            )}
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }} className={print ? "" : "mesa-3d-live"}>
+            {print ? (
+              snap
+                ? <img src={snap} alt="masa 3d" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontFamily: MONO, fontSize: 10.5, color: "rgba(0,0,0,.45)", textTransform: "uppercase", textAlign: "center", padding: 16 }}>Sin captura 3D — en la Mesa presioná “capturar vista”</div>
+            ) : (
+              <Masa3DBoundary>
+                <Suspense fallback={<div style={{ fontFamily: MONO, fontSize: 11, padding: 20 }}>cargando 3D…</div>}>
+                  <Masa3D
+                    e={e} frente={s.frente} pisos={s.pisos} pisosSot={r.pisosSot} azoteaTechada={s.azoteaTechada}
+                    retiros={s.retiros} tipoLote={s.tipoLote}
+                    lotePoly={s.modoLote === "cad" ? s.lotePoly : null}
+                    frenteIdx={s.frenteIdx ?? s.cadInfo?.frenteIdx ?? 0}
+                  />
+                </Suspense>
+              </Masa3DBoundary>
+            )}
+          </div>
+        </div>
       </div>
     </A4>
   );

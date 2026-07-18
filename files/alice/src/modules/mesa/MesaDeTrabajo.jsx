@@ -13,7 +13,7 @@ import {
 import {
   A4W, A4H, LamPortada, LamProyecto, LamUbicacion, LamAnalisis, LamEconomico,
   LamMercadoSector, LamMercadoPosicion, LamCabidaParams,
-  LamDistribucion, LamMasa3D, LamMasa3DPrint, LamPlanos,
+  LamVolumetria, LamPlanos,
 } from "./laminas.jsx";
 
 const BG = "#E3E1DE", INK = "#000000", ORANGE = "#F7643B";
@@ -59,7 +59,17 @@ export default function MesaDeTrabajo() {
   // Growth es el parent: la Mesa arranca con el proyecto activo de Cabida/Planos
   // (nombre + terreno vinculado) salvo que ya tengas una meta propia guardada.
   const { activo: proyectoActivo } = useProyectos();
-  const [tab, setTab] = useState("portada");
+  // si venís del Editor de Planos ("→ mesa de trabajo") la Mesa abre en Planos.
+  // Lectura pura en el initializer (idempotente); el borrado va en un timeout con
+  // cleanup, así sobrevive el doble-mount de StrictMode sin consumir el flag antes
+  // del segundo montaje.
+  const [tab, setTab] = useState(() => {
+    try { return localStorage.getItem("hygge:mesaTabInicial") || "portada"; } catch { return "portada"; }
+  });
+  useEffect(() => {
+    const id = setTimeout(() => { try { localStorage.removeItem("hygge:mesaTabInicial"); } catch { /* noop */ } }, 1500);
+    return () => clearTimeout(id);
+  }, []);
   const [nombre, setNombre] = useState(meta0.nombre || proyectoActivo?.nombre || "");
   const [terrenoId, setTerrenoId] = useState(meta0.terrenoId ?? proyectoActivo?.terrenoId ?? "");
   // si desde Growth abriste otro terreno, la Mesa lo sigue
@@ -94,6 +104,17 @@ export default function MesaDeTrabajo() {
 
   const flash = (msg) => { setAviso(msg); setTimeout(() => setAviso(null), 2600); };
   const importRef = useRef(null);
+
+  // memoria persistente de la distribución: los clics en la lámina (parti, frente,
+  // mover bloques) se mergean en hygge:cabidaState — la MISMA fuente que lee Cabida,
+  // así la elección sobrevive recargas y queda sincronizada ida y vuelta.
+  const patchCabida = useCallback((patch) => {
+    try {
+      const cur = JSON.parse(localStorage.getItem(K.cabida) || "{}") || {};
+      localStorage.setItem(K.cabida, JSON.stringify({ ...cur, ...patch }));
+    } catch { /* cuota */ }
+    setTick((t) => t + 1);
+  }, []);
 
   // estado completo hygge:* ⇄ .json — el archivo se commitea al repo y la otra
   // máquina lo importa (el sync de app_state en Supabase está roto por RLS)
@@ -241,8 +262,13 @@ export default function MesaDeTrabajo() {
         {tab === "cabida" && <Laminas>{laminasCabida}</Laminas>}
         {tab === "3d" && (
           <Laminas>
-            <LamDistribucion nombre={nombreEf} cab={cab} />
-            <LamMasa3D nombre={nombreEf} cab={cab} snap={snap3d} onSnap={setSnap3d} />
+            <LamVolumetria
+              nombre={nombreEf} cab={cab} snap={snap3d} onSnap={setSnap3d}
+              onParti={(i) => patchCabida({ partiIdx: i })}
+              onMovs={(m) => patchCabida({ movs: m })}
+              onFrente={(i) => patchCabida({ frenteIdx: i })}
+              onFrenteReal={(f) => patchCabida({ frente: f })}
+            />
           </Laminas>
         )}
         {tab === "planos" && (
@@ -259,8 +285,7 @@ export default function MesaDeTrabajo() {
           <LamPortada nombre={nombreEf} terreno={terreno} img={portadaImg} onImg={() => {}} fecha={fecha} />
           {laminasGrowth}
           {laminasCabida}
-          <LamDistribucion nombre={nombreEf} cab={cab} />
-          <LamMasa3DPrint nombre={nombreEf} snap={snap3d} />
+          <LamVolumetria nombre={nombreEf} cab={cab} snap={snap3d} print />
           <LamPlanos nombre={nombreEf} editor={editor} />
           <div className="mesa-a4" style={{ width: A4W, height: A4H, background: "#D6D4D0", overflow: "hidden", position: "relative" }}>
             <div style={{ transform: `scale(${A4H / 3720})`, transformOrigin: "0 0", position: "absolute", left: (A4W - 2480 * (A4H / 3720)) / 2, top: 0, width: 2480 }}>
