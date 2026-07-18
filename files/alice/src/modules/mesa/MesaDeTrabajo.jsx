@@ -287,11 +287,21 @@ export default function MesaDeTrabajo() {
           {laminasCabida}
           <LamVolumetria nombre={nombreEf} cab={cab} snap={snap3d} print />
           <LamPlanos nombre={nombreEf} editor={editor} />
-          <div className="mesa-a4" style={{ width: A4W, height: A4H, background: "#D6D4D0", overflow: "hidden", position: "relative" }}>
-            <div style={{ transform: `scale(${A4H / 3720})`, transformOrigin: "0 0", position: "absolute", left: (A4W - 2480 * (A4H / 3720)) / 2, top: 0, width: 2480 }}>
-              <ConceptoBam height={`${3720}px`} />
-            </div>
-          </div>
+          {/* Concepto BAM: el board es retrato (2480×3720) — en apaisado quedaba como
+              una tira vertical al medio. Lo partimos en dos hojas horizontales: cada
+              mitad del board (1860px) escalada para llenar el alto A4. */}
+          {(() => {
+            const CW = 2480, CH = 3720, HALF = CH / 2;
+            const cs = A4H / HALF;               // media hoja del board llena el alto A4
+            const cl = (A4W - CW * cs) / 2;       // centrado horizontal
+            return [0, 1].map((h) => (
+              <div key={`concepto-${h}`} className="mesa-a4" style={{ width: A4W, height: A4H, background: "#D6D4D0", overflow: "hidden", position: "relative" }}>
+                <div style={{ transform: `scale(${cs})`, transformOrigin: "0 0", position: "absolute", left: cl, top: -h * HALF * cs, width: CW }}>
+                  <ConceptoBam height={`${CH}px`} />
+                </div>
+              </div>
+            ));
+          })()}
         </div>,
         document.body
       )}
