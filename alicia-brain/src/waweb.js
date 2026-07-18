@@ -174,14 +174,28 @@ function scheduleReconnect(delay) {
   reconnectTimer.unref?.();
 }
 
+// WhatsApp nuevo entrega al remitente como LID opaco (@lid) en vez del número.
+// El número real (PN) viene en un campo alterno del key o en el mapeo LID→PN de baileys.
+function resolverTelefono(m, jid) {
+  if (jid.endsWith("@s.whatsapp.net")) return "+" + jid.split("@")[0];
+  const alt = m.key?.remoteJidAlt || m.key?.senderPn || m.key?.participantPn || m.key?.participantAlt;
+  if (alt && String(alt).endsWith("@s.whatsapp.net")) return "+" + String(alt).split("@")[0];
+  try {
+    const pn = sock?.signalRepository?.lidMapping?.getPNForLID?.(jid);
+    if (pn) return "+" + String(pn).split("@")[0];
+  } catch { /* API distinta en esta versión */ }
+  return null;
+}
+
 async function handleIncoming(m, baileys) {
-  const _jid = m.key?.remoteJid || "";
-  console.log(`📥 WA in: ${_jid} · fromMe=${m.key?.fromMe} · hasMsg=${!!m.message}`); // DIAG temporal
+  console.log(`📥 WA in key: ${JSON.stringify(m.key)} · hasMsg=${!!m.message}`); // DIAG temporal
   if (!m.message || m.key.fromMe) return;
   const jid = m.key.remoteJid || "";
-  // Solo chats directos: nada de grupos, status ni newsletters
-  if (!jid.endsWith("@s.whatsapp.net")) return;
-  const phone = "+" + jid.split("@")[0];
+  // Chats directos por número (@s.whatsapp.net) O por LID (@lid, WhatsApp nuevo).
+  // Grupos (@g.us), status y newsletters se ignoran.
+  if (!jid.endsWith("@s.whatsapp.net") && !jid.endsWith("@lid")) return;
+  const phone = resolverTelefono(m, jid);
+  if (!phone) { console.log(`⚠️ WA no resolví el número de ${jid}`); return; }
 
   const msg = m.message.ephemeralMessage?.message || m.message;
   const audio = msg.audioMessage;
