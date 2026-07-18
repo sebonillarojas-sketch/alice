@@ -65,6 +65,20 @@ begin
   end if;
 end $$;
 
+-- replica identity full: para que los eventos UPDATE/DELETE traigan la fila
+-- completa y el realtime pueda evaluar RLS sobre ella (INSERT ya anda sin esto).
+alter table public.tasks replica identity full;
+
+-- Diagnóstico (pegá el resultado si sigue sin andar en vivo):
+--   select
+--     (select count(*) from public.tasks) as total_tareas,
+--     exists(select 1 from pg_publication_tables
+--            where pubname='supabase_realtime' and schemaname='public' and tablename='tasks') as tasks_en_realtime,
+--     (select count(*) from pg_policies
+--            where schemaname='public' and tablename='tasks') as policies_en_tasks;
+-- Además: Supabase Dashboard → Database → Replication → asegurate que Realtime
+-- esté ON para public.tasks (algunos proyectos lo traen apagado por default).
+
 -- ── verificación rápida (opcional) ──────────────────────────────────────────
 -- Después de correrlo, esto debería listar las policies creadas:
 --   select tablename, policyname, cmd
