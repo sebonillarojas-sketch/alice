@@ -53,6 +53,18 @@ create policy "team_read_app_state"   on public.app_state for select to authenti
 create policy "team_upsert_app_state"  on public.app_state for insert to authenticated with check (true);
 create policy "team_update_app_state" on public.app_state for update to authenticated using (true) with check (true);
 
+-- ── realtime · publicar `tasks` para la suscripción en vivo ─────────────────
+-- Sin esto, db.subscribeTasks() se conecta pero nunca recibe eventos. Idempotente.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'tasks'
+  ) then
+    alter publication supabase_realtime add table public.tasks;
+  end if;
+end $$;
+
 -- ── verificación rápida (opcional) ──────────────────────────────────────────
 -- Después de correrlo, esto debería listar las policies creadas:
 --   select tablename, policyname, cmd

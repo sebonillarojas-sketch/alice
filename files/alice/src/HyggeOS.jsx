@@ -219,6 +219,21 @@ async function loadStored(key, fallback) {
   return local !== undefined ? local : fallback;
 }
 
+// Merge puro de un cambio realtime de Supabase sobre la lista local de tareas.
+// DELETE → saca por id. INSERT/UPDATE → upsert por id (echo de tu propia escritura
+// = no-op; tarea de otro usuario = se agrega/actualiza). Pura → testeable.
+function mergeRealtimeTask(prev, change) {
+  if (!change) return prev;
+  if (change.type === "DELETE") return change.id ? prev.filter(t => t.id !== change.id) : prev;
+  const inc = change.task;
+  if (!inc || inc.id == null) return prev;
+  const i = prev.findIndex(t => t.id === inc.id);
+  if (i === -1) return [inc, ...prev];
+  const next = [...prev];
+  next[i] = { ...next[i], ...inc };
+  return next;
+}
+
 const _syncTimers = {};
 async function saveStored(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
@@ -14174,6 +14189,15 @@ export default function HyggeOS({ authUser } = {}) {
   const [loaded, setLoaded] = useState(false);
   // ERP sync — loaded debe estar declarado antes de este hook
   const { pushNewTask, pushTaskUpdate, pushNewEvent } = useERPSync({ tasks, setTasks, currentUser, loaded });
+
+  // Realtime cross-usuario: cuando otro miembro crea/edita/borra una tarea en
+  // Supabase, se refleja en vivo sin recargar (respeta RLS; requiere las policies
+  // de supabase/rls-policies.sql). Solo tras la carga inicial.
+  useEffect(() => {
+    if (!loaded) return;
+    const unsub = db.subscribeTasks((change) => setTasks(prev => mergeRealtimeTask(prev, change)));
+    return unsub;
+  }, [loaded]);
 
   // ─── UNDO SYSTEM · last 10 destructive actions ───
   const [undoStack, setUndoStack] = useState([]); // [{ label, snapshot, ts }]
