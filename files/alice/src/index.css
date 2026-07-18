@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* tipografías de marca BAM (assets reales del brand book) — las usan la Mesa de
+   Trabajo, el Concepto BAM y las láminas de presentación */
+@font-face {
+  font-family: "Neue Montreal";
+  src: url("/fonts/NeueMontreal-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Montreal";
+  src: url("/fonts/NeueMontreal-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "CS Genio Mono";
+  src: url("/fonts/CSGenioMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
 html, body, #root {
   height: 100%;
   font-family: "DM Sans", "Helvetica Neue", system-ui, sans-serif;

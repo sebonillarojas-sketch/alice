@@ -4,6 +4,7 @@ import AliciaView from "./modules/alicia/AliciaView";
 import MercadoView from "./modules/mercado/MercadoView";
 import CabidaView from "./modules/cabida/CabidaView";
 import EditorPlanos from "./modules/planos/EditorPlanos";
+import { proyectosStore } from "./modules/cabida/proyectos.js";
 import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { DISTRICTS_DATA, COMPETITORS_DB, TREND_LABEL } from "./modules/mercado/sectorData";
@@ -218,6 +219,21 @@ async function loadStored(key, fallback) {
   return local !== undefined ? local : fallback;
 }
 
+// Merge puro de un cambio realtime de Supabase sobre la lista local de tareas.
+// DELETE → saca por id. INSERT/UPDATE → upsert por id (echo de tu propia escritura
+// = no-op; tarea de otro usuario = se agrega/actualiza). Pura → testeable.
+function mergeRealtimeTask(prev, change) {
+  if (!change) return prev;
+  if (change.type === "DELETE") return change.id ? prev.filter(t => t.id !== change.id) : prev;
+  const inc = change.task;
+  if (!inc || inc.id == null) return prev;
+  const i = prev.findIndex(t => t.id === inc.id);
+  if (i === -1) return [inc, ...prev];
+  const next = [...prev];
+  next[i] = { ...next[i], ...inc };
+  return next;
+}
+
 const _syncTimers = {};
 async function saveStored(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
@@ -301,6 +317,7 @@ const LAB_TOOLS = [
 
 const TOOLS = [
   { id: "alicia", label: "Alicia", icon: Bot, dot: "#A855F7" },
+  { id: "mistareas", label: "Mis tareas", icon: CheckCircle2, dot: "#5F8A6A" },
   { id: "inbox", label: "Smart Capture", icon: InboxIcon, dot: "#3D52D5" },
   { id: "messages", label: "Mensajes", icon: MessageSquare, dot: "#A89BD9" },
   { id: "calendar-tool", label: "Calendario", icon: CalIcon, dot: "#5F8A6A" },
@@ -385,6 +402,7 @@ const APPS = [
   },
   {
     id: "app-cabida",
+    parent: "growth",
     label: "Cabida",
     icon: Building2,
     dot: "#F7643B",
@@ -395,6 +413,7 @@ const APPS = [
   },
   {
     id: "app-editor",
+    parent: "growth",
     label: "Editor de Planos",
     icon: Pencil,
     dot: "#95ABE8",
@@ -405,11 +424,12 @@ const APPS = [
   },
   {
     id: "app-mesa",
+    parent: "growth",
     label: "Mesa de Trabajo",
     icon: StickyNote,
     dot: "#373737",
     url: null,
-    description: "Tablero colaborativo BAM · concepto, inspo, croquis, planos y votación",
+    description: "Workspace BAM · portada, growth, 3D, planos y concepto · exporta presentación",
     badge: "v1.0",
     native: true,
   },
@@ -1033,6 +1053,11 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
     });
     return counts;
   }, [tasks]);
+  // conteo de tareas pendientes asignadas al usuario actual (badge de "Mis tareas")
+  const myTaskCount = useMemo(
+    () => (tasks || []).filter(t => !t.checked && t.assignee === currentUser?.id).length,
+    [tasks, currentUser]
+  );
   const sidebarTools = tools || TOOLS;
   const [labExpanded, setLabExpanded] = useState(() => {
     try { return JSON.parse(localStorage.getItem("hygge:labExpanded")) ?? false; }
@@ -1056,7 +1081,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
           {sidebarTools.map(t => {
             const Icon = t.icon;
             const isActive = t.id === currentSpace;
-            const badge = t.id === "inbox" ? inboxCount : t.id === "messages" ? messagesCount : t.id === "notifications" ? notifCount : 0;
+            const badge = t.id === "inbox" ? inboxCount : t.id === "messages" ? messagesCount : t.id === "notifications" ? notifCount : t.id === "mistareas" ? myTaskCount : 0;
             return (
               <button key={t.id} onClick={() => setSpace(t.id)}
                 className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:opacity-90"
@@ -1078,7 +1103,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
               <Eyebrow>Apps</Eyebrow>
             </div>
             <nav className="space-y-0.5 mb-6">
-              {visibleApps.map(a => {
+              {visibleApps.filter(a => !a.parent).map(a => {
                 const Icon = a.icon;
                 const isActive = a.id === currentSpace;
                 return (
@@ -1093,6 +1118,39 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
                   </button>
                 );
               })}
+              {/* Growth es el parent del flujo terreno → cabida → planos → mesa */}
+              {(() => {
+                const growthApps = visibleApps.filter(a => a.parent === "growth");
+                if (!growthApps.length) return null;
+                const growthActive = currentSpace === "growth";
+                const childActive = growthApps.some(a => a.id === currentSpace);
+                return (
+                  <div>
+                    <button onClick={() => setSpace("growth")}
+                      className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:opacity-90"
+                      title="Growth · terrenos en evaluación · parent de Cabida, Planos y Mesa"
+                      style={{ backgroundColor: growthActive ? C.surface : "transparent", border: `1px solid ${growthActive ? C.lineSoft : "transparent"}`, borderRadius: 2 }}>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: "#B8C8E5" }} />
+                      <span className="text-[12px] flex-1 text-left" style={{ color: (growthActive || childActive) ? C.ink : C.inkSoft, fontWeight: (growthActive || childActive) ? 600 : 500 }}>Growth</span>
+                      <ChevronRight size={11} style={{ color: C.muted, transform: "rotate(90deg)" }} />
+                    </button>
+                    <div className="ml-4 mt-0.5 space-y-0.5" style={{ borderLeft: `1px solid ${C.lineSoft}` }}>
+                      {growthApps.map(a => {
+                        const Icon = a.icon;
+                        const isActive = a.id === currentSpace;
+                        return (
+                          <button key={a.id} onClick={() => setSpace(a.id)} title={a.description}
+                            className="w-full flex items-center gap-2 pl-3 pr-2 py-1 text-left hover:opacity-80"
+                            style={{ backgroundColor: isActive ? C.surface : "transparent", border: `1px solid ${isActive ? C.lineSoft : "transparent"}`, borderRadius: 2 }}>
+                            <Icon size={11} style={{ color: isActive ? a.dot : C.muted, flexShrink: 0 }} />
+                            <span className="text-[11px] flex-1 truncate" style={{ color: isActive ? C.ink : C.inkSoft, fontWeight: isActive ? 600 : 400 }}>{a.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </nav>
           </>
         )}
@@ -2182,7 +2240,7 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
 function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, allSpaces, timerProps, setTaskStatus }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
   const all = tasks;
   const roots = all.filter(t => !t.parentId);
   const open = roots.filter(t => getTaskStatus(t) !== "completada");
@@ -2226,7 +2284,7 @@ function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, a
 function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
   const filtered = tasks.filter(t => !t.parentId);
   const cols = TASK_STATUSES.map(s => ({
     ...s,
@@ -2276,7 +2334,7 @@ function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }
 function GanttView({ tasks, currentSpace, allSpaces, openDetail }) {
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
 
   const parseDate = (s) => {
     if (!s) return null;
@@ -2387,14 +2445,30 @@ function GanttView({ tasks, currentSpace, allSpaces, openDetail }) {
   );
 }
 
-function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) {
+function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate, users = [] }) {
   const [refDate, setRefDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [dayModal, setDayModal] = useState(null);        // día abierto en popup
+  const [hiddenUsers, setHiddenUsers] = useState(() => new Set()); // assignees apagados
   const [quickText, setQuickText] = useState("");
+
+  // usuarios que tienen alguna tarea con fecha en las tareas cargadas (para los chips)
+  const usersWithTasks = useMemo(() => {
+    const ids = new Set();
+    let hayNadie = false;
+    tasks.forEach(t => { if (t.parentId) return; if (t.assignee) ids.add(t.assignee); else hayNadie = true; });
+    const list = users.filter(u => ids.has(u.id));
+    return { list, hayNadie };
+  }, [tasks, users]);
+  const toggleUser = (id) => setHiddenUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const visibleByUser = useMemo(
+    () => tasks.filter(t => (t.assignee ? !hiddenUsers.has(t.assignee) : !hiddenUsers.has("__none__"))),
+    [tasks, hiddenUsers]
+  );
 
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
 
   const year = refDate.getFullYear();
   const month = refDate.getMonth();
@@ -2408,7 +2482,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
 
   const tasksByDate = useMemo(() => {
     const map = {};
-    tasks.forEach(t => {
+    visibleByUser.forEach(t => {
       if (t.parentId) return;
       [t.endDate, t.startDate, t.due].filter(Boolean).forEach(s => {
         const m = String(s).match(/^\d{4}-\d{2}-\d{2}/);
@@ -2420,7 +2494,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
       });
     });
     return map;
-  }, [tasks]);
+  }, [visibleByUser]);
 
   const cells = [];
   for (let i = 0; i < 42; i++) {
@@ -2456,8 +2530,31 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
         <button onClick={() => setRefDate(new Date(year, month + 1, 1))} className="p-1.5 hover:opacity-70" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}><ChevronRight size={12} style={{ color: C.ink }} /></button>
         <button onClick={() => setRefDate(new Date())} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>Hoy</button>
         <div className="flex-1" />
-        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para agregar</div>
+        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para ver / agregar</div>
       </div>
+
+      {/* filtros por usuario · prender/apagar las tareas de cada uno */}
+      {(usersWithTasks.list.length > 0 || usersWithTasks.hayNadie) && (
+        <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9px] uppercase mr-1" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>Ver tareas de</span>
+          {usersWithTasks.list.map(u => {
+            const off = hiddenUsers.has(u.id);
+            return (
+              <button key={u.id} onClick={() => toggleUser(u.id)} title={off ? `Mostrar tareas de ${u.firstName}` : `Ocultar tareas de ${u.firstName}`}
+                className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 hover:opacity-90"
+                style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, backgroundColor: off ? "transparent" : C.surface, opacity: off ? 0.5 : 1 }}>
+                <Avatar personId={u.id} size={18} />
+                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500, textDecoration: off ? "line-through" : "none" }}>{u.firstName}</span>
+              </button>
+            );
+          })}
+          {usersWithTasks.hayNadie && (() => { const off = hiddenUsers.has("__none__"); return (
+            <button onClick={() => toggleUser("__none__")} className="text-[11px] px-2 py-1 hover:opacity-90"
+              style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, opacity: off ? 0.5 : 1, color: C.muted, textDecoration: off ? "line-through" : "none" }}>Sin asignar</button>
+          ); })()}
+          {hiddenUsers.size > 0 && <button onClick={() => setHiddenUsers(new Set())} className="text-[10px] px-2 py-1 hover:opacity-70" style={{ color: C.cobalt, fontWeight: 500 }}>ver todos</button>}
+        </div>
+      )}
 
       <div className="grid grid-cols-7 gap-px" style={{ backgroundColor: C.line, border: `1px solid ${C.line}` }}>
         {["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"].map(d => (
@@ -2467,7 +2564,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
           if (!cell) return <div key={i} style={{ backgroundColor: C.surface, minHeight: 90 }} />;
           const isSelected = selectedDate === cell.key;
           return (
-            <button key={i} onClick={() => setSelectedDate(isSelected ? null : cell.key)}
+            <button key={i} onClick={() => { setSelectedDate(cell.key); setDayModal(cell.key); }}
               className="text-left p-2 hover:opacity-90"
               style={{ backgroundColor: isSelected ? C.cobalt + "11" : C.bg, minHeight: 90, outline: isSelected ? `2px solid ${C.cobalt}` : "none", outlineOffset: -2 }}>
               <div className="flex items-center justify-between mb-1">
@@ -2520,6 +2617,45 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
           )}
         </div>
       )}
+
+      {/* popup del día · click en una celda */}
+      {dayModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => setDayModal(null)}>
+          <div className="w-full max-w-[460px] max-h-[76vh] flex flex-col" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+              <div>
+                <Eyebrow>{spaceName}</Eyebrow>
+                <div className="text-[15px] mt-1 capitalize" style={{ color: C.ink, fontWeight: 600 }}>{new Date(dayModal + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</div>
+              </div>
+              <button onClick={() => setDayModal(null)} className="hover:opacity-70"><X size={14} style={{ color: C.muted }} /></button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              {onCreate && (
+                <form onSubmit={(e) => { e.preventDefault(); if (!quickText.trim() || !onCreate) return; onCreate({ title: quickText.trim(), startDate: dayModal, endDate: dayModal, due: dayModal, space: currentSpace }); setQuickText(""); }} className="flex items-center gap-2 mb-4">
+                  <input value={quickText} onChange={e => setQuickText(e.target.value)} placeholder="Nueva tarea en este día…" autoFocus
+                    className="flex-1 px-3 py-2 outline-none text-[13px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} />
+                  <button type="submit" disabled={!quickText.trim()} className="px-3 py-2 text-[11px] hover:opacity-90" style={{ backgroundColor: quickText.trim() ? C.ink : C.muted, color: C.bg, borderRadius: 2, fontWeight: 500, opacity: quickText.trim() ? 1 : 0.5 }}><Plus size={11} className="inline mr-1" />Crear</button>
+                </form>
+              )}
+              {(tasksByDate[dayModal] || []).length === 0 ? (
+                <div className="text-center py-6 text-[12px]" style={{ color: C.muted }}>Sin tareas este día.</div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.muted, fontWeight: 600 }}>{(tasksByDate[dayModal] || []).length} {(tasksByDate[dayModal] || []).length === 1 ? "tarea" : "tareas"}</div>
+                  {(tasksByDate[dayModal] || []).map(t => (
+                    <button key={t.id} onClick={() => { setDayModal(null); openDetail(t.id); }} className="w-full flex items-center gap-2 p-2 text-left hover:opacity-90"
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
+                      {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
+                      <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
+                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2527,7 +2663,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
 function TableView({ tasks, currentSpace, openDetail, allSpaces }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
   const filtered = tasks.filter(t => !t.parentId);
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1280px] mx-auto">
@@ -4937,7 +5073,13 @@ function NewTerrenoModal({ onClose, onCreate, initial }) {
   );
 }
 
-function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
+function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete, navigate }) {
+  // Growth como parent: el terreno abre SU proyecto en las apps hijas
+  const abrirEnApp = (appId) => {
+    proyectosStore.abrirParaTerreno(terreno);
+    onClose();
+    navigate && navigate(appId);
+  };
   const confirm = useConfirm();
   const askDelete = async () => {
     const ok = await confirm({ title: `Eliminar terreno "${terreno.name}"`, message: "Sale del pipeline de scouting · acción reversible con Cmd+Z.", danger: true, confirmLabel: "Eliminar terreno" });
@@ -5004,6 +5146,22 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete }) {
             )}
             <button onClick={askDelete} className="text-[10px] px-2 py-1 hover:opacity-90" style={{ color: C.brick, border: `1px solid ${C.brick}33`, borderRadius: 2 }}><Trash2 size={9} /></button>
           </div>
+          {navigate && (
+            <div className="flex items-center gap-1.5 flex-wrap mt-3">
+              <span className="text-[9px] uppercase" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>Abrir en</span>
+              {[
+                { id: "app-cabida", label: "Cabida", icon: Building2 },
+                { id: "app-editor", label: "Editor de Planos", icon: Pencil },
+                { id: "app-mesa", label: "Mesa de Trabajo", icon: StickyNote },
+              ].map(a => { const Ic = a.icon; return (
+                <button key={a.id} onClick={() => abrirEnApp(a.id)} title={`Abrir el proyecto de "${terreno.name}" en ${a.label}`}
+                  className="flex items-center gap-1 text-[10px] px-2 py-1 hover:opacity-90"
+                  style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>
+                  <Ic size={10} /> {a.label}
+                </button>
+              ); })}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1 px-5 lg:px-6 flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
@@ -5739,22 +5897,32 @@ function ProjectDashboard({ projectId }) {
   );
 }
 
-function GenericSpaceDashboard({ space, tasks }) {
+function GenericSpaceDashboard({ space, tasks, openDetail, onToggle }) {
   const spaceTasks = tasks.filter(t => t.space === space.id && !t.parentId);
+  const shown = spaceTasks.slice(0, 8);
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
-      <Hero eyebrow={`${space.name} · custom`} code={space.code || space.name.toUpperCase().slice(0, 6)} intro={<><strong>{spaceTasks.length} tareas</strong>. Dashboard se construye con el uso.</>} />
+      <Hero eyebrow={`${space.name} · custom`} code={space.code || space.name.toUpperCase().slice(0, 6)} intro={<><strong>{spaceTasks.length} {spaceTasks.length === 1 ? "tarea" : "tareas"}</strong>. Click una tarea para ver el detalle, asignar, comentar o borrar.</>} />
       <section className="mb-14"><SectionHead title="Tareas del space" />
         {spaceTasks.length === 0 ? (
           <Panel><div className="text-center py-8"><div className="text-[14px] mb-2" style={{ color: C.ink, fontWeight: 500 }}>Sin tareas</div></div></Panel>
         ) : (
-          <Panel>{spaceTasks.slice(0, 5).map((t, i) => (
-            <div key={t.id} className="py-3 flex items-center gap-3" style={{ borderBottom: i < Math.min(spaceTasks.length, 5) - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
-              {t.checked ? <CheckCircle2 size={14} style={{ color: C.green }} /> : <Circle size={14} style={{ color: C.muted }} />}
-              <div className="flex-1 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{t.title}</div>
+          <Panel>{shown.map((t, i) => (
+            <div key={t.id} onClick={() => openDetail && openDetail(t.id)}
+              className="py-3 flex items-center gap-3 cursor-pointer hover:opacity-80 -mx-2 px-2 rounded"
+              style={{ borderBottom: i < shown.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
+              <button onClick={(e) => { e.stopPropagation(); onToggle && onToggle(t.id); }} className="flex-shrink-0 hover:opacity-70" title={t.checked ? "Reabrir" : "Completar"}>
+                {t.checked ? <CheckCircle2 size={16} style={{ color: C.green }} /> : <Circle size={16} style={{ color: C.muted }} />}
+              </button>
+              <div className="flex-1 text-[13px] truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none", opacity: t.checked ? 0.55 : 1 }}>{t.title}</div>
+              {t.priority && <span className="text-[9px] uppercase px-1.5 py-0.5 flex-shrink-0" style={{ color: C.muted, letterSpacing: "0.08em" }}>{t.priority}</span>}
               {t.assignee && <Avatar personId={t.assignee} size={18} />}
             </div>
-          ))}</Panel>
+          ))}
+          {spaceTasks.length > shown.length && (
+            <div className="pt-3 text-[11px]" style={{ color: C.muted }}>+{spaceTasks.length - shown.length} más · abrí la vista <strong>Lista</strong> para verlas todas</div>
+          )}
+          </Panel>
         )}
       </section>
     </div>
@@ -5762,14 +5930,15 @@ function GenericSpaceDashboard({ space, tasks }) {
 }
 
 // ═══ MODALS ══════════════════════════════════════════════════════════════
-function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onStartTimer }) {
+function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onStartTimer, currentUserId }) {
   const flatSpaces = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const blob = useModalBlob();
+  const meId = currentUserId || "sb";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [spaceId, setSpaceId] = useState(currentSpace || "hq");
   const [subSpaceId, setSubSpaceId] = useState("");
-  const [assignee, setAssignee] = useState("sb");
+  const [assignee, setAssignee] = useState(meId);
   const [priority, setPriority] = useState("media");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -5779,7 +5948,10 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
   // Determine if selected space has sub-spaces. If currentSpace IS a sub-space, set parent + child accordingly.
   const isSubSpace = !flatSpaces.find(s => s.children?.length); // not used directly
   const parentOfCurrent = allSpaces.find(s => s.children?.some(c => c.id === currentSpace));
-  const initialParentId = parentOfCurrent ? parentOfCurrent.id : (currentSpace || "hq");
+  // si currentSpace no es un space real (ej. un tool como "mistareas"/"inbox"),
+  // caer en el primer space disponible en vez de asignar la tarea a un id inválido.
+  const currentIsRealSpace = flatSpaces.some(s => s.id === currentSpace);
+  const initialParentId = parentOfCurrent ? parentOfCurrent.id : (currentIsRealSpace ? currentSpace : (allSpaces[0]?.id || "hq"));
   const initialSubId = parentOfCurrent ? currentSpace : "";
 
   useEffect(() => {
@@ -5787,7 +5959,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
       setTitle(""); setDescription("");
       setSpaceId(initialParentId);
       setSubSpaceId(initialSubId);
-      setAssignee("sb");
+      setAssignee(meId);
       setPriority("media");
       const today = new Date().toISOString().slice(0, 10);
       setStartDate(today);
@@ -9229,11 +9401,24 @@ function FilterPopover({ open, onClose, filters, setFilters, users, allSpaces, c
   );
 }
 // ═══ CALENDAR TOOL · month view across all spaces ═══════════════════════
-function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
+function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = [] }) {
   const [refDate, setRefDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [dayModal, setDayModal] = useState(null);
+  const [hiddenUsers, setHiddenUsers] = useState(() => new Set());
   const [quickText, setQuickText] = useState("");
   const [events, setEvents] = useState([]);
+
+  const usersWithTasks = useMemo(() => {
+    const ids = new Set(); let hayNadie = false;
+    tasks.forEach(t => { if (t.parentId) return; if (t.assignee) ids.add(t.assignee); else hayNadie = true; });
+    return { list: users.filter(u => ids.has(u.id)), hayNadie };
+  }, [tasks, users]);
+  const toggleUser = (id) => setHiddenUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const visibleByUser = useMemo(
+    () => tasks.filter(t => (t.assignee ? !hiddenUsers.has(t.assignee) : !hiddenUsers.has("__none__"))),
+    [tasks, hiddenUsers]
+  );
   // Eventos reales de Google Calendar del usuario (los que Alicia también ve)
   useEffect(() => {
     let alive = true;
@@ -9256,7 +9441,8 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
 
   const tasksByDate = useMemo(() => {
     const map = {};
-    tasks.forEach(t => {
+    visibleByUser.forEach(t => {
+      if (t.parentId) return;
       const candidates = [t.endDate, t.startDate, t.due].filter(Boolean);
       candidates.forEach(s => {
         const m = String(s).match(/^\d{4}-\d{2}-\d{2}/);
@@ -9268,7 +9454,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
       });
     });
     return map;
-  }, [tasks]);
+  }, [visibleByUser]);
 
   const eventsByDate = useMemo(() => {
     const map = {};
@@ -9315,8 +9501,31 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
         <button onClick={nextMonth} className="p-1.5 hover:opacity-70" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}><ChevronRight size={12} style={{ color: C.ink }} /></button>
         <button onClick={goToday} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>Hoy</button>
         <div className="flex-1" />
-        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para agregar evento</div>
+        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para ver / agregar</div>
       </div>
+
+      {/* filtros por usuario · prender/apagar las tareas de cada uno */}
+      {(usersWithTasks.list.length > 0 || usersWithTasks.hayNadie) && (
+        <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9px] uppercase mr-1" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>Ver tareas de</span>
+          {usersWithTasks.list.map(u => {
+            const off = hiddenUsers.has(u.id);
+            return (
+              <button key={u.id} onClick={() => toggleUser(u.id)} title={off ? `Mostrar tareas de ${u.firstName}` : `Ocultar tareas de ${u.firstName}`}
+                className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 hover:opacity-90"
+                style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, backgroundColor: off ? "transparent" : C.surface, opacity: off ? 0.5 : 1 }}>
+                <Avatar personId={u.id} size={18} />
+                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500, textDecoration: off ? "line-through" : "none" }}>{u.firstName}</span>
+              </button>
+            );
+          })}
+          {usersWithTasks.hayNadie && (() => { const off = hiddenUsers.has("__none__"); return (
+            <button onClick={() => toggleUser("__none__")} className="text-[11px] px-2 py-1 hover:opacity-90"
+              style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, opacity: off ? 0.5 : 1, color: C.muted, textDecoration: off ? "line-through" : "none" }}>Sin asignar</button>
+          ); })()}
+          {hiddenUsers.size > 0 && <button onClick={() => setHiddenUsers(new Set())} className="text-[10px] px-2 py-1 hover:opacity-70" style={{ color: C.cobalt, fontWeight: 500 }}>ver todos</button>}
+        </div>
+      )}
 
       <div className="grid grid-cols-7 gap-px" style={{ backgroundColor: C.line, border: `1px solid ${C.line}` }}>
         {["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"].map(d => (
@@ -9326,7 +9535,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
           if (!cell) return <div key={i} style={{ backgroundColor: C.surface, minHeight: 80 }} />;
           const isSelected = selectedDate === cell.key;
           return (
-            <button key={i} onClick={() => setSelectedDate(isSelected ? null : cell.key)}
+            <button key={i} onClick={() => { setSelectedDate(cell.key); setDayModal(cell.key); }}
               className="text-left p-2 hover:opacity-90"
               style={{ backgroundColor: isSelected ? C.cobalt + "11" : C.bg, minHeight: 80, outline: isSelected ? `2px solid ${C.cobalt}` : "none", outlineOffset: -2 }}>
               <div className="flex items-center justify-between mb-1">
@@ -9392,6 +9601,56 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* popup del día · click en una celda */}
+      {dayModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => setDayModal(null)}>
+          <div className="w-full max-w-[460px] max-h-[76vh] flex flex-col" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+              <div>
+                <Eyebrow>Calendario</Eyebrow>
+                <div className="text-[15px] mt-1 capitalize" style={{ color: C.ink, fontWeight: 600 }}>{new Date(dayModal + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</div>
+              </div>
+              <button onClick={() => setDayModal(null)} className="hover:opacity-70"><X size={14} style={{ color: C.muted }} /></button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              <form onSubmit={(e) => { e.preventDefault(); if (!quickText.trim()) return; onCreate({ title: quickText.trim(), startDate: dayModal, endDate: dayModal, due: dayModal }); setQuickText(""); }} className="flex items-center gap-2 mb-4">
+                <input value={quickText} onChange={e => setQuickText(e.target.value)} placeholder="Nueva tarea en este día…" autoFocus
+                  className="flex-1 px-3 py-2 outline-none text-[13px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} />
+                <button type="submit" disabled={!quickText.trim()} className="px-3 py-2 text-[11px] hover:opacity-90" style={{ backgroundColor: quickText.trim() ? C.ink : C.muted, color: C.bg, borderRadius: 2, fontWeight: 500, opacity: quickText.trim() ? 1 : 0.5 }}><Plus size={11} className="inline mr-1" />Crear</button>
+              </form>
+              {(eventsByDate[dayModal] || []).length > 0 && (
+                <div className="space-y-1.5 mb-4">
+                  <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.cobalt, fontWeight: 600 }}>Calendario · {(eventsByDate[dayModal] || []).length}</div>
+                  {(eventsByDate[dayModal] || []).map(ev => (
+                    <div key={ev.id} className="flex items-center gap-2 p-2" style={{ backgroundColor: C.cobalt + "0D", border: `1px solid ${C.cobalt}33`, borderRadius: 2 }}>
+                      <CalIcon size={12} style={{ color: C.cobalt, flexShrink: 0 }} />
+                      <span className="text-[11px]" style={{ color: C.cobalt, fontWeight: 600, minWidth: 34 }}>{hhmm(ev.start) || "—"}</span>
+                      <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500 }}>{ev.title}</span>
+                      {ev.meetLink && <a href={ev.meetLink} target="_blank" rel="noopener noreferrer" className="text-[10px] hover:opacity-70" style={{ color: C.cobalt, fontWeight: 600 }}>Unirse</a>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(tasksByDate[dayModal] || []).length === 0 && (eventsByDate[dayModal] || []).length === 0 ? (
+                <div className="text-center py-6 text-[12px]" style={{ color: C.muted }}>Nada este día.</div>
+              ) : (tasksByDate[dayModal] || []).length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.muted, fontWeight: 600 }}>{(tasksByDate[dayModal] || []).length} {(tasksByDate[dayModal] || []).length === 1 ? "tarea" : "tareas"}</div>
+                  {(tasksByDate[dayModal] || []).map(t => (
+                    <button key={t.id} onClick={() => { setDayModal(null); openDetail(t.id); }} className="w-full flex items-center gap-2 p-2 text-left hover:opacity-90"
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
+                      {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
+                      <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
+                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -14106,6 +14365,15 @@ export default function HyggeOS({ authUser } = {}) {
   // ERP sync — loaded debe estar declarado antes de este hook
   const { pushNewTask, pushTaskUpdate, pushNewEvent } = useERPSync({ tasks, setTasks, currentUser, loaded });
 
+  // Realtime cross-usuario: cuando otro miembro crea/edita/borra una tarea en
+  // Supabase, se refleja en vivo sin recargar (respeta RLS; requiere las policies
+  // de supabase/rls-policies.sql). Solo tras la carga inicial.
+  useEffect(() => {
+    if (!loaded) return;
+    const unsub = db.subscribeTasks((change) => setTasks(prev => mergeRealtimeTask(prev, change)));
+    return unsub;
+  }, [loaded]);
+
   // ─── UNDO SYSTEM · last 10 destructive actions ───
   const [undoStack, setUndoStack] = useState([]); // [{ label, snapshot, ts }]
   // Agent registry · cada agente reporta su última corrida acá · Dark Alice lo orquesta
@@ -15031,7 +15299,7 @@ REGLAS:
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
         if (app.id === "app-velocity") return <MercadoView />;
         if (app.id === "app-cabida")   return <CabidaView />;
-        if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos /></div>;
+        if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos navigate={navigate} /></div>;
         if (app.id === "app-mesa")     return <MesaDeTrabajo />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
@@ -15060,7 +15328,7 @@ REGLAS:
       );
     }
     if (currentSpace === "calendar-tool") {
-      return <CalendarToolView tasks={tasks} openDetail={openDetail} onCreate={createFromSmartCapture} userId={currentUser?.id || authUser?.id || "sb"} />;
+      return <CalendarToolView tasks={tasks} openDetail={openDetail} onCreate={createFromSmartCapture} userId={currentUser?.id || authUser?.id || "sb"} users={users} />;
     }
     if (currentSpace === "wikihygge") {
       return <WikiHyggeView openDetail={openDetail} allSpaces={allSpaces} spaceViewports={spaceViewports} setSpaceViewports={setSpaceViewports} knowledgeLinks={knowledgeLinks} setKnowledgeLinks={setKnowledgeLinks} navigate={navigate} />;
@@ -15096,6 +15364,14 @@ REGLAS:
     if (currentSpace === "notifications") {
       return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} />;
     }
+    if (currentSpace === "mistareas") {
+      // Tareas asignadas al usuario actual, across TODOS los spaces (no space-scoped).
+      // Incluye el padre de cada match para que el árbol renderice completo.
+      const mineIds = new Set();
+      tasks.forEach(t => { if (t.assignee === currentUserId) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
+      const misTareas = tasks.filter(t => mineIds.has(t.id));
+      return <ListView tasks={misTareas} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace="mistareas" allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
+    }
     // LAB · agentes Wonderland en el sidebar
     if (currentSpace && currentSpace.startsWith("lab-")) {
       return <LabView labId={currentSpace}
@@ -15115,7 +15391,7 @@ REGLAS:
     if (view === "list") return <ListView tasks={visibleTasks} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace={currentSpace} allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
     if (view === "board") return <BoardView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} setTaskStatus={setTaskStatus} />;
     if (view === "gantt") return <GanttView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} />;
-    if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} />;
+    if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} users={users} />;
     if (view === "table") return <TableView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} />;
     if (view === "archivos") return <SpaceArchivosView spaceId={currentSpace} />;
     if (view === "viewport") return <ViewportView spaceId={currentSpace} currentSpace={currentSpace} viewports={spaceViewports} setViewports={setSpaceViewports} />;
@@ -15146,7 +15422,7 @@ REGLAS:
     if (currentSpace === "growth") return <GrowthDashboard terrenos={terrenos} onSelect={setSelectedTerrenoId} onCreate={createTerreno} onUpdate={updateTerreno} selectedTerrenoId={selectedTerrenoId} />;
     if (PROJECT_CONFIGS[currentSpace]) return <ProjectDashboard projectId={currentSpace} />;
     const customSpace = customSpaces.find(s => s.id === currentSpace);
-    if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} />;
+    if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} openDetail={openDetail} onToggle={toggleTask} />;
     return <HQDashboard totalSales={totalSales} totalTarget={totalTarget} totalSold={totalSold} totalUnits={totalUnits} onOpenSpace={navigate} spvs={spvs} setSpvs={setSpvs} cifras={hqCifras} setCifras={setHqCifras} isAdmin={authUser?.isAdmin} />;
   })();
 
@@ -15254,7 +15530,7 @@ REGLAS:
         openCreateSpace={() => setCreateSpaceOpen(true)}
         openSettings={() => setSettingsOpen(true)}
       />
-      <QuickAdd open={addOpen} onClose={() => setAddOpen(false)} onCreate={addTask} allSpaces={allSpaces} users={users} currentSpace={currentSpace} onStartTimer={startTimer} />
+      <QuickAdd open={addOpen} onClose={() => setAddOpen(false)} onCreate={addTask} allSpaces={allSpaces} users={users} currentSpace={currentSpace} onStartTimer={startTimer} currentUserId={currentUserId} />
       <CreateSpaceModal open={createSpaceOpen} onClose={() => setCreateSpaceOpen(false)} onCreate={(name, color) => createCustomSpace(name, color, createSpaceParent?.id || null)} parentSpace={createSpaceParent} />
       <DeleteSpaceModal
         open={!!deleteSpaceTarget}
@@ -15351,7 +15627,7 @@ REGLAS:
       />
       <AIChatPanel open={chatOpen} onClose={() => setChatOpen(false)} conversation={conversation} sending={chatSending} sendMessage={sendToHygge} />
       <TaskDetailPanel task={detailTask} allTasks={tasks} allSpaces={allSpaces} onClose={() => setDetailTaskId(null)} onUpdate={updateTask} onToggle={toggleTask} onAddComment={addComment} onAddAttachment={addAttachment} onRemoveAttachment={removeAttachment} onAddSubtask={addSubtask} onDuplicate={duplicateTask} setTaskStatus={setTaskStatus} onDelete={deleteTaskCascade} />
-      <TerrenoDetailPanel terreno={terrenos.find(t => t.id === selectedTerrenoId)} users={users} onClose={() => setSelectedTerrenoId(null)} onUpdate={updateTerreno} onDelete={deleteTerreno} />
+      <TerrenoDetailPanel terreno={terrenos.find(t => t.id === selectedTerrenoId)} users={users} onClose={() => setSelectedTerrenoId(null)} onUpdate={updateTerreno} onDelete={deleteTerreno} navigate={navigate} />
       {customViewEditOpen && (
         <CustomViewConfigModal initial={customViewEditInitial}
           onClose={() => { setCustomViewEditOpen(false); setCustomViewEditInitial(null); }}

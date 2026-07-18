@@ -275,6 +275,7 @@ export default function EsquemaPlanta({
   terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
   frente, tipoLote, retiros, lotePoly, cadInfo,
   frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
+  soloPlanta = false,
 }) {
   const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
@@ -352,6 +353,7 @@ export default function EsquemaPlanta({
           {retiros?.ochavo?.on && tipoLote === "esquina" ? ` · ochavo ${retiros.ochavo.v}m` : ""}
         </span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          {!soloPlanta && (
           <button onClick={() => setShow3D((v) => !v)} style={{
             fontFamily: mono, fontSize: 10.5, color: show3D ? C.card : C.ink,
             background: show3D ? C.ink : C.paper, border: `1px solid ${show3D ? C.ink : C.line}`,
@@ -359,6 +361,7 @@ export default function EsquemaPlanta({
           }}>
             {show3D ? "▣ masa 3D" : "◱ masa 3D"}
           </button>
+          )}
           <button onClick={descargar} style={{
             fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper,
             border: `1px solid ${C.line}`, borderRadius: 2, padding: "6px 12px", cursor: "pointer",
@@ -374,7 +377,7 @@ export default function EsquemaPlanta({
       ))}
 
       {/* planta + corte */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 2.4fr) minmax(140px, 1fr)", gap: 20, paddingTop: 16, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: soloPlanta ? "1fr" : "minmax(260px, 2.4fr) minmax(140px, 1fr)", gap: 20, paddingTop: 16, alignItems: "start" }}>
         <div>
           {real && parti ? (
             <>
@@ -417,10 +420,12 @@ export default function EsquemaPlanta({
             </>
           )}
         </div>
+        {!soloPlanta && (
         <div>
           <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, marginBottom: 8 }}>corte esquemático</div>
           <Corte e={e} pisos={pisos} pisosSot={pisosSot} azoteaTechada={azoteaTechada} />
         </div>
+        )}
       </div>
 
       {/* masa volumétrica 3D orbitable */}
