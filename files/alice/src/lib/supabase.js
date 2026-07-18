@@ -45,6 +45,19 @@ export const db = {
     if (error) throw error;
   },
 
+  // Realtime: escucha INSERT/UPDATE/DELETE de la tabla tasks (respeta RLS).
+  // onChange({ type, task?, id? }). Devuelve fn de cleanup para desuscribir.
+  subscribeTasks(onChange) {
+    const ch = supabase
+      .channel("tasks-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (payload) => {
+        if (payload.eventType === "DELETE") onChange({ type: "DELETE", id: payload.old?.id });
+        else onChange({ type: payload.eventType, task: fromRow(payload.new) });
+      })
+      .subscribe();
+    return () => { try { supabase.removeChannel(ch); } catch { /* noop */ } };
+  },
+
   // ─── terrenos ─────────────────────────────────────────────
   async getTerrenos() {
     const { data, error } = await supabase.from("terrenos").select("*").order("created_at", { ascending: false });
