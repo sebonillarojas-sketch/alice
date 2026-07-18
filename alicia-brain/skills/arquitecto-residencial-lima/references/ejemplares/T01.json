@@ -1,0 +1,55 @@
+{
+  "id": "T01",
+  "nombre": "1D/1B estándar Lima Moderna — sala-comedor con kitchenette abierta",
+  "area_techada": 40.6,
+  "frente_m": 6.6,
+  "fondo_m": 6.15,
+  "ambientes": [
+    {
+      "nombre": "sala-comedor",
+      "poligono": [[0.15, 0.15], [3.30, 0.15], [3.30, 6.00], [1.35, 6.00], [1.35, 3.90], [0.15, 3.90]],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [[3.45, 0.15], [6.45, 0.15], [6.45, 6.00], [5.25, 6.00], [5.25, 3.70], [3.45, 3.70]],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [[3.45, 3.85], [5.10, 3.85], [5.10, 6.00], [3.45, 6.00]],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavandería",
+      "poligono": [[0.15, 4.05], [1.20, 4.05], [1.20, 6.00], [0.15, 6.00]],
+      "zona": "servicio",
+      "luz": false
+    }
+  ],
+  "muros": [
+    {"a": [0.0, 0.075], "b": [6.60, 0.075], "espesor": 0.15, "portante": true},
+    {"a": [0.0, 6.075], "b": [6.60, 6.075], "espesor": 0.15, "portante": true},
+    {"a": [0.075, 0.0], "b": [0.075, 6.15], "espesor": 0.15, "portante": true},
+    {"a": [6.525, 0.0], "b": [6.525, 6.15], "espesor": 0.15, "portante": true},
+    {"a": [3.375, 0.15], "b": [3.375, 6.00], "espesor": 0.15, "portante": false},
+    {"a": [3.45, 3.775], "b": [5.10, 3.775], "espesor": 0.15, "portante": false},
+    {"a": [5.175, 3.85], "b": [5.175, 6.00], "espesor": 0.15, "portante": false},
+    {"a": [1.275, 4.05], "b": [1.275, 6.00], "espesor": 0.15, "portante": false},
+    {"a": [0.15, 3.975], "b": [1.20, 3.975], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "baño 1", "ancho": 0.70},
+    {"de": "sala-comedor", "a": "lavandería", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "sala-comedor", "ancho": 1.80, "alto": 1.20, "alfeizar": 1.00},
+    {"ambiente": "dormitorio principal", "ancho": 1.50, "alto": 1.20, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.15, 6.075], "b": [5.10, 6.075]}
+}

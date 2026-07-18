@@ -1,8 +1,10 @@
 // Feyd-Rautha 🗡️ · arquitecto residencial de BAM (agente aparte de Alicia)
 // Existe para que Alicia NO cargue Neufert/RNE/tipologías en su system prompt:
 // la personalidad de Alicia queda intacta y el conocimiento pesado vive acá.
-// Su cerebro es el skill .claude/skills/arquitecto-residencial-lima (raíz del repo);
-// en deploys donde el repo no viaja completo, seteá ARQUITECTO_SKILL_DIR.
+// Su cerebro es el skill arquitecto-residencial-lima. Vive en DOS lugares que hay que
+// mantener sincronizados: .claude/skills/ (raíz — lo lee el harness de Claude Code) y
+// alicia-brain/skills/ (copia que SÍ viaja al contenedor de Railway, porque el build
+// no incluye el dotdir .claude/). Si editás uno, copiá al otro. Override: ARQUITECTO_SKILL_DIR.
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
