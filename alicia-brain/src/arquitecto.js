@@ -27,17 +27,24 @@ export function arquitectoDisponible() {
   return Boolean(skillDir());
 }
 
-let skillCache = null;
-function cargarSkill() {
-  if (skillCache) return skillCache;
+// Dos perfiles del skill para no pagar latencia de más:
+//  - "full" (diseñar desde cero): necesita los ejemplares few-shot y Neufert → ~32k tok
+//  - "corregir" (auditar una planta existente): SKILL + RNE + checklist alcanzan → ~13k tok
+//    (auditar no necesita las 12 tipologías ni Neufert completo → 59% menos input, ~2x más rápido)
+const REFS_FULL = ["rne.md", "neufert.md", "tipologias-lima.md", "checklist-validacion.md"];
+const REFS_CORREGIR = ["rne.md", "checklist-validacion.md"];
+const skillCache = {};
+function cargarSkill(modo = "full") {
+  if (skillCache[modo]) return skillCache[modo];
   const dir = skillDir();
   if (!dir) throw new Error("skill arquitecto-residencial-lima no encontrada — seteá ARQUITECTO_SKILL_DIR");
-  const refs = ["rne.md", "neufert.md", "tipologias-lima.md", "checklist-validacion.md"]
+  const lista = modo === "corregir" ? REFS_CORREGIR : REFS_FULL;
+  const refs = lista
     .filter(f => existsSync(join(dir, "references", f)))
     .map(f => `\n\n<!-- references/${f} -->\n${readFileSync(join(dir, "references", f), "utf8")}`)
     .join("");
-  skillCache = readFileSync(join(dir, "SKILL.md"), "utf8") + refs;
-  return skillCache;
+  skillCache[modo] = readFileSync(join(dir, "SKILL.md"), "utf8") + refs;
+  return skillCache[modo];
 }
 
 const PERSONA = `Sos Feyd-Rautha 🗡️, el arquitecto residencial de BAM (Hygge Holding, Lima).
@@ -54,29 +61,33 @@ Seguí la metodología del skill al pie de la letra, incluida la autocrítica co
 references/checklist-validacion.md antes de entregar — ítem por ítem, sin piedad.`;
 
 function extraerJSON(texto) {
-  const ini = texto.indexOf("{");
-  const fin = texto.lastIndexOf("}");
-  if (ini === -1 || fin <= ini) throw new Error("Feyd-Rautha no devolvió JSON");
-  return JSON.parse(texto.slice(ini, fin + 1));
+  let t = (texto || "").trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);   // sacar fences si el modelo los puso
+  if (fence) t = fence[1];
+  const ini = t.indexOf("{");
+  const fin = t.lastIndexOf("}");
+  if (ini === -1 || fin <= ini) throw new Error("Feyd-Rautha no devolvió JSON (respuesta cortada o vacía)");
+  return JSON.parse(t.slice(ini, fin + 1));
 }
 
 // brief: { dormitorios, banos, area_m2, frente_m, fondo_m, fachadas, notas } — todo opcional;
 // lo no especificado se completa con la estadística de mercado del skill.
 export async function disenarPlano(brief, { autocritica = true } = {}) {
   // El skill entero va como bloque cacheado: iteraciones y pedidos seguidos pagan solo el delta.
-  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill()}`, cache_control: { type: "ephemeral" } }];
+  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill("full")}`, cache_control: { type: "ephemeral" } }];
   const messages = [{
     role: "user",
     content: `Diseñá una planta con este brief (completá lo no especificado con la estadística de mercado del skill):\n${JSON.stringify(brief ?? {}, null, 1)}\n\nRespondé ÚNICAMENTE con el JSON estricto del layout — sin markdown, sin comentarios.`,
   }];
-  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 8000, system, messages });
+  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 12000, system, messages });
   let texto = r1.content.find(b => b.type === "text")?.text || "";
   if (autocritica) {
+    // 2ª llamada reusa el MISMO system block → pega en el cache de prompt (barata)
     messages.push(
       { role: "assistant", content: texto },
       { role: "user", content: "Recorré references/checklist-validacion.md ítem por ítem contra tu layout. Si TODO pasa, repetí el mismo JSON idéntico; si algo falla, corregilo. Respondé solo el JSON." },
     );
-    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 8000, system, messages });
+    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 12000, system, messages });
     texto = r2.content.find(b => b.type === "text")?.text || texto;
   }
   return extraerJSON(texto);
@@ -85,16 +96,17 @@ export async function disenarPlano(brief, { autocritica = true } = {}) {
 // El Editor de Planos del ERP manda una planta existente (a veces solo ambientes,
 // sin muros/puertas/ventanas): Feyd la audita contra su checklist y la corrige.
 export async function corregirPlano(layout, notas = "") {
-  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill()}`, cache_control: { type: "ephemeral" } }];
+  // modo liviano: auditar no necesita el skill completo → ~2x más rápido que diseñar
+  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill("corregir")}`, cache_control: { type: "ephemeral" } }];
   const messages = [{
     role: "user",
     content: `Auditá y corregí esta planta que viene del editor de BAM.${notas ? ` Contexto: ${notas}.` : ""}
 ${JSON.stringify(layout)}
 
 Recorré references/checklist-validacion.md ítem por ítem contra la planta. Después corregila: mantené la huella, el frente y la intención del parti todo lo posible — cirugía, no demolición (salvo que esté indefendible, y en ese caso decilo en tu veredicto). Respondé ÚNICAMENTE con este JSON:
-{"veredicto": "<1-2 líneas en tu voz: qué opinás de la planta>", "problemas": ["<problema concreto + regla citada (RNE Art. / Neufert p. / CHK-XX)>", ...], "layout": <la planta corregida en tu formato estricto de layout>}
-Si la planta ya está impecable, decilo en el veredicto (sin regalar elogios) y devolvé el layout igual.`,
+{"veredicto": "<1-2 líneas en tu voz>", "problemas": ["<máx 8, los más graves; problema + regla citada (RNE Art. / CHK-XX)>"], "layout": <la planta corregida en tu formato estricto>}
+Sé conciso en veredicto y problemas para no cortar el JSON. Si la planta ya está impecable, decilo (sin regalar elogios) y devolvé el layout igual.`,
   }];
-  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 8000, system, messages });
+  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 12000, system, messages });
   return extraerJSON(r.content.find(b => b.type === "text")?.text || "");
 }

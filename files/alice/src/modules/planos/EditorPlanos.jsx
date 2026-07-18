@@ -966,6 +966,20 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         </div>
       </div>
 
+      {/* Feyd auditando · el análisis tarda ~30s, hay que mostrar que está trabajando */}
+      {feyd === "cargando" && (
+        <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
+          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
+          padding: "14px 16px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 10 }}>
+          <style>{"@keyframes feydspin{to{transform:rotate(360deg)}}"}</style>
+          <Sword size={14} color="#A85B5B" style={{ animation: "feydspin 1.4s linear infinite", flexShrink: 0 }} />
+          <div>
+            <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: C.ink }}>Feyd está destrozando tu planta…</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: C.soft, marginTop: 2 }}>audita contra RNE + checklist BAM · ~30s</div>
+          </div>
+        </div>
+      )}
+
       {/* veredicto de Feyd-Rautha 🗡️ */}
       {feyd && feyd !== "cargando" && (
         <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
