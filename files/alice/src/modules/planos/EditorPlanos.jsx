@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Comp
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, MessageCircle, Box, Sword,
+  Upload, Crosshair, RefreshCw, MessageCircle, Box, Sword, StickyNote,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
@@ -354,20 +354,20 @@ function FichaModal({ ficha, setFicha, onClose }) {
 
 // Wrapper: pestañas de proyecto (mismas que Cabida) + el editor keyed por proyecto.
 // Al saltar de pestaña se re-lee el plano de ESE proyecto; el dibujo ya no se borra.
-export default function EditorPlanos() {
+export default function EditorPlanos({ navigate }) {
   const { activo, store } = useProyectos();
   const guardar = useCallback((snap) => store.guardarPlano(activo.id, snap), [store, activo.id]);
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 520 }}>
       <ProyectoTabs />
       <div style={{ flex: 1, minHeight: 0 }}>
-        <EditorPlanosInner key={activo.id} proyecto={activo} onSavePlano={guardar} />
+        <EditorPlanosInner key={activo.id} proyecto={activo} onSavePlano={guardar} navigate={navigate} />
       </div>
     </div>
   );
 }
 
-function EditorPlanosInner({ proyecto, onSavePlano }) {
+function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
   const P = proyecto?.plano || {};                  // plano guardado del proyecto activo
@@ -822,6 +822,21 @@ function EditorPlanosInner({ proyecto, onSavePlano }) {
     URL.revokeObjectURL(a.href);
   };
 
+  // ── exportar a la Mesa de Trabajo ─────────────────────────
+  // la Mesa lee el plano de hygge:editorPlanos (STORE); el editor guarda en el
+  // project store, así que acá puenteamos: escribimos el snap actual en STORE,
+  // dejamos la Mesa apuntada a la pestaña Planos, y navegamos a la app.
+  const exportarAMesa = () => {
+    if (!rooms.length) return;
+    const fchr = { ...ficha, proyecto: ficha.proyecto || proyecto?.nombre };
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha: fchr };
+    try {
+      localStorage.setItem(STORE, JSON.stringify(snap));
+      localStorage.setItem("hygge:mesaTabInicial", "planos");
+    } catch { /* cuota */ }
+    if (navigate) navigate("app-mesa");
+  };
+
   // ── rejilla ───────────────────────────────────────────────
   const box = wrapRef.current?.getBoundingClientRect();
   const gridLines = [];
@@ -926,6 +941,7 @@ function EditorPlanosInner({ proyecto, onSavePlano }) {
         <Btn onClick={fitView} title="Encuadrar"><Maximize2 size={13} /></Btn>
         <Btn onClick={() => setShowFicha(true)} title="Editar membrete de la lámina">membrete</Btn>
         <Btn onClick={exportSVG} disabled={!rooms.length} title="Exportar lámina BAM (.svg)"><Download size={13} /> lámina</Btn>
+        <Btn onClick={exportarAMesa} disabled={!rooms.length || !navigate} title="Enviar esta lámina a la Mesa de Trabajo (pestaña Planos, formato horizontal)"><StickyNote size={13} /> → mesa de trabajo</Btn>
         <Btn onClick={consultarFeyd} disabled={!rooms.length || feyd === "cargando"}
           title="Feyd-Rautha 🗡️ audita la planta contra RNE + Neufert + checklist BAM y propone la corrección">
           <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd-rautha"}

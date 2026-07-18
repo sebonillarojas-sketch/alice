@@ -15090,7 +15090,7 @@ REGLAS:
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
         if (app.id === "app-velocity") return <MercadoView />;
         if (app.id === "app-cabida")   return <CabidaView />;
-        if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos /></div>;
+        if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos navigate={navigate} /></div>;
         if (app.id === "app-mesa")     return <MesaDeTrabajo />;
         return (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
