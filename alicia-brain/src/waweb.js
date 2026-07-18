@@ -175,6 +175,8 @@ function scheduleReconnect(delay) {
 }
 
 async function handleIncoming(m, baileys) {
+  const _jid = m.key?.remoteJid || "";
+  console.log(`📥 WA in: ${_jid} · fromMe=${m.key?.fromMe} · hasMsg=${!!m.message}`); // DIAG temporal
   if (!m.message || m.key.fromMe) return;
   const jid = m.key.remoteJid || "";
   // Solo chats directos: nada de grupos, status ni newsletters
