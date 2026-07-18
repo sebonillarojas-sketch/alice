@@ -2445,10 +2445,26 @@ function GanttView({ tasks, currentSpace, allSpaces, openDetail }) {
   );
 }
 
-function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) {
+function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate, users = [] }) {
   const [refDate, setRefDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [dayModal, setDayModal] = useState(null);        // día abierto en popup
+  const [hiddenUsers, setHiddenUsers] = useState(() => new Set()); // assignees apagados
   const [quickText, setQuickText] = useState("");
+
+  // usuarios que tienen alguna tarea con fecha en las tareas cargadas (para los chips)
+  const usersWithTasks = useMemo(() => {
+    const ids = new Set();
+    let hayNadie = false;
+    tasks.forEach(t => { if (t.parentId) return; if (t.assignee) ids.add(t.assignee); else hayNadie = true; });
+    const list = users.filter(u => ids.has(u.id));
+    return { list, hayNadie };
+  }, [tasks, users]);
+  const toggleUser = (id) => setHiddenUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const visibleByUser = useMemo(
+    () => tasks.filter(t => (t.assignee ? !hiddenUsers.has(t.assignee) : !hiddenUsers.has("__none__"))),
+    [tasks, hiddenUsers]
+  );
 
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
@@ -2466,7 +2482,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
 
   const tasksByDate = useMemo(() => {
     const map = {};
-    tasks.forEach(t => {
+    visibleByUser.forEach(t => {
       if (t.parentId) return;
       [t.endDate, t.startDate, t.due].filter(Boolean).forEach(s => {
         const m = String(s).match(/^\d{4}-\d{2}-\d{2}/);
@@ -2478,7 +2494,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
       });
     });
     return map;
-  }, [tasks]);
+  }, [visibleByUser]);
 
   const cells = [];
   for (let i = 0; i < 42; i++) {
@@ -2514,8 +2530,31 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
         <button onClick={() => setRefDate(new Date(year, month + 1, 1))} className="p-1.5 hover:opacity-70" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}><ChevronRight size={12} style={{ color: C.ink }} /></button>
         <button onClick={() => setRefDate(new Date())} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>Hoy</button>
         <div className="flex-1" />
-        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para agregar</div>
+        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para ver / agregar</div>
       </div>
+
+      {/* filtros por usuario · prender/apagar las tareas de cada uno */}
+      {(usersWithTasks.list.length > 0 || usersWithTasks.hayNadie) && (
+        <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9px] uppercase mr-1" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>Ver tareas de</span>
+          {usersWithTasks.list.map(u => {
+            const off = hiddenUsers.has(u.id);
+            return (
+              <button key={u.id} onClick={() => toggleUser(u.id)} title={off ? `Mostrar tareas de ${u.firstName}` : `Ocultar tareas de ${u.firstName}`}
+                className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 hover:opacity-90"
+                style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, backgroundColor: off ? "transparent" : C.surface, opacity: off ? 0.5 : 1 }}>
+                <Avatar personId={u.id} size={18} />
+                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500, textDecoration: off ? "line-through" : "none" }}>{u.firstName}</span>
+              </button>
+            );
+          })}
+          {usersWithTasks.hayNadie && (() => { const off = hiddenUsers.has("__none__"); return (
+            <button onClick={() => toggleUser("__none__")} className="text-[11px] px-2 py-1 hover:opacity-90"
+              style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, opacity: off ? 0.5 : 1, color: C.muted, textDecoration: off ? "line-through" : "none" }}>Sin asignar</button>
+          ); })()}
+          {hiddenUsers.size > 0 && <button onClick={() => setHiddenUsers(new Set())} className="text-[10px] px-2 py-1 hover:opacity-70" style={{ color: C.cobalt, fontWeight: 500 }}>ver todos</button>}
+        </div>
+      )}
 
       <div className="grid grid-cols-7 gap-px" style={{ backgroundColor: C.line, border: `1px solid ${C.line}` }}>
         {["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"].map(d => (
@@ -2525,7 +2564,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
           if (!cell) return <div key={i} style={{ backgroundColor: C.surface, minHeight: 90 }} />;
           const isSelected = selectedDate === cell.key;
           return (
-            <button key={i} onClick={() => setSelectedDate(isSelected ? null : cell.key)}
+            <button key={i} onClick={() => { setSelectedDate(cell.key); setDayModal(cell.key); }}
               className="text-left p-2 hover:opacity-90"
               style={{ backgroundColor: isSelected ? C.cobalt + "11" : C.bg, minHeight: 90, outline: isSelected ? `2px solid ${C.cobalt}` : "none", outlineOffset: -2 }}>
               <div className="flex items-center justify-between mb-1">
@@ -2576,6 +2615,45 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* popup del día · click en una celda */}
+      {dayModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => setDayModal(null)}>
+          <div className="w-full max-w-[460px] max-h-[76vh] flex flex-col" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+              <div>
+                <Eyebrow>{spaceName}</Eyebrow>
+                <div className="text-[15px] mt-1 capitalize" style={{ color: C.ink, fontWeight: 600 }}>{new Date(dayModal + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</div>
+              </div>
+              <button onClick={() => setDayModal(null)} className="hover:opacity-70"><X size={14} style={{ color: C.muted }} /></button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              {onCreate && (
+                <form onSubmit={(e) => { e.preventDefault(); if (!quickText.trim() || !onCreate) return; onCreate({ title: quickText.trim(), startDate: dayModal, endDate: dayModal, due: dayModal, space: currentSpace }); setQuickText(""); }} className="flex items-center gap-2 mb-4">
+                  <input value={quickText} onChange={e => setQuickText(e.target.value)} placeholder="Nueva tarea en este día…" autoFocus
+                    className="flex-1 px-3 py-2 outline-none text-[13px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} />
+                  <button type="submit" disabled={!quickText.trim()} className="px-3 py-2 text-[11px] hover:opacity-90" style={{ backgroundColor: quickText.trim() ? C.ink : C.muted, color: C.bg, borderRadius: 2, fontWeight: 500, opacity: quickText.trim() ? 1 : 0.5 }}><Plus size={11} className="inline mr-1" />Crear</button>
+                </form>
+              )}
+              {(tasksByDate[dayModal] || []).length === 0 ? (
+                <div className="text-center py-6 text-[12px]" style={{ color: C.muted }}>Sin tareas este día.</div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.muted, fontWeight: 600 }}>{(tasksByDate[dayModal] || []).length} {(tasksByDate[dayModal] || []).length === 1 ? "tarea" : "tareas"}</div>
+                  {(tasksByDate[dayModal] || []).map(t => (
+                    <button key={t.id} onClick={() => { setDayModal(null); openDetail(t.id); }} className="w-full flex items-center gap-2 p-2 text-left hover:opacity-90"
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
+                      {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
+                      <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
+                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -5819,22 +5897,32 @@ function ProjectDashboard({ projectId }) {
   );
 }
 
-function GenericSpaceDashboard({ space, tasks }) {
+function GenericSpaceDashboard({ space, tasks, openDetail, onToggle }) {
   const spaceTasks = tasks.filter(t => t.space === space.id && !t.parentId);
+  const shown = spaceTasks.slice(0, 8);
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
-      <Hero eyebrow={`${space.name} · custom`} code={space.code || space.name.toUpperCase().slice(0, 6)} intro={<><strong>{spaceTasks.length} tareas</strong>. Dashboard se construye con el uso.</>} />
+      <Hero eyebrow={`${space.name} · custom`} code={space.code || space.name.toUpperCase().slice(0, 6)} intro={<><strong>{spaceTasks.length} {spaceTasks.length === 1 ? "tarea" : "tareas"}</strong>. Click una tarea para ver el detalle, asignar, comentar o borrar.</>} />
       <section className="mb-14"><SectionHead title="Tareas del space" />
         {spaceTasks.length === 0 ? (
           <Panel><div className="text-center py-8"><div className="text-[14px] mb-2" style={{ color: C.ink, fontWeight: 500 }}>Sin tareas</div></div></Panel>
         ) : (
-          <Panel>{spaceTasks.slice(0, 5).map((t, i) => (
-            <div key={t.id} className="py-3 flex items-center gap-3" style={{ borderBottom: i < Math.min(spaceTasks.length, 5) - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
-              {t.checked ? <CheckCircle2 size={14} style={{ color: C.green }} /> : <Circle size={14} style={{ color: C.muted }} />}
-              <div className="flex-1 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{t.title}</div>
+          <Panel>{shown.map((t, i) => (
+            <div key={t.id} onClick={() => openDetail && openDetail(t.id)}
+              className="py-3 flex items-center gap-3 cursor-pointer hover:opacity-80 -mx-2 px-2 rounded"
+              style={{ borderBottom: i < shown.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
+              <button onClick={(e) => { e.stopPropagation(); onToggle && onToggle(t.id); }} className="flex-shrink-0 hover:opacity-70" title={t.checked ? "Reabrir" : "Completar"}>
+                {t.checked ? <CheckCircle2 size={16} style={{ color: C.green }} /> : <Circle size={16} style={{ color: C.muted }} />}
+              </button>
+              <div className="flex-1 text-[13px] truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none", opacity: t.checked ? 0.55 : 1 }}>{t.title}</div>
+              {t.priority && <span className="text-[9px] uppercase px-1.5 py-0.5 flex-shrink-0" style={{ color: C.muted, letterSpacing: "0.08em" }}>{t.priority}</span>}
               {t.assignee && <Avatar personId={t.assignee} size={18} />}
             </div>
-          ))}</Panel>
+          ))}
+          {spaceTasks.length > shown.length && (
+            <div className="pt-3 text-[11px]" style={{ color: C.muted }}>+{spaceTasks.length - shown.length} más · abrí la vista <strong>Lista</strong> para verlas todas</div>
+          )}
+          </Panel>
         )}
       </section>
     </div>
@@ -9313,11 +9401,24 @@ function FilterPopover({ open, onClose, filters, setFilters, users, allSpaces, c
   );
 }
 // ═══ CALENDAR TOOL · month view across all spaces ═══════════════════════
-function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
+function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = [] }) {
   const [refDate, setRefDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [dayModal, setDayModal] = useState(null);
+  const [hiddenUsers, setHiddenUsers] = useState(() => new Set());
   const [quickText, setQuickText] = useState("");
   const [events, setEvents] = useState([]);
+
+  const usersWithTasks = useMemo(() => {
+    const ids = new Set(); let hayNadie = false;
+    tasks.forEach(t => { if (t.parentId) return; if (t.assignee) ids.add(t.assignee); else hayNadie = true; });
+    return { list: users.filter(u => ids.has(u.id)), hayNadie };
+  }, [tasks, users]);
+  const toggleUser = (id) => setHiddenUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const visibleByUser = useMemo(
+    () => tasks.filter(t => (t.assignee ? !hiddenUsers.has(t.assignee) : !hiddenUsers.has("__none__"))),
+    [tasks, hiddenUsers]
+  );
   // Eventos reales de Google Calendar del usuario (los que Alicia también ve)
   useEffect(() => {
     let alive = true;
@@ -9340,7 +9441,8 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
 
   const tasksByDate = useMemo(() => {
     const map = {};
-    tasks.forEach(t => {
+    visibleByUser.forEach(t => {
+      if (t.parentId) return;
       const candidates = [t.endDate, t.startDate, t.due].filter(Boolean);
       candidates.forEach(s => {
         const m = String(s).match(/^\d{4}-\d{2}-\d{2}/);
@@ -9352,7 +9454,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
       });
     });
     return map;
-  }, [tasks]);
+  }, [visibleByUser]);
 
   const eventsByDate = useMemo(() => {
     const map = {};
@@ -9399,8 +9501,31 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
         <button onClick={nextMonth} className="p-1.5 hover:opacity-70" style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}><ChevronRight size={12} style={{ color: C.ink }} /></button>
         <button onClick={goToday} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.inkSoft, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>Hoy</button>
         <div className="flex-1" />
-        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para agregar evento</div>
+        <div className="text-[10px]" style={{ color: C.muted }}>Click un día para ver / agregar</div>
       </div>
+
+      {/* filtros por usuario · prender/apagar las tareas de cada uno */}
+      {(usersWithTasks.list.length > 0 || usersWithTasks.hayNadie) && (
+        <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9px] uppercase mr-1" style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>Ver tareas de</span>
+          {usersWithTasks.list.map(u => {
+            const off = hiddenUsers.has(u.id);
+            return (
+              <button key={u.id} onClick={() => toggleUser(u.id)} title={off ? `Mostrar tareas de ${u.firstName}` : `Ocultar tareas de ${u.firstName}`}
+                className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 hover:opacity-90"
+                style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, backgroundColor: off ? "transparent" : C.surface, opacity: off ? 0.5 : 1 }}>
+                <Avatar personId={u.id} size={18} />
+                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500, textDecoration: off ? "line-through" : "none" }}>{u.firstName}</span>
+              </button>
+            );
+          })}
+          {usersWithTasks.hayNadie && (() => { const off = hiddenUsers.has("__none__"); return (
+            <button onClick={() => toggleUser("__none__")} className="text-[11px] px-2 py-1 hover:opacity-90"
+              style={{ border: `1px solid ${off ? C.lineSoft : C.ink}`, borderRadius: 999, opacity: off ? 0.5 : 1, color: C.muted, textDecoration: off ? "line-through" : "none" }}>Sin asignar</button>
+          ); })()}
+          {hiddenUsers.size > 0 && <button onClick={() => setHiddenUsers(new Set())} className="text-[10px] px-2 py-1 hover:opacity-70" style={{ color: C.cobalt, fontWeight: 500 }}>ver todos</button>}
+        </div>
+      )}
 
       <div className="grid grid-cols-7 gap-px" style={{ backgroundColor: C.line, border: `1px solid ${C.line}` }}>
         {["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"].map(d => (
@@ -9410,7 +9535,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
           if (!cell) return <div key={i} style={{ backgroundColor: C.surface, minHeight: 80 }} />;
           const isSelected = selectedDate === cell.key;
           return (
-            <button key={i} onClick={() => setSelectedDate(isSelected ? null : cell.key)}
+            <button key={i} onClick={() => { setSelectedDate(cell.key); setDayModal(cell.key); }}
               className="text-left p-2 hover:opacity-90"
               style={{ backgroundColor: isSelected ? C.cobalt + "11" : C.bg, minHeight: 80, outline: isSelected ? `2px solid ${C.cobalt}` : "none", outlineOffset: -2 }}>
               <div className="flex items-center justify-between mb-1">
@@ -9476,6 +9601,56 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb" }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* popup del día · click en una celda */}
+      {dayModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ backgroundColor: "rgba(10,11,15,0.4)" }} onClick={() => setDayModal(null)}>
+          <div className="w-full max-w-[460px] max-h-[76vh] flex flex-col" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 4 }} onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+              <div>
+                <Eyebrow>Calendario</Eyebrow>
+                <div className="text-[15px] mt-1 capitalize" style={{ color: C.ink, fontWeight: 600 }}>{new Date(dayModal + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</div>
+              </div>
+              <button onClick={() => setDayModal(null)} className="hover:opacity-70"><X size={14} style={{ color: C.muted }} /></button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              <form onSubmit={(e) => { e.preventDefault(); if (!quickText.trim()) return; onCreate({ title: quickText.trim(), startDate: dayModal, endDate: dayModal, due: dayModal }); setQuickText(""); }} className="flex items-center gap-2 mb-4">
+                <input value={quickText} onChange={e => setQuickText(e.target.value)} placeholder="Nueva tarea en este día…" autoFocus
+                  className="flex-1 px-3 py-2 outline-none text-[13px]" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }} />
+                <button type="submit" disabled={!quickText.trim()} className="px-3 py-2 text-[11px] hover:opacity-90" style={{ backgroundColor: quickText.trim() ? C.ink : C.muted, color: C.bg, borderRadius: 2, fontWeight: 500, opacity: quickText.trim() ? 1 : 0.5 }}><Plus size={11} className="inline mr-1" />Crear</button>
+              </form>
+              {(eventsByDate[dayModal] || []).length > 0 && (
+                <div className="space-y-1.5 mb-4">
+                  <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.cobalt, fontWeight: 600 }}>Calendario · {(eventsByDate[dayModal] || []).length}</div>
+                  {(eventsByDate[dayModal] || []).map(ev => (
+                    <div key={ev.id} className="flex items-center gap-2 p-2" style={{ backgroundColor: C.cobalt + "0D", border: `1px solid ${C.cobalt}33`, borderRadius: 2 }}>
+                      <CalIcon size={12} style={{ color: C.cobalt, flexShrink: 0 }} />
+                      <span className="text-[11px]" style={{ color: C.cobalt, fontWeight: 600, minWidth: 34 }}>{hhmm(ev.start) || "—"}</span>
+                      <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500 }}>{ev.title}</span>
+                      {ev.meetLink && <a href={ev.meetLink} target="_blank" rel="noopener noreferrer" className="text-[10px] hover:opacity-70" style={{ color: C.cobalt, fontWeight: 600 }}>Unirse</a>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(tasksByDate[dayModal] || []).length === 0 && (eventsByDate[dayModal] || []).length === 0 ? (
+                <div className="text-center py-6 text-[12px]" style={{ color: C.muted }}>Nada este día.</div>
+              ) : (tasksByDate[dayModal] || []).length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[10px] tracking-[0.12em] uppercase mb-1" style={{ color: C.muted, fontWeight: 600 }}>{(tasksByDate[dayModal] || []).length} {(tasksByDate[dayModal] || []).length === 1 ? "tarea" : "tareas"}</div>
+                  {(tasksByDate[dayModal] || []).map(t => (
+                    <button key={t.id} onClick={() => { setDayModal(null); openDetail(t.id); }} className="w-full flex items-center gap-2 p-2 text-left hover:opacity-90"
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
+                      {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
+                      <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
+                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -15153,7 +15328,7 @@ REGLAS:
       );
     }
     if (currentSpace === "calendar-tool") {
-      return <CalendarToolView tasks={tasks} openDetail={openDetail} onCreate={createFromSmartCapture} userId={currentUser?.id || authUser?.id || "sb"} />;
+      return <CalendarToolView tasks={tasks} openDetail={openDetail} onCreate={createFromSmartCapture} userId={currentUser?.id || authUser?.id || "sb"} users={users} />;
     }
     if (currentSpace === "wikihygge") {
       return <WikiHyggeView openDetail={openDetail} allSpaces={allSpaces} spaceViewports={spaceViewports} setSpaceViewports={setSpaceViewports} knowledgeLinks={knowledgeLinks} setKnowledgeLinks={setKnowledgeLinks} navigate={navigate} />;
@@ -15216,7 +15391,7 @@ REGLAS:
     if (view === "list") return <ListView tasks={visibleTasks} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace={currentSpace} allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
     if (view === "board") return <BoardView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} setTaskStatus={setTaskStatus} />;
     if (view === "gantt") return <GanttView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} />;
-    if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} />;
+    if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} users={users} />;
     if (view === "table") return <TableView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} />;
     if (view === "archivos") return <SpaceArchivosView spaceId={currentSpace} />;
     if (view === "viewport") return <ViewportView spaceId={currentSpace} currentSpace={currentSpace} viewports={spaceViewports} setViewports={setSpaceViewports} />;
@@ -15247,7 +15422,7 @@ REGLAS:
     if (currentSpace === "growth") return <GrowthDashboard terrenos={terrenos} onSelect={setSelectedTerrenoId} onCreate={createTerreno} onUpdate={updateTerreno} selectedTerrenoId={selectedTerrenoId} />;
     if (PROJECT_CONFIGS[currentSpace]) return <ProjectDashboard projectId={currentSpace} />;
     const customSpace = customSpaces.find(s => s.id === currentSpace);
-    if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} />;
+    if (customSpace) return <GenericSpaceDashboard space={customSpace} tasks={visibleTasks} openDetail={openDetail} onToggle={toggleTask} />;
     return <HQDashboard totalSales={totalSales} totalTarget={totalTarget} totalSold={totalSold} totalUnits={totalUnits} onOpenSpace={navigate} spvs={spvs} setSpvs={setSpvs} cifras={hqCifras} setCifras={setHqCifras} isAdmin={authUser?.isAdmin} />;
   })();
 
