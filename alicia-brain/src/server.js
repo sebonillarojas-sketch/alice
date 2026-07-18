@@ -332,6 +332,12 @@ Con Sebastián NO sos una asistente — sos su mano derecha, quien lleva la empr
 
 ## Rol de innovación
 SOLO cuando se te ocurra algo genuinamente bueno (máximo una de cada 4-5 respuestas): 💡 **Idea ALICE:** [nombre] · [qué haría]. Si no hay nada que valga la pena, nada.`
+    : isAdmin(userId)
+    ? `## Modo: ADMIN (facultades ampliadas, con aprobación de Sebastián para lo sensible)
+Con ${profile?.name?.split(" ")[0] || "Vanessa"} sos más que una asistente: maneja la administración del equipo. PODÉS hacer sola, sin pedir permiso: asignar y priorizar tareas de cualquiera del equipo, agendar reuniones del equipo (chequeando disponibilidad), subir y organizar archivos.
+- Acciones SENSIBLES (enviar emails de verdad, mover archivos ajenos): las preparás pero NO se ejecutan hasta que Sebastián las apruebe. El sistema las encola y le avisa automáticamente — vos decile a ${profile?.name?.split(" ")[0] || "Vanessa"} que quedó a la espera del OK de Sebastián, NUNCA que ya está hecho.
+- Límites que siguen firmes: estrategia de la empresa, finanzas y datos personales de otros colaboradores son de Sebastián — no es tu terreno con ella.
+- Tono: cercano, ejecutivo, resolutivo.`
     : `## Modo: Asistente de productividad
 Con ${profile?.name?.split(" ")[0] || "el equipo"} tu misión es que produzca más y más rápido. Sos veloz y resolutiva:
 - Alcanzale archivos al instante, buscá en internet lo que necesite para su chamba, ayudalo a cerrar pendientes, armá y prioricé sus tareas, agendá sus reuniones, recordale fechas y links.
@@ -416,7 +422,7 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 // ── Agentic loop ──────────────────────────────────────────────────────────────
 
 // Herramientas para colaboradores (no-CEO): todo lo que los ayude a producir.
-// Gmail, recursos y knowledge-write quedan exclusivos del sub-CEO.
+// Gmail-send, recursos y knowledge-write quedan exclusivos del sub-CEO.
 const COLLAB_TOOLS = new Set([
   "create_task", "update_task", "get_tasks",
   "calendar_list", "calendar_create", "check_availability",
@@ -425,6 +431,74 @@ const COLLAB_TOOLS = new Set([
   "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
 ]);
+
+// ── Rol ADMIN (Vanessa) ── entre CEO y colaborador ──────────────────────────────
+// Facultades extra sobre un colaborador, pero lo SENSIBLE (enviar emails, mover
+// archivos ajenos) pasa por la aprobación del CEO antes de ejecutarse.
+const ADMIN_IDS = new Set(["vd"]);
+const isAdmin = (uid) => ADMIN_IDS.has(uid);
+const ADMIN_TOOLS = new Set([...COLLAB_TOOLS, "gmail_send", "dropbox_move"]);
+// Acciones de un admin que NO se ejecutan solas: requieren OK del CEO.
+const SENSITIVE_ADMIN = new Set(["gmail_send", "dropbox_move"]);
+
+function userIdToPhone(uid) {
+  const v = process.env[`PHONE_${uid}`];
+  return v ? v.trim() : null;
+}
+
+// Cola de aprobaciones pendientes { id, byUser, byName, tool, input, resumen, ts }.
+// Persistida en app_settings para sobrevivir redeploys.
+let pendingApprovals = [];
+function loadApprovals() {
+  try { pendingApprovals = JSON.parse(query("SELECT value FROM app_settings WHERE key='pending_approvals'").rows[0]?.value || "[]"); }
+  catch { pendingApprovals = []; }
+}
+function saveApprovals() {
+  try {
+    query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('pending_approvals', ?, datetime('now'))
+           ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`, [JSON.stringify(pendingApprovals)]);
+  } catch (e) { console.error("saveApprovals:", e.message); }
+}
+function resumenAccion(tool, input) {
+  if (tool === "gmail_send") return `enviar un email a ${input.to || "?"} · asunto: "${(input.subject || "").slice(0, 60)}"`;
+  if (tool === "dropbox_move") return `mover en Dropbox: ${input.from_path || "?"} → ${input.to_path || "?"}`;
+  return `${tool} ${JSON.stringify(input).slice(0, 80)}`;
+}
+// Un admin dispara una acción sensible → no se ejecuta; se encola y se avisa al CEO.
+async function encolarAprobacion(byUser, byName, tool, input) {
+  const id = Math.random().toString(36).slice(2, 7);
+  const resumen = resumenAccion(tool, input);
+  pendingApprovals.push({ id, byUser, byName, tool, input, resumen, ts: Date.now() });
+  saveApprovals();
+  const ceoPhone = userIdToPhone(CEO_ID);
+  if (ceoPhone) {
+    const { sendWA } = await import("./wa.js");
+    sendWA(ceoPhone, `🔐 *${byName}* quiere ${resumen}.\nRespondé *aprobar ${id}* o *rechazar ${id}*.`).catch(() => {});
+  }
+  return `Esta acción es sensible y necesita el OK de Sebastián. Ya se la pasé (código ${id}); le aviso a ${byName} en cuanto la apruebe o rechace. No la ejecutes vos.`;
+}
+// El CEO responde "aprobar <id>" / "rechazar <id>" → ejecuta o descarta y avisa al admin.
+async function resolverAprobacion(text) {
+  const m = text.trim().match(/^(aprobar|aprob[aá]|rechazar|rechaz[aá]|denegar)\s+([a-z0-9]{3,6})\b/i);
+  if (!m) return null;
+  const decision = /^(aprob)/i.test(m[1]) ? "ok" : "no";
+  const id = m[2].toLowerCase();
+  const idx = pendingApprovals.findIndex(a => a.id === id);
+  if (idx === -1) return `No encontré una aprobación con código ${id} (quizás ya se resolvió).`;
+  const a = pendingApprovals[idx];
+  pendingApprovals.splice(idx, 1); saveApprovals();
+  const adminPhone = userIdToPhone(a.byUser);
+  const { sendWA } = await import("./wa.js");
+  if (decision === "no") {
+    if (adminPhone) sendWA(adminPhone, `Sebastián rechazó tu pedido de ${a.resumen}. Si lo necesitás, hablalo con él.`).catch(() => {});
+    return `Rechazado. Le avisé a ${a.byName}.`;
+  }
+  let outcome;
+  try { const r = await executeTool(a.tool, a.input, a.byUser); outcome = `✅ ${a.resumen} — hecho.`; console.log(`✔ aprobación ${id} ejecutada:`, r?.slice?.(0, 80)); }
+  catch (e) { outcome = `⚠️ Aprobado, pero falló al ejecutar: ${e.message}`; }
+  if (adminPhone) sendWA(adminPhone, `Sebastián aprobó: ${a.resumen}. ${outcome.startsWith("✅") ? "Ya está hecho." : outcome}`).catch(() => {});
+  return `${outcome} (pedido de ${a.byName})`;
+}
 
 // Warm-up de contexto: Alicia entra "briefeada". Junta agenda + tareas UNA vez (cache 5 min
 // por usuario) y conversa fluido desde eso, sin loop de herramientas por mensaje para lo común.
@@ -459,15 +533,26 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   ]);
 
   const isCEO = userId === CEO_ID;
+  const admin = isAdmin(userId);
+
+  // El CEO resuelve aprobaciones pendientes con "aprobar <id>" / "rechazar <id>"
+  // — atajo antes del loop de IA, sin gastar un turno de modelo.
+  if (isCEO && pendingApprovals.length) {
+    const res = await resolverAprobacion(userText);
+    if (res) { await saveMessage(userId, "user", userText, channel); await saveMessage(userId, "assistant", res, channel); return { text: res, toolResults: [] }; }
+  }
+
   // Por defecto TODOS van con Sonnet (rápido, estable, barato). "Maximum effort" 🦸
   // (a lo Deadpool) activa Fable 5 SOLO para ese turno de Sebastián. Fable razona
   // internamente consumiendo del mismo max_tokens — con presupuesto chico el
   // razonamiento se lo come entero y la respuesta llega vacía, de ahí los 16000.
   const maximumEffort = isCEO && /(maximum|m[aá]ximo)\s+effort|m[aá]ximo\s+esfuerzo/i.test(userText);
   const model = maximumEffort ? "claude-fable-5" : "claude-sonnet-4-6";
-  const maxTokens = maximumEffort ? 16000 : (isCEO ? 3000 : 1200);
+  const maxTokens = maximumEffort ? 16000 : (isCEO || admin ? 3000 : 1200);
   if (maximumEffort) console.log(`🦸 [${userId}] MAXIMUM EFFORT — turno con Fable 5`);
-  const tools = isCEO ? ALICIA_TOOLS : ALICIA_TOOLS.filter(t => COLLAB_TOOLS.has(t.name));
+  const tools = isCEO ? ALICIA_TOOLS
+    : admin ? ALICIA_TOOLS.filter(t => ADMIN_TOOLS.has(t.name))
+    : ALICIA_TOOLS.filter(t => COLLAB_TOOLS.has(t.name));
 
   const systemPrompt = buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId);
   // Prompt caching: el system prompt y las tools son idénticos en cada iteración del loop
@@ -559,9 +644,15 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     for (const block of toolUseBlocks) {
       let result;
       try {
-        result = await executeTool(block.name, block.input, userId);
+        if (admin && SENSITIVE_ADMIN.has(block.name)) {
+          // acción sensible de un admin → no se ejecuta; se manda a aprobación del CEO
+          result = await encolarAprobacion(userId, profile?.name?.split(" ")[0] || userId, block.name, block.input);
+          console.log(`🔐 [${userId}] ${block.name} → aprobación CEO`);
+        } else {
+          result = await executeTool(block.name, block.input, userId);
+          console.log(`🔧 [${userId}] ${block.name}:`, JSON.stringify(block.input).slice(0, 100));
+        }
         toolResults.push({ tool: block.name, input: block.input, result });
-        console.log(`🔧 [${userId}] ${block.name}:`, JSON.stringify(block.input).slice(0, 100));
       } catch (e) {
         result = `Error al ejecutar ${block.name}: ${e.message}`;
         console.error(`Tool ${block.name} error:`, e.message);
@@ -1691,6 +1782,7 @@ app.listen(PORT, async () => {
 
   // Ensure market tables exist, seed projects from static file if empty
   ensureMarketSchema();
+  loadApprovals(); // aprobaciones pendientes de admins (sobreviven redeploys)
   try {
     const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
     const raw = await readFile(staticPath, "utf8");
