@@ -16,6 +16,16 @@
 -- Es idempotente (drop policy if exists antes de crear). Seguro re-correrlo.
 -- ────────────────────────────────────────────────────────────────────────────
 
+-- ── schema · columnas que la app escribe pero faltaban en la tabla ──────────
+-- CAUSA REAL del "total_tareas: 0" (18 jul 2026): toRow() en src/lib/supabase.js
+-- manda `status` y `archived` en cada tarea, pero la tabla no tenía esas columnas
+-- → cada INSERT fallaba con "column status does not exist", lo tragaba el
+-- .catch(console.error), y NINGUNA tarea llegaba a la base. Sin escritura no hay
+-- sync ni realtime. Esto lo destraba:
+alter table public.tasks
+  add column if not exists status   text    default 'pendiente',
+  add column if not exists archived boolean default false;
+
 -- ── tasks ───────────────────────────────────────────────────────────────────
 alter table public.tasks enable row level security;
 
