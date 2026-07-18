@@ -302,6 +302,7 @@ const LAB_TOOLS = [
 
 const TOOLS = [
   { id: "alicia", label: "Alicia", icon: Bot, dot: "#A855F7" },
+  { id: "mistareas", label: "Mis tareas", icon: CheckCircle2, dot: "#5F8A6A" },
   { id: "inbox", label: "Smart Capture", icon: InboxIcon, dot: "#3D52D5" },
   { id: "messages", label: "Mensajes", icon: MessageSquare, dot: "#A89BD9" },
   { id: "calendar-tool", label: "Calendario", icon: CalIcon, dot: "#5F8A6A" },
@@ -1037,6 +1038,11 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
     });
     return counts;
   }, [tasks]);
+  // conteo de tareas pendientes asignadas al usuario actual (badge de "Mis tareas")
+  const myTaskCount = useMemo(
+    () => (tasks || []).filter(t => !t.checked && t.assignee === currentUser?.id).length,
+    [tasks, currentUser]
+  );
   const sidebarTools = tools || TOOLS;
   const [labExpanded, setLabExpanded] = useState(() => {
     try { return JSON.parse(localStorage.getItem("hygge:labExpanded")) ?? false; }
@@ -1060,7 +1066,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
           {sidebarTools.map(t => {
             const Icon = t.icon;
             const isActive = t.id === currentSpace;
-            const badge = t.id === "inbox" ? inboxCount : t.id === "messages" ? messagesCount : t.id === "notifications" ? notifCount : 0;
+            const badge = t.id === "inbox" ? inboxCount : t.id === "messages" ? messagesCount : t.id === "notifications" ? notifCount : t.id === "mistareas" ? myTaskCount : 0;
             return (
               <button key={t.id} onClick={() => setSpace(t.id)}
                 className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:opacity-90"
@@ -2219,7 +2225,7 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
 function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, allSpaces, timerProps, setTaskStatus }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
   const all = tasks;
   const roots = all.filter(t => !t.parentId);
   const open = roots.filter(t => getTaskStatus(t) !== "completada");
@@ -2263,7 +2269,7 @@ function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, a
 function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
   const filtered = tasks.filter(t => !t.parentId);
   const cols = TASK_STATUSES.map(s => ({
     ...s,
@@ -2313,7 +2319,7 @@ function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }
 function GanttView({ tasks, currentSpace, allSpaces, openDetail }) {
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
 
   const parseDate = (s) => {
     if (!s) return null;
@@ -2431,7 +2437,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
 
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
 
   const year = refDate.getFullYear();
   const month = refDate.getMonth();
@@ -2564,7 +2570,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate }) 
 function TableView({ tasks, currentSpace, openDetail, allSpaces }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
-  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace);
+  const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
   const filtered = tasks.filter(t => !t.parentId);
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1280px] mx-auto">
@@ -5821,14 +5827,15 @@ function GenericSpaceDashboard({ space, tasks }) {
 }
 
 // ═══ MODALS ══════════════════════════════════════════════════════════════
-function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onStartTimer }) {
+function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onStartTimer, currentUserId }) {
   const flatSpaces = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const blob = useModalBlob();
+  const meId = currentUserId || "sb";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [spaceId, setSpaceId] = useState(currentSpace || "hq");
   const [subSpaceId, setSubSpaceId] = useState("");
-  const [assignee, setAssignee] = useState("sb");
+  const [assignee, setAssignee] = useState(meId);
   const [priority, setPriority] = useState("media");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -5838,7 +5845,10 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
   // Determine if selected space has sub-spaces. If currentSpace IS a sub-space, set parent + child accordingly.
   const isSubSpace = !flatSpaces.find(s => s.children?.length); // not used directly
   const parentOfCurrent = allSpaces.find(s => s.children?.some(c => c.id === currentSpace));
-  const initialParentId = parentOfCurrent ? parentOfCurrent.id : (currentSpace || "hq");
+  // si currentSpace no es un space real (ej. un tool como "mistareas"/"inbox"),
+  // caer en el primer space disponible en vez de asignar la tarea a un id inválido.
+  const currentIsRealSpace = flatSpaces.some(s => s.id === currentSpace);
+  const initialParentId = parentOfCurrent ? parentOfCurrent.id : (currentIsRealSpace ? currentSpace : (allSpaces[0]?.id || "hq"));
   const initialSubId = parentOfCurrent ? currentSpace : "";
 
   useEffect(() => {
@@ -5846,7 +5856,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
       setTitle(""); setDescription("");
       setSpaceId(initialParentId);
       setSubSpaceId(initialSubId);
-      setAssignee("sb");
+      setAssignee(meId);
       setPriority("media");
       const today = new Date().toISOString().slice(0, 10);
       setStartDate(today);
@@ -15155,6 +15165,14 @@ REGLAS:
     if (currentSpace === "notifications") {
       return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} />;
     }
+    if (currentSpace === "mistareas") {
+      // Tareas asignadas al usuario actual, across TODOS los spaces (no space-scoped).
+      // Incluye el padre de cada match para que el árbol renderice completo.
+      const mineIds = new Set();
+      tasks.forEach(t => { if (t.assignee === currentUserId) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
+      const misTareas = tasks.filter(t => mineIds.has(t.id));
+      return <ListView tasks={misTareas} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace="mistareas" allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
+    }
     // LAB · agentes Wonderland en el sidebar
     if (currentSpace && currentSpace.startsWith("lab-")) {
       return <LabView labId={currentSpace}
@@ -15313,7 +15331,7 @@ REGLAS:
         openCreateSpace={() => setCreateSpaceOpen(true)}
         openSettings={() => setSettingsOpen(true)}
       />
-      <QuickAdd open={addOpen} onClose={() => setAddOpen(false)} onCreate={addTask} allSpaces={allSpaces} users={users} currentSpace={currentSpace} onStartTimer={startTimer} />
+      <QuickAdd open={addOpen} onClose={() => setAddOpen(false)} onCreate={addTask} allSpaces={allSpaces} users={users} currentSpace={currentSpace} onStartTimer={startTimer} currentUserId={currentUserId} />
       <CreateSpaceModal open={createSpaceOpen} onClose={() => setCreateSpaceOpen(false)} onCreate={(name, color) => createCustomSpace(name, color, createSpaceParent?.id || null)} parentSpace={createSpaceParent} />
       <DeleteSpaceModal
         open={!!deleteSpaceTarget}
