@@ -16,6 +16,16 @@
 -- Es idempotente (drop policy if exists antes de crear). Seguro re-correrlo.
 -- ────────────────────────────────────────────────────────────────────────────
 
+-- ── schema · columnas que la app escribe pero faltaban en la tabla ──────────
+-- CAUSA REAL del "total_tareas: 0" (18 jul 2026): toRow() en src/lib/supabase.js
+-- manda `status` y `archived` en cada tarea, pero la tabla no tenía esas columnas
+-- → cada INSERT fallaba con "column status does not exist", lo tragaba el
+-- .catch(console.error), y NINGUNA tarea llegaba a la base. Sin escritura no hay
+-- sync ni realtime. Esto lo destraba:
+alter table public.tasks
+  add column if not exists status   text    default 'pendiente',
+  add column if not exists archived boolean default false;
+
 -- ── tasks ───────────────────────────────────────────────────────────────────
 alter table public.tasks enable row level security;
 
@@ -64,6 +74,20 @@ begin
     alter publication supabase_realtime add table public.tasks;
   end if;
 end $$;
+
+-- replica identity full: para que los eventos UPDATE/DELETE traigan la fila
+-- completa y el realtime pueda evaluar RLS sobre ella (INSERT ya anda sin esto).
+alter table public.tasks replica identity full;
+
+-- Diagnóstico (pegá el resultado si sigue sin andar en vivo):
+--   select
+--     (select count(*) from public.tasks) as total_tareas,
+--     exists(select 1 from pg_publication_tables
+--            where pubname='supabase_realtime' and schemaname='public' and tablename='tasks') as tasks_en_realtime,
+--     (select count(*) from pg_policies
+--            where schemaname='public' and tablename='tasks') as policies_en_tasks;
+-- Además: Supabase Dashboard → Database → Replication → asegurate que Realtime
+-- esté ON para public.tasks (algunos proyectos lo traen apagado por default).
 
 -- ── verificación rápida (opcional) ──────────────────────────────────────────
 -- Después de correrlo, esto debería listar las policies creadas:

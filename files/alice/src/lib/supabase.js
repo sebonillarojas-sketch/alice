@@ -48,14 +48,26 @@ export const db = {
   // Realtime: escucha INSERT/UPDATE/DELETE de la tabla tasks (respeta RLS).
   // onChange({ type, task?, id? }). Devuelve fn de cleanup para desuscribir.
   subscribeTasks(onChange) {
+    // El realtime aplica RLS con el JWT de la conexión: si no está seteado,
+    // conecta como anon y los eventos (policies `to authenticated`) no llegan.
+    // Lo seteamos explícitamente y re-seteamos en cada refresh de token.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) { try { supabase.realtime.setAuth(session.access_token); } catch { /* noop */ } }
+    });
+    const { data: authSub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.access_token) { try { supabase.realtime.setAuth(session.access_token); } catch { /* noop */ } }
+    });
     const ch = supabase
       .channel("tasks-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (payload) => {
         if (payload.eventType === "DELETE") onChange({ type: "DELETE", id: payload.old?.id });
         else onChange({ type: payload.eventType, task: fromRow(payload.new) });
       })
-      .subscribe();
-    return () => { try { supabase.removeChannel(ch); } catch { /* noop */ } };
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") console.log("🟢 realtime tasks · suscrito");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") console.warn("⚠️ realtime tasks:", status, "— revisá que public.tasks esté en la publicación supabase_realtime y que Realtime esté ON en el proyecto");
+      });
+    return () => { try { supabase.removeChannel(ch); } catch { /* noop */ } try { authSub?.subscription?.unsubscribe(); } catch { /* noop */ } };
   },
 
   // ─── terrenos ─────────────────────────────────────────────
