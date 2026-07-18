@@ -188,7 +188,6 @@ function resolverTelefono(m, jid) {
 }
 
 async function handleIncoming(m, baileys) {
-  console.log(`📥 WA in key: ${JSON.stringify(m.key)} · hasMsg=${!!m.message}`); // DIAG temporal
   if (!m.message || m.key.fromMe) return;
   const jid = m.key.remoteJid || "";
   // Chats directos por número (@s.whatsapp.net) O por LID (@lid, WhatsApp nuevo).

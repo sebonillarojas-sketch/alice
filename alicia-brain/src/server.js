@@ -689,11 +689,8 @@ async function downloadWACloudMedia(mediaId) {
 
 async function handleWAWebIncoming({ phone, text, media }) {
   const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, "")).filter(Boolean);
-  const ok = allowed.includes(phone.replace(/\D/g, ""));
-  const uid = phoneToUserId(phone);
-  console.log(`📱 WA in de ${phone} (dig ${phone.replace(/\D/g, "")}) · allowed=${ok} · userId=${uid} · allowlist=[${allowed.join(",")}]`); // DIAG temporal
-  if (!ok) return;
-  const userId = uid;
+  if (!allowed.includes(phone.replace(/\D/g, ""))) { console.log(`🚫 WA de ${phone} no autorizado`); return; }
+  const userId = phoneToUserId(phone);
   if (!userId) return;
 
   let userText = text, inputWasAudio = false;
