@@ -201,7 +201,8 @@ export default function MesaDeTrabajo() {
           @page { size: A4 landscape; margin: 0; }
           body.mesa-printing > *:not(.mesa-print) { display: none !important; }
           body.mesa-printing .mesa-print { position: static; left: 0; }
-          .mesa-print .mesa-a4 { box-shadow: none !important; break-after: page; page-break-after: always; }
+          .mesa-print .mesa-a4 { box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; }
+          .mesa-print .mesa-a4:not(:last-child) { break-after: page; page-break-after: always; }
           .mesa-noprint { display: none !important; }
         }
       `}</style>
@@ -295,7 +296,7 @@ export default function MesaDeTrabajo() {
             const cs = A4H / HALF;               // media hoja del board llena el alto A4
             const cl = (A4W - CW * cs) / 2;       // centrado horizontal
             return [0, 1].map((h) => (
-              <div key={`concepto-${h}`} className="mesa-a4" style={{ width: A4W, height: A4H, background: "#D6D4D0", overflow: "hidden", position: "relative" }}>
+              <div key={`concepto-${h}`} className="mesa-a4" style={{ width: A4W, height: A4H, background: "#D6D4D0", overflow: "hidden", position: "relative", contain: "layout paint size" }}>
                 <div style={{ transform: `scale(${cs})`, transformOrigin: "0 0", position: "absolute", left: cl, top: -h * HALF * cs, width: CW }}>
                   <ConceptoBam height={`${CH}px`} />
                 </div>

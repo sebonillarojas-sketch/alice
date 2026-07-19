@@ -50,24 +50,27 @@ export const db = {
   subscribeTasks(onChange) {
     // El realtime aplica RLS con el JWT de la conexión: si no está seteado,
     // conecta como anon y los eventos (policies `to authenticated`) no llegan.
-    // Lo seteamos explícitamente y re-seteamos en cada refresh de token.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.access_token) { try { supabase.realtime.setAuth(session.access_token); } catch { /* noop */ } }
-    });
-    const { data: authSub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session?.access_token) { try { supabase.realtime.setAuth(session.access_token); } catch { /* noop */ } }
-    });
-    const ch = supabase
-      .channel("tasks-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (payload) => {
-        if (payload.eventType === "DELETE") onChange({ type: "DELETE", id: payload.old?.id });
-        else onChange({ type: payload.eventType, task: fromRow(payload.new) });
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") console.log("🟢 realtime tasks · suscrito");
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") console.warn("⚠️ realtime tasks:", status, "— revisá que public.tasks esté en la publicación supabase_realtime y que Realtime esté ON en el proyecto");
-      });
-    return () => { try { supabase.removeChannel(ch); } catch { /* noop */ } try { authSub?.subscription?.unsubscribe(); } catch { /* noop */ } };
+    // CRÍTICO: hay que setear el token ANTES de .subscribe(); si suscribimos
+    // mientras getSession() todavía resuelve, el canal conecta sin auth y RLS
+    // silencia los eventos. Por eso ordenamos: getSession → setAuth → subscribe.
+    let ch = null, cancelled = false;
+    const attach = (t) => { if (t) { try { supabase.realtime.setAuth(t); } catch { /* noop */ } } };
+    (async () => {
+      try { const { data: { session } } = await supabase.auth.getSession(); attach(session?.access_token); } catch { /* noop */ }
+      if (cancelled) return;
+      ch = supabase
+        .channel("tasks-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (payload) => {
+          if (payload.eventType === "DELETE") onChange({ type: "DELETE", id: payload.old?.id });
+          else onChange({ type: payload.eventType, task: fromRow(payload.new) });
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") console.log("🟢 realtime tasks · suscrito");
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") console.warn("⚠️ realtime tasks:", status, "— revisá publicación supabase_realtime + Realtime ON en el proyecto");
+        });
+    })();
+    const { data: authSub } = supabase.auth.onAuthStateChange((_e, session) => attach(session?.access_token));
+    return () => { cancelled = true; try { if (ch) supabase.removeChannel(ch); } catch { /* noop */ } try { authSub?.subscription?.unsubscribe(); } catch { /* noop */ } };
   },
 
   // ─── terrenos ─────────────────────────────────────────────
