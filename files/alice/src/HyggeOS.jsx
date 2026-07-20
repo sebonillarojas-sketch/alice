@@ -7874,6 +7874,21 @@ function WikiHyggeView({ openDetail, allSpaces, spaceViewports, setSpaceViewport
 // driveId: link a la carpeta del proyecto en Drive (fuente operativa)
 const INITIAL_CEO_PROJECTS = [];
 
+// Etapas del ciclo de vida de un proyecto · el slider mueve el proyecto por acá.
+const PROJECT_STAGES = ["Permisos", "Pre-venta", "Construcción", "Entrega", "Post-entrega"];
+const STAGE_TONE = { "Permisos": C.brick, "Pre-venta": C.ochre, "Construcción": C.cobalt, "Entrega": C.green, "Post-entrega": C.muted };
+
+// Centroides de distritos de Lima · para ubicar el pin del proyecto en el mapa cuando
+// todavía no tiene lat/lng exacta. Editable después arrastrando el pin.
+const LIMA_DISTRICTS = {
+  "San Isidro": [-12.0972, -77.0365], "Miraflores": [-12.1211, -77.0297], "Barranco": [-12.1489, -77.0206],
+  "Santiago de Surco": [-12.1450, -76.9931], "Surco": [-12.1450, -76.9931], "La Molina": [-12.0870, -76.9430],
+  "San Borja": [-12.1080, -77.0000], "Magdalena": [-12.0920, -77.0730], "Jesús María": [-12.0740, -77.0480],
+  "Lince": [-12.0870, -77.0360], "Pueblo Libre": [-12.0760, -77.0630], "San Miguel": [-12.0770, -77.0910],
+  "Lima": [-12.0464, -77.0428], "Cercado de Lima": [-12.0464, -77.0428],
+};
+const districtCoords = (d) => LIMA_DISTRICTS[d] || LIMA_DISTRICTS["Lima"];
+
 const _fmtM = (n) => n >= 1000000 ? `$${(n/1000000).toFixed(1)}M` : n >= 1000 ? `$${(n/1000).toFixed(0)}K` : `$${n}`;
 const _pctOf = (a, b) => b > 0 ? Math.round((a/b)*100) : 0;
 
@@ -8558,6 +8573,28 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
                       <span style={{ fontSize: 10, color: C.muted, width: 28, textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{p.progreso}%</span>
                     </div>
 
+                    {/* Slider de etapa · mueve el proyecto por el ciclo de vida (solo interno) */}
+                    {audience === "internal" && (() => {
+                      const idx = Math.max(0, PROJECT_STAGES.indexOf(p.fase));
+                      const tone = STAGE_TONE[PROJECT_STAGES[idx]] || C.cobalt;
+                      return (
+                        <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span style={{ fontSize: 9, color: C.muted, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Etapa</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: tone }}>{PROJECT_STAGES[idx]}</span>
+                          </div>
+                          <input type="range" min={0} max={PROJECT_STAGES.length - 1} step={1} value={idx}
+                            onChange={(e) => onEditProject(p.id, { fase: PROJECT_STAGES[Number(e.target.value)] })}
+                            style={{ width: "100%", accentColor: tone, cursor: "pointer" }} />
+                          <div className="flex justify-between mt-0.5">
+                            {PROJECT_STAGES.map((s, k) => (
+                              <span key={s} style={{ fontSize: 7, color: k === idx ? C.ink : C.muted, fontWeight: k === idx ? 700 : 400, letterSpacing: "0.02em" }}>{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Expanded details */}
                     {activeProject === i && visible.projectDetails && (
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -8717,6 +8754,26 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
               })}
             </div>
           )}
+
+          {/* Mapa de ubicación de proyectos · pin por distrito, arrastrable para afinar */}
+          {visible.projects && projects.length > 0 && (() => {
+            const pins = projects.map(p => {
+              const [dLat, dLng] = districtCoords(p.district);
+              return { id: p.id, name: p.name, lat: p.lat ?? dLat, lng: p.lng ?? dLng, district: p.district || "—", status: p.fase };
+            });
+            return (
+              <div style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 4, padding: "14px 16px" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>Ubicación de Proyectos</div>
+                  <span style={{ fontSize: 9, color: C.muted }}>{pins.length} en el mapa{audience === "internal" ? " · arrastrá el pin para afinar" : ""}</span>
+                </div>
+                <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${C.lineSoft}` }}>
+                  <LeafletMap terrenos={pins} height={280} interactive={audience === "internal"}
+                    onMarkerDrag={audience === "internal" ? ((id, lat, lng) => onEditProject(id, { lat, lng })) : undefined} />
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -8809,6 +8866,9 @@ function CEOProjectEditModal({ project, isNew = false, onSave, onDelete, onClose
     fase: project.fase,
     progreso: project.progreso,
     vencimiento: project.vencimiento,
+    district: project.district || "Miraflores",   // para el mapa de ubicación
+    lat: project.lat ?? null,
+    lng: project.lng ?? null,
     unidades: { ...project.unidades },
     revenue: { ...project.revenue },
     fc: { ...project.fc },
@@ -8867,6 +8927,12 @@ function CEOProjectEditModal({ project, isNew = false, onSave, onDelete, onClose
               <label className="block">
                 <span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Vencimiento</span>
                 <input value={form.vencimiento} onChange={(e) => setField("vencimiento", e.target.value)} placeholder="ej. Dic 2026" className="w-full px-2 py-1.5 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }} />
+              </label>
+              <label className="block">
+                <span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Distrito · ubicación en mapa</span>
+                <select value={form.district} onChange={(e) => setField("district", e.target.value)} className="w-full px-2 py-1.5 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }}>
+                  {Object.keys(LIMA_DISTRICTS).filter(d => !["Surco","Cercado de Lima"].includes(d)).map(d => <option key={d}>{d}</option>)}
+                </select>
               </label>
             </div>
           </div>
