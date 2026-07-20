@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Alicia · cuerpo</title>
+<link rel="manifest" href="/alicia.webmanifest">
+<meta name="theme-color" content="#0b0b0f">
+<link rel="apple-touch-icon" href="/alicia-192.png">
+<style>
+  :root { --bg:#0b0b0f; --fg:#e9e9ee; --dim:#8a8a99; --accent:#c9a227; --live:#e5484d; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 -apple-system,system-ui,sans-serif;
+         height:100dvh; display:flex; flex-direction:column; padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+  header { display:flex; align-items:center; gap:8px; padding:12px 0; font-size:13px; color:var(--dim); }
+  #dot { width:8px; height:8px; border-radius:50%; background:#444; }
+  #dot.on { background:#2e9e4f; } #dot.err { background:var(--live); }
+  #log { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px 0; }
+  .msg { max-width:85%; padding:10px 13px; border-radius:16px; white-space:pre-wrap; }
+  .me  { align-self:flex-end; background:#22222c; border-bottom-right-radius:5px; }
+  .her { align-self:flex-start; background:#171720; border-bottom-left-radius:5px; }
+  .sys { align-self:center; color:var(--dim); font-size:12px; background:none; }
+  .t   { font-size:11px; color:var(--dim); margin-top:5px; }
+  #cam { width:100%; border-radius:14px; display:none; background:#000; aspect-ratio:3/4; object-fit:cover; }
+  footer { padding:12px 0; display:flex; flex-direction:column; gap:10px; }
+  #talk { width:100%; padding:20px; border:none; border-radius:18px; background:var(--accent); color:#1a1a1a;
+          font-size:17px; font-weight:600; touch-action:none; user-select:none; }
+  #talk:disabled { opacity:.4; }
+  #talk.rec { background:var(--live); color:#fff; }
+  .row { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--dim); flex-wrap:wrap; }
+  select,input { background:#171720; color:var(--fg); border:1px solid #2a2a36; border-radius:9px; padding:7px 9px; font-size:13px; }
+  input#key { flex:1; min-width:110px; }
+  label { display:flex; align-items:center; gap:5px; }
+</style>
+</head>
+<body>
+<header><span id="dot"></span><span id="status">tocá Hablar</span></header>
+<video id="cam" playsinline muted autoplay></video>
+<div id="log"></div>
+<footer>
+  <button id="talk">Hablar</button>
+  <div class="row">
+    <label><input type="checkbox" id="eyes"> 👁 cámara</label>
+    <select id="tts"><option value="openai">voz OpenAI</option><option value="eleven">voz ElevenLabs</option></select>
+    <input id="key" type="password" placeholder="body key" autocomplete="off">
+  </div>
+</footer>
+<script>
+// Instalable como app en la pantalla de inicio. Solo se registra en contexto
+// seguro — o sea https, o localhost vía `adb reverse` con el cable USB.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/body-sw.js").catch(() => {});
+}
+
+const $ = s => document.querySelector(s);
+const log = $("#log"), dot = $("#dot"), status = $("#status");
+let rec, chunks = [], stream, camStream, busy = false;
+
+$("#key").value = localStorage.bodyKey || "";
+$("#key").oninput = e => localStorage.bodyKey = e.target.value;
+$("#tts").value = localStorage.ttsProvider || "openai";
+$("#tts").onchange = e => localStorage.ttsProvider = e.target.value;
+
+function say(cls, text, meta) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls; d.textContent = text;
+  if (meta) { const m = document.createElement("div"); m.className = "t"; m.textContent = meta; d.appendChild(m); }
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+const setStatus = (t, s) => { status.textContent = t; dot.className = s || ""; };
+
+// getUserMedia solo existe en contexto seguro. Por http://<ip-lan> el browser lo
+// esconde entero y no hay permiso que pedir: hay que entrar por https (ver README).
+if (!navigator.mediaDevices?.getUserMedia) {
+  say("sys", location.protocol === "https:" || location.hostname === "localhost"
+    ? "Este browser no da micrófono."
+    : "Sin micrófono: abrí esta página por HTTPS (npm run tunnel), no por IP directa.");
+  $("#talk").disabled = true;
+}
+
+// ── ojos ────────────────────────────────────────────────────────────────────
+$("#eyes").onchange = async e => {
+  if (e.target.checked) {
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      $("#cam").srcObject = camStream; $("#cam").style.display = "block";
+    } catch (err) { say("sys", "cámara: " + err.message); e.target.checked = false; }
+  } else {
+    camStream?.getTracks().forEach(t => t.stop());
+    $("#cam").style.display = "none"; camStream = null;
+  }
+};
+// Un frame como JPEG. 720px de ancho alcanza para que vea; más solo cuesta subida.
+function grabFrame() {
+  if (!camStream) return null;
+  const v = $("#cam");
+  if (!v.videoWidth) return null;
+  const c = document.createElement("canvas");
+  c.width = 720; c.height = Math.round(v.videoHeight * 720 / v.videoWidth);
+  c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.7).split(",")[1];
+}
+
+// ── voz de salida ───────────────────────────────────────────────────────────
+// Safari en iPad solo deja arrancar audio dentro de un gesto del usuario, y la
+// respuesta llega después de un await (el gesto ya se perdió) → se negaría a sonar
+// sin decir nada: Alicia contesta y no se escucha. Por eso desbloqueamos UN
+// elemento <audio> en el primer toque y después solo le cambiamos el src.
+const player = new Audio();
+let unlocked = false;
+function unlockAudio() {
+  if (unlocked) return;
+  // Un wav mudo de un frame: basta para que Safari marque el elemento como
+  // "iniciado por el usuario" y lo deje reproducir más tarde.
+  player.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=";
+  player.play().then(() => { unlocked = true; }).catch(() => {});
+  // speechSynthesis necesita el mismo permiso, y se pide igual: dentro del gesto.
+  try { speechSynthesis.speak(new SpeechSynthesisUtterance("")); } catch {}
+}
+function play(mediaType, b64, fallbackText) {
+  player.src = `data:${mediaType};base64,${b64}`;
+  player.play().catch(e => { say("sys", "no pudo sonar (" + e.name + "), uso la voz del device"); speakLocal(fallbackText); });
+}
+
+// ── oído ────────────────────────────────────────────────────────────────────
+async function startRec() {
+  if (busy) return;
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  });
+  chunks = [];
+  // Safari no hace webm/opus: da audio/mp4 (aac). Whisper acepta los dos, así que
+  // se elige el primero soportado y se manda el mime real, sin asumir ninguno.
+  const pref = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac"]
+    .find(t => MediaRecorder.isTypeSupported?.(t));
+  rec = new MediaRecorder(stream, pref ? { mimeType: pref } : {});
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = send;
+  rec.start();
+  $("#talk").classList.add("rec"); $("#talk").textContent = "Soltá para enviar";
+  setStatus("escuchando…", "err");
+}
+function stopRec() {
+  if (rec?.state === "recording") rec.stop();
+  stream?.getTracks().forEach(t => t.stop());
+  $("#talk").classList.remove("rec"); $("#talk").textContent = "Hablar";
+}
+
+async function send() {
+  const blob = new Blob(chunks, { type: rec.mimeType || chunks[0]?.type || "audio/mp4" });
+  if (blob.size < 1200) { setStatus("no escuché nada"); return; }  // toque accidental
+  busy = true; $("#talk").disabled = true; setStatus("pensando…", "on");
+  const t0 = performance.now();
+  try {
+    const audio = await new Promise(r => { const f = new FileReader();
+      f.onload = () => r(f.result.split(",")[1]); f.readAsDataURL(blob); });
+    const image = grabFrame();
+    const res = await fetch("/api/embodied?tts=" + $("#tts").value, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-body-key": $("#key").value },
+      body: JSON.stringify({ audio, audioType: blob.type, image, imageType: image ? "image/jpeg" : undefined }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+    const j = await res.json();
+    say("me", j.transcript + (j.saw ? "  👁" : ""));
+    const rtt = Math.round(performance.now() - t0);
+    say("her", j.reply, `${rtt}ms · stt ${j.timings.stt} · brain ${j.timings.brain} · tts ${j.timings.tts}${j.voice ? " · " + j.voice : ""}`);
+    if (j.audio) play(j.mediaType, j.audio, j.reply);
+    else speakLocal(j.reply);     // sin TTS del server: que hable con la voz del device
+    setStatus("listo", "on");
+  } catch (e) {
+    say("sys", "error: " + e.message);
+    setStatus("error", "err");
+  } finally { busy = false; $("#talk").disabled = false; }
+}
+
+function speakLocal(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "es-PE"; speechSynthesis.speak(u);
+}
+
+// Push-to-talk. pointer* cubre dedo y mouse con un solo par de handlers.
+const btn = $("#talk");
+btn.addEventListener("pointerdown", e => { e.preventDefault(); unlockAudio(); startRec().catch(err => say("sys", "mic: " + err.message)); });
+btn.addEventListener("pointerup", e => { e.preventDefault(); stopRec(); });
+btn.addEventListener("pointercancel", stopRec);
+btn.addEventListener("pointerleave", () => rec?.state === "recording" && stopRec());
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Alicia",
+  "short_name": "Alicia",
+  "description": "El cuerpo de Alicia — voz, oído y vista.",
+  "start_url": "/body.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0b0f",
+  "theme_color": "#0b0b0f",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "/alicia-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/alicia-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/alicia-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
