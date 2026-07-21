@@ -14322,6 +14322,10 @@ export default function HyggeOS({ authUser } = {}) {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [users, setUsers] = useState(INITIAL_USERS);
   const [currentUserId, setCurrentUserId] = useState(authUser?.id || "sb");
+  // currentUserId siempre debe seguir a la identidad logueada (authUser). Sin
+  // esto, si authUser llega/actualiza después del primer render, currentUserId
+  // quedaba stale y la atribución de tareas/actividad se corría de usuario.
+  useEffect(() => { if (authUser?.id) setCurrentUserId(authUser.id); }, [authUser?.id]);
   const [spaceAccess, setSpaceAccess] = useState({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -14811,18 +14815,26 @@ export default function HyggeOS({ authUser } = {}) {
   // Activity / Notificaciones feed · registra eventos REALES del sistema (creación/edición/cierre de tareas, etc.)
   // Cada entry tiene `read: false` por default. Se diferencia conceptualmente de `messages` (mensajes humanos).
   const recordActivity = useCallback((what, opts = {}) => {
-    const u = users.find(x => x.id === currentUserId) || users[0];
+    // Identidad canónica = authUser (AuthContext). Antes esto hacía
+    // `users.find(currentUserId) || users[0]` y leía `u?.name` — pero los
+    // objetos de `users` tienen `firstName`/`lastName`, NO `name`, así que
+    // `u.name` era siempre undefined y CUALQUIER actividad caía al literal
+    // "Sebastián" (bug 21 jul 2026: "figura como si yo la hubiera creado").
+    // Ahora resolvemos por authUser.id y usamos firstName, sin fallback silencioso.
+    const me = users.find(x => x.id === authUser?.id)
+            || users.find(x => x.id === currentUserId);
+    const who = me?.firstName || authUser?.firstName || me?.name?.split(" ")[0] || "—";
     setActivity(prev => [{
       id: Date.now() + Math.random(),
-      who: u?.name?.split(" ")[0] || "Sebastián",
+      who,
       what,
       ts: Date.now(),
-      color: u?.color || "#0A0B0F",
+      color: me?.color || authUser?.color || "#0A0B0F",
       read: false,
       relatedTaskId: opts.taskId || null,
       relatedSpace: opts.space || null,
     }, ...prev].slice(0, 50));
-  }, [users, currentUserId]);
+  }, [users, currentUserId, authUser]);
 
   const markNotifRead = useCallback((id) => {
     setActivity(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
