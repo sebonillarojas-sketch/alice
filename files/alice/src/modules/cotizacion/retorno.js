@@ -47,6 +47,22 @@ export function resumenRetornoPorFuente({ comps, district, tipologia, precioUnid
   return out;
 }
 
+// Listings auto-scrapeados de Wynwood House (alicia-brain, cada 6h — ver
+// alicia-brain/src/rentalScraper.js). Solo devuelve tarifa/noche observada:
+// NO inventamos ocupación, así que no calculamos yield acá — eso queda para
+// cuando comercial carga un comparable manual con ocupación observada.
+export function resumenListingsAuto({ listings, district }) {
+  const rows = (listings || []).filter(l => l.district === district && l.nightly_rate != null);
+  if (!rows.length) return null;
+  const promedioNoche = rows.reduce((a, b) => a + b.nightly_rate, 0) / rows.length;
+  return {
+    promedioNoche,
+    currency: rows[0].currency || "USD",
+    muestras: rows.length,
+    listings: rows.slice(0, 3),
+  };
+}
+
 // Plusvalía: no proyectamos % de apreciación (no tenemos series históricas
 // reales) — mostramos señales defendibles con la data real que sí tenemos en
 // sectorData.js (relevamiento manual): dónde cae el precio de compra dentro

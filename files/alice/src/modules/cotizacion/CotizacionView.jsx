@@ -1,11 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { RefreshCw, Plus, Trash2, Info, CheckCircle2, XCircle } from "lucide-react";
+import { RefreshCw, Plus, Trash2, Info, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import { ALICIA_URL } from "../../lib/brain.js";
 import { db } from "../../lib/supabase.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { DISTRICTS_DATA, TREND_LABEL } from "../mercado/sectorData.js";
 import { calcularCuotasPorBanco, RATIO_ENDEUDAMIENTO_DEFAULT } from "./financiamiento.js";
-import { resumenRetornoPorFuente, percentilEnRango } from "./retorno.js";
+import { resumenRetornoPorFuente, resumenListingsAuto, percentilEnRango } from "./retorno.js";
 
 // ─── BRAND (mismos tokens que el resto de ALICE) ────────────────────────────
 const C = {
@@ -75,6 +75,7 @@ export default function CotizacionView() {
   // ── data real (alicia-brain: BCRP + scraper de bancos) ──
   const [macro, setMacro] = useState(null);
   const [bankRates, setBankRates] = useState([]);
+  const [rentalListings, setRentalListings] = useState([]);
   const [marketTs, setMarketTs] = useState(null);
   const [loadingMarket, setLoadingMarket] = useState(true);
 
@@ -86,6 +87,7 @@ export default function CotizacionView() {
         const json = await res.json();
         if (json.macro) setMacro(json.macro);
         if (json.bank_rates) setBankRates(json.bank_rates);
+        if (json.rental_listings) setRentalListings(json.rental_listings);
         if (json.scraped_at) setMarketTs(json.scraped_at);
       }
     } catch { /* sin conexión al brain — se avisa en la UI, no se inventa data */ }
@@ -116,6 +118,22 @@ export default function CotizacionView() {
 
   const percentil = percentilEnRango({ precioM2: precioM2Efectivo, priceRange: zona?.priceRange });
   const retorno = useMemo(() => resumenRetornoPorFuente({ comps, district, tipologia, precioUnidad }), [comps, district, tipologia, precioUnidad]);
+  const wynwoodAuto = useMemo(() => resumenListingsAuto({ listings: rentalListings, district }), [rentalListings, district]);
+
+  // ocupación es la única variable que Wynwood House no publica — se la
+  // pedimos a comercial como supuesto EXPLÍCITO, nunca la asumimos nosotros.
+  const [ocupacionAsumida, setOcupacionAsumida] = useState("");
+  const wynwoodEstimado = useMemo(() => {
+    const occ = parseFloat(ocupacionAsumida);
+    if (!wynwoodAuto || !occ || !precioUnidad) return null;
+    // Wynwood House cotiza en USD; si la cotización está en soles, convertimos
+    // con el tipo de cambio BCRP real (macro.usd_pen) para no mezclar monedas.
+    const nocheEnMoneda = moneda === "USD" || !macro?.usd_pen?.value
+      ? wynwoodAuto.promedioNoche
+      : wynwoodAuto.promedioNoche * macro.usd_pen.value;
+    const ingresoMensual = nocheEnMoneda * (occ / 100) * 30;
+    return { ingresoMensual, yieldAnual: (ingresoMensual * 12) / precioUnidad };
+  }, [wynwoodAuto, ocupacionAsumida, precioUnidad, moneda, macro]);
 
   // ── quick-add de comparable real ──
   const [addingSource, setAddingSource] = useState(null);
@@ -290,8 +308,38 @@ export default function CotizacionView() {
                 const r = retorno[source];
                 return (
                   <div key={source} style={{ border: `1px solid ${C.line}`, borderRadius: 4, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: SOURCE_COLOR[source] }}>{SOURCE_LABEL[source]}</div>
-                    {r ? (
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: SOURCE_COLOR[source] }}>
+                      {SOURCE_LABEL[source]}
+                      {source === "wynwood_house" && wynwoodAuto && <span style={{ fontWeight: 500, color: C.muted, textTransform: "none", letterSpacing: 0 }}> · auto</span>}
+                    </div>
+
+                    {source === "wynwood_house" && wynwoodAuto ? (
+                      <>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, marginTop: 6 }}>
+                          {fmtMoney(wynwoodAuto.promedioNoche, wynwoodAuto.currency)}<span style={{ fontSize: 11, fontWeight: 500, color: C.muted }}>/noche</span>
+                        </div>
+                        <div style={{ fontSize: 9, color: C.muted }}>{wynwoodAuto.muestras} anuncio{wynwoodAuto.muestras > 1 ? "s" : ""} en {district} · scrapeado c/6h desde wynwood-house.com</div>
+                        <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 2 }}>
+                          {wynwoodAuto.listings.map(l => (
+                            <a key={l.external_code} href={l.url} target="_blank" rel="noreferrer"
+                              style={{ fontSize: 10, color: C.cobalt, textDecoration: "none", display: "flex", alignItems: "center", gap: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <ExternalLink size={9} style={{ flexShrink: 0 }} /> {l.title}
+                            </a>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.lineSoft}` }}>
+                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>ocupación asumida % (Wynwood House no la publica)</div>
+                          <input type="number" placeholder="ej. 70" value={ocupacionAsumida} onChange={e => setOcupacionAsumida(e.target.value)}
+                            style={{ ...inputStyle, fontSize: 11, padding: "4px 7px", width: 70 }} />
+                          {wynwoodEstimado && (
+                            <div style={{ marginTop: 4, fontSize: 11, color: C.ink }}>
+                              ≈ {fmtMoney(wynwoodEstimado.ingresoMensual, moneda)}/mes · yield {fmtPct(wynwoodEstimado.yieldAnual)}
+                              <span style={{ fontSize: 9, color: C.muted, display: "block" }}>estimado con la ocupación que pusiste arriba, no observado</span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : r ? (
                       <>
                         <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, marginTop: 6 }}>{fmtMoney(r.promedioMensual, moneda)}<span style={{ fontSize: 11, fontWeight: 500, color: C.muted }}>/mes</span></div>
                         <div style={{ fontSize: 12, color: C.muted }}>yield anual {fmtPct(r.yieldAnual)}</div>
@@ -328,7 +376,7 @@ export default function CotizacionView() {
             </div>
             <div style={{ fontSize: 10, color: C.muted, marginTop: 10, display: "flex", gap: 6 }}>
               <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-              Los comparables se cargan a mano por el equipo comercial a partir de listings reales vistos en Airbnb, Wynwood House, portales de alquiler, etc. — no hay estimaciones automáticas. {loadingComps && "Cargando comparables guardados…"}
+              Wynwood House se trae solo (scraper propio cada 6h, sin ocupación porque no la publican). Alquiler tradicional y Airbnb se cargan a mano por comercial a partir de listings reales vistos — Airbnb no se scrapea automáticamente (Akamai Bot Manager bloquea el acceso automatizado a sus búsquedas). {loadingComps && "Cargando comparables guardados…"}
             </div>
           </Card>
         </div>

@@ -1,7 +1,7 @@
 // Scheduler — tareas periódicas de Alicia
 import cron from "node-cron";
 import { runDailyBriefing } from "./briefing.js";
-import { refreshMarketData } from "./market.js";
+import { refreshMarketData, refreshRentalListings } from "./market.js";
 
 export function startCron() {
   // Briefing diario a las 7:00am hora Lima (UTC-5 → 12:00 UTC)
@@ -14,6 +14,14 @@ export function startCron() {
   cron.schedule("0 * * * *", async () => {
     console.log("🐰 Cron: refresh market data");
     await refreshMarketData().catch(e => console.error("Market refresh error:", e.message));
+  }, { timezone: "America/Lima" });
+
+  // Rental listings (Wynwood House, Lima) cada 6h — cadencia baja a propósito,
+  // los precios de corta estadía no cambian tan seguido como para justificar
+  // pegarle a su sitio cada hora.
+  cron.schedule("0 */6 * * *", async () => {
+    console.log("🐰 Cron: refresh rental listings (Wynwood House)");
+    await refreshRentalListings().catch(e => console.error("Rental listings error:", e.message));
   }, { timezone: "America/Lima" });
 
   // Tea Table semanal — lunes 7:30am Lima · reporte de sistema + WhatsApp a Sebastián
@@ -56,7 +64,8 @@ export function startCron() {
     await runMadHatter().catch(e => console.error("Mad Hatter boot error:", e.message));
     const { runDarkAlice } = await import("./darkalice.js");
     await runDarkAlice({ notify: false }).catch(e => console.error("Dark Alice boot error:", e.message));
+    await refreshRentalListings().catch(e => console.error("Rental listings boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 7am · market refresh · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 7am · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · cerebro→Dropbox 3:30am");
 }

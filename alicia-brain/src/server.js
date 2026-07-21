@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 import { query, parseArr } from "./db.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
-import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, importProjects } from "./market.js";
+import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
 import crypto from "crypto";
 dotenv.config();
@@ -37,7 +37,7 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
 // la consume radar.html sin sesión) y /market-refresh|import (self-auth con su
 // propio bearer MARKET_REFRESH_TOKEN adentro del handler).
 // /agents/report|findings pasan el gate con x-agent-key (requireAgentKey valida el valor).
-const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/market-import"];
+const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/market-import", "/rental-refresh"];
 
 // Valida el access_token de Supabase contra /auth/v1/user (con cache) — así el
 // backend no necesita el JWT secret ni JWKS: Supabase confirma sesión viva.
@@ -1914,13 +1914,15 @@ app.get("/api/market-data", (req, res) => {
     const snap = getLatestSnapshot();
     const macro = getMacroData();
     const bank_rates = getBankRates();
+    const rental_listings = getRentalListings();
     res.json({
       ok: true,
       projects: snap?.projects || [],
       total: snap?.total || 0,
       scraped_at: snap?.scraped_at || null,
-      macro,        // { tasa_hip_pen, tasa_hip_usd, usd_pen } from BCRP
-      bank_rates,   // per-bank hipotecario rates from Playwright scraper
+      macro,             // { tasa_hip_pen, tasa_hip_usd, usd_pen } from BCRP
+      bank_rates,        // per-bank hipotecario rates from Playwright scraper
+      rental_listings,   // corta estadía Wynwood House (Lima), scraper propio cada 6h
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
@@ -1958,6 +1960,14 @@ app.post("/api/market-refresh", async (req, res) => {
   res.json({ ok: true, status: "refresh_started" });
   // Run async so response returns immediately
   refreshMarketData().catch(e => console.error("market refresh error:", e.message));
+});
+
+app.post("/api/rental-refresh", async (req, res) => {
+  const auth = req.headers.authorization || "";
+  const token = process.env.MARKET_REFRESH_TOKEN || "white-rabbit";
+  if (auth !== `Bearer ${token}`) return res.status(401).json({ ok: false, error: "unauthorized" });
+  const result = await refreshRentalListings();
+  res.json(result);
 });
 
 // Sala de operaciones de Wonderland (pública, solo lectura del estado de agentes)
