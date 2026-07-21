@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { RefreshCw, Plus, Trash2, Info, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { RefreshCw, Plus, Trash2, Info, CheckCircle2, XCircle, ExternalLink, Download } from "lucide-react";
 import { ALICIA_URL } from "../../lib/brain.js";
 import { db } from "../../lib/supabase.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { DISTRICTS_DATA, TREND_LABEL } from "../mercado/sectorData.js";
 import { calcularCuotasPorBanco, RATIO_ENDEUDAMIENTO_DEFAULT } from "./financiamiento.js";
 import { resumenRetornoPorFuente, resumenListingsAuto, percentilEnRango } from "./retorno.js";
+import { downloadPrintableDocument } from "../../lib/exportHtml.js";
 
 // ─── BRAND (mismos tokens que el resto de ALICE) ────────────────────────────
 const C = {
@@ -158,6 +159,88 @@ export default function CotizacionView() {
     }
   }, [district, tipologia, moneda, compForm, currentUser, loadComps]);
 
+  const handleExport = useCallback(() => {
+    const cuotasRows = cuotas.length
+      ? cuotas.map(r => `<tr>
+          <td>${r.bank}</td><td>${r.tea.toFixed(2)}%</td>
+          <td style="text-align:right; font-weight:700;">${fmtMoney(r.cuotaMensual, moneda)}</td>
+          <td style="text-align:right;">${fmtMoney(r.totalIntereses, moneda)}</td>
+          <td style="text-align:right; color:${r.apta === false ? "#A85B5B" : "#0A0B0F"};">${fmtPct(r.ratio)}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="5" style="color:#6B6863;">Sin tasas por banco disponibles al momento de exportar${macroTea != null ? ` — referencia con tasa promedio BCRP (${macroTea.toFixed(2)}% TEA): ${fmtMoney(cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios), moneda)}/mes` : ""}.</td></tr>`;
+
+    const retornoCards = ["alquiler_tradicional", "airbnb", "wynwood_house"].map(source => {
+      if (source === "wynwood_house" && wynwoodAuto) {
+        const listingsHtml = wynwoodAuto.listings.map(l => `<div style="font-size:11px;"><a href="${l.url}">${l.title}</a></div>`).join("");
+        const estimadoHtml = wynwoodEstimado
+          ? `<div style="font-size:12px; margin-top:6px;">≈ ${fmtMoney(wynwoodEstimado.ingresoMensual, moneda)}/mes · yield ${fmtPct(wynwoodEstimado.yieldAnual)}<br><span style="font-size:10px; color:#6B6863;">estimado con ${ocupacionAsumida}% de ocupación asumida, no observada</span></div>`
+          : "";
+        return `<div class="card" style="margin-bottom:10px;">
+          <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:#C2A45A;">Wynwood House · auto</div>
+          <div style="font-size:16px; font-weight:700; margin-top:4px;">${fmtMoney(wynwoodAuto.promedioNoche, wynwoodAuto.currency)}/noche</div>
+          <div style="font-size:10px; color:#6B6863;">${wynwoodAuto.muestras} anuncio(s) en ${district} · scraper propio</div>
+          <div style="margin-top:6px;">${listingsHtml}</div>
+          ${estimadoHtml}
+        </div>`;
+      }
+      const r = retorno[source];
+      return `<div class="card" style="margin-bottom:10px;">
+        <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:${SOURCE_COLOR[source]};">${SOURCE_LABEL[source]}</div>
+        ${r
+          ? `<div style="font-size:16px; font-weight:700; margin-top:4px;">${fmtMoney(r.promedioMensual, moneda)}/mes</div>
+             <div style="font-size:12px; color:#6B6863;">yield anual ${fmtPct(r.yieldAnual)} · ${r.muestras} comparable(s) cargado(s)</div>`
+          : `<div style="font-size:12px; color:#6B6863; margin-top:4px;">Sin comparables cargados para ${district} · ${tipologia}</div>`}
+      </div>`;
+    }).join("");
+
+    const bodyHtml = `
+      <div class="card">
+        <div class="eyebrow">Unidad</div>
+        <table>
+          <tr><td>Zona</td><td>${district}</td></tr>
+          <tr><td>Tipología</td><td>${tipologia}</td></tr>
+          <tr><td>Área</td><td>${areaM2} m²</td></tr>
+          <tr><td>Precio / m²</td><td>${fmtMoney(precioM2Efectivo, moneda)}</td></tr>
+          <tr><td style="font-weight:700;">Precio total</td><td style="font-weight:700;">${fmtMoney(precioUnidad, moneda)}</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Perfil del cliente</div>
+        <table>
+          <tr><td>Moneda</td><td>${moneda}</td></tr>
+          <tr><td>Ingreso mensual promedio</td><td>${fmtMoney(ingresoMensual, moneda)}</td></tr>
+          <tr><td>Inicial</td><td>${inicialPct}% · ${fmtMoney(inicialMonto, moneda)}</td></tr>
+          <tr><td>Plazo</td><td>${plazoAnios} años</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Cuotas por banco · tasas reales (BCRP + scraper)</div>
+        <table>
+          <thead><tr><th>Banco</th><th>TEA</th><th style="text-align:right;">Cuota/mes</th><th style="text-align:right;">Total intereses</th><th style="text-align:right;">% ingreso</th></tr></thead>
+          <tbody>${cuotasRows}</tbody>
+        </table>
+        <div style="font-size:10px; color:#6B6863; margin-top:8px;">Regla de capacidad de endeudamiento: cuota ≤ ${Math.round(RATIO_ENDEUDAMIENTO_DEFAULT * 100)}% del ingreso mensual declarado.</div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Plusvalía</div>
+        ${zona ? `<table>
+          <tr><td>Tendencia de la zona (relevamiento manual)</td><td>${TREND_LABEL[zona.trend]}</td></tr>
+          <tr><td>Posición del precio en el rango de mercado</td><td>${percentil == null ? "—" : `percentil ${Math.round(percentil)}`}</td></tr>
+          <tr><td>NSE / demanda relevada</td><td>${zona.nse} · demanda ${zona.demanda}/100</td></tr>
+        </table>` : ""}
+        <div style="font-size:10px; color:#6B6863; margin-top:8px;">No se proyecta % de apreciación anual — es una lectura de posicionamiento relativo, no una promesa de retorno.</div>
+      </div>
+      <div class="eyebrow" style="margin-top:8px;">Retorno de alquiler · zona y tipología</div>
+      ${retornoCards}
+    `;
+
+    downloadPrintableDocument({
+      title: `Cotización ${district} · ${tipologia} · ${areaM2}m²`,
+      subtitle: "Cotización comercial",
+      bodyHtml,
+    });
+  }, [cuotas, moneda, macroTea, precioUnidad, inicialMonto, plazoAnios, retorno, wynwoodAuto, wynwoodEstimado, ocupacionAsumida, district, tipologia, areaM2, precioM2Efectivo, ingresoMensual, inicialPct, zona, percentil]);
+
   return (
     <div style={{ background: C.bg, minHeight: "100%", padding: "24px 28px", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 20 }}>
@@ -167,10 +250,16 @@ export default function CotizacionView() {
         </div>
         <div style={{ fontSize: 10, color: C.muted, textAlign: "right" }}>
           {marketTs && <div>tasas actualizadas · {new Date(marketTs).toLocaleDateString("es-PE")}</div>}
-          <button onClick={fetchMarket} disabled={loadingMarket}
-            style={{ marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "#fff", fontSize: 10, color: C.muted, cursor: "pointer" }}>
-            <RefreshCw size={10} className={loadingMarket ? "animate-spin" : ""} /> {loadingMarket ? "actualizando…" : "refrescar tasas"}
-          </button>
+          <div style={{ display: "flex", gap: 6, marginTop: 4, justifyContent: "flex-end" }}>
+            <button onClick={fetchMarket} disabled={loadingMarket}
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "#fff", fontSize: 10, color: C.muted, cursor: "pointer" }}>
+              <RefreshCw size={10} className={loadingMarket ? "animate-spin" : ""} /> {loadingMarket ? "actualizando…" : "refrescar tasas"}
+            </button>
+            <button onClick={handleExport}
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 2, border: "none", background: C.ink, color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+              <Download size={10} /> exportar cotización
+            </button>
+          </div>
         </div>
       </div>
 
