@@ -321,14 +321,14 @@ export default function CotizacionView() {
             )}>
             {loadingMarket ? (
               <div style={{ fontSize: 12, color: C.muted }}>Cargando tasas…</div>
-            ) : cuotas.length === 0 ? (
-              <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 6, alignItems: "flex-start" }}>
-                <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-                Sin tasas por banco disponibles todavía (bank_rates vacío en alicia-brain — falta correr el scraper de White Rabbit).
-                {macroTea != null && <> Mientras tanto, con la tasa promedio de banca ({macroTea.toFixed(2)}% TEA) la cuota estimada sería {fmtMoney(cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios), moneda)}/mes.</>}
-              </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
+                {cuotas.length === 0 && (
+                  <div style={{ fontSize: 11, color: C.muted, display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 10 }}>
+                    <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                    Todavía no hay tasas cargadas por banco individual (falta correr el scraper de bank_rates) — mientras tanto se muestra la fila de referencia con la tasa promedio de mercado (BCRP).
+                  </div>
+                )}
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${C.line}`, color: C.muted, textAlign: "left" }}>
@@ -341,7 +341,7 @@ export default function CotizacionView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cuotas.map(r => (
+                    {cuotas.length > 0 ? cuotas.map(r => (
                       <tr key={r.bank} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
                         <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>{r.bank}</td>
                         <td style={{ padding: "6px 8px", color: C.muted }}>{r.tea.toFixed(2)}%</td>
@@ -353,7 +353,20 @@ export default function CotizacionView() {
                           {r.apta === false && <XCircle size={13} color={C.brick} />}
                         </td>
                       </tr>
-                    ))}
+                    )) : macroTea != null && (() => {
+                      const preview = cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios);
+                      const capacidad = ingresoMensual && preview ? preview / ingresoMensual : null;
+                      return (
+                        <tr style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>Promedio de mercado (BCRP)</td>
+                          <td style={{ padding: "6px 8px", color: C.muted }}>{macroTea.toFixed(2)}%</td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(preview, moneda)}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", color: C.muted }}>—</td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", color: capacidad != null && capacidad > RATIO_ENDEUDAMIENTO_DEFAULT ? C.brick : C.ink }}>{capacidad != null ? fmtPct(capacidad) : "—"}</td>
+                          <td style={{ padding: "6px 8px" }}></td>
+                        </tr>
+                      );
+                    })()}
                   </tbody>
                 </table>
                 <div style={{ fontSize: 10, color: C.muted, marginTop: 8 }}>
