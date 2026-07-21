@@ -90,6 +90,23 @@ export const db = {
     if (error) throw error;
   },
 
+  // ─── rental_comps (Cotización · Retorno) ──────────────────
+  async getRentalComps() {
+    const { data, error } = await supabase.from("rental_comps").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return data.map(fromRentalCompRow);
+  },
+
+  async upsertRentalComp(comp) {
+    const { error } = await supabase.from("rental_comps").upsert(toRentalCompRow(comp), { onConflict: "id" });
+    if (error) throw error;
+  },
+
+  async deleteRentalComp(id) {
+    const { error } = await supabase.from("rental_comps").delete().eq("id", id);
+    if (error) throw error;
+  },
+
   // ─── generic app state (messages, activity, etc) ──────────
   async getState(key) {
     const { data } = await supabase.from("app_state").select("value").eq("key", key).single();
@@ -182,6 +199,42 @@ function toTerrenoRow(t) {
     documents: t.documents ?? [],
     bam_proposal: t.bamProposal ?? null,
     updated_at: new Date().toISOString(),
+  };
+}
+
+function toRentalCompRow(c) {
+  return {
+    id: c.id,
+    district: c.district,
+    tipologia: c.tipologia ?? null,
+    source: c.source ?? "alquiler_tradicional",
+    currency: c.currency ?? "PEN",
+    monthly_rent: c.monthlyRent ?? null,
+    daily_rate: c.dailyRate ?? null,
+    occupancy_pct: c.occupancyPct ?? null,
+    area_m2: c.areaM2 ?? null,
+    url: c.url ?? null,
+    notes: c.notes ?? null,
+    entered_by: c.enteredBy ?? null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function fromRentalCompRow(r) {
+  return {
+    id: r.id,
+    district: r.district,
+    tipologia: r.tipologia,
+    source: r.source,
+    currency: r.currency,
+    monthlyRent: r.monthly_rent,
+    dailyRate: r.daily_rate,
+    occupancyPct: r.occupancy_pct,
+    areaM2: r.area_m2,
+    url: r.url,
+    notes: r.notes,
+    enteredBy: r.entered_by,
+    createdAt: r.created_at,
   };
 }
 

@@ -6,6 +6,7 @@ import CabidaView from "./modules/cabida/CabidaView";
 import EditorPlanos from "./modules/planos/EditorPlanos";
 import { proyectosStore } from "./modules/cabida/proyectos.js";
 import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
+import CotizacionView from "./modules/cotizacion/CotizacionView";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { DISTRICTS_DATA, COMPETITORS_DB, TREND_LABEL } from "./modules/mercado/sectorData";
 import { useTimer } from "./modules/timer/useTimer";
@@ -55,7 +56,7 @@ import {
   Bookmark, ThumbsUp, Lightbulb,
   Menu, PanelRightOpen, Inbox as InboxIcon,
   PieChart as PieChartIcon, BarChart3, LineChart as LineChartIcon, Globe, ExternalLink,
-  Coffee, Shield, FlaskConical, Gamepad2, Bot, RefreshCw,
+  Coffee, Shield, FlaskConical, Gamepad2, Bot, RefreshCw, Calculator,
 } from "lucide-react";
 
 // ═══ BRAND TOKENS ═══════════════════════════════════════════════════════
@@ -397,6 +398,16 @@ const APPS = [
     dot: "#5F8A6A",
     url: null,
     description: "Simulador de velocidad de ventas · análisis de mercado · Alicia AI",
+    badge: "v1.0",
+    native: true,
+  },
+  {
+    id: "app-cotizacion",
+    label: "Cotización",
+    icon: Calculator,
+    dot: "#A85B5B",
+    url: null,
+    description: "Cuotas por banco (tasas reales), plusvalía y retorno de alquiler por zona · Airbnb, Wynwood House",
     badge: "v1.0",
     native: true,
   },
@@ -15298,6 +15309,7 @@ REGLAS:
       if (app && app.native) {
         if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
         if (app.id === "app-velocity") return <MercadoView />;
+        if (app.id === "app-cotizacion") return <CotizacionView />;
         if (app.id === "app-cabida")   return <CabidaView />;
         if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos navigate={navigate} /></div>;
         if (app.id === "app-mesa")     return <MesaDeTrabajo />;
