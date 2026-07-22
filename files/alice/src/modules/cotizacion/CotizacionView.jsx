@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { RefreshCw, Plus, Info, CheckCircle2, XCircle, ExternalLink, Download } from "lucide-react";
+import { RefreshCw, Plus, Info, CheckCircle2, XCircle, ExternalLink, Download, HandCoins } from "lucide-react";
 import { ALICIA_URL } from "../../lib/brain.js";
 import { db } from "../../lib/supabase.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { DISTRICTS_DATA, TREND_LABEL } from "../mercado/sectorData.js";
-import { calcularCuotasPorBanco, RATIO_ENDEUDAMIENTO_DEFAULT } from "./financiamiento.js";
+import { calcularCuotasPorBanco, generarCronogramaPropio, RATIO_ENDEUDAMIENTO_DEFAULT } from "./financiamiento.js";
 import { resumenRetornoPorFuente, resumenListingsAuto, percentilEnRango } from "./retorno.js";
 import { downloadPrintableDocument } from "../../lib/exportHtml.js";
 
@@ -165,17 +165,34 @@ export default function CotizacionView() {
     return { ingresoMensual, yieldAnual: (ingresoMensual * 12) / precioUnidad };
   }, [wynwoodAuto, ocupacionAsumida, precioUnidad, moneda, macro]);
 
+  // ── financiamiento propio · directo con el cliente, sin banco. Los términos
+  // (tasa, cuotas, monto) son lo que se negoció — nunca vienen de un feed. ──
+  const [financiamientoPropioOn, setFinanciamientoPropioOn] = useState(false);
+  const [fpMonto, setFpMonto] = useState(null); // null = usa precioUnidad - inicialMonto
+  const [fpTasa, setFpTasa] = useState(0);
+  const [fpMeses, setFpMeses] = useState(12);
+  const [fpFechaInicio, setFpFechaInicio] = useState("");
+
+  const fpMontoEfectivo = fpMonto ?? Math.max(0, precioUnidad - inicialMonto);
+  const cronogramaPropio = useMemo(() => (
+    financiamientoPropioOn
+      ? generarCronogramaPropio({ monto: fpMontoEfectivo, teaPercent: fpTasa, meses: fpMeses, fechaInicioISO: fpFechaInicio || null })
+      : []
+  ), [financiamientoPropioOn, fpMontoEfectivo, fpTasa, fpMeses, fpFechaInicio]);
+
   // ── resumen "pagos vs entradas" · cuota mensual por banco contra ingreso
   // mensual por fuente de alquiler, para ver de un vistazo si el alquiler
   // cubre la cuota ──
   const filasPagos = useMemo(() => {
-    if (cuotas.length) return cuotas.map(r => ({ label: r.bank, monto: r.cuotaMensual, nota: `${r.tea.toFixed(2)}% TEA` }));
-    if (macroTea != null) {
+    const rows = [];
+    if (cuotas.length) rows.push(...cuotas.map(r => ({ label: r.bank, monto: r.cuotaMensual, nota: `${r.tea.toFixed(2)}% TEA` })));
+    else if (macroTea != null) {
       const preview = cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios);
-      return preview != null ? [{ label: "Promedio de mercado (BCRP)", monto: preview, nota: `${macroTea.toFixed(2)}% TEA · sin tasas por banco aún` }] : [];
+      if (preview != null) rows.push({ label: "Promedio de mercado (BCRP)", monto: preview, nota: `${macroTea.toFixed(2)}% TEA · sin tasas por banco aún` });
     }
-    return [];
-  }, [cuotas, macroTea, precioUnidad, inicialMonto, plazoAnios]);
+    if (cronogramaPropio.length) rows.push({ label: "Financiamiento propio (negociado)", monto: cronogramaPropio[0].cuota, nota: `${fpMeses} cuotas · ${fpTasa}% TEA` });
+    return rows;
+  }, [cuotas, macroTea, precioUnidad, inicialMonto, plazoAnios, cronogramaPropio, fpMeses, fpTasa]);
 
   const filasEntradas = useMemo(() => {
     const rows = [];
@@ -287,6 +304,21 @@ export default function CotizacionView() {
         </table>
         <div style="font-size:10px; color:#6B6863; margin-top:8px;">Regla de capacidad de endeudamiento: cuota ≤ ${Math.round(RATIO_ENDEUDAMIENTO_DEFAULT * 100)}% del ingreso mensual declarado.</div>
       </div>
+      ${cronogramaPropio.length ? `<div class="card">
+        <div class="eyebrow">Financiamiento propio · negociado con el cliente</div>
+        <table>
+          <tr><td>Monto financiado</td><td>${fmtMoney(fpMontoEfectivo, moneda)}</td></tr>
+          <tr><td>Tasa anual negociada</td><td>${fpTasa}%</td></tr>
+          <tr><td>Cuotas</td><td>${fpMeses}</td></tr>
+          <tr><td style="font-weight:700;">Cuota mensual</td><td style="font-weight:700;">${fmtMoney(cronogramaPropio[0].cuota, moneda)}</td></tr>
+        </table>
+        <table style="margin-top:10px;">
+          <thead><tr><th>Cuota</th>${fpFechaInicio ? "<th>Fecha</th>" : ""}<th style="text-align:right;">Monto</th><th style="text-align:right;">Interés</th><th style="text-align:right;">Amortización</th><th style="text-align:right;">Saldo</th></tr></thead>
+          <tbody>
+            ${cronogramaPropio.map(f => `<tr><td>${f.numero}</td>${fpFechaInicio ? `<td>${f.fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</td>` : ""}<td style="text-align:right;">${fmtMoney(f.cuota, moneda)}</td><td style="text-align:right;">${fmtMoney(f.interes, moneda)}</td><td style="text-align:right;">${fmtMoney(f.amortizacion, moneda)}</td><td style="text-align:right;">${fmtMoney(f.saldo, moneda)}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>` : ""}
       <div class="card">
         <div class="eyebrow">Plusvalía</div>
         ${zona ? `<table>
@@ -305,7 +337,7 @@ export default function CotizacionView() {
       subtitle: "Cotización comercial",
       bodyHtml,
     });
-  }, [cuotas, moneda, macroTea, precioUnidad, inicialMonto, plazoAnios, retorno, wynwoodAuto, wynwoodEstimado, ocupacionAsumida, district, tipologia, areaM2, precioM2Efectivo, ingresoMensual, inicialPct, zona, percentil, filasPagos, filasEntradas, cobertura]);
+  }, [cuotas, moneda, macroTea, precioUnidad, inicialMonto, plazoAnios, retorno, wynwoodAuto, wynwoodEstimado, ocupacionAsumida, district, tipologia, areaM2, precioM2Efectivo, ingresoMensual, inicialPct, zona, percentil, filasPagos, filasEntradas, cobertura, cronogramaPropio, fpMontoEfectivo, fpTasa, fpMeses, fpFechaInicio]);
 
   return (
     <div style={{ background: C.bg, minHeight: "100%", padding: "40px 44px", fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
@@ -501,6 +533,81 @@ export default function CotizacionView() {
                 </div>
               )}
             </Panel>
+          </div>
+
+          {/* FINANCIAMIENTO PROPIO */}
+          <div>
+            <SectionHead title="Financiamiento propio" right={
+              <button onClick={() => setFinanciamientoPropioOn(v => !v)} style={financiamientoPropioOn ? inkBtn : ghostBtn}>
+                <HandCoins size={11} /> {financiamientoPropioOn ? "quitar" : "negociar con el cliente"}
+              </button>
+            } />
+            {financiamientoPropioOn && (
+              <Panel>
+                <div style={{ fontSize: 12, color: C.inkSoft, marginBottom: 16, lineHeight: 1.5 }}>
+                  Sin banco de por medio — el cronograma sale de lo que se negocie directamente con el cliente. Tasa, monto y cuotas son términos manuales, no un dato de mercado.
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1.2fr", gap: 14, marginBottom: 18 }}>
+                  <Field label={`Monto a financiar${fpMonto == null ? " (auto)" : ""}`}>
+                    <input type="number" placeholder={String(Math.round(fpMontoEfectivo))} value={fpMonto ?? ""} onChange={e => setFpMonto(e.target.value ? parseFloat(e.target.value) : null)} style={inputStyle} />
+                  </Field>
+                  <Field label="Tasa anual negociada (%)">
+                    <input type="number" min={0} step={0.5} value={fpTasa} onChange={e => setFpTasa(parseFloat(e.target.value) || 0)} style={inputStyle} />
+                  </Field>
+                  <Field label="Cantidad de cuotas">
+                    <input type="number" min={1} value={fpMeses} onChange={e => setFpMeses(parseInt(e.target.value, 10) || 1)} style={inputStyle} />
+                  </Field>
+                  <Field label="Primera cuota (opcional)">
+                    <input type="date" value={fpFechaInicio} onChange={e => setFpFechaInicio(e.target.value)} style={inputStyle} />
+                  </Field>
+                </div>
+
+                {cronogramaPropio.length > 0 && (
+                  <>
+                    <div style={{ display: "flex", gap: 0, marginBottom: 18, borderTop: `1px solid ${C.lineSoft}`, borderBottom: `1px solid ${C.lineSoft}` }}>
+                      <div style={{ padding: "14px 20px 14px 0", flex: 1 }}>
+                        <Eyebrow>Cuota mensual</Eyebrow>
+                        <div style={{ fontSize: 24, marginTop: 6, color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{fmtMoney(cronogramaPropio[0].cuota, moneda)}</div>
+                      </div>
+                      <div style={{ padding: "14px 20px", flex: 1, borderLeft: `1px solid ${C.lineSoft}` }}>
+                        <Eyebrow>Total a pagar</Eyebrow>
+                        <div style={{ fontSize: 24, marginTop: 6, color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{fmtMoney(cronogramaPropio[0].cuota * fpMeses, moneda)}</div>
+                      </div>
+                      <div style={{ padding: "14px 0 14px 20px", flex: 1, borderLeft: `1px solid ${C.lineSoft}` }}>
+                        <Eyebrow>Total interés</Eyebrow>
+                        <div style={{ fontSize: 24, marginTop: 6, color: fpTasa > 0 ? C.ink : C.muted, fontWeight: 300, letterSpacing: "-0.02em" }}>{fmtMoney(cronogramaPropio[0].cuota * fpMeses - fpMontoEfectivo, moneda)}</div>
+                      </div>
+                    </div>
+                    <div style={{ overflowX: "auto", maxHeight: 360, overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${C.lineSoft}`, color: C.muted, textAlign: "left" }}>
+                            <th style={{ padding: "0 8px 8px 0", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>Cuota</th>
+                            {fpFechaInicio && <th style={{ padding: "0 8px 8px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>Fecha</th>}
+                            <th style={{ padding: "0 8px 8px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>Monto</th>
+                            <th style={{ padding: "0 8px 8px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>Interés</th>
+                            <th style={{ padding: "0 8px 8px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>Amortización</th>
+                            <th style={{ padding: "0 0 8px 8px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>Saldo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cronogramaPropio.map(f => (
+                            <tr key={f.numero} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                              <td style={{ padding: "7px 8px 7px 0", color: C.muted }}>{f.numero}</td>
+                              {fpFechaInicio && <td style={{ padding: "7px 8px", color: C.muted }}>{f.fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</td>}
+                              <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 600, color: C.ink }}>{fmtMoney(f.cuota, moneda)}</td>
+                              <td style={{ padding: "7px 8px", textAlign: "right", color: C.muted }}>{fmtMoney(f.interes, moneda)}</td>
+                              <td style={{ padding: "7px 8px", textAlign: "right", color: C.muted }}>{fmtMoney(f.amortizacion, moneda)}</td>
+                              <td style={{ padding: "7px 0 7px 8px", textAlign: "right", color: C.muted }}>{fmtMoney(f.saldo, moneda)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </Panel>
+            )}
           </div>
 
           {/* PLUSVALÍA */}
