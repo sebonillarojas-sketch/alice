@@ -68,7 +68,7 @@ export const USERS = [
     color: "#3D52D5",
     isAdmin: false,
     isCEO: false,
-    allowedSpaces: ["bam", "proyectos"],
+    allowedSpaces: ["bam", "proyectos", "growth"],
   },
   {
     id: "ac",
