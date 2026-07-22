@@ -180,7 +180,6 @@ const INITIAL_USERS = PEOPLE.map(p => {
     initials: p.initials,
     avatar: null,
     password: "",
-    online: false,
     preferences: { ...DEFAULT_PREFS },
     createdAt: Date.now(),
   };
@@ -1055,7 +1054,7 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
 }
 
 // ═══ SIDEBAR ═════════════════════════════════════════════════════════════
-function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, toggleSpaceExpansion, onCreateSpace, onCreateSubSpace, onDeleteSpace, onEditSpace, smartViews, activeSmartViewId, onSelectSmartView, onClearSmartView, onDeleteSmartView, mobileOpen, onMobileClose, currentUser, onOpenSettings, onClickUser, users, inboxCount, notifCount, messagesCount, tasks, features = {} }) {
+function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, toggleSpaceExpansion, onCreateSpace, onCreateSubSpace, onDeleteSpace, onEditSpace, smartViews, activeSmartViewId, onSelectSmartView, onClearSmartView, onDeleteSmartView, mobileOpen, onMobileClose, currentUser, onOpenSettings, onClickUser, users, onlineUserIds, inboxCount, notifCount, messagesCount, tasks, features = {} }) {
   const visibleApps = APPS.filter(a => a.id !== "app-games" || features.juegos); // Juegos vive en Features opt-in
   const taskCountBySpace = useMemo(() => {
     const counts = {};
@@ -1271,15 +1270,15 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
         <div className="mt-7 mb-3"><Eyebrow>Equipo</Eyebrow></div>
         <div className="space-y-1">
           {(users || []).slice(0, 8).map(u => {
-            const isMe = u.id === currentUser?.id;
+            const isOnline = onlineUserIds?.has(u.id);
             return (
               <button key={u.id} onClick={() => onClickUser && onClickUser(u.id)} className="w-full flex items-center gap-2 px-2 py-1 hover:opacity-80 text-left" style={{ borderRadius: 2 }}>
                 <div className="relative">
                   <Avatar personId={u.id} size={20} />
-                  {isMe && <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full" title="conectado" style={{ backgroundColor: C.green, border: `1.5px solid ${C.bg}` }} />}
+                  {isOnline && <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full" title="conectado" style={{ backgroundColor: C.green, border: `1.5px solid ${C.bg}` }} />}
                 </div>
                 <span className="text-[11px] flex-1 truncate" style={{ color: C.inkSoft, fontWeight: 500 }}>{u.firstName}</span>
-                {isMe && <span className="text-[8px] tracking-[0.1em] uppercase" style={{ color: C.green, fontWeight: 600 }}>online</span>}
+                {isOnline && <span className="text-[8px] tracking-[0.1em] uppercase" style={{ color: C.green, fontWeight: 600 }}>online</span>}
               </button>
             );
           })}
@@ -1302,9 +1301,10 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
 }
 
 // ─── USER DETAIL MODAL · perfil del usuario con tareas asignadas + spaces con acceso ───
-function UserDetailModal({ userId, users, tasks, allSpaces, spaceAccess, onClose, onOpenTask, onNavigateSpace }) {
+function UserDetailModal({ userId, users, onlineUserIds, tasks, allSpaces, spaceAccess, onClose, onOpenTask, onNavigateSpace }) {
   const user = users.find(u => u.id === userId);
   if (!user) return null;
+  const isOnline = onlineUserIds?.has(user.id);
 
   const assignedTasks = tasks.filter(t => t.assignee === userId || (Array.isArray(t.assignees) && t.assignees.includes(userId)));
   const openAssigned = assignedTasks.filter(t => !t.checked);
@@ -1331,7 +1331,7 @@ function UserDetailModal({ userId, users, tasks, allSpaces, spaceAccess, onClose
               {user.isAdmin && (
                 <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 10, backgroundColor: `${C.ochre}25`, color: C.ochre, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Admin</span>
               )}
-              {user.online && (
+              {isOnline && (
                 <span className="flex items-center gap-1" style={{ fontSize: 9, color: C.green, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.green }} /> Online
                 </span>
@@ -14389,6 +14389,15 @@ export default function HyggeOS({ authUser } = {}) {
     return unsub;
   }, [loaded]);
 
+  // Presencia real del equipo · sidebar "Equipo" (punto verde) — reemplaza el
+  // campo `online` que antes vivía siempre en false.
+  const [onlineUserIds, setOnlineUserIds] = useState(() => new Set());
+  useEffect(() => {
+    if (!loaded || !currentUser?.id) return;
+    const unsub = db.subscribeTeamPresence(currentUser.id, setOnlineUserIds);
+    return unsub;
+  }, [loaded, currentUser?.id]);
+
   // ─── UNDO SYSTEM · last 10 destructive actions ───
   const [undoStack, setUndoStack] = useState([]); // [{ label, snapshot, ts }]
   // Agent registry · cada agente reporta su última corrida acá · Dark Alice lo orquesta
@@ -14593,7 +14602,7 @@ export default function HyggeOS({ authUser } = {}) {
         loadStored("hygge:hq:cifras", DEFAULT_HQ_CIFRAS),
         loadStored("hygge:deletedDefaultSpaces", []),
       ]);
-      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(Array.isArray(us) ? us.map(u => ({ ...u, online: false })) : us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length > 0 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 0); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport, juegos: !!ft.juegos } : { whiteboards: false, customViews: false, viewport: false, juegos: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
+      setTasks(t); setMessages(m); setWhiteboards(wb); setTimer(tm); setCurrentSpace(sp); setView(vw); setCustomSpaces(cs); setSmartViews(sv); setUsers(us); setSpaceAccess(sa); setTerrenos(tr); setCustomViews(cv); setRightPanelCollapsed(rpc); setActivity(Array.isArray(act) ? act : []); setCeoProjects(Array.isArray(cp) && cp.length > 0 ? cp : INITIAL_CEO_PROJECTS); setCeoNps(typeof cn === "number" ? cn : 0); setFeatures(ft && typeof ft === "object" ? { whiteboards: !!ft.whiteboards, customViews: !!ft.customViews, viewport: !!ft.viewport, juegos: !!ft.juegos } : { whiteboards: false, customViews: false, viewport: false, juegos: false }); setSpaceViewports(vp && typeof vp === "object" ? vp : {}); setKnowledgeLinks(Array.isArray(kl) ? kl : []); setSpvs(Array.isArray(spv) && spv.length > 0 ? spv : DEFAULT_SPVS); setHqCifras(Array.isArray(hqcf) && hqcf.length > 0 ? hqcf : DEFAULT_HQ_CIFRAS); setDeletedDefaultSpaceIds(Array.isArray(dds) ? dds : []); setLoaded(true);
     })();
   }, []);
 
@@ -15491,6 +15500,7 @@ REGLAS:
           onMobileClose={() => setMobileSidebarOpen(false)}
           currentUser={currentUser}
           users={users}
+          onlineUserIds={onlineUserIds}
           inboxCount={inboxCount}
           notifCount={notifCount}
           messagesCount={messagesCount}
@@ -15688,6 +15698,7 @@ REGLAS:
         <UserDetailModal
           userId={selectedUserId}
           users={users}
+          onlineUserIds={onlineUserIds}
           tasks={tasks}
           allSpaces={allSpaces}
           spaceAccess={spaceAccess}

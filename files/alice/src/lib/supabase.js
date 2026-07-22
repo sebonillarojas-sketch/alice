@@ -90,6 +90,26 @@ export const db = {
     if (error) throw error;
   },
 
+  // ─── presencia del equipo (sidebar "Equipo" · punto verde real) ──────────
+  // Canal de Supabase Realtime Presence (no es postgres_changes, no requiere
+  // RLS): cada sesión se une con su user id como key y hace track() de sí
+  // misma. onChange recibe el Set de ids actualmente conectados — reemplaza
+  // el campo `online` que antes vivía hardcodeado en `false`.
+  subscribeTeamPresence(userId, onChange) {
+    if (!userId) return () => {};
+    let cancelled = false;
+    const channel = supabase.channel("team-presence", { config: { presence: { key: userId } } });
+    const syncState = () => { if (!cancelled) onChange(new Set(Object.keys(channel.presenceState()))); };
+    channel
+      .on("presence", { event: "sync" }, syncState)
+      .on("presence", { event: "join" }, syncState)
+      .on("presence", { event: "leave" }, syncState)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED" && !cancelled) await channel.track({ online_at: new Date().toISOString() });
+      });
+    return () => { cancelled = true; try { supabase.removeChannel(channel); } catch { /* noop */ } };
+  },
+
   // ─── rental_comps (Cotización · Retorno) ──────────────────
   async getRentalComps() {
     const { data, error } = await supabase.from("rental_comps").select("*").order("created_at", { ascending: false });
