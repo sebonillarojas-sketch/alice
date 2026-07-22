@@ -136,6 +136,31 @@ export default function CotizacionView() {
     return { ingresoMensual, yieldAnual: (ingresoMensual * 12) / precioUnidad };
   }, [wynwoodAuto, ocupacionAsumida, precioUnidad, moneda, macro]);
 
+  // ── resumen "pagos vs entradas" · una sola tabla, cuota mensual por banco
+  // contra ingreso mensual por fuente de alquiler, para ver de un vistazo si
+  // el alquiler cubre la cuota ──
+  const filasPagos = useMemo(() => {
+    if (cuotas.length) return cuotas.map(r => ({ label: r.bank, monto: r.cuotaMensual, nota: `${r.tea.toFixed(2)}% TEA` }));
+    if (macroTea != null) {
+      const preview = cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios);
+      return preview != null ? [{ label: "Promedio de mercado (BCRP)", monto: preview, nota: `${macroTea.toFixed(2)}% TEA · sin tasas por banco aún` }] : [];
+    }
+    return [];
+  }, [cuotas, macroTea, precioUnidad, inicialMonto, plazoAnios]);
+
+  const filasEntradas = useMemo(() => {
+    const rows = [];
+    if (retorno.alquiler_tradicional) rows.push({ label: "Alquiler tradicional", monto: retorno.alquiler_tradicional.promedioMensual, nota: `${retorno.alquiler_tradicional.muestras} comparable(s)` });
+    if (retorno.airbnb) rows.push({ label: "Airbnb", monto: retorno.airbnb.promedioMensual, nota: `${retorno.airbnb.muestras} comparable(s)` });
+    if (retorno.wynwood_house) rows.push({ label: "Wynwood House (manual)", monto: retorno.wynwood_house.promedioMensual, nota: `${retorno.wynwood_house.muestras} comparable(s)` });
+    if (wynwoodEstimado) rows.push({ label: "Wynwood House (auto, estimado)", monto: wynwoodEstimado.ingresoMensual, nota: `${ocupacionAsumida}% ocupación asumida` });
+    return rows;
+  }, [retorno, wynwoodEstimado, ocupacionAsumida]);
+
+  const mejorPago = filasPagos.length ? Math.min(...filasPagos.map(f => f.monto)) : null;
+  const mejorEntrada = filasEntradas.length ? Math.max(...filasEntradas.map(f => f.monto)) : null;
+  const cobertura = mejorPago && mejorEntrada != null ? mejorEntrada / mejorPago : null;
+
   // ── quick-add de comparable real ──
   const [addingSource, setAddingSource] = useState(null);
   const [compForm, setCompForm] = useState({ monthlyRent: "", dailyRate: "", occupancyPct: "", url: "" });
@@ -214,6 +239,18 @@ export default function CotizacionView() {
         </table>
       </div>
       <div class="card">
+        <div class="eyebrow">Pagos vs entradas · resumen mensual${cobertura != null ? ` · cobertura ${fmtPct(cobertura, 0)}` : ""}</div>
+        <table>
+          <thead><tr><th></th><th>Concepto</th><th style="text-align:right;">Monto/mes</th><th>Detalle</th></tr></thead>
+          <tbody>
+            <tr><td colspan="4" style="font-size:10px; font-weight:700; text-transform:uppercase; color:#A85B5B;">Pagos (cuota)</td></tr>
+            ${filasPagos.length ? filasPagos.map(f => `<tr><td>−</td><td>${f.label}</td><td style="text-align:right; font-weight:700;">${fmtMoney(f.monto, moneda)}</td><td style="font-size:11px; color:#6B6863;">${f.nota}</td></tr>`).join("") : `<tr><td colspan="4" style="color:#6B6863;">Sin datos</td></tr>`}
+            <tr><td colspan="4" style="font-size:10px; font-weight:700; text-transform:uppercase; color:#5F8A6A; padding-top:8px;">Entradas (alquiler)</td></tr>
+            ${filasEntradas.length ? filasEntradas.map(f => `<tr><td>+</td><td>${f.label}</td><td style="text-align:right; font-weight:700;">${fmtMoney(f.monto, moneda)}</td><td style="font-size:11px; color:#6B6863;">${f.nota}</td></tr>`).join("") : `<tr><td colspan="4" style="color:#6B6863;">Sin comparables cargados para ${district} · ${tipologia}</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
         <div class="eyebrow">Cuotas por banco · tasas reales (BCRP + scraper)</div>
         <table>
           <thead><tr><th>Banco</th><th>TEA</th><th style="text-align:right;">Cuota/mes</th><th style="text-align:right;">Total intereses</th><th style="text-align:right;">% ingreso</th></tr></thead>
@@ -239,7 +276,7 @@ export default function CotizacionView() {
       subtitle: "Cotización comercial",
       bodyHtml,
     });
-  }, [cuotas, moneda, macroTea, precioUnidad, inicialMonto, plazoAnios, retorno, wynwoodAuto, wynwoodEstimado, ocupacionAsumida, district, tipologia, areaM2, precioM2Efectivo, ingresoMensual, inicialPct, zona, percentil]);
+  }, [cuotas, moneda, macroTea, precioUnidad, inicialMonto, plazoAnios, retorno, wynwoodAuto, wynwoodEstimado, ocupacionAsumida, district, tipologia, areaM2, precioM2Efectivo, ingresoMensual, inicialPct, zona, percentil, filasPagos, filasEntradas, cobertura]);
 
   return (
     <div style={{ background: C.bg, minHeight: "100%", padding: "24px 28px", fontFamily: "'DM Sans', sans-serif" }}>
@@ -263,7 +300,54 @@ export default function CotizacionView() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 18, alignItems: "start" }}>
+      <Card title="Pagos vs entradas · resumen mensual" right={cobertura != null && (
+        <span style={{ fontSize: 11, fontWeight: 700, color: cobertura >= 1 ? C.green : C.brick }}>
+          cobertura {fmtPct(cobertura, 0)}
+        </span>
+      )}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.line}`, color: C.muted, textAlign: "left" }}>
+                <th style={{ padding: "4px 8px", fontWeight: 600 }}></th>
+                <th style={{ padding: "4px 8px", fontWeight: 600 }}>Concepto</th>
+                <th style={{ padding: "4px 8px", fontWeight: 600, textAlign: "right" }}>Monto/mes</th>
+                <th style={{ padding: "4px 8px", fontWeight: 600 }}>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colSpan={4} style={{ padding: "8px 8px 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.brick }}>Pagos (cuota)</td></tr>
+              {filasPagos.length ? filasPagos.map(f => (
+                <tr key={f.label} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                  <td style={{ padding: "6px 8px" }}><XCircle size={12} color={C.brick} /></td>
+                  <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>{f.label}</td>
+                  <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(f.monto, moneda)}</td>
+                  <td style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>{f.nota}</td>
+                </tr>
+              )) : (
+                <tr><td colSpan={4} style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>Sin datos todavía — completá precio de la unidad e ingreso del cliente.</td></tr>
+              )}
+              <tr><td colSpan={4} style={{ padding: "10px 8px 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.green }}>Entradas (alquiler)</td></tr>
+              {filasEntradas.length ? filasEntradas.map(f => (
+                <tr key={f.label} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                  <td style={{ padding: "6px 8px" }}><CheckCircle2 size={12} color={C.green} /></td>
+                  <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>{f.label}</td>
+                  <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(f.monto, moneda)}</td>
+                  <td style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>{f.nota}</td>
+                </tr>
+              )) : (
+                <tr><td colSpan={4} style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>Sin comparables de alquiler cargados todavía para {district} · {tipologia} (ver Retorno más abajo).</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 10, color: C.muted, marginTop: 10, display: "flex", gap: 6 }}>
+          <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+          Cobertura = mejor entrada mensual disponible ÷ mejor cuota disponible. No es un neto contable (no descuenta mantenimiento, IGV, vacancia).
+        </div>
+      </Card>
+
+      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 18, alignItems: "start", marginTop: 18 }}>
         {/* ── COLUMNA IZQUIERDA: inputs ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Card title="Unidad">
