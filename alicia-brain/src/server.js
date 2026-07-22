@@ -2028,6 +2028,14 @@ app.post("/api/arquitecto/corregir", async (req, res) => {
   }
 });
 
+// Reboot manual desde el panel — Railway tiene restartPolicyType ON_FAILURE,
+// así que un exit no-cero dispara el restart automático del proceso.
+app.post("/api/system/reboot", (_, res) => {
+  res.json({ ok: true, message: "Reiniciando…" });
+  console.log("🔁 Reboot manual pedido desde el panel");
+  setTimeout(() => process.exit(1), 400);
+});
+
 app.get("/health", async (_, res) => {
   let dropbox = false;
   try { ({ dropboxAvailable: dropbox } = await import("./integrations/dropbox.js")); dropbox = dropbox(); } catch { dropbox = false; }

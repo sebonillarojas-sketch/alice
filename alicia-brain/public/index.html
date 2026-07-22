@@ -139,6 +139,7 @@
   /* BLOB · Alicia viva */
   .blob{width:190px;height:190px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 0 80px rgba(139,92,246,.35)}
   .blob-idle{animation:blob-morph 8s ease-in-out infinite, blob-float 5s ease-in-out infinite}
+  .blob-wake{animation:blob-morph 8s ease-in-out infinite, blob-float 5s ease-in-out infinite;opacity:.5}
   .blob-listening{background:linear-gradient(135deg,#a78bfa,#8b5cf6);animation:blob-morph 3.5s ease-in-out infinite, blob-float 4s ease-in-out infinite;box-shadow:0 0 110px rgba(167,139,250,.55)}
   .blob-thinking{background:linear-gradient(135deg,#6d28d9,#4c1d95);animation:blob-morph 2.8s ease-in-out infinite, blob-float 5s ease-in-out infinite, blob-dim 1.6s ease-in-out infinite}
   .blob-speaking{background:linear-gradient(135deg,#c084fc,#8b5cf6);animation:blob-morph 1.8s ease-in-out infinite, blob-bounce .55s cubic-bezier(.36,1.4,.5,1) infinite;box-shadow:0 0 120px rgba(192,132,252,.5)}
@@ -310,6 +311,12 @@
         <option value="echo">Echo — masculina clara</option>
         <option value="onyx">Onyx — masculina profunda</option>
       </select>
+      <div style="margin-top:10px">
+        <button id="wake-toggle" class="btn btn-ghost" style="font-size:12px" onclick="toggleWakeMode()">🎙️ Activar comandos de voz</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;max-width:340px;line-height:1.5">
+        Con esto activo: decí <b>"despierta Alicia"</b> para que empiece a escuchar, y <b>"descansa Alicia"</b> para cortar la conversación. Requiere la pestaña abierta y en primer plano.
+      </div>
     </div>
     <div id="hablar-exchange" style="max-width:560px;width:100%;display:none;flex-direction:column;gap:8px;max-height:32vh;overflow-y:auto">
       <div id="hablar-user" style="align-self:flex-end;padding:8px 14px;border-radius:12px 12px 2px 12px;background:var(--cobalt);color:#fff;font-size:13px;max-width:85%"></div>
@@ -321,7 +328,10 @@
 <!-- SISTEMA -->
 <div class="page" id="page-sistema">
   <div class="eyebrow">Dashboard</div>
-  <h2>Estado del Sistema</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <h2 style="margin:0">Estado del Sistema</h2>
+    <button class="btn btn-ghost" style="color:#f87171" onclick="rebootAlicia()">🔁 Reiniciar Alicia</button>
+  </div>
   <div style="margin-bottom:24px"></div>
 
   <div class="grid grid-4" style="margin-bottom:20px" id="stats-grid">
@@ -901,12 +911,25 @@ async function triggerBriefing() {
   else toast('Error: '+r.error, 'err');
 }
 
+async function rebootAlicia() {
+  if (!confirm('¿Reiniciar Alicia? El servicio se cae unos segundos (WhatsApp, panel, voz) y vuelve solo.')) return;
+  const btn = event.target;
+  btn.textContent = 'Reiniciando…'; btn.disabled = true;
+  try { await fetch('/api/system/reboot', { method: 'POST' }); }
+  catch {} // el servidor corta la conexión al reiniciar — es esperable
+  toast('Reiniciando — volvé a cargar en ~20s');
+  setTimeout(() => { btn.textContent = '🔁 Reiniciar Alicia'; btn.disabled = false; loadSistema(); }, 15000);
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 loadSistema();
 
 // ── HABLAR · conversación por voz ──────────────────────────────────────────
 let hListening = false, hSending = false, hAudio = null, hRec = null;
+let hWakeActive = false, hWakeRec = null;
 const HABLAR_USER = 'sb';
+const WAKE_RE = /despierta\s+alic[ie]a[,.]?\s*(.*)/i;
+const SLEEP_RE = /descansa\s+alic[ie]a/i;
 
 function setBlob(state, status, sub) {
   const b = document.getElementById('blob');
@@ -915,8 +938,14 @@ function setBlob(state, status, sub) {
   if (sub) document.getElementById('hablar-sub').textContent = sub;
 }
 
-function talkOnce() {
-  if (hListening) { hRec?.stop(); return; }
+// Vuelve a idle normal, o si el modo de comandos de voz está activo, a escucha pasiva
+function idleOrWake() {
+  if (hWakeActive) { setBlob('wake', 'Alicia descansa 🌙', 'Decí "despierta Alicia" para hablar'); resumeWakeLoop(); }
+  else setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá · te respondo con voz');
+}
+
+// Un turno de escucha activa (single-shot): usado tanto por el tap manual como por "despierta Alicia"
+function startListeningTurn() {
   if (hSending) return;
   if (hAudio) { hAudio.pause(); hAudio = null; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -928,11 +957,79 @@ function talkOnce() {
     hListening = false;
     if (t && t.trim()) hablarSend(t);
   };
-  hRec.onerror = () => { hListening = false; setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá · te respondo con voz'); };
-  hRec.onend = () => { if (hListening) { hListening = false; setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá'); } };
+  hRec.onerror = () => { hListening = false; idleOrWake(); };
+  hRec.onend = () => { if (hListening) { hListening = false; idleOrWake(); } };
   hRec.start();
   hListening = true;
   setBlob('listening', 'Te escucho…', 'Hablá con naturalidad — corto cuando termines');
+}
+
+function talkOnce() {
+  if (hListening) { hRec?.stop(); return; }
+  pauseWakeLoop();
+  startListeningTurn();
+}
+
+// ── Comandos de voz: "despierta Alicia" / "descansa Alicia" ────────────────
+// Escucha pasiva y continua en el navegador (requiere pestaña abierta y en
+// primer plano — Safari/iOS no sostiene reconocimiento continuo en segundo
+// plano, es una limitación de la plataforma, no del código).
+function toggleWakeMode() {
+  if (hWakeActive) { stopWakeMode(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Tu navegador no soporta escucha continua', 'err'); return; }
+  hWakeActive = true;
+  const btn = document.getElementById('wake-toggle');
+  btn.textContent = '🌙 Desactivar comandos de voz';
+  btn.classList.add('btn-primary');
+  resumeWakeLoop();
+}
+
+function stopWakeMode() {
+  hWakeActive = false;
+  pauseWakeLoop();
+  const btn = document.getElementById('wake-toggle');
+  btn.textContent = '🎙️ Activar comandos de voz';
+  btn.classList.remove('btn-primary');
+  if (!hListening && !hSending) setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá · te respondo con voz');
+}
+
+function pauseWakeLoop() {
+  if (hWakeRec) { try { hWakeRec.onend = null; hWakeRec.stop(); } catch {} hWakeRec = null; }
+}
+
+function resumeWakeLoop() {
+  if (!hWakeActive || hListening || hSending || hRec) return;
+  runWakeRecognition();
+}
+
+function runWakeRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  hWakeRec = new SR();
+  hWakeRec.lang = 'es-PE'; hWakeRec.continuous = true; hWakeRec.interimResults = false;
+  hWakeRec.onresult = e => {
+    let t = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) t += ' ' + e.results[i][0].transcript;
+    t = t.toLowerCase().trim();
+    if (!t) return;
+    if (SLEEP_RE.test(t)) { stopWakeMode(); return; }
+    const m = t.match(WAKE_RE);
+    if (m) {
+      pauseWakeLoop();
+      const rest = (m[1] || '').trim();
+      if (rest.length > 2) hablarSend(rest); else startListeningTurn();
+    }
+  };
+  hWakeRec.onerror = e => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      stopWakeMode();
+      toast('Permiso de micrófono denegado para comandos de voz', 'err');
+    }
+    // no-speech / aborted / network: se relanza solo en onend
+  };
+  hWakeRec.onend = () => { hWakeRec = null; if (hWakeActive && !hListening && !hSending) setTimeout(resumeWakeLoop, 250); };
+  try { hWakeRec.start(); setBlob('wake', 'Alicia descansa 🌙', 'Decí "despierta Alicia" para hablar'); }
+  catch (e) { console.warn('wake rec start:', e.message); }
 }
 
 async function hablarSend(text) {
@@ -971,10 +1068,10 @@ async function hablarSend(text) {
       const url = URL.createObjectURL(await tts.blob());
       hAudio = new Audio(url);
       hAudio.onplay = () => setBlob('speaking', '…', 'Tocá el blob para interrumpir y hablar');
-      hAudio.onended = () => { setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá'); URL.revokeObjectURL(url); hAudio = null; };
+      hAudio.onended = () => { idleOrWake(); URL.revokeObjectURL(url); hAudio = null; };
       await hAudio.play();
     } else {
-      setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá');
+      idleOrWake();
     }
   } catch (e) {
     hSending = false;
@@ -982,7 +1079,7 @@ async function hablarSend(text) {
       ? 'Se cortó la conexión con el servidor. Tocá el blob y probá de nuevo.'
       : 'Tuve un problema: ' + e.message;
     document.getElementById('hablar-alicia').textContent = friendly;
-    setBlob('idle', 'Hola, Sebastián', 'Tocá el blob y hablá');
+    idleOrWake();
   }
 }
 
