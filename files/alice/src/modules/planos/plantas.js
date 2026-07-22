@@ -7,7 +7,7 @@
 import { packFloor } from "./lote.js";
 import { layout } from "./distribucion.js";
 import { tipologiaCercana, mixTipologias, porTipologia } from "./tipologias.js";
-import { area } from "./geometry.js";
+import { area, clipConvex, pointInPolygon, isConvex } from "./geometry.js";
 import { porId, NSE } from "./mobiliario.js";
 
 let _n = 1;
@@ -95,14 +95,41 @@ function amoblarUnidad(unit, F, nse, override = null) {
   const ang = (Math.atan2(F.u.y, F.u.x) * 180) / Math.PI;
   const toWorldPt = (x, y) => { const f = toFrame(x, y); const p = F.toWorld(f.u, f.v); return { x: round(p.x), y: round(p.y) }; };
 
-  const rooms = L.rooms.map((r) => ({
+  let rooms = L.rooms.map((r) => ({
     ...r, id: `${unit.id}_${r.id}`,
     pts: r.pts.map((p) => toWorldPt(p.x, p.y)),
   }));
-  const items = L.items.map((t2) => {
+  let items = L.items.map((t2) => {
     const p = toWorldPt(t2.x, t2.y);
     return { ...t2, id: `${unit.id}_${t2.id}`, x: p.x, y: p.y, rot: (t2.rot + rotExtra + ang + 360) % 360 };
   });
+  // El amoblado se genera sobre el rectángulo pleno del marco de la unidad, pero
+  // unit.pts ya viene acotado al footprint por packFloor (respeta todos los retiros
+  // y la forma real del lote). Recortamos cada ambiente a unit.pts y descartamos los
+  // muebles que caigan fuera → el amoblado tampoco sobresale. En lotes rectangulares
+  // unit.pts es el propio rectángulo → no-op; en irregulares/ochavo recorta de verdad.
+  const lim = unit.pts;
+  if (lim && lim.length >= 3) {
+    rooms = rooms.map((r) => {
+      if (isConvex(r.pts)) {
+        // ambiente convexo (la mayoría): se recorta exacto a la forma de la unidad.
+        const c = clipConvex(lim, r.pts);
+        return c.length >= 3 ? { ...r, pts: c.map((p) => ({ x: round(p.x), y: round(p.y) })) } : null; // entero fuera → se descarta
+      }
+      // ambiente no convexo (raro, p.ej. sala en L): si la unidad es convexa se
+      // recorta el ambiente cóncavo contra ella (clip convexo = la unidad).
+      if (isConvex(lim)) {
+        const c = clipConvex(r.pts, lim);
+        return c.length >= 3 ? { ...r, pts: c.map((p) => ({ x: round(p.x), y: round(p.y) })) } : null;
+      }
+      // ambos cóncavos (muy raro): se conserva solo si su centro cae dentro de la
+      // unidad, si no se descarta (para no sobresalir).
+      const cx = r.pts.reduce((a, p) => a + p.x, 0) / r.pts.length;
+      const cy = r.pts.reduce((a, p) => a + p.y, 0) / r.pts.length;
+      return pointInPolygon({ x: cx, y: cy }, lim) ? r : null;
+    }).filter(Boolean);
+    items = items.filter((t2) => pointInPolygon({ x: t2.x, y: t2.y }, lim));
+  }
   return { rooms, items, tipologia: t, warns: L.warns };
 }
 

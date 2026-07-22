@@ -30,6 +30,7 @@ import { aliciaAnalyze } from "../../lib/alicia.js";
 import { corregirConFeyd, reanclarItems } from "./feyd.js";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
 import { useProyectos } from "../cabida/proyectos.js";
+import { clasificarBordes } from "../cabida/loteReal.js";
 
 const FICHA_DEF = {
   proyecto: "Nuevo proyecto", tipo: "Edificio Multifamiliar", ubicacion: "", cliente: "",
@@ -406,6 +407,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [tipoLote, setTipoLote] = useState(P.tipoLote ?? "medianera"); // medianera | esquina
   const [retiro, setRetiro] = useState(P.retiro ?? 3);         // retiro frontal (m)
   const [retiroLat, setRetiroLat] = useState(P.retiroLat ?? 3);   // retiro de la calle lateral (solo esquina)
+  const [retiroPost, setRetiroPost] = useState(P.retiroPost ?? 3); // retiro posterior (área libre)
   const [frontIdx, setFrontIdx] = useState(P.frontIdx ?? 0);     // borde-frente del lote
   const [calib, setCalib] = useState([]);          // puntos de calibración en curso
   const [loteBar, setLoteBar] = useState(true);    // barra de herramientas de lote visible
@@ -417,15 +419,20 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const drag = useRef(null);
 
   // envolvente construible = lote − retiros NORMATIVOS según tipo:
-  // medianera → retiro solo en el frente (los demás bordes son colindantes);
-  // esquina   → retiro en el frente + la calle lateral (borde siguiente al frente).
+  //  · frontal  → siempre (hacia la calle)
+  //  · posterior→ siempre (área libre reglamentaria)
+  //  · laterales→ solo la calle lateral en esquina; en medianera son colindantes (0)
+  // Se clasifica cada borde por su normal (clasificarBordes) para que ande también
+  // en lotes irregulares, no solo rectángulos.
   const footprint = (() => {
     if (!lote || lote.pts.length < 3) return null;
     const n = lote.pts.length;
+    const clases = clasificarBordes(lote.pts, frontIdx);
     const dists = lote.pts.map((_, i) =>
       i === frontIdx ? retiro
-        : (tipoLote === "esquina" && i === (frontIdx + 1) % n) ? retiroLat
-          : 0);
+        : clases[i] === "posterior" ? retiroPost
+          : (tipoLote === "esquina" && i === (frontIdx + 1) % n) ? retiroLat
+            : 0);
     return offsetEdges(lote.pts, dists);
   })();
 
@@ -446,10 +453,10 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
   // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
   useEffect(() => {
-    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha };
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha };
     if (onSavePlano) onSavePlano(snap);
     else { try { localStorage.setItem(STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
-  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha]);
+  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha]);
 
   // ── historial ─────────────────────────────────────────────
   const snapshot = useCallback(() => ({ rooms, items }), [rooms, items]);
@@ -638,6 +645,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     else if (typeof c.retiroFrontal === "number") setRetiro(c.retiroFrontal); // formato viejo
     const rl = c.retiros?.derecha?.on ? c.retiros.derecha : c.retiros?.izquierda?.on ? c.retiros.izquierda : null;
     if (rl && typeof rl.v === "number") setRetiroLat(rl.v);
+    const rp = c.retiros?.posterior;
+    if (rp?.on && typeof rp.v === "number") setRetiroPost(rp.v);
     // hereda el PRODUCTO de cabida: área promedio y mix de dorms → el editor ofrece
     // depas cercanos a eso (uds/piso se re-deriva del footprint al abrir distribución).
     setBrief((br) => ({
@@ -829,7 +838,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const exportarAMesa = () => {
     if (!rooms.length) return;
     const fchr = { ...ficha, proyecto: ficha.proyecto || proyecto?.nombre };
-    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, frontIdx, brief, ficha: fchr };
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha: fchr };
     try {
       localStorage.setItem(STORE, JSON.stringify(snap));
       localStorage.setItem("hygge:mesaTabInicial", "planos");
@@ -1028,6 +1037,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
               </select></label>
             <label style={li}>retiro frontal
               <input type="number" value={retiro} step={0.5} min={0} onChange={(e) => setRetiro(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
+            <label style={li}>retiro posterior
+              <input type="number" value={retiroPost} step={0.5} min={0} onChange={(e) => setRetiroPost(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
             {tipoLote === "esquina" && (
               <label style={li}>retiro calle lateral
                 <input type="number" value={retiroLat} step={0.5} min={0} onChange={(e) => setRetiroLat(parseFloat(e.target.value) || 0)} style={inp} /> m</label>
