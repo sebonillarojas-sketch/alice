@@ -27,7 +27,7 @@ import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { corregirConFeyd } from "./feyd.js";
+import { corregirConFeyd, reanclarItems } from "./feyd.js";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
 import { useProyectos } from "../cabida/proyectos.js";
 
@@ -883,7 +883,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     }
   };
   const aplicarFeyd = () => {
-    if (feyd?.rooms?.length) commit(feyd.rooms, items);
+    // los muebles viajan con su ambiente corregido (F1) — antes quedaban en
+    // coordenadas viejas y terminaban flotando fuera de los muros de Feyd.
+    if (feyd?.rooms?.length) commit(feyd.rooms, reanclarItems(items, rooms, feyd.rooms));
     setFeyd(null);
   };
 
