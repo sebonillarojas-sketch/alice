@@ -14735,7 +14735,10 @@ export default function HyggeOS({ authUser } = {}) {
       description: parsed.amount ? `Monto: S/ ${parsed.amount.toLocaleString("es-PE")}` : "",
       project: parsed.project || "", priority: parsed.priority || "media",
       due: parsed.due || "", space: targetSpace,
-      checked: false, assignee: parsed.assignee || "sb",
+      // Fallback a "sb" hardcodeado = bug: cualquier captura sin assignee
+      // explícito quedaba asignada a Sebastián sin importar quién la creó
+      // (21 jul 2026: "las tareas creadas por otros aparecen con mi nombre").
+      checked: false, assignee: parsed.assignee || currentUser?.id || "sb",
       tags: parsed.type ? [parsed.type] : [], type: parsed.type || null,
       amount: parsed.amount || null, person: parsed.person || null,
       source: "smartcapture", capturedAt: Date.now(),
@@ -15273,8 +15276,11 @@ REGLAS:
       for (const action of (parsed.actions || [])) {
         if (action.type === "create_task") {
           const space = allSpaces.find(s => s.id === action.space) || allSpaces[0];
-          addTask({ title: action.title, space: space.id, priority: action.priority || "media", project: action.project || "HQ", assignee: action.assignee || "sb", due: "hoy", checked: false, parentId: null });
-          executed.push({ label: `Tarea creada: "${action.title}" → ${findPerson(action.assignee)?.name || "Sebastián"}` });
+          // Mismo bug que en Smart Capture: sin fallback a currentUser, cualquier
+          // tarea creada por chat sin assignee explícito quedaba en Sebastián.
+          const assigneeId = action.assignee || currentUser?.id || "sb";
+          addTask({ title: action.title, space: space.id, priority: action.priority || "media", project: action.project || "HQ", assignee: assigneeId, due: "hoy", checked: false, parentId: null });
+          executed.push({ label: `Tarea creada: "${action.title}" → ${findPerson(assigneeId)?.name || currentUser?.firstName || "—"}` });
         } else if (action.type === "create_space") {
           const colorIdx = Math.floor(Math.random() * SPACE_COLORS.length);
           createCustomSpace(action.name, SPACE_COLORS[colorIdx]);
@@ -15288,7 +15294,7 @@ REGLAS:
         } else if (action.type === "add_comment") {
           const found = tasks.find(t => t.title.toLowerCase().includes(action.title.toLowerCase()));
           if (found) {
-            setTasks(prev => prev.map(t => t.id === found.id ? { ...t, comments: [...(t.comments || []), { id: Date.now(), who: "sb", text: action.comment, when: nowHHMM() }] } : t));
+            setTasks(prev => prev.map(t => t.id === found.id ? { ...t, comments: [...(t.comments || []), { id: Date.now(), who: currentUser?.id || "sb", text: action.comment, when: nowHHMM() }] } : t));
             executed.push({ label: `Comentario en "${found.title}"` });
           }
         } else if (action.type === "edit_task") {
@@ -15309,7 +15315,7 @@ REGLAS:
     } finally {
       setChatSending(false);
     }
-  }, [conversation, tasks, allSpaces, addTask, createCustomSpace, toggleTask, updateTask]);
+  }, [conversation, tasks, allSpaces, addTask, createCustomSpace, toggleTask, updateTask, currentUser]);
 
   const totalSales = spvs.reduce((a, b) => a + b.salesPEN, 0);
   const totalTarget = spvs.reduce((a, b) => a + b.targetPEN, 0);
