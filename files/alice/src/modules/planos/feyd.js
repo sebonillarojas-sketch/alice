@@ -2,7 +2,7 @@
 // y el layout JSON del skill arquitecto-residencial-lima (alicia-brain).
 // El na-Barón audita la planta contra su checklist (RNE + Neufert + mercado)
 // y devuelve veredicto + layout corregido, que acá se traduce de vuelta a rooms.
-import { snapPt, area } from "./geometry.js";
+import { snapPt, area, centroid, pointInPolygon } from "./geometry.js";
 import { ALICIA_URL } from "../../lib/brain.js";
 
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -58,6 +58,37 @@ export function layoutARooms(layout) {
       tipo: tipoDe(a.nombre),
       pts: a.poligono.map(([x, y]) => snapPt({ x, y }, 0.05)),
     }));
+}
+
+// F1 · Feyd deja de vaciar/desincronizar el mobiliario.
+// Feyd audita SOLO los ambientes (roomsALayout no le manda muebles), y su
+// corrección reescribe los polígonos. Antes, al aplicar, los muebles quedaban
+// en las coordenadas viejas → flotando fuera de los muros ("vacías"/desincronizado).
+// Acá cada mueble viaja con su ambiente: se lo reancla por el desplazamiento del
+// centroide del ambiente que lo contenía — el mismo criterio con que el editor
+// mueve los muebles cuando arrastrás un ambiente. Ningún mueble se pierde: los
+// que no caen en ningún ambiente, o cuyo ambiente no matchea, quedan intactos.
+export function reanclarItems(items, roomsPrev, roomsNew) {
+  if (!items?.length || !roomsPrev?.length || !roomsNew?.length) return items || [];
+  const cNew = roomsNew.map((r) => centroid(r.pts));
+  // por cada ambiente previo, su corregido más cercano (Feyd ajusta, no reordena).
+  // cap 6 m: si el match más cercano está lejísimo, no reanclar (evita saltos absurdos).
+  const delta = roomsPrev.map((r) => {
+    const c = centroid(r.pts);
+    let best = -1, bestD = Infinity;
+    for (let j = 0; j < cNew.length; j++) {
+      const d = (cNew[j].x - c.x) ** 2 + (cNew[j].y - c.y) ** 2;
+      if (d < bestD) { bestD = d; best = j; }
+    }
+    if (best < 0 || bestD > 36) return { x: 0, y: 0 };
+    return { x: cNew[best].x - c.x, y: cNew[best].y - c.y };
+  });
+  return items.map((t) => {
+    const ri = roomsPrev.findIndex((r) => pointInPolygon({ x: t.x, y: t.y }, r.pts));
+    if (ri < 0) return t;
+    const d = delta[ri];
+    return { ...t, x: r2(t.x + d.x), y: r2(t.y + d.y) };
+  });
 }
 
 // consulta al na-Barón vía alicia-brain (el interceptor de lib/supabase.js adjunta el JWT)

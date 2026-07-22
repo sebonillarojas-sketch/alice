@@ -127,7 +127,7 @@ function Kpi({ label, value, unit, accent }) {
 const CABIDA_STORE = "hygge:cabidaState";
 const loadCabida = () => { try { return JSON.parse(localStorage.getItem(CABIDA_STORE) || "null") || {}; } catch { return {}; } };
 
-export default function CabidaView({ initialTerreno, compact }) {
+export default function CabidaView({ initialTerreno, initialValorTerreno, compact }) {
   const S = useRef(loadCabida()).current;                     // snapshot guardado (ida y vuelta al editor)
   const [terreno, setTerreno] = useState(S.terreno ?? (initialTerreno || 693));
   const [areaLibre, setAreaLibre] = useState(S.areaLibre ?? 35);
@@ -201,6 +201,9 @@ export default function CabidaView({ initialTerreno, compact }) {
   const [factorAzotea, setFactorAzotea] = useState(50);
   const [precioEst, setPrecioEst] = useState(15000);
   const [costoM2, setCostoM2] = useState(950);
+  const [costoVentas, setCostoVentas] = useState(S.costoVentas ?? 15); // costo sobre ventas %: comisiones, mkt, admin, legal, financiamiento (todo lo demás)
+  const [valorTerreno, setValorTerreno] = useState(S.valorTerreno ?? initialValorTerreno ?? 0); // valor del terreno (viene de Growth)
+  const [impuesto, setImpuesto] = useState(S.impuesto ?? 29.5); // impuesto a la renta % sobre la utilidad
 
   const r = useMemo(() => {
     const libre = terreno * areaLibre / 100;
@@ -230,18 +233,23 @@ export default function CabidaView({ initialTerreno, compact }) {
     const ingEst = estVend * precioEst;
     const ingresos = ingViv + ingAz + ingEst;
     const costo = construidaTotal * costoM2;
-    const margen = ingresos - costo;
+    const margen = ingresos - costo;                              // margen bruto (obra)
+    const gastosVentas = ingresos * costoVentas / 100;            // costo sobre ventas: comisiones, mkt, admin, legal, financiamiento (todo lo demás)
+    const utilAntesImp = margen - gastosVentas - valorTerreno;    // − costo sobre ventas − valor del terreno
+    const impuestos = utilAntesImp > 0 ? utilAntesImp * impuesto / 100 : 0;
+    const utilNeta = utilAntesImp - impuestos;                    // utilidad neta después de impuestos
 
     return {
       libre, huella, torre, azTech, azLibre, brutaSR, noComp, vendible,
       dptos, d1, d2, d3, mix3, estVend, estTotal, areaEst, pisosSot, sotanos,
       construidaTotal, ingViv, ingAz, ingEst, ingresos, costo, margen,
+      gastosVentas, valorTerreno, utilAntesImp, impuestos, utilNeta,
       eficiencia: brutaSR ? vendible / brutaSR * 100 : 0,
       incidencia: ingresos ? costo / ingresos * 100 : 0,
       vendEquiv: vendible + azLibre * factorAzotea / 100,
     };
   }, [terreno, areaLibre, pisos, azoteaTechada, circulacion, areaDpto, mix1, mix2,
-      est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2]);
+      est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2, costoVentas, valorTerreno, impuesto]);
 
   const mixWarn = mix1 + mix2 > 100;
 
@@ -251,12 +259,12 @@ export default function CabidaView({ initialTerreno, compact }) {
       localStorage.setItem(CABIDA_STORE, JSON.stringify({
         terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
         frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
-        areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2,
+        areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2, costoVentas, valorTerreno, impuesto,
       }));
     } catch { /* cuota */ }
   }, [terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
       frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
-      areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2]);
+      areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2, costoVentas, valorTerreno, impuesto]);
 
   return (
     <div style={{ minHeight: "100%", background: C.paper, color: C.ink, paddingBottom: 48 }}>
@@ -284,6 +292,7 @@ export default function CabidaView({ initialTerreno, compact }) {
         <Kpi label="departamentos" value={fmt(r.dptos)} unit="unids" accent={C.peri} />
         <Kpi label="estacionamientos" value={fmt(r.estVend)} unit="unids" accent={C.peri} />
         <Kpi label="margen bruto" value={`$${fmt(r.margen)}`} unit={`${r.ingresos > 0 ? fmt(r.margen / r.ingresos * 100, 1) : 0}%`} accent={C.orange} />
+        <Kpi label="utilidad neta" value={`$${fmt(r.utilNeta)}`} unit={`${r.ingresos > 0 ? fmt(r.utilNeta / r.ingresos * 100, 1) : 0}%`} accent={C.peri} />
       </div>
 
       {/* body */}
@@ -374,7 +383,10 @@ export default function CabidaView({ initialTerreno, compact }) {
             <Num label="precio m² vendible" value={precioM2} onChange={setPrecioM2} unit="usd" step={50} accent={C.orange} />
             <Num label="precio por estacionamiento" value={precioEst} onChange={setPrecioEst} unit="usd" step={500} accent={C.orange} />
             <Num label="costo m² construido" value={costoM2} onChange={setCostoM2} unit="usd" step={25} accent={C.orange} />
+            <Pct label="costo sobre ventas (% · comisiones, mkt, admin, legal, financiamiento)" value={costoVentas} onChange={setCostoVentas} max={40} accent={C.orange} />
             <Pct label="valor azotea no techada (% del precio)" value={factorAzotea} onChange={setFactorAzotea} accent={C.orange} />
+            <Num label="valor del terreno (Growth)" value={valorTerreno} onChange={setValorTerreno} unit="usd" step={10000} accent={C.orange} />
+            <Pct label="impuesto a la renta (% s/ utilidad)" value={impuesto} onChange={setImpuesto} max={40} accent={C.orange} />
           </Card>
         </div>
 
@@ -429,6 +441,25 @@ export default function CabidaView({ initialTerreno, compact }) {
               </div>
               <div style={{ fontFamily: mono, fontSize: 12, color: C.peri }}>
                 {r.ingresos > 0 ? fmt(r.margen / r.ingresos * 100, 1) : "0"}% sobre ingresos · incidencia {fmt(r.incidencia, 1)}%
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <Row dark k={`costo sobre ventas (${costoVentas}%)`} v={`−$${fmt(r.gastosVentas)}`} unit="" accent={C.orange} />
+              <Row dark k="valor del terreno (Growth)" v={`−$${fmt(r.valorTerreno)}`} unit="" accent={C.orange} />
+              <Row dark k="utilidad antes de impuestos" v={`$${fmt(r.utilAntesImp)}`} unit="" strong />
+              <Row dark k={`impuestos (${impuesto}% s/ utilidad)`} v={`−$${fmt(r.impuestos)}`} unit="" accent={C.orange} />
+            </div>
+
+            <div style={{ marginTop: 14, borderLeft: `3px solid ${C.peri}`, paddingLeft: 14 }}>
+              <div style={{ fontFamily: mono, fontSize: 9.5, color: C.peri, letterSpacing: "0.05em", marginBottom: 2 }}>
+                utilidad neta (después de terreno + impuestos)
+              </div>
+              <div style={{ fontFamily: mono, fontSize: 26, fontWeight: 700 }}>
+                ${fmt(r.utilNeta)}
+              </div>
+              <div style={{ fontFamily: mono, fontSize: 12, color: C.peri }}>
+                {r.ingresos > 0 ? fmt(r.utilNeta / r.ingresos * 100, 1) : "0"}% sobre ingresos · ROI s/terreno {r.valorTerreno > 0 ? fmt(r.utilNeta / r.valorTerreno * 100, 0) + "%" : "—"}
               </div>
             </div>
 
