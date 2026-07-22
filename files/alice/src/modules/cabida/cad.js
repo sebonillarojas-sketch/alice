@@ -90,27 +90,44 @@ function simplificar(pts, tol = 0.01) {
   return out;
 }
 
-// recentra a origen (centro del bbox) y devuelve métricas
+// escala, alinea el frente a la horizontal y recentra al origen; devuelve métricas
 function finalize(polyRaw, mpuDecl, unitCode, layer, source) {
   const rawArea = Math.abs(shoelace(polyRaw));
   const esc = elegirEscala(rawArea, mpuDecl, unitCode);
   const mpu = esc.mpu;
-  // simplificar DESPUÉS de escalar: la tolerancia (1 cm) es en metros
-  const poly = simplificar(polyRaw.map((p) => ({ x: p.x * mpu, y: p.y * mpu })));
-  const xs = poly.map((p) => p.x), ys = poly.map((p) => p.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-  // Y del CAD apunta arriba; en pantalla apunta abajo → invertimos Y al recentrar
-  const pts = poly.map((p) => ({ x: +(p.x - cx).toFixed(3), y: +(cy - p.y).toFixed(3) }));
-  const area = Math.abs(shoelace(pts));
+  // simplificar DESPUÉS de escalar: la tolerancia (1 cm) es en metros.
+  // Y del CAD apunta arriba; en pantalla apunta abajo → invertimos Y.
+  let pts = simplificar(polyRaw.map((p) => ({ x: p.x * mpu, y: p.y * mpu }))).map((p) => ({ x: p.x, y: -p.y }));
+
   // borde más largo = frente probable (hacia la calle)
-  let frente = 0, frenteIdx = 0;
+  let frenteIdx = 0, frente = 0;
   for (let i = 0; i < pts.length; i++) {
     const q = pts[(i + 1) % pts.length];
     const len = Math.hypot(pts[i].x - q.x, pts[i].y - q.y);
     if (len > frente) { frente = len; frenteIdx = i; }
   }
+
+  // ALINEAR: el CAD suele venir chueco. Rotamos todo el lote para que el borde
+  // del frente quede horizontal (no reordena vértices → frenteIdx se conserva).
+  const p0 = pts[frenteIdx], p1 = pts[(frenteIdx + 1) % pts.length];
+  const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+  const ca = Math.cos(-ang), sa = Math.sin(-ang);
+  pts = pts.map((p) => ({ x: p.x * ca - p.y * sa, y: p.x * sa + p.y * ca }));
+  // dejar el cuerpo del lote por encima del frente (calle abajo). Si el centroide
+  // quedó por debajo del borde-frente, giramos 180° (sigue horizontal).
+  const cyc = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+  const eY = (pts[frenteIdx].y + pts[(frenteIdx + 1) % pts.length].y) / 2;
+  if (cyc > eY) pts = pts.map((p) => ({ x: -p.x, y: -p.y }));
+
+  // recentrar al origen (centro del bbox, ya rotado)
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  pts = pts.map((p) => ({ x: +(p.x - cx).toFixed(3), y: +(p.y - cy).toFixed(3) }));
+  const area = Math.abs(shoelace(pts));
+  // frente = largo del borde ya alineado (la rotación preserva longitudes)
+  frente = Math.hypot(pts[frenteIdx].x - pts[(frenteIdx + 1) % pts.length].x, pts[frenteIdx].y - pts[(frenteIdx + 1) % pts.length].y);
   return {
     pts, frenteIdx, area: +area.toFixed(1),
     bbox: { w: +(maxX - minX).toFixed(2), h: +(maxY - minY).toFixed(2) },

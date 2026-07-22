@@ -2,7 +2,7 @@
 // toma el footprint (envolvente construible = lote − retiros) y reparte tipologías
 // de departamento + core de circulación, orientadas al frente y recortadas a la forma.
 
-import { orientedFrame, area, clipConvex, isConvex, signedArea } from "./geometry.js";
+import { orientedFrame, area, clipConvex, signedArea } from "./geometry.js";
 
 let _n = 1;
 const rid = () => `f${_n++}_${Math.random().toString(36).slice(2, 6)}`;
@@ -56,13 +56,17 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     ].map((tip) => ({ tip, area: ratios[tip] * esc }));
   }
 
+  // recorta cualquier rectángulo (siempre convexo) a la forma REAL del lote:
+  // clipConvex(footprint, rect) = footprint ∩ rect (clip a "viewport" clásico),
+  // válido para lotes convexos Y cóncavos (ochavo, trapecio, L). Garantiza que
+  // ni las tipologías ni el core ni el corredor sobresalgan jamás del lote.
+  const recortar = (rectPts) => { const c = clipConvex(footprint, rectPts); return c.length >= 3 ? c.map(round) : null; };
+
   // core en el frente: centrado o pegado a un lado
   const coreU0 = corePos === "izq" ? 0 : (frente - coreW) / 2;
   const coreU1 = coreU0 + coreW;
-  const core = {
-    id: rid(), tipo: "core",
-    pts: [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, fondo), F.toWorld(coreU0, fondo)].map(round),
-  };
+  const coreRect = [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, fondo), F.toWorld(coreU0, fondo)];
+  const core = { id: rid(), tipo: "core", pts: recortar(coreRect) || coreRect.map(round) };
 
   // filas (bandas) según crujía
   const filas = doble
@@ -80,8 +84,6 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
   // empaquetar a lo largo del frente, saltando el hueco del core
   const disponible = Math.max(frente - coreW, 1);
   const units = [];
-  const clip = isConvex(footprint) ? footprint : null;
-  if (!clip) warns.push("lote no convexo — bloques sin recortar a la forma exacta");
 
   filas.forEach((fila) => {
     const sumW = fila.units.reduce((a, u) => a + u.area / fila.depth, 0) || 1;
@@ -100,13 +102,13 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
         segs.push([coreU1, b + coreW]);
       }
       segs.forEach(([ua, ub], si) => {
-        let poly = [
+        const rect = [
           F.toWorld(ua, fila.v0), F.toWorld(ub, fila.v0),
           F.toWorld(ub, fila.v0 + fila.depth), F.toWorld(ua, fila.v0 + fila.depth),
         ];
-        if (clip) { const c = clipConvex(poly, clip); if (c.length >= 3) poly = c; else return; }
-        poly = poly.map(round);
-        if (area(poly) < 2) return;   // esquirla junto al core: ni depósito merece
+        const poly = recortar(rect);   // recorta la unidad a la forma real del lote
+        if (!poly) return;             // cae entera fuera del lote → no existe
+        if (area(poly) < 2) return;    // esquirla junto al core: ni depósito merece
         units.push({
           id: rid(), tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
           tipologia: unit.tipologia || null, partida: segs.length > 1 ? si : null,
@@ -117,10 +119,10 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     });
   });
 
-  const corridor = doble ? {
-    id: rid(), tipo: "corredor",
-    pts: [F.toWorld(0, bandDepth), F.toWorld(frente, bandDepth), F.toWorld(frente, bandDepth + corrDepth), F.toWorld(0, bandDepth + corrDepth)].map(round),
-  } : null;
+  const corrRect = doble
+    ? [F.toWorld(0, bandDepth), F.toWorld(frente, bandDepth), F.toWorld(frente, bandDepth + corrDepth), F.toWorld(0, bandDepth + corrDepth)]
+    : null;
+  const corridor = corrRect ? { id: rid(), tipo: "corredor", pts: recortar(corrRect) || corrRect.map(round) } : null;
 
   return { units, core, corridor, F, frente, fondo, doble, bandDepth, corrDepth, warns };
 }
