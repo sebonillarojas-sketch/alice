@@ -9931,7 +9931,7 @@ function ComposeMessageModal({ users, currentUserId, onClose, onSend }) {
 
 
 
-function SettingsModal({ open, onClose, currentUser, users, updateUser, createUser, deleteUser, allSpaces, spaceAccess, updateSpaceAccess, onResetTasks, onResetTerrenos, onResetCustomViews, taskCount, terrenoCount, customViewsCount, tasks, setTasks, customViews, setCustomViews, terrenos, setTerrenos, customSpaces, setCustomSpaces, messages, smartViews, whiteboards, onExportTasks, onExportTerrenos, agentStatus, recordAgentRun, quarantineMode, setQuarantineMode, features, setFeatures }) {
+function SettingsModal({ open, onClose, currentUser, users, updateUser, createUser, deleteUser, allSpaces, spaceAccess, updateSpaceAccess, onResetTasks, onResetTerrenos, onResetCustomViews, taskCount, terrenoCount, customViewsCount, tasks, setTasks, customViews, setCustomViews, terrenos, setTerrenos, customSpaces, setCustomSpaces, messages, smartViews, whiteboards, onExportTasks, onExportTerrenos, agentStatus, recordAgentRun, quarantineMode, setQuarantineMode, features, setFeatures, activity, updateTask }) {
   const [tab, setTab] = useState("perfil");
   const [adminSubTab, setAdminSubTab] = useState("usuarios");
   if (!open || !currentUser) return null;
@@ -9965,7 +9965,7 @@ function SettingsModal({ open, onClose, currentUser, users, updateUser, createUs
           {tab === "preferencias" && <PreferencesTab user={currentUser} updateUser={(p) => updateUser(currentUser.id, p)} allSpaces={allSpaces} />}
           {tab === "seguridad" && <SecurityTab user={currentUser} updateUser={(p) => updateUser(currentUser.id, p)} />}
           {tab === "admin" && isAdmin && (
-            <AdminTab subTab={adminSubTab} setSubTab={setAdminSubTab} users={users} createUser={createUser} updateUser={updateUser} deleteUser={deleteUser} currentUserId={currentUser.id} allSpaces={allSpaces} spaceAccess={spaceAccess} updateSpaceAccess={updateSpaceAccess} onResetTasks={onResetTasks} onResetTerrenos={onResetTerrenos} onResetCustomViews={onResetCustomViews} taskCount={taskCount} terrenoCount={terrenoCount} customViewsCount={customViewsCount} tasks={tasks} setTasks={setTasks} customViews={customViews} setCustomViews={setCustomViews} terrenos={terrenos} setTerrenos={setTerrenos} customSpaces={customSpaces} setCustomSpaces={setCustomSpaces} messages={messages} smartViews={smartViews} whiteboards={whiteboards} onExportTasks={onExportTasks} onExportTerrenos={onExportTerrenos} agentStatus={agentStatus} recordAgentRun={recordAgentRun} quarantineMode={quarantineMode} setQuarantineMode={setQuarantineMode} features={features} setFeatures={setFeatures} />
+            <AdminTab subTab={adminSubTab} setSubTab={setAdminSubTab} users={users} createUser={createUser} updateUser={updateUser} deleteUser={deleteUser} currentUserId={currentUser.id} allSpaces={allSpaces} spaceAccess={spaceAccess} updateSpaceAccess={updateSpaceAccess} onResetTasks={onResetTasks} onResetTerrenos={onResetTerrenos} onResetCustomViews={onResetCustomViews} taskCount={taskCount} terrenoCount={terrenoCount} customViewsCount={customViewsCount} tasks={tasks} setTasks={setTasks} customViews={customViews} setCustomViews={setCustomViews} terrenos={terrenos} setTerrenos={setTerrenos} customSpaces={customSpaces} setCustomSpaces={setCustomSpaces} messages={messages} smartViews={smartViews} whiteboards={whiteboards} onExportTasks={onExportTasks} onExportTerrenos={onExportTerrenos} agentStatus={agentStatus} recordAgentRun={recordAgentRun} quarantineMode={quarantineMode} setQuarantineMode={setQuarantineMode} features={features} setFeatures={setFeatures} activity={activity} updateTask={updateTask} />
           )}
         </div>
       </div>
@@ -10162,7 +10162,7 @@ function FeaturesAdminPanel({ features, setFeatures }) {
   );
 }
 
-function AdminTab({ subTab, setSubTab, users, createUser, updateUser, deleteUser, currentUserId, allSpaces, spaceAccess, updateSpaceAccess, onResetTasks, onResetTerrenos, onResetCustomViews, taskCount, terrenoCount, customViewsCount, tasks, setTasks, customViews, setCustomViews, terrenos, setTerrenos, customSpaces, setCustomSpaces, messages, smartViews, whiteboards, onExportTasks, onExportTerrenos, agentStatus, recordAgentRun, quarantineMode, setQuarantineMode, features, setFeatures }) {
+function AdminTab({ subTab, setSubTab, users, createUser, updateUser, deleteUser, currentUserId, allSpaces, spaceAccess, updateSpaceAccess, onResetTasks, onResetTerrenos, onResetCustomViews, taskCount, terrenoCount, customViewsCount, tasks, setTasks, customViews, setCustomViews, terrenos, setTerrenos, customSpaces, setCustomSpaces, messages, smartViews, whiteboards, onExportTasks, onExportTerrenos, agentStatus, recordAgentRun, quarantineMode, setQuarantineMode, features, setFeatures, activity, updateTask }) {
   const subTabs = [
     { id: "usuarios", label: "Usuarios", icon: Users },
     { id: "permisos", label: "Permisos de Spaces", icon: Settings },
@@ -10191,7 +10191,7 @@ function AdminTab({ subTab, setSubTab, users, createUser, updateUser, deleteUser
       </div>
       {subTab === "usuarios" && <UsersAdminPanel users={users} createUser={createUser} updateUser={updateUser} deleteUser={deleteUser} currentUserId={currentUserId} />}
       {subTab === "permisos" && <SpacePermissionsPanel users={users} allSpaces={allSpaces} spaceAccess={spaceAccess} updateSpaceAccess={updateSpaceAccess} />}
-      {subTab === "datos" && <DataAdminPanel onResetTasks={onResetTasks} onResetTerrenos={onResetTerrenos} onResetCustomViews={onResetCustomViews} taskCount={taskCount} terrenoCount={terrenoCount} customViewsCount={customViewsCount} onExportTasks={onExportTasks} onExportTerrenos={onExportTerrenos} />}
+      {subTab === "datos" && <DataAdminPanel onResetTasks={onResetTasks} onResetTerrenos={onResetTerrenos} onResetCustomViews={onResetCustomViews} taskCount={taskCount} terrenoCount={terrenoCount} customViewsCount={customViewsCount} onExportTasks={onExportTasks} onExportTerrenos={onExportTerrenos} tasks={tasks} activity={activity} users={users} updateTask={updateTask} />}
       {subTab === "features" && <FeaturesAdminPanel features={features} setFeatures={setFeatures} />}
       {subTab === "jabberwocky" && <JabberwockyPanel tasks={tasks} customViews={customViews} terrenos={terrenos} customSpaces={customSpaces} allSpaces={allSpaces} users={users} messages={messages} smartViews={smartViews} whiteboards={whiteboards} spaceAccess={spaceAccess} agentStatus={agentStatus} recordAgentRun={recordAgentRun} />}
       {subTab === "bandersnatch" && <BandersnatchPanel tasks={tasks} setTasks={setTasks} customViews={customViews} setCustomViews={setCustomViews} terrenos={terrenos} setTerrenos={setTerrenos} customSpaces={customSpaces} setCustomSpaces={setCustomSpaces} allSpaces={allSpaces} users={users} recordAgentRun={recordAgentRun} />}
@@ -14097,7 +14097,85 @@ CIERRE: [una frase final breve, con personalidad Jabberwocky]`,
   );
 }
 
-function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, taskCount, terrenoCount, customViewsCount, onExportTasks, onExportTerrenos }) {
+// Corrige tareas cuyo `assignee` quedó en "sb" por el bug del fallback hardcodeado
+// (ver fix "sacar el fallback hardcodeado a sb", 22 jul 2026) usando la ÚNICA señal
+// real disponible: el feed de Actividad, que desde el fix de recordActivity (PR #16,
+// 21 jul 2026) sí guarda el firstName de quien efectivamente creó la tarea.
+// LIMITACIÓN honesta: `activity` está capado a las últimas 50 entradas y sincronizado
+// como blob (last-write-wins) — tareas más viejas que eso, o creadas antes de que
+// recordActivity guardara el nombre correcto, no son recuperables así. No hay ningún
+// campo "createdBy" persistido — por eso esto es best-effort con preview, no un
+// backfill silencioso.
+function ReconcileAssigneesPanel({ tasks, activity, users, updateTask }) {
+  const [applying, setApplying] = useState(null);
+  const [applied, setApplied] = useState(new Set());
+
+  const candidates = useMemo(() => {
+    const creatorByTask = new Map();
+    for (const a of (activity || [])) {
+      if (!a.relatedTaskId || creatorByTask.has(a.relatedTaskId)) continue;
+      if (!/^creó "/.test(a.what || "")) continue;
+      creatorByTask.set(a.relatedTaskId, a.who);
+    }
+    const out = [];
+    for (const t of (tasks || [])) {
+      if (t.assignee !== "sb") continue;
+      const who = creatorByTask.get(t.id);
+      if (!who) continue;
+      const match = (users || []).find(u => u.firstName === who);
+      if (!match || match.id === "sb") continue;
+      out.push({ taskId: t.id, title: t.title, newAssignee: match.id, newName: match.firstName });
+    }
+    return out;
+  }, [tasks, activity, users]);
+
+  const applyOne = useCallback(async (c) => {
+    setApplying(c.taskId);
+    try { await updateTask(c.taskId, { assignee: c.newAssignee }); setApplied(prev => new Set(prev).add(c.taskId)); }
+    finally { setApplying(null); }
+  }, [updateTask]);
+
+  const pending = candidates.filter(c => !applied.has(c.taskId));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <Eyebrow>Reasignar tareas históricas</Eyebrow>
+        {pending.length > 0 && (
+          <button onClick={() => { pending.forEach(c => applyOne(c)); }} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.ink, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 600 }}>
+            Aplicar todas ({pending.length})
+          </button>
+        )}
+      </div>
+      <div className="text-[10px] mb-3" style={{ color: C.muted, lineHeight: 1.55 }}>
+        Detecta tareas asignadas a Sebastián cuyo registro de "creó…" en el feed de Actividad dice otro nombre, y las reasigna. Solo cubre lo que sigue en ese log (capado a 50 entradas) — no es un backfill completo, es lo único que se puede reconstruir sin inventar datos.
+      </div>
+      {candidates.length === 0 ? (
+        <div className="text-[11px]" style={{ color: C.muted }}>Sin correcciones detectables en el log actual.</div>
+      ) : (
+        <div className="space-y-1">
+          {candidates.map(c => (
+            <div key={c.taskId} className="flex items-center justify-between px-3 py-2" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, opacity: applied.has(c.taskId) ? 0.5 : 1 }}>
+              <div className="text-[12px] truncate flex-1 min-w-0" style={{ color: C.ink }}>{c.title}</div>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                <span className="text-[10px]" style={{ color: C.muted }}>Sebastián → {c.newName}</span>
+                {applied.has(c.taskId) ? (
+                  <CheckCircle2 size={13} style={{ color: C.green }} />
+                ) : (
+                  <button onClick={() => applyOne(c)} disabled={applying === c.taskId} className="px-2 py-1 text-[10px] hover:opacity-90" style={{ color: C.ink, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+                    {applying === c.taskId ? "…" : "Corregir"}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, taskCount, terrenoCount, customViewsCount, onExportTasks, onExportTerrenos, tasks, activity, users, updateTask }) {
   const confirm = useConfirm();
   const askReset = async (kind, action) => {
     const labels = {
@@ -14145,6 +14223,10 @@ function DataAdminPanel({ onResetTasks, onResetTerrenos, onResetCustomViews, tas
             Resetear terrenos
           </button>
         </div>
+      </div>
+
+      <div className="p-4" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
+        <ReconcileAssigneesPanel tasks={tasks} activity={activity} users={users} updateTask={updateTask} />
       </div>
 
       <div>
@@ -15689,6 +15771,7 @@ REGLAS:
           }} />
       )}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} users={users} updateUser={updateUserData} createUser={createUserAccount} deleteUser={deleteUserAccount} allSpaces={allSpaces} spaceAccess={spaceAccess} updateSpaceAccess={updateSpaceAccessFor}
+        activity={activity} updateTask={updateTask}
         onResetTasks={() => setTasks(INITIAL_TASKS)}
         onResetTerrenos={() => setTerrenos(INITIAL_TERRENOS)}
         onResetCustomViews={() => setCustomViews(INITIAL_CUSTOM_VIEWS)}
