@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { RefreshCw, Plus, Trash2, Info, CheckCircle2, XCircle, ExternalLink, Download } from "lucide-react";
+import { RefreshCw, Plus, Info, CheckCircle2, XCircle, ExternalLink, Download } from "lucide-react";
 import { ALICIA_URL } from "../../lib/brain.js";
 import { db } from "../../lib/supabase.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
@@ -8,7 +8,8 @@ import { calcularCuotasPorBanco, RATIO_ENDEUDAMIENTO_DEFAULT } from "./financiam
 import { resumenRetornoPorFuente, resumenListingsAuto, percentilEnRango } from "./retorno.js";
 import { downloadPrintableDocument } from "../../lib/exportHtml.js";
 
-// ─── BRAND (mismos tokens que el resto de ALICE) ────────────────────────────
+// ─── BRAND (mismos tokens + primitivas editoriales que el resto de ALICE,
+// ver HyggeOS.jsx § PRIMITIVES: NavyRule/Eyebrow/Panel/KpiBar) ──────────────
 const C = {
   bg: "#EEEBE3", paper: "#F4F1EA", ink: "#0A0B0F", inkSoft: "#2E2E33",
   muted: "#6B6863", line: "#D9D5CD", lineSoft: "#E5E1D6", surface: "#E5E1D6",
@@ -28,35 +29,63 @@ const fmtMoney = (n, cur = "PEN") => {
 };
 const fmtPct = (n, d = 1) => (n == null || Number.isNaN(n) ? "—" : `${(n * 100).toFixed(d)}%`);
 
-function Eyebrow({ children }) {
-  return <div style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, fontWeight: 600 }}>{children}</div>;
+const NavyRule = ({ width = 24 }) => <div style={{ width, height: 2, backgroundColor: C.navy }} />;
+
+function Eyebrow({ children, color = C.muted }) {
+  return <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color, fontWeight: 500 }}>{children}</div>;
 }
 
-function Card({ title, right, children }) {
+function SectionHead({ title, right }) {
   return (
-    <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 4, padding: "18px 20px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <Eyebrow>{title}</Eyebrow>
+    <div style={{ marginBottom: 18 }}>
+      <NavyRule />
+      <div style={{ marginTop: 10, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <h2 style={{ fontSize: 19, color: C.ink, fontWeight: 600, letterSpacing: "-0.012em", margin: 0 }}>{title}</h2>
         {right}
       </div>
-      {children}
     </div>
   );
 }
 
+function Panel({ children, style }) {
+  return <div style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "22px 24px", ...style }}>{children}</div>;
+}
+
 function Field({ label, children }) {
   return (
-    <label style={{ display: "block", marginBottom: 12 }}>
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>{label}</div>
+    <label style={{ display: "block", marginBottom: 14 }}>
+      <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted, fontWeight: 500, marginBottom: 6 }}>{label}</div>
       {children}
     </label>
   );
 }
 
 const inputStyle = {
-  width: "100%", padding: "7px 9px", borderRadius: 2, border: `1px solid ${C.line}`,
+  width: "100%", padding: "8px 10px", borderRadius: 2, border: `1px solid ${C.lineSoft}`,
   background: "#fff", fontSize: 13, color: C.ink, outline: "none", boxSizing: "border-box",
 };
+
+const ghostBtn = {
+  display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 2,
+  border: `1px solid ${C.lineSoft}`, background: "#fff", fontSize: 10, letterSpacing: "0.1em",
+  textTransform: "uppercase", color: C.muted, cursor: "pointer", fontWeight: 500,
+};
+const inkBtn = {
+  display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 2,
+  border: "none", background: C.ink, color: C.bg, fontSize: 10, letterSpacing: "0.12em",
+  textTransform: "uppercase", fontWeight: 600, cursor: "pointer",
+};
+
+// tile de una sola cifra grande, estilo KpiBar de HQDashboard
+function StatTile({ label, value, valueColor, sub, borderRight }) {
+  return (
+    <div style={{ padding: "18px 22px", borderRight: borderRight ? `1px solid ${C.lineSoft}` : "none", flex: 1, minWidth: 140 }}>
+      <Eyebrow>{label}</Eyebrow>
+      <div style={{ fontSize: 30, marginTop: 8, marginBottom: 6, color: valueColor || C.ink, fontWeight: 300, letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.muted }}>{sub}</div>}
+    </div>
+  );
+}
 
 export default function CotizacionView() {
   const { currentUser } = useAuth();
@@ -136,9 +165,9 @@ export default function CotizacionView() {
     return { ingresoMensual, yieldAnual: (ingresoMensual * 12) / precioUnidad };
   }, [wynwoodAuto, ocupacionAsumida, precioUnidad, moneda, macro]);
 
-  // ── resumen "pagos vs entradas" · una sola tabla, cuota mensual por banco
-  // contra ingreso mensual por fuente de alquiler, para ver de un vistazo si
-  // el alquiler cubre la cuota ──
+  // ── resumen "pagos vs entradas" · cuota mensual por banco contra ingreso
+  // mensual por fuente de alquiler, para ver de un vistazo si el alquiler
+  // cubre la cuota ──
   const filasPagos = useMemo(() => {
     if (cuotas.length) return cuotas.map(r => ({ label: r.bank, monto: r.cuotaMensual, nota: `${r.tea.toFixed(2)}% TEA` }));
     if (macroTea != null) {
@@ -279,233 +308,252 @@ export default function CotizacionView() {
   }, [cuotas, moneda, macroTea, precioUnidad, inicialMonto, plazoAnios, retorno, wynwoodAuto, wynwoodEstimado, ocupacionAsumida, district, tipologia, areaM2, precioM2Efectivo, ingresoMensual, inicialPct, zona, percentil, filasPagos, filasEntradas, cobertura]);
 
   return (
-    <div style={{ background: C.bg, minHeight: "100%", padding: "24px 28px", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 20 }}>
+    <div style={{ background: C.bg, minHeight: "100%", padding: "40px 44px", fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
+      {/* ── HERO ── */}
+      <div style={{ marginBottom: 40, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div>
-          <Eyebrow>Comercial · Cotización</Eyebrow>
-          <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", color: C.ink, margin: "2px 0 0" }}>Cuotas, plusvalía y retorno</h1>
+          <NavyRule width={28} />
+          <div style={{ marginTop: 12 }}><Eyebrow>Comercial · Cotización</Eyebrow></div>
+          <h1 style={{ fontSize: 40, lineHeight: 1, marginTop: 14, color: C.ink, fontWeight: 300, letterSpacing: "-0.03em" }}>
+            Cuotas, plusvalía<br />y retorno
+          </h1>
+          <p style={{ fontSize: 14, marginTop: 14, maxWidth: 520, color: C.inkSoft, lineHeight: 1.6 }}>
+            Cotización para <strong style={{ fontWeight: 600 }}>{district}</strong> · {tipologia} de {areaM2}m² — cuota comparada entre bancos con tasas reales, más el retorno de alquiler de la zona.
+          </p>
         </div>
-        <div style={{ fontSize: 10, color: C.muted, textAlign: "right" }}>
-          {marketTs && <div>tasas actualizadas · {new Date(marketTs).toLocaleDateString("es-PE")}</div>}
-          <div style={{ display: "flex", gap: 6, marginTop: 4, justifyContent: "flex-end" }}>
-            <button onClick={fetchMarket} disabled={loadingMarket}
-              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "#fff", fontSize: 10, color: C.muted, cursor: "pointer" }}>
+        <div style={{ textAlign: "right" }}>
+          {marketTs && <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>tasas actualizadas · {new Date(marketTs).toLocaleDateString("es-PE")}</div>}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button onClick={fetchMarket} disabled={loadingMarket} style={ghostBtn}>
               <RefreshCw size={10} className={loadingMarket ? "animate-spin" : ""} /> {loadingMarket ? "actualizando…" : "refrescar tasas"}
             </button>
-            <button onClick={handleExport}
-              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 2, border: "none", background: C.ink, color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+            <button onClick={handleExport} style={inkBtn}>
               <Download size={10} /> exportar cotización
             </button>
           </div>
         </div>
       </div>
 
-      <Card title="Pagos vs entradas · resumen mensual" right={cobertura != null && (
-        <span style={{ fontSize: 11, fontWeight: 700, color: cobertura >= 1 ? C.green : C.brick }}>
-          cobertura {fmtPct(cobertura, 0)}
-        </span>
-      )}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${C.line}`, color: C.muted, textAlign: "left" }}>
-                <th style={{ padding: "4px 8px", fontWeight: 600 }}></th>
-                <th style={{ padding: "4px 8px", fontWeight: 600 }}>Concepto</th>
-                <th style={{ padding: "4px 8px", fontWeight: 600, textAlign: "right" }}>Monto/mes</th>
-                <th style={{ padding: "4px 8px", fontWeight: 600 }}>Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan={4} style={{ padding: "8px 8px 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.brick }}>Pagos (cuota)</td></tr>
-              {filasPagos.length ? filasPagos.map(f => (
-                <tr key={f.label} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                  <td style={{ padding: "6px 8px" }}><XCircle size={12} color={C.brick} /></td>
-                  <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>{f.label}</td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(f.monto, moneda)}</td>
-                  <td style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>{f.nota}</td>
-                </tr>
-              )) : (
-                <tr><td colSpan={4} style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>Sin datos todavía — completá precio de la unidad e ingreso del cliente.</td></tr>
-              )}
-              <tr><td colSpan={4} style={{ padding: "10px 8px 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: C.green }}>Entradas (alquiler)</td></tr>
-              {filasEntradas.length ? filasEntradas.map(f => (
-                <tr key={f.label} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                  <td style={{ padding: "6px 8px" }}><CheckCircle2 size={12} color={C.green} /></td>
-                  <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>{f.label}</td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(f.monto, moneda)}</td>
-                  <td style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>{f.nota}</td>
-                </tr>
-              )) : (
-                <tr><td colSpan={4} style={{ padding: "6px 8px", color: C.muted, fontSize: 11 }}>Sin comparables de alquiler cargados todavía para {district} · {tipologia} (ver Retorno más abajo).</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div style={{ fontSize: 10, color: C.muted, marginTop: 10, display: "flex", gap: 6 }}>
-          <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-          Cobertura = mejor entrada mensual disponible ÷ mejor cuota disponible. No es un neto contable (no descuenta mantenimiento, IGV, vacancia).
-        </div>
-      </Card>
+      {/* ── PAGOS VS ENTRADAS · KPI strip + detalle ── */}
+      <section style={{ marginBottom: 36 }}>
+        <SectionHead title="Pagos vs entradas" right={cobertura != null && (
+          <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 600, color: cobertura >= 1 ? C.green : C.brick }}>
+            {cobertura >= 1 ? "↗" : "↘"} cobertura {fmtPct(cobertura, 0)}
+          </span>
+        )} />
+        <Panel style={{ padding: 0 }}>
+          <div style={{ display: "flex", flexWrap: "wrap" }}>
+            <StatTile label="Mejor cuota" value={mejorPago != null ? fmtMoney(mejorPago, moneda) : "—"} sub={filasPagos[0] && "/mes"} borderRight />
+            <StatTile label="Mejor entrada" value={mejorEntrada != null ? fmtMoney(mejorEntrada, moneda) : "—"} sub={filasEntradas[0] && "/mes"} borderRight />
+            <StatTile label="Cobertura" value={cobertura != null ? fmtPct(cobertura, 0) : "—"} valueColor={cobertura != null ? (cobertura >= 1 ? C.green : C.brick) : C.ink} sub="entrada ÷ cuota" />
+          </div>
+          <div style={{ borderTop: `1px solid ${C.lineSoft}`, padding: "18px 24px" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <tbody>
+                <tr><td colSpan={4} style={{ padding: "0 0 8px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: C.brick }}>Pagos (cuota)</td></tr>
+                {filasPagos.length ? filasPagos.map(f => (
+                  <tr key={f.label} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                    <td style={{ padding: "7px 8px 7px 0", width: 18 }}><XCircle size={12} color={C.brick} /></td>
+                    <td style={{ padding: "7px 8px", fontWeight: 500, color: C.ink }}>{f.label}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 600, color: C.ink }}>{fmtMoney(f.monto, moneda)}</td>
+                    <td style={{ padding: "7px 8px", color: C.muted, fontSize: 11 }}>{f.nota}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={4} style={{ padding: "7px 0", color: C.muted, fontSize: 11 }}>Sin datos todavía — completá precio de la unidad e ingreso del cliente.</td></tr>
+                )}
+                <tr><td colSpan={4} style={{ padding: "12px 0 8px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: C.green }}>Entradas (alquiler)</td></tr>
+                {filasEntradas.length ? filasEntradas.map(f => (
+                  <tr key={f.label} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                    <td style={{ padding: "7px 8px 7px 0" }}><CheckCircle2 size={12} color={C.green} /></td>
+                    <td style={{ padding: "7px 8px", fontWeight: 500, color: C.ink }}>{f.label}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 600, color: C.ink }}>{fmtMoney(f.monto, moneda)}</td>
+                    <td style={{ padding: "7px 8px", color: C.muted, fontSize: 11 }}>{f.nota}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={4} style={{ padding: "7px 0", color: C.muted, fontSize: 11 }}>Sin comparables de alquiler cargados todavía para {district} · {tipologia} (ver Retorno más abajo).</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ padding: "0 24px 18px", fontSize: 10, color: C.muted, display: "flex", gap: 6 }}>
+            <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+            Cobertura = mejor entrada mensual disponible ÷ mejor cuota disponible. No es un neto contable (no descuenta mantenimiento, IGV, vacancia).
+          </div>
+        </Panel>
+      </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 18, alignItems: "start", marginTop: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 32, alignItems: "start" }}>
         {/* ── COLUMNA IZQUIERDA: inputs ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Card title="Unidad">
-            <Field label="Zona">
-              <select value={district} onChange={e => setDistrict(e.target.value)} style={inputStyle}>
-                {Object.keys(DISTRICTS_DATA).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </Field>
-            <Field label="Tipología">
-              <select value={tipologia} onChange={e => setTipologia(e.target.value)} style={inputStyle}>
-                {TIPOLOGIAS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="Área (m²)">
-              <input type="number" value={areaM2} onChange={e => setAreaM2(parseFloat(e.target.value) || 0)} style={inputStyle} />
-            </Field>
-            <Field label={`Precio / m² · rango zona S/ ${zona?.priceRange[0]}–${zona?.priceRange[1]}`}>
-              <input type="number" placeholder={String(Math.round(precioM2Efectivo))} value={precioM2 ?? ""} onChange={e => setPrecioM2(e.target.value ? parseFloat(e.target.value) : null)} style={inputStyle} />
-            </Field>
-            <div style={{ marginTop: 8, paddingTop: 10, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 11, color: C.muted }}>Precio total</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{fmtMoney(precioUnidad, moneda)}</span>
-            </div>
-          </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <div>
+            <SectionHead title="Unidad" />
+            <Panel>
+              <Field label="Zona">
+                <select value={district} onChange={e => setDistrict(e.target.value)} style={inputStyle}>
+                  {Object.keys(DISTRICTS_DATA).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </Field>
+              <Field label="Tipología">
+                <select value={tipologia} onChange={e => setTipologia(e.target.value)} style={inputStyle}>
+                  {TIPOLOGIAS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label="Área (m²)">
+                <input type="number" value={areaM2} onChange={e => setAreaM2(parseFloat(e.target.value) || 0)} style={inputStyle} />
+              </Field>
+              <Field label={`Precio / m² · rango zona S/ ${zona?.priceRange[0]}–${zona?.priceRange[1]}`}>
+                <input type="number" placeholder={String(Math.round(precioM2Efectivo))} value={precioM2 ?? ""} onChange={e => setPrecioM2(e.target.value ? parseFloat(e.target.value) : null)} style={inputStyle} />
+              </Field>
+              <div style={{ marginTop: 12, paddingTop: 14, borderTop: `1px solid ${C.lineSoft}` }}>
+                <Eyebrow>Precio total</Eyebrow>
+                <div style={{ fontSize: 26, marginTop: 6, color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{fmtMoney(precioUnidad, moneda)}</div>
+              </div>
+            </Panel>
+          </div>
 
-          <Card title="Perfil del cliente">
-            <Field label="Moneda">
-              <select value={moneda} onChange={e => setMoneda(e.target.value)} style={inputStyle}>
-                <option value="PEN">Soles (PEN)</option>
-                <option value="USD">Dólares (USD)</option>
-              </select>
-            </Field>
-            <Field label="Ingreso mensual promedio">
-              <input type="number" value={ingresoMensual} onChange={e => setIngresoMensual(parseFloat(e.target.value) || 0)} style={inputStyle} />
-            </Field>
-            <Field label={`Inicial · ${inicialPct}% = ${fmtMoney(inicialMonto, moneda)}`}>
-              <input type="range" min={5} max={50} step={1} value={inicialPct} onChange={e => setInicialPct(parseFloat(e.target.value))} style={{ width: "100%" }} />
-            </Field>
-            <Field label="Plazo (años)">
-              <select value={plazoAnios} onChange={e => setPlazoAnios(parseFloat(e.target.value))} style={inputStyle}>
-                {PLAZOS.map(p => <option key={p} value={p}>{p} años</option>)}
-              </select>
-            </Field>
-          </Card>
+          <div>
+            <SectionHead title="Perfil del cliente" />
+            <Panel>
+              <Field label="Moneda">
+                <select value={moneda} onChange={e => setMoneda(e.target.value)} style={inputStyle}>
+                  <option value="PEN">Soles (PEN)</option>
+                  <option value="USD">Dólares (USD)</option>
+                </select>
+              </Field>
+              <Field label="Ingreso mensual promedio">
+                <input type="number" value={ingresoMensual} onChange={e => setIngresoMensual(parseFloat(e.target.value) || 0)} style={inputStyle} />
+              </Field>
+              <Field label={`Inicial · ${inicialPct}% = ${fmtMoney(inicialMonto, moneda)}`}>
+                <input type="range" min={5} max={50} step={1} value={inicialPct} onChange={e => setInicialPct(parseFloat(e.target.value))} style={{ width: "100%", accentColor: C.navy }} />
+              </Field>
+              <Field label="Plazo (años)">
+                <select value={plazoAnios} onChange={e => setPlazoAnios(parseFloat(e.target.value))} style={inputStyle}>
+                  {PLAZOS.map(p => <option key={p} value={p}>{p} años</option>)}
+                </select>
+              </Field>
+            </Panel>
+          </div>
         </div>
 
         {/* ── COLUMNA DERECHA: resultados ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
           {/* CUOTAS POR BANCO */}
-          <Card title="Cuotas por banco · tasas reales (BCRP + scraper)"
-            right={macroTea != null && (
-              <span style={{ fontSize: 10, color: C.muted }}>
-                promedio banca {macro?.[moneda === "USD" ? "tasa_hip_usd" : "tasa_hip_pen"]?.period}: <strong style={{ color: C.ink }}>{macroTea.toFixed(2)}%</strong> TEA
+          <div>
+            <SectionHead title="Cuotas por banco · tasas reales" right={macroTea != null && (
+              <span style={{ fontSize: 11, color: C.muted }}>
+                promedio banca {macro?.[moneda === "USD" ? "tasa_hip_usd" : "tasa_hip_pen"]?.period}: <strong style={{ color: C.ink, fontWeight: 600 }}>{macroTea.toFixed(2)}%</strong> TEA
               </span>
-            )}>
-            {loadingMarket ? (
-              <div style={{ fontSize: 12, color: C.muted }}>Cargando tasas…</div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                {cuotas.length === 0 && (
-                  <div style={{ fontSize: 11, color: C.muted, display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 10 }}>
-                    <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-                    Todavía no hay tasas cargadas por banco individual (falta correr el scraper de bank_rates) — mientras tanto se muestra la fila de referencia con la tasa promedio de mercado (BCRP).
-                  </div>
-                )}
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${C.line}`, color: C.muted, textAlign: "left" }}>
-                      <th style={{ padding: "4px 8px", fontWeight: 600 }}>Banco</th>
-                      <th style={{ padding: "4px 8px", fontWeight: 600 }}>TEA</th>
-                      <th style={{ padding: "4px 8px", fontWeight: 600, textAlign: "right" }}>Cuota/mes</th>
-                      <th style={{ padding: "4px 8px", fontWeight: 600, textAlign: "right" }}>Total intereses</th>
-                      <th style={{ padding: "4px 8px", fontWeight: 600, textAlign: "right" }}>% ingreso</th>
-                      <th style={{ padding: "4px 8px", fontWeight: 600 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cuotas.length > 0 ? cuotas.map(r => (
-                      <tr key={r.bank} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                        <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>{r.bank}</td>
-                        <td style={{ padding: "6px 8px", color: C.muted }}>{r.tea.toFixed(2)}%</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(r.cuotaMensual, moneda)}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", color: C.muted }}>{fmtMoney(r.totalIntereses, moneda)}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", color: r.apta === false ? C.brick : C.ink }}>{fmtPct(r.ratio)}</td>
-                        <td style={{ padding: "6px 8px" }}>
-                          {r.apta === true && <CheckCircle2 size={13} color={C.green} />}
-                          {r.apta === false && <XCircle size={13} color={C.brick} />}
-                        </td>
+            )} />
+            <Panel>
+              {loadingMarket ? (
+                <div style={{ fontSize: 12, color: C.muted }}>Cargando tasas…</div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  {cuotas.length === 0 && (
+                    <div style={{ fontSize: 11, color: C.muted, display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 14 }}>
+                      <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                      Todavía no hay tasas cargadas por banco individual (falta correr el scraper de bank_rates) — mientras tanto se muestra la fila de referencia con la tasa promedio de mercado (BCRP).
+                    </div>
+                  )}
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${C.lineSoft}`, color: C.muted, textAlign: "left" }}>
+                        <th style={{ padding: "0 8px 10px 0", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>Banco</th>
+                        <th style={{ padding: "0 8px 10px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>TEA</th>
+                        <th style={{ padding: "0 8px 10px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>Cuota/mes</th>
+                        <th style={{ padding: "0 8px 10px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>Total intereses</th>
+                        <th style={{ padding: "0 8px 10px", fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>% ingreso</th>
+                        <th style={{ padding: "0 0 10px 8px", fontWeight: 500 }}></th>
                       </tr>
-                    )) : macroTea != null && (() => {
-                      const preview = cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios);
-                      const capacidad = ingresoMensual && preview ? preview / ingresoMensual : null;
-                      return (
-                        <tr style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                          <td style={{ padding: "6px 8px", fontWeight: 600, color: C.ink }}>Promedio de mercado (BCRP)</td>
-                          <td style={{ padding: "6px 8px", color: C.muted }}>{macroTea.toFixed(2)}%</td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(preview, moneda)}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", color: C.muted }}>—</td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", color: capacidad != null && capacidad > RATIO_ENDEUDAMIENTO_DEFAULT ? C.brick : C.ink }}>{capacidad != null ? fmtPct(capacidad) : "—"}</td>
-                          <td style={{ padding: "6px 8px" }}></td>
+                    </thead>
+                    <tbody>
+                      {cuotas.length > 0 ? cuotas.map(r => (
+                        <tr key={r.bank} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                          <td style={{ padding: "9px 8px 9px 0", fontWeight: 600, color: C.ink }}>{r.bank}</td>
+                          <td style={{ padding: "9px 8px", color: C.muted }}>{r.tea.toFixed(2)}%</td>
+                          <td style={{ padding: "9px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(r.cuotaMensual, moneda)}</td>
+                          <td style={{ padding: "9px 8px", textAlign: "right", color: C.muted }}>{fmtMoney(r.totalIntereses, moneda)}</td>
+                          <td style={{ padding: "9px 8px", textAlign: "right", color: r.apta === false ? C.brick : C.ink }}>{fmtPct(r.ratio)}</td>
+                          <td style={{ padding: "9px 0 9px 8px" }}>
+                            {r.apta === true && <CheckCircle2 size={13} color={C.green} />}
+                            {r.apta === false && <XCircle size={13} color={C.brick} />}
+                          </td>
                         </tr>
-                      );
-                    })()}
-                  </tbody>
-                </table>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 8 }}>
-                  Regla de capacidad de endeudamiento: cuota ≤ {Math.round(RATIO_ENDEUDAMIENTO_DEFAULT * 100)}% del ingreso mensual declarado.
+                      )) : macroTea != null && (() => {
+                        const preview = cuotaFrancesaPreview(precioUnidad - inicialMonto, macroTea, plazoAnios);
+                        const capacidad = ingresoMensual && preview ? preview / ingresoMensual : null;
+                        return (
+                          <tr style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                            <td style={{ padding: "9px 8px 9px 0", fontWeight: 600, color: C.ink }}>Promedio de mercado (BCRP)</td>
+                            <td style={{ padding: "9px 8px", color: C.muted }}>{macroTea.toFixed(2)}%</td>
+                            <td style={{ padding: "9px 8px", textAlign: "right", fontWeight: 700, color: C.ink }}>{fmtMoney(preview, moneda)}</td>
+                            <td style={{ padding: "9px 8px", textAlign: "right", color: C.muted }}>—</td>
+                            <td style={{ padding: "9px 8px", textAlign: "right", color: capacidad != null && capacidad > RATIO_ENDEUDAMIENTO_DEFAULT ? C.brick : C.ink }}>{capacidad != null ? fmtPct(capacidad) : "—"}</td>
+                            <td style={{ padding: "9px 0 9px 8px" }}></td>
+                          </tr>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 12 }}>
+                    Regla de capacidad de endeudamiento: cuota ≤ {Math.round(RATIO_ENDEUDAMIENTO_DEFAULT * 100)}% del ingreso mensual declarado.
+                  </div>
                 </div>
-              </div>
-            )}
-          </Card>
+              )}
+            </Panel>
+          </div>
 
           {/* PLUSVALÍA */}
-          <Card title="Plusvalía">
-            {zona ? (
-              <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontSize: 11, color: C.muted }}>Tendencia de la zona (relevamiento manual)</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{TREND_LABEL[zona.trend]}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: C.muted }}>Posición del precio en el rango de mercado</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>
-                    {percentil == null ? "—" : `percentil ${Math.round(percentil)}`}
-                    <span style={{ fontSize: 11, fontWeight: 500, color: C.muted }}> {percentil != null && (percentil < 33 ? "· por debajo del promedio de la zona" : percentil > 66 ? "· por encima del promedio de la zona" : "· en línea con el promedio de la zona")}</span>
+          <div>
+            <SectionHead title="Plusvalía" />
+            <Panel>
+              {zona ? (
+                <div style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
+                  <div style={{ paddingRight: 28, borderRight: `1px solid ${C.lineSoft}`, marginRight: 28 }}>
+                    <Eyebrow>Tendencia de la zona</Eyebrow>
+                    <div style={{ fontSize: 22, marginTop: 6, color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{TREND_LABEL[zona.trend]}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>relevamiento manual</div>
+                  </div>
+                  <div style={{ paddingRight: 28, borderRight: `1px solid ${C.lineSoft}`, marginRight: 28 }}>
+                    <Eyebrow>Posición en el rango de mercado</Eyebrow>
+                    <div style={{ fontSize: 22, marginTop: 6, color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{percentil == null ? "—" : `p${Math.round(percentil)}`}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{percentil != null && (percentil < 33 ? "por debajo del promedio" : percentil > 66 ? "por encima del promedio" : "en línea con el promedio")}</div>
+                  </div>
+                  <div>
+                    <Eyebrow>NSE / demanda relevada</Eyebrow>
+                    <div style={{ fontSize: 22, marginTop: 6, color: C.ink, fontWeight: 300, letterSpacing: "-0.02em" }}>{zona.nse}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>demanda {zona.demanda}/100</div>
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, color: C.muted }}>NSE / demanda relevada</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{zona.nse} · demanda {zona.demanda}/100</div>
-                </div>
+              ) : <div style={{ fontSize: 12, color: C.muted }}>Elegí una zona.</div>}
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 18, display: "flex", gap: 6 }}>
+                <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                No proyectamos % de apreciación anual — no hay series históricas de precio confiables por zona todavía. Esto es una lectura de posicionamiento relativo, no una promesa de retorno.
               </div>
-            ) : <div style={{ fontSize: 12, color: C.muted }}>Elegí una zona.</div>}
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 10, display: "flex", gap: 6 }}>
-              <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-              No proyectamos % de apreciación anual — no hay series históricas de precio confiables por zona todavía. Esto es una lectura de posicionamiento relativo, no una promesa de retorno.
-            </div>
-          </Card>
+            </Panel>
+          </div>
 
           {/* RETORNO */}
-          <Card title="Retorno de alquiler · zona y tipología">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div>
+            <SectionHead title="Retorno de alquiler · zona y tipología" />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
               {["alquiler_tradicional", "airbnb", "wynwood_house"].map(source => {
                 const r = retorno[source];
                 return (
-                  <div key={source} style={{ border: `1px solid ${C.line}`, borderRadius: 4, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: SOURCE_COLOR[source] }}>
+                  <div key={source} style={{ background: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: "18px 18px 16px" }}>
+                    <div style={{ width: 16, height: 2, backgroundColor: SOURCE_COLOR[source], marginBottom: 12 }} />
+                    <Eyebrow color={SOURCE_COLOR[source]}>
                       {SOURCE_LABEL[source]}
-                      {source === "wynwood_house" && wynwoodAuto && <span style={{ fontWeight: 500, color: C.muted, textTransform: "none", letterSpacing: 0 }}> · auto</span>}
-                    </div>
+                      {source === "wynwood_house" && wynwoodAuto && <span style={{ color: C.muted, fontWeight: 400 }}> · auto</span>}
+                    </Eyebrow>
 
                     {source === "wynwood_house" && wynwoodAuto ? (
                       <>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, marginTop: 6 }}>
+                        <div style={{ fontSize: 24, fontWeight: 300, color: C.ink, marginTop: 8, letterSpacing: "-0.02em" }}>
                           {fmtMoney(wynwoodAuto.promedioNoche, wynwoodAuto.currency)}<span style={{ fontSize: 11, fontWeight: 500, color: C.muted }}>/noche</span>
                         </div>
-                        <div style={{ fontSize: 9, color: C.muted }}>{wynwoodAuto.muestras} anuncio{wynwoodAuto.muestras > 1 ? "s" : ""} en {district} · scrapeado c/6h desde wynwood-house.com</div>
-                        <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 2 }}>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{wynwoodAuto.muestras} anuncio{wynwoodAuto.muestras > 1 ? "s" : ""} en {district} · scrapeado c/6h</div>
+                        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
                           {wynwoodAuto.listings.map(l => (
                             <a key={l.external_code} href={l.url} target="_blank" rel="noreferrer"
                               style={{ fontSize: 10, color: C.cobalt, textDecoration: "none", display: "flex", alignItems: "center", gap: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -513,46 +561,46 @@ export default function CotizacionView() {
                             </a>
                           ))}
                         </div>
-                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.lineSoft}` }}>
-                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>ocupación asumida % (Wynwood House no la publica)</div>
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.lineSoft}` }}>
+                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 6 }}>ocupación asumida % (no la publican)</div>
                           <input type="number" placeholder="ej. 70" value={ocupacionAsumida} onChange={e => setOcupacionAsumida(e.target.value)}
-                            style={{ ...inputStyle, fontSize: 11, padding: "4px 7px", width: 70 }} />
+                            style={{ ...inputStyle, fontSize: 11, padding: "5px 8px", width: 74 }} />
                           {wynwoodEstimado && (
-                            <div style={{ marginTop: 4, fontSize: 11, color: C.ink }}>
+                            <div style={{ marginTop: 6, fontSize: 11, color: C.ink }}>
                               ≈ {fmtMoney(wynwoodEstimado.ingresoMensual, moneda)}/mes · yield {fmtPct(wynwoodEstimado.yieldAnual)}
-                              <span style={{ fontSize: 9, color: C.muted, display: "block" }}>estimado con la ocupación que pusiste arriba, no observado</span>
+                              <span style={{ fontSize: 9, color: C.muted, display: "block", marginTop: 2 }}>estimado, no observado</span>
                             </div>
                           )}
                         </div>
                       </>
                     ) : r ? (
                       <>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, marginTop: 6 }}>{fmtMoney(r.promedioMensual, moneda)}<span style={{ fontSize: 11, fontWeight: 500, color: C.muted }}>/mes</span></div>
-                        <div style={{ fontSize: 12, color: C.muted }}>yield anual {fmtPct(r.yieldAnual)}</div>
-                        <div style={{ fontSize: 9, color: C.mutedSoft || C.muted }}>{r.muestras} comparable{r.muestras > 1 ? "s" : ""} cargado{r.muestras > 1 ? "s" : ""}</div>
+                        <div style={{ fontSize: 24, fontWeight: 300, color: C.ink, marginTop: 8, letterSpacing: "-0.02em" }}>{fmtMoney(r.promedioMensual, moneda)}<span style={{ fontSize: 11, fontWeight: 500, color: C.muted }}>/mes</span></div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>yield anual {fmtPct(r.yieldAnual)}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{r.muestras} comparable{r.muestras > 1 ? "s" : ""} cargado{r.muestras > 1 ? "s" : ""}</div>
                       </>
                     ) : (
-                      <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Sin comparables cargados para {district} · {tipologia}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>Sin comparables cargados para {district} · {tipologia}</div>
                     )}
                     {addingSource === source ? (
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
                         {source === "alquiler_tradicional" ? (
-                          <input placeholder="alquiler mensual" type="number" value={compForm.monthlyRent} onChange={e => setCompForm(f => ({ ...f, monthlyRent: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "5px 7px" }} />
+                          <input placeholder="alquiler mensual" type="number" value={compForm.monthlyRent} onChange={e => setCompForm(f => ({ ...f, monthlyRent: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "6px 8px" }} />
                         ) : (
                           <>
-                            <input placeholder="tarifa por noche" type="number" value={compForm.dailyRate} onChange={e => setCompForm(f => ({ ...f, dailyRate: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "5px 7px" }} />
-                            <input placeholder="ocupación % observada" type="number" value={compForm.occupancyPct} onChange={e => setCompForm(f => ({ ...f, occupancyPct: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "5px 7px" }} />
+                            <input placeholder="tarifa por noche" type="number" value={compForm.dailyRate} onChange={e => setCompForm(f => ({ ...f, dailyRate: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "6px 8px" }} />
+                            <input placeholder="ocupación % observada" type="number" value={compForm.occupancyPct} onChange={e => setCompForm(f => ({ ...f, occupancyPct: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "6px 8px" }} />
                           </>
                         )}
-                        <input placeholder="link del listing (opcional)" value={compForm.url} onChange={e => setCompForm(f => ({ ...f, url: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "5px 7px" }} />
+                        <input placeholder="link del listing (opcional)" value={compForm.url} onChange={e => setCompForm(f => ({ ...f, url: e.target.value }))} style={{ ...inputStyle, fontSize: 11, padding: "6px 8px" }} />
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => saveComp(source)} style={{ flex: 1, padding: "5px 0", borderRadius: 2, border: "none", background: C.ink, color: "#fff", fontSize: 11, cursor: "pointer" }}>Guardar</button>
-                          <button onClick={() => setAddingSource(null)} style={{ padding: "5px 8px", borderRadius: 2, border: `1px solid ${C.line}`, background: "#fff", fontSize: 11, cursor: "pointer" }}>×</button>
+                          <button onClick={() => saveComp(source)} style={{ ...inkBtn, flex: 1, justifyContent: "center", padding: "6px 0" }}>Guardar</button>
+                          <button onClick={() => setAddingSource(null)} style={{ ...ghostBtn, padding: "6px 10px" }}>×</button>
                         </div>
                       </div>
                     ) : (
                       <button onClick={() => setAddingSource(source)}
-                        style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.cobalt, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 4, fontSize: 10, letterSpacing: "0.06em", color: C.cobalt, background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 500 }}>
                         <Plus size={11} /> agregar comparable real
                       </button>
                     )}
@@ -560,11 +608,11 @@ export default function CotizacionView() {
                 );
               })}
             </div>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 10, display: "flex", gap: 6 }}>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 14, display: "flex", gap: 6 }}>
               <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               Wynwood House se trae solo (scraper propio cada 6h, sin ocupación porque no la publican). Alquiler tradicional y Airbnb se cargan a mano por comercial a partir de listings reales vistos — Airbnb no se scrapea automáticamente (Akamai Bot Manager bloquea el acceso automatizado a sus búsquedas). {loadingComps && "Cargando comparables guardados…"}
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
