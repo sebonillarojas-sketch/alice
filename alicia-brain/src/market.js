@@ -10,6 +10,7 @@
 //   PN01210PM — Tipo de cambio USD/PEN promedio mensual (bancario)
 
 import { query } from "./db.js";
+import { scrapeWynwoodHouseLima } from "./rentalScraper.js";
 
 const BCRP_API = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api";
 const NEXO_API_URL = process.env.NEXO_API_URL || "";
@@ -73,6 +74,23 @@ export function ensureMarketSchema() {
       source TEXT DEFAULT 'playwright',
       scraped_at TEXT DEFAULT (datetime('now')),
       UNIQUE(bank, product)
+    )
+  `);
+  query(`
+    CREATE TABLE IF NOT EXISTS rental_listings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT NOT NULL DEFAULT 'wynwood_house',
+      external_code TEXT NOT NULL,
+      title TEXT,
+      district TEXT,
+      raw_zone TEXT,
+      lat REAL,
+      lng REAL,
+      currency TEXT,
+      nightly_rate REAL,
+      url TEXT,
+      scraped_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(source, external_code)
     )
   `);
 }
@@ -317,6 +335,45 @@ export function getBankRates() {
      FROM bank_rates ORDER BY rate_pen ASC`
   );
   return rows;
+}
+
+// ── Rental listings (Wynwood House · scraper propio, corre en Railway) ────────
+export function saveRentalListings(source, listings) {
+  for (const l of listings) {
+    if (!l.code || l.nightlyRate == null) continue;
+    query(
+      `INSERT INTO rental_listings (source, external_code, title, district, raw_zone, lat, lng, currency, nightly_rate, url, scraped_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))
+       ON CONFLICT(source, external_code) DO UPDATE SET
+         title=excluded.title, district=excluded.district, raw_zone=excluded.raw_zone,
+         lat=excluded.lat, lng=excluded.lng, currency=excluded.currency,
+         nightly_rate=excluded.nightly_rate, url=excluded.url, scraped_at=excluded.scraped_at`,
+      [source, l.code, l.title || null, l.district || null, l.rawZone || null, l.lat ?? null, l.lng ?? null, l.currency || null, l.nightlyRate, l.url]
+    );
+  }
+  console.log(`🐰 Rental listings (${source}): ${listings.length} guardados`);
+}
+
+export function getRentalListings() {
+  const { rows } = query(
+    `SELECT source, external_code, title, district, raw_zone, lat, lng, currency, nightly_rate, url, scraped_at
+     FROM rental_listings ORDER BY scraped_at DESC`
+  );
+  return rows;
+}
+
+// Se llama desde el cron (cada 6h) y desde el refresh manual del panel.
+// Wynwood House es HTML server-rendered sin protección anti-bot — no requiere
+// Playwright. Airbnb queda deliberadamente afuera (Akamai Bot Manager).
+export async function refreshRentalListings() {
+  try {
+    const listings = await scrapeWynwoodHouseLima();
+    saveRentalListings("wynwood_house", listings);
+    return { ok: true, total: listings.length };
+  } catch (e) {
+    console.error("🐰 Wynwood House scraper error:", e.message);
+    return { ok: false, reason: e.message };
+  }
 }
 
 // ── Import from Playwright scraper ────────────────────────────────────────────
