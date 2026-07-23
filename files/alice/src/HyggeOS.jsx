@@ -4139,10 +4139,19 @@ const FINANZAS_TIPOS = [
 // ni alimentan el CEO Dashboard). Convención: prefijo "_" también las esconde.
 const FINANZAS_SKIP = new Set([
   "original images", "reportes", "reporte", "templates", "template", "plantillas",
-  "docs", "shared", "compartido", "archivo", "archivos", "general", "misc", "backup",
+  "docs", "shared", "compartido", "archivo", "archivos", "misc", "backup",
 ]);
+// Proyecto = carpeta normal (sin "_"). Entidad "General" = carpeta con prefijo "_"
+// (flujo consolidado: _HYGGE HOLDING, _BAM STUDIO). Ambas bajo /04_FINANZAS/FINANZAS.
 function isFinanzasProjectFolder(name) {
   return !!name && !name.startsWith("_") && !FINANZAS_SKIP.has(name.trim().toLowerCase());
+}
+function isFinanzasGeneralFolder(name) {
+  if (!name || !name.startsWith("_")) return false;
+  return !FINANZAS_SKIP.has(name.replace(/^_+/, "").trim().toLowerCase());
+}
+function finanzasLabel(name) {
+  return String(name || "").replace(/^_+/, "").trim();   // "_HYGGE HOLDING" → "HYGGE HOLDING"
 }
 
 function FinanzasDashboard() {
@@ -4151,7 +4160,8 @@ function FinanzasDashboard() {
   });
   const [project, setProject] = useState(() => { try { return localStorage.getItem("hygge:finanzas:project") || null; } catch { return null; } });
   const [tipo, setTipo] = useState(() => { try { return localStorage.getItem("hygge:finanzas:tipo") || "factibilidad"; } catch { return "factibilidad"; } });
-  const [projects, setProjects] = useState([]);          // nombres de carpeta bajo /Hygge/Finanzas
+  const [projects, setProjects] = useState([]);          // proyectos: subcarpetas normales bajo /04_FINANZAS/FINANZAS
+  const [generals, setGenerals] = useState([]);          // entidades "General" (prefijo _): holding, BAM studio…
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [report, setReport] = useState(null);            // { folder, file } del reporte actual
   const [approved, setApproved] = useState(() => { try { return JSON.parse(localStorage.getItem("hygge:finanzas:approved") || "{}"); } catch { return {}; } });
@@ -4194,7 +4204,9 @@ function FinanzasDashboard() {
       const res = await fetch(`${BACKEND}/api/dropbox/browse?path=${encodeURIComponent(FINANZAS_ROOT)}`);
       if (!res.ok) throw dropboxGateError(res) || new Error(`Error ${res.status}`);
       const j = await res.json();
-      setProjects((j.entries || []).filter(e => e.type === "folder" && isFinanzasProjectFolder(e.name)).map(e => e.name));
+      const folders = (j.entries || []).filter(e => e.type === "folder");
+      setProjects(folders.filter(e => isFinanzasProjectFolder(e.name)).map(e => e.name));
+      setGenerals(folders.filter(e => isFinanzasGeneralFolder(e.name)).map(e => e.name));
     } catch (e) {
       setError({ message: e.message, kind: e.kind });
     } finally {
@@ -4253,6 +4265,18 @@ function FinanzasDashboard() {
   useEffect(() => { loadProjects(); }, [loadProjects]);
   useEffect(() => { if (project && !source) fetchReport(project, tipo); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Landing por defecto: si no hay proyecto elegido, abrir en el flujo general de la holding
+  // (entidad _HYGGE HOLDING / _*). Una sola vez; respeta lo que el usuario ya tenía guardado.
+  const defaultedRef = useRef(false);
+  useEffect(() => {
+    if (defaultedRef.current) return;
+    if (project) { defaultedRef.current = true; return; }
+    if (!generals.length && !projects.length) return; // aún no cargó la lista
+    defaultedRef.current = true;
+    const holding = generals.find(g => /holding|hygge/i.test(g)) || generals[0];
+    if (holding) selectProject(holding);
+  }, [generals, projects, project]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveSource = () => {
     if (!pathInput.trim()) { blob.onError(); return; }
     blob.onHappy(() => {
@@ -4310,8 +4334,28 @@ function FinanzasDashboard() {
         </div>
       </div>
 
-      {/* Selector de proyecto (dinámico) + toggle de tipo · fuente /Hygge/Finanzas/{proyecto}/{tipo} */}
+      {/* Selector: General (holding/BAM) + Proyectos · fuente /04_FINANZAS/FINANZAS/{entidad}/FUENTE_ERP/{tipo} */}
       <div style={{ marginBottom: 20 }}>
+        {/* General · flujos consolidados (carpetas con prefijo _) */}
+        {generals.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>General</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {generals.map(name => {
+                const active = project === name;
+                return (
+                  <button key={name} onClick={() => selectProject(name)}
+                    title={`${FINANZAS_ROOT}/${name}`}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 3, cursor: "pointer",
+                      border: `1px solid ${active ? C.navy : C.line}`, background: active ? C.navy : C.paper,
+                      color: active ? "white" : C.ink, fontSize: 12, fontWeight: active ? 600 : 500 }}>
+                    {finanzasLabel(name)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
           Proyecto
           <button onClick={loadProjects} disabled={projectsLoading} title="Recargar proyectos desde Dropbox"
