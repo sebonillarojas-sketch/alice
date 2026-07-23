@@ -5674,6 +5674,20 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete, navig
   );
 }
 
+// Persiste estado por terreno: no se resetea al reabrir Y es exclusivo de cada terreno.
+// Si cambia el terreno (mismo componente montado), recarga el valor guardado de ese terreno.
+function useTerrenoPersist(terrenoId, key, initial) {
+  const K = `hygge:terreno:${terrenoId ?? "none"}:${key}`;
+  const read = () => { try { const r = localStorage.getItem(K); return r != null ? JSON.parse(r) : (typeof initial === "function" ? initial() : initial); } catch { return typeof initial === "function" ? initial() : initial; } };
+  const [v, setV] = React.useState(read);
+  const kRef = React.useRef(K);
+  React.useEffect(() => {
+    if (kRef.current !== K) { kRef.current = K; setV(read()); return; }   // cambió de terreno → recargar lo suyo
+    try { localStorage.setItem(K, JSON.stringify(v)); } catch { /* cuota */ }
+  }, [K, v]); // eslint-disable-line react-hooks/exhaustive-deps
+  return [v, setV];
+}
+
 function TerrenoOpportunidad({ terreno }) {
   const TREND_COLOR = { trending: "#5F8A6A", estable: "#3D52D5", emergente: "#C2A45A" };
   const STATUS_COLOR = { "En venta": "#3D52D5", "Pre-venta": "#C2A45A", "Lanzamiento": "#5F8A6A", "Entrega": "#6B6863" };
@@ -5681,12 +5695,12 @@ function TerrenoOpportunidad({ terreno }) {
   const d = DISTRICTS_DATA[terreno.district] || DISTRICTS_DATA["Miraflores"];
   const competidores = COMPETITORS_DB[terreno.district] || COMPETITORS_DB["Miraflores"];
 
-  const [tipologia, setTipologia] = React.useState("Departamento");
-  const [precioM2, setPrecioM2] = React.useState(Math.round((d.priceRange[0] + d.priceRange[1]) / 2));
-  const [acabados, setAcabados] = React.useState("Estándar");
-  const [storytelling, setStorytelling] = React.useState(50);
-  const [arquitecto, setArquitecto] = React.useState("Reconocido local");
-  const [aliciaText, setAliciaText] = React.useState("");
+  const [tipologia, setTipologia] = useTerrenoPersist(terreno.id, "an_tipologia", "Departamento");
+  const [precioM2, setPrecioM2] = useTerrenoPersist(terreno.id, "an_precioM2", () => Math.round((d.priceRange[0] + d.priceRange[1]) / 2));
+  const [acabados, setAcabados] = useTerrenoPersist(terreno.id, "an_acabados", "Estándar");
+  const [storytelling, setStorytelling] = useTerrenoPersist(terreno.id, "an_storytelling", 50);
+  const [arquitecto, setArquitecto] = useTerrenoPersist(terreno.id, "an_arquitecto", "Reconocido local");
+  const [aliciaText, setAliciaText] = useTerrenoPersist(terreno.id, "an_aliciaText", "");
   const [aliciaLoading, setAliciaLoading] = React.useState(false);
 
   const midPrice = (d.priceRange[0] + d.priceRange[1]) / 2;
