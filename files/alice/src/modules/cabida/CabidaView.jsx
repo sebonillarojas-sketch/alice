@@ -124,11 +124,12 @@ function Kpi({ label, value, unit, accent }) {
   );
 }
 
-const CABIDA_STORE = "hygge:cabidaState";
-const loadCabida = () => { try { return JSON.parse(localStorage.getItem(CABIDA_STORE) || "null") || {}; } catch { return {}; } };
+const loadCabida = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || {}; } catch { return {}; } };
 
-export default function CabidaView({ initialTerreno, initialValorTerreno, compact }) {
-  const S = useRef(loadCabida()).current;                     // snapshot guardado (ida y vuelta al editor)
+export default function CabidaView({ initialTerreno, initialValorTerreno, compact, scopeKey }) {
+  // scopeKey (ej. terreno.id) → cada terreno guarda su cabida aparte; sin scope, estado global (app standalone)
+  const STORE_KEY = scopeKey ? `hygge:cabidaState:${scopeKey}` : "hygge:cabidaState";
+  const S = useRef(loadCabida(STORE_KEY)).current;            // snapshot guardado (ida y vuelta al editor)
   const [terreno, setTerreno] = useState(S.terreno ?? (initialTerreno || 693));
   const [areaLibre, setAreaLibre] = useState(S.areaLibre ?? 35);
   const [pisos, setPisos] = useState(S.pisos ?? 8);
@@ -197,10 +198,10 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   const [visitas, setVisitas] = useState(10);
   const [m2Plaza, setM2Plaza] = useState(30);
 
-  const [precioM2, setPrecioM2] = useState(2600);
-  const [factorAzotea, setFactorAzotea] = useState(50);
-  const [precioEst, setPrecioEst] = useState(15000);
-  const [costoM2, setCostoM2] = useState(950);
+  const [precioM2, setPrecioM2] = useState(S.precioM2 ?? 2600);
+  const [factorAzotea, setFactorAzotea] = useState(S.factorAzotea ?? 50);
+  const [precioEst, setPrecioEst] = useState(S.precioEst ?? 15000);
+  const [costoM2, setCostoM2] = useState(S.costoM2 ?? 950);
   const [costoVentas, setCostoVentas] = useState(S.costoVentas ?? 15); // costo sobre ventas %: comisiones, mkt, admin, legal, financiamiento (todo lo demás)
   const [valorTerreno, setValorTerreno] = useState(S.valorTerreno ?? initialValorTerreno ?? 0); // valor del terreno (viene de Growth)
   const [impuesto, setImpuesto] = useState(S.impuesto ?? 29.5); // impuesto a la renta % sobre la utilidad
@@ -256,7 +257,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   // persiste TODO el estado de la cabida (sobrevive ir/volver del editor de planos)
   useEffect(() => {
     try {
-      localStorage.setItem(CABIDA_STORE, JSON.stringify({
+      localStorage.setItem(STORE_KEY, JSON.stringify({
         terreno, areaLibre, pisos, azoteaTechada, circulacion, modoLote, lotePoly, cadInfo,
         frente, tipoLote, retiros, frenteIdx, partiIdx, movs,
         areaDpto, mix1, mix2, est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2, costoVentas, valorTerreno, impuesto,

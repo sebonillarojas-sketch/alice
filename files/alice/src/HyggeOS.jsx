@@ -5663,7 +5663,7 @@ function TerrenoDetailPanel({ terreno, users, onClose, onUpdate, onDelete, navig
             <TerrenoOpportunidad terreno={terreno} />
           )}
           {tab === "cabida" && (
-            <CabidaView initialTerreno={terreno.areaM2 || 500} initialValorTerreno={terreno.price || (terreno.priceM2 && terreno.areaM2 ? Math.round(terreno.priceM2 * terreno.areaM2) : 0)} compact />
+            <CabidaView key={terreno.id} scopeKey={terreno.id} initialTerreno={terreno.areaM2 || 500} initialValorTerreno={terreno.price || (terreno.priceM2 && terreno.areaM2 ? Math.round(terreno.priceM2 * terreno.areaM2) : 0)} compact />
           )}
           {tab === "propuesta" && (
             <PropuestaBamTab terreno={terreno} onUpdate={onUpdate} />
