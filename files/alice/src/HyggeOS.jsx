@@ -4107,6 +4107,58 @@ function looksLikeHtml(text) {
   return t.startsWith("<!doctype html") || t.startsWith("<html") || (t.includes("<head") && t.includes("<meta"));
 }
 
+// Parser JSON tolerante: la IA a veces envuelve el JSON en texto o ```json.
+function parseJsonLoose(text) {
+  if (!text) return null;
+  let s = String(text).trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try { return JSON.parse(s); } catch { /* sigue */ }
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch { /* sigue */ } }
+  return null;
+}
+
+// Gráfico genérico para specs que devuelve la IA: { type: "bar"|"line", titulo, data:[{label,value}] }.
+function FinAiChart({ spec, idx = 0 }) {
+  if (!spec || !Array.isArray(spec.data) || !spec.data.length) return null;
+  const data = spec.data.map(d => ({ label: String(d.label ?? ""), value: Number(String(d.value).replace(/[,\sS/%$]/g, "")) || 0 }));
+  const color = [C.cobalt, C.ochre, C.green, C.lavender][idx % 4];
+  const isLine = spec.type === "line" || spec.type === "area";
+  const many = data.length > 5;
+  const fmtTip = (v) => typeof v === "number" ? v.toLocaleString("es-PE") : v;
+  return (
+    <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "20px 16px", marginBottom: 12 }}>
+      {spec.titulo && <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>{spec.titulo}</div>}
+      <div style={{ height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {isLine ? (
+            <AreaChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: many ? 40 : 6 }}>
+              <defs>
+                <linearGradient id={`ai_grad_${idx}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} interval={0} angle={many ? -25 : 0} textAnchor={many ? "end" : "middle"} height={many ? 50 : 20} />
+              <YAxis hide />
+              <Tooltip formatter={fmtTip} contentStyle={{ fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2 }} />
+              <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} fill={`url(#ai_grad_${idx})`} />
+            </AreaChart>
+          ) : (
+            <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: many ? 40 : 6 }}>
+              <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} interval={0} angle={many ? -25 : 0} textAnchor={many ? "end" : "middle"} height={many ? 50 : 20} />
+              <YAxis hide />
+              <Tooltip formatter={fmtTip} contentStyle={{ fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2 }} cursor={{ fill: C.lineSoft, opacity: 0.4 }} />
+              <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 const BACKEND = ALICIA_URL;
 const FZ_SOURCE_KEY = "hygge:finanzas:source";
 
@@ -4182,6 +4234,9 @@ function FinanzasDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
+  const [analysis, setAnalysis] = useState(null);   // { resumen:[], kpis:[], charts:[] } | { error }
+  const [analyzing, setAnalyzing] = useState(false);
+  const analyzedKeyRef = useRef(null);
   const blob = useModalBlob();
   const { logout } = useAuth();
 
@@ -4327,6 +4382,43 @@ function FinanzasDashboard() {
     });
   };
 
+  // Análisis con IA: Alicia lee el reporte y devuelve resumen + KPIs + specs de gráficos.
+  const analyzeReport = useCallback(async (d, ctxLabel) => {
+    if (!d?.headers?.length || !d.rows?.length) return;
+    setAnalyzing(true); setAnalysis(null);
+    try {
+      const csv = [d.headers.join(","), ...d.rows.slice(0, 300).map(r => d.headers.map(h => (r[h] ?? "")).join(","))].join("\n");
+      const prompt = `Sos el CFO de Hygge Holding, desarrolladora inmobiliaria en Lima. Analizá este reporte financiero ("${ctxLabel}") y devolvé SOLO un JSON válido (sin texto alrededor, sin backticks) con esta forma exacta:
+{"resumen":["bullet 1","bullet 2"],"kpis":[{"label":"Utilidad Neta","value":"S/ 1,581,912","nota":"14.8% margen"}],"charts":[{"type":"bar","titulo":"Costos vs Ingresos","data":[{"label":"Costo","value":8442849},{"label":"Ingresos","value":10686696}]}]}
+Reglas: resumen = 3 a 6 bullets ejecutivos con cifras interpretadas (moneda), márgenes, riesgos y 1-2 recomendaciones accionables. kpis = 3 a 6, value ya formateado con moneda/miles. charts = 1 a 3 relevantes; type "bar" para desglose/comparación, "line" para evolución temporal; value numérico SIN formato. Español rioplatense, directo, sin relleno.
+Datos CSV:
+${csv}`;
+      const res = await fetch(`${BACKEND}/api/analyze`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, max_tokens: 2200, system: "Sos Alicia, CFO virtual de Hygge Holding. Respondés SOLO con JSON válido. Español rioplatense, directa, sin relleno." }),
+      });
+      if (!res.ok) throw dropboxGateError(res) || new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
+      const j = await res.json();
+      const parsed = parseJsonLoose(j.text);
+      if (!parsed) throw new Error("No pude interpretar el análisis");
+      setAnalysis(parsed);
+    } catch (e) {
+      setAnalysis({ error: e.message });
+    } finally {
+      setAnalyzing(false);
+    }
+  }, []);
+
+  // Auto-analizar cuando cambia la data (una vez por reporte).
+  useEffect(() => {
+    if (!data) { setAnalysis(null); analyzedKeyRef.current = null; return; }
+    const key = report?.file?.path || source?.path || `${project}:${tipo}`;
+    if (analyzedKeyRef.current === key) return;
+    analyzedKeyRef.current = key;
+    const label = `${project ? finanzasLabel(project) : (source?.label || "reporte")} · ${FINANZAS_TIPOS.find(t => t.id === tipo)?.label || ""}`;
+    analyzeReport(data, label);
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const widgets = data ? autoWidgets(data.headers, data.rows) : [];
   const kpis = widgets.filter(w => w.type === "kpi");
   const chart = widgets.find(w => w.type === "chart");
@@ -4341,6 +4433,11 @@ function FinanzasDashboard() {
   const numericCols = data ? new Set(data.headers.filter(h => isNumericCol(data.rows, h))) : new Set();
   const CHART_COLORS = [C.cobalt, C.lavender, C.ochre, C.green];
   const fmtTip = (v) => typeof v === "number" ? v.toLocaleString("es-PE") : v;
+  // Output del análisis de Alicia (IA). Si viene, tiene prioridad sobre los auto-widgets.
+  const aiOk = analysis && !analysis.error;
+  const aiResumen = aiOk ? (Array.isArray(analysis.resumen) ? analysis.resumen : (analysis.resumen ? [String(analysis.resumen)] : [])) : [];
+  const aiKpis = aiOk && Array.isArray(analysis.kpis) ? analysis.kpis : [];
+  const aiCharts = aiOk && Array.isArray(analysis.charts) ? analysis.charts.filter(c => c && Array.isArray(c.data) && c.data.length) : [];
 
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
@@ -4560,8 +4657,62 @@ function FinanzasDashboard() {
       {/* Widgets */}
       {data && !loading && (
         <>
-          {/* KPI cards */}
-          {kpis.length > 0 && (
+          {/* Análisis de Alicia (IA) */}
+          {(analyzing || aiResumen.length > 0 || analysis?.error) && (
+            <section className="mb-10">
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <Sparkles size={12} style={{ color: C.cobalt }} /> Análisis · Alicia
+                {!analyzing && (
+                  <button onClick={() => { analyzedKeyRef.current = null; analyzeReport(data, `${project ? finanzasLabel(project) : (source?.label || "reporte")} · ${FINANZAS_TIPOS.find(t => t.id === tipo)?.label || ""}`); }}
+                    title="Volver a analizar" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: C.muted, display: "inline-flex" }}>
+                    <RefreshCw size={10} />
+                  </button>
+                )}
+              </div>
+              <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "18px 20px" }}>
+                {analyzing ? (
+                  <div style={{ fontSize: 13, color: C.muted, display: "flex", alignItems: "center", gap: 8 }}>
+                    <RefreshCw size={12} style={{ animation: "spin 1s linear infinite" }} /> Alicia está leyendo el reporte…
+                  </div>
+                ) : analysis?.error ? (
+                  <div style={{ fontSize: 12.5, color: C.brick }}>No se pudo generar el análisis: {analysis.error}</div>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+                    {aiResumen.map((b, i) => (
+                      <li key={i} style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.55 }}>{String(b)}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* KPIs de Alicia (IA) — prioridad sobre los auto */}
+          {aiKpis.length > 0 && (
+            <section className="mb-10">
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Métricas clave</div>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 180px), 1fr))`, gap: 12 }}>
+                {aiKpis.map((k, i) => (
+                  <div key={i} style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "18px 20px" }}>
+                    <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 8 }}>{k.label}</div>
+                    <div style={{ fontSize: 26, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", lineHeight: 1 }}>{k.value}</div>
+                    {k.nota && <div style={{ fontSize: 11, color: C.muted, marginTop: 6, fontWeight: 500 }}>{k.nota}</div>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Gráficos de Alicia (IA) */}
+          {aiCharts.length > 0 && (
+            <section className="mb-10">
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Representación gráfica</div>
+              {aiCharts.map((c, i) => <FinAiChart key={i} spec={c} idx={i} />)}
+            </section>
+          )}
+
+          {/* KPI cards · fallback auto cuando la IA no dio KPIs */}
+          {aiKpis.length === 0 && kpis.length > 0 && (
             <section className="mb-10">
               <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Métricas · última fila</div>
               <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 180px), 1fr))`, gap: 12 }}>
@@ -4583,8 +4734,8 @@ function FinanzasDashboard() {
             </section>
           )}
 
-          {/* Chart · curva si el eje es temporal, barras si es un desglose */}
-          {chart && chartData.length > 0 && (
+          {/* Chart · fallback auto cuando la IA no dio gráficos */}
+          {aiCharts.length === 0 && chart && chartData.length > 0 && (
             <section className="mb-10">
               <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>{chartTemporal ? "Evolución temporal" : "Desglose"}</div>
               <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "20px 16px" }}>
