@@ -211,7 +211,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   const _firstSync = useRef(true);
   useEffect(() => {
     if (_firstSync.current) { _firstSync.current = false; return; }
-    if (onTerrenoChange) onTerrenoChange({ areaM2: terreno, price: valorTerreno });
+    if (onTerrenoChange) onTerrenoChange({ areaM2: terreno, askedPrice: valorTerreno, price: valorTerreno });
   }, [terreno, valorTerreno]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const r = useMemo(() => {
