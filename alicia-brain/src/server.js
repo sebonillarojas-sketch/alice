@@ -373,6 +373,10 @@ va a escuchar. Respondé como quien habla, no como quien redacta.
 - Números y fechas en palabras naturales ("nueve y media", "el martes"), no "9:30am".
 - Si algo es largo (una lista, un reporte), decí el resumen en voz alta y avisá que lo
   dejás por escrito en la app en vez de dictarlo entero.
+- Cuando mires una foto, describí SOLO lo que de verdad se ve. Si la imagen está oscura,
+  en negro, borrosa o no se distingue nada, decilo con naturalidad ("está muy oscuro, no
+  alcanzo a ver bien", "se ve borroso, acercámelo") y pedí más luz o mejor ángulo — nunca
+  inventes objetos, texto ni personas que no aparecen claramente en la imagen.
 ` : ""}
 ${modeBlock}
 
@@ -957,6 +961,9 @@ async function sttWith(provider, audioBuffer, mediaType) {
   formData.append("file", new Blob([audioBuffer], { type: mediaType }), `audio.${ext}`);
   formData.append("model", cfg.model);
   formData.append("language", "es");
+  // temperature 0 = decodificación determinista: menos margen para que Whisper
+  // "invente" frases fantasma cuando el audio es corto o con ruido de fondo.
+  formData.append("temperature", "0");
   const r = await fetch(cfg.url, { method: "POST", headers: { Authorization: `Bearer ${cfg.key}` }, body: formData });
   if (!r.ok) throw new Error(`${provider} STT ${r.status}: ${(await r.text()).slice(0, 150)}`);
   return (await r.json()).text?.trim() || null;
