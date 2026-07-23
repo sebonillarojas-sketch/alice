@@ -503,6 +503,31 @@ const SPACE_DROPBOX_PATHS = {
 // es de Alicia, 10_CONTABILIDAD es archivo contable, _* = sistema por convención)
 const DROPBOX_SYSTEM_FOLDERS = new Set(["00_inbox", "09_alice", "10_contabilidad"]);
 
+// Proyectos del CEO Dashboard ↔ carpeta espejo en Dropbox (02_PROYECTOS).
+// Convención de nombre: "<CODE>_<slug>" (matchea DC01_del_castillo). Sin code → solo slug.
+const PROYECTOS_ROOT = "/Hygge/02_PROYECTOS";
+function slugify(s) {
+  return (s || "").trim().toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")   // sin acentos
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+function projectFolderName(p) {
+  const slug = slugify(p?.name);
+  const code = (p?.code || "").trim().toUpperCase();
+  return code ? `${code}_${slug}` : slug;
+}
+function projectDropboxPath(p) {
+  return `${PROYECTOS_ROOT}/${projectFolderName(p)}`;
+}
+// Inverso: de un nombre de carpeta "DC01_del_castillo" a { code, name } para crear el proyecto.
+function projectFromFolderName(folder) {
+  const m = String(folder).match(/^([A-Za-z]{1,4}\d{1,3})[_\s-]+(.+)$/);
+  const code = m ? m[1].toUpperCase() : "";
+  const raw = m ? m[2] : folder;
+  const name = raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim().replace(/\b\w/g, c => c.toUpperCase());
+  return { code, name };
+}
+
 const SPV_TIPOS = [
   { id: "spv_propio",    label: "SPV propio",       hint: "Hygge como developer" },
   { id: "administracion", label: "Administración",  hint: "Fee por gestión, no capital propio" },
@@ -4023,6 +4048,20 @@ function autoWidgets(headers, rows) {
   return widgets;
 }
 
+// Formatea una celda para mostrar: si es numérica, aplica separador de miles es-PE
+// y conserva la moneda detectada (S/, $) y el % final. Si no es numérica, la deja igual.
+function fmtNum(raw) {
+  const s = raw == null ? "" : String(raw).trim();
+  if (s === "") return "—";
+  if (!/\d/.test(s)) return s;                       // no tiene dígitos → texto tal cual
+  const n = parseFloat(s.replace(/[,\sS/%$]/g, "")); // misma limpieza que isNumericCol + $ y espacios
+  if (isNaN(n)) return s;
+  const cur = /S\//i.test(s) ? "S/ " : /\$/.test(s) ? "$ " : "";
+  const pct = /%\s*$/.test(s) ? "%" : "";
+  const dec = n % 1 !== 0 ? 2 : 0;
+  return cur + n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: 2 }) + pct;
+}
+
 const BACKEND = ALICIA_URL;
 const FZ_SOURCE_KEY = "hygge:finanzas:source";
 
@@ -4048,20 +4087,25 @@ function dropboxGateError(res) {
 
 // Proyectos con flujo financiero en Dropbox. La raíz sale del mapeo real de carpetas;
 // el backend crea/lee "{raíz}/Fuente Flujo ERP" → link directo, sin tipear rutas.
-const FINANZAS_PROYECTOS = [
-  { id: "dc01", code: "DC01", label: "Del Castillo" },
-  { id: "pu01", code: "PU01", label: "Paula Ugarriza" },
-  { id: "tg01", code: "TG01", label: "De la Torre" },
-  { id: "l36",  code: "L36",  label: "Larco 1036" },
-  { id: "finanzas", code: "Gral", label: "General" },
-].map(p => ({ ...p, root: SPACE_DROPBOX_PATHS[p.id] })).filter(p => p.root);
+// Fuente de Finanzas: /Hygge/Finanzas/{PROYECTO}/{tipo}. Los proyectos se listan
+// dinámicamente desde Dropbox (cada subcarpeta = un proyecto). Dos reportes por
+// proyecto: Factibilidad y Flujo Financiero (subcarpeta con el archivo más reciente).
+// Deprecada la vieja convención "{raíz}/Fuente Flujo ERP".
+const FINANZAS_ROOT = "/Hygge/Finanzas";
+const FINANZAS_TIPOS = [
+  { id: "factibilidad", label: "Factibilidad" },
+  { id: "flujo financiero", label: "Flujo Financiero" },
+];
 
 function FinanzasDashboard() {
   const [source, setSource] = useState(() => {
     try { return JSON.parse(localStorage.getItem(FZ_SOURCE_KEY) || "null"); } catch { return null; }
   });
   const [project, setProject] = useState(() => { try { return localStorage.getItem("hygge:finanzas:project") || null; } catch { return null; } });
-  const [flujo, setFlujo] = useState(null);   // { folder, file } de la fuente por proyecto
+  const [tipo, setTipo] = useState(() => { try { return localStorage.getItem("hygge:finanzas:tipo") || "factibilidad"; } catch { return "factibilidad"; } });
+  const [projects, setProjects] = useState([]);          // nombres de carpeta bajo /Hygge/Finanzas
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [report, setReport] = useState(null);            // { folder, file } del reporte actual
   const [approved, setApproved] = useState(() => { try { return JSON.parse(localStorage.getItem("hygge:finanzas:approved") || "{}"); } catch { return {}; } });
   const [configOpen, setConfigOpen] = useState(false);
   const [pathInput, setPathInput] = useState(source?.path || "");
@@ -4095,20 +4139,34 @@ function FinanzasDashboard() {
 
   useEffect(() => { if (source) fetchCSV(source); }, [source, fetchCSV]);
 
-  // fuente por proyecto: el backend asegura la carpeta "Fuente Flujo ERP" y devuelve
-  // el CSV más reciente. Link directo, la fuente es solo verla y aprobarla.
-  const fetchFlujo = useCallback(async (projId) => {
-    const p = FINANZAS_PROYECTOS.find(x => x.id === projId);
-    if (!p) return;
-    setLoading(true); setError(null); setData(null); setFlujo(null);
+  // Lista de proyectos = subcarpetas de /Hygge/Finanzas (Dropbox es la fuente de verdad).
+  const loadProjects = useCallback(async () => {
+    setProjectsLoading(true);
+    try {
+      const res = await fetch(`${BACKEND}/api/dropbox/browse?path=${encodeURIComponent(FINANZAS_ROOT)}`);
+      if (!res.ok) throw dropboxGateError(res) || new Error(`Error ${res.status}`);
+      const j = await res.json();
+      setProjects((j.entries || []).filter(e => e.type === "folder" && !e.name.startsWith("_")).map(e => e.name));
+    } catch (e) {
+      setError({ message: e.message, kind: e.kind });
+    } finally {
+      setProjectsLoading(false);
+    }
+  }, []);
+
+  // Reporte de un proyecto + tipo: el backend arma /Hygge/Finanzas/{proyecto}/{tipo},
+  // asegura la carpeta y devuelve el archivo más reciente (csv/tsv/xlsx) como CSV.
+  const fetchReport = useCallback(async (proyecto, rtipo) => {
+    if (!proyecto || !rtipo) return;
+    setLoading(true); setError(null); setData(null); setReport(null);
     try {
       const res = await fetch(`${BACKEND}/api/dropbox/flujo`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectRoot: p.root }),
+        body: JSON.stringify({ proyecto, tipo: rtipo }),
       });
       if (!res.ok) throw dropboxGateError(res) || new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
       const j = await res.json();
-      setFlujo({ folder: j.folder, file: j.file });
+      setReport({ folder: j.folder, file: j.file });
       if (j.file && j.content != null) {
         const parsed = parseCSV(j.content);
         if (parsed.headers.length === 0) throw new Error("El archivo no tiene columnas reconocibles");
@@ -4122,23 +4180,30 @@ function FinanzasDashboard() {
     }
   }, []);
 
-  const selectProject = (id) => {
-    setProject(id); setSource(null);
-    try { localStorage.setItem("hygge:finanzas:project", id); } catch { /* cuota */ }
-    fetchFlujo(id);
+  const selectProject = (name) => {
+    setProject(name); setSource(null);
+    try { localStorage.setItem("hygge:finanzas:project", name); } catch { /* cuota */ }
+    fetchReport(name, tipo);
+  };
+  const selectTipo = (t) => {
+    setTipo(t);
+    try { localStorage.setItem("hygge:finanzas:tipo", t); } catch { /* cuota */ }
+    if (project) fetchReport(project, t);
   };
 
-  // aprobar el flujo mostrado (se sincroniza: Joel/Sebastián lo ven aprobado en cualquier dispositivo)
-  const approveFlujo = () => {
-    if (!project || !flujo?.file) return;
-    const next = { ...approved, [project]: { path: flujo.file.path, modified: flujo.file.modified, approvedAt: new Date().toISOString() } };
+  // aprobar el reporte mostrado (se sincroniza cross-device). Clave por proyecto+tipo.
+  const approvalKey = project && tipo ? `${project}::${tipo}` : null;
+  const approveReport = () => {
+    if (!approvalKey || !report?.file) return;
+    const next = { ...approved, [approvalKey]: { path: report.file.path, modified: report.file.modified, approvedAt: new Date().toISOString() } };
     setApproved(next);
     saveStored("hygge:finanzas:approved", next);
   };
-  const flujoAprobado = project && flujo?.file && approved[project]?.modified === flujo.file.modified;
+  const reportAprobado = approvalKey && report?.file && approved[approvalKey]?.modified === report.file.modified;
 
-  // al entrar, si había un proyecto elegido, recargar su flujo
-  useEffect(() => { if (project && !source) fetchFlujo(project); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // al montar: cargar la lista de proyectos y, si había uno elegido, su reporte
+  useEffect(() => { loadProjects(); }, [loadProjects]);
+  useEffect(() => { if (project && !source) fetchReport(project, tipo); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveSource = () => {
     if (!pathInput.trim()) { blob.onError(); return; }
@@ -4158,7 +4223,12 @@ function FinanzasDashboard() {
     chart.numCols.forEach(c => { obj[c] = parseFloat(r[c]?.replace(/[,S/%]/g, "") || 0); });
     return obj;
   }) : [];
+  // Si el eje es temporal (fecha/mes/período) → curva; si es un desglose categórico → barras.
+  const chartTemporal = chart ? isLabelCol(chart.labelCol) : false;
+  // Columnas numéricas de la tabla: alineación a la derecha + formato de miles.
+  const numericCols = data ? new Set(data.headers.filter(h => isNumericCol(data.rows, h))) : new Set();
   const CHART_COLORS = [C.cobalt, C.lavender, C.ochre, C.green];
+  const fmtTip = (v) => typeof v === "number" ? v.toLocaleString("es-PE") : v;
 
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[1080px] mx-auto">
@@ -4192,48 +4262,77 @@ function FinanzasDashboard() {
         </div>
       </div>
 
-      {/* Selector de proyecto · fuente directa "Fuente Flujo ERP" en Dropbox */}
+      {/* Selector de proyecto (dinámico) + toggle de tipo · fuente /Hygge/Finanzas/{proyecto}/{tipo} */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Flujo por proyecto</div>
+        <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+          Proyecto
+          <button onClick={loadProjects} disabled={projectsLoading} title="Recargar proyectos desde Dropbox"
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: C.muted, display: "inline-flex" }}>
+            <RefreshCw size={10} style={{ animation: projectsLoading ? "spin 1s linear infinite" : "none" }} />
+          </button>
+        </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          {FINANZAS_PROYECTOS.map(p => {
-            const active = project === p.id;
-            const ap = approved[p.id];
+          {projectsLoading && projects.length === 0 && <span style={{ fontSize: 12, color: C.muted }}>Cargando proyectos…</span>}
+          {!projectsLoading && projects.length === 0 && (
+            <span style={{ fontSize: 12, color: C.muted }}>No hay proyectos en {FINANZAS_ROOT}. Creá una carpeta por proyecto en Dropbox.</span>
+          )}
+          {projects.map(name => {
+            const active = project === name;
             return (
-              <button key={p.id} onClick={() => selectProject(p.id)}
-                title={`${p.root}/Fuente Flujo ERP`}
+              <button key={name} onClick={() => selectProject(name)}
+                title={`${FINANZAS_ROOT}/${name}`}
                 style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 3, cursor: "pointer",
                   border: `1px solid ${active ? C.ink : C.line}`, background: active ? C.ink : C.paper,
                   color: active ? C.bg : C.ink, fontSize: 12, fontWeight: active ? 600 : 500 }}>
-                {p.code}
-                {ap && <span title={`Aprobado ${new Date(ap.approvedAt).toLocaleDateString("es-PE")}`} style={{ color: active ? "#9BD3A6" : C.green, fontSize: 11 }}>✓</span>}
+                {name}
               </button>
             );
           })}
         </div>
-        {project && flujo && (
+
+        {/* Toggle tipo de reporte */}
+        {project && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Reporte</div>
+            <div style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 3, overflow: "hidden" }}>
+              {FINANZAS_TIPOS.map((t, i) => {
+                const active = tipo === t.id;
+                return (
+                  <button key={t.id} onClick={() => selectTipo(t.id)}
+                    style={{ padding: "7px 16px", cursor: "pointer", fontSize: 12, fontWeight: active ? 600 : 500,
+                      border: "none", borderLeft: i > 0 ? `1px solid ${C.line}` : "none",
+                      background: active ? C.navy : C.paper, color: active ? "white" : C.ink }}>
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {project && report && (
           <div style={{ marginTop: 12, padding: "12px 14px", background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            {flujo.file ? (
+            {report.file ? (
               <>
                 <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 600 }}>{flujo.file.name}</div>
-                  <div style={{ fontSize: 10.5, color: C.muted, fontFamily: "monospace", marginTop: 3 }}>{flujo.folder}</div>
+                  <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 600 }}>{report.file.name}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted, fontFamily: "monospace", marginTop: 3 }}>{report.folder}</div>
                 </div>
-                {flujoAprobado ? (
+                {reportAprobado ? (
                   <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.green }}>
                     <Check size={13} /> Aprobado
                   </span>
                 ) : (
-                  <button onClick={approveFlujo}
+                  <button onClick={approveReport}
                     style={{ padding: "8px 16px", background: C.green, color: "white", border: "none", borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    Aprobar flujo
+                    Aprobar reporte
                   </button>
                 )}
               </>
             ) : (
               <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
-                Carpeta lista en Dropbox — dejá tu CSV de flujo acá y volvé a entrar:
-                <div style={{ fontFamily: "monospace", color: C.ink, marginTop: 4 }}>{flujo.folder}</div>
+                Carpeta lista en Dropbox — dejá tu archivo de {FINANZAS_TIPOS.find(t => t.id === tipo)?.label.toLowerCase()} acá y volvé a entrar:
+                <div style={{ fontFamily: "monospace", color: C.ink, marginTop: 4 }}>{report.folder}</div>
               </div>
             )}
           </div>
@@ -4298,7 +4397,7 @@ function FinanzasDashboard() {
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginBottom: 8 }}>Elegí un proyecto</div>
           <p style={{ fontSize: 13, color: C.muted, maxWidth: 360, margin: "0 auto 24px", lineHeight: 1.65 }}>
-            Elegí un proyecto arriba y ALICE abre su flujo directo desde la carpeta "Fuente Flujo ERP" en Dropbox. O conectá un CSV manual.
+            Elegí un proyecto arriba y ALICE abre sus reportes (Factibilidad · Flujo Financiero) directo desde <span style={{ fontFamily: "monospace" }}>{FINANZAS_ROOT}/{"{proyecto}"}</span> en Dropbox. O conectá un CSV manual.
           </p>
           <button onClick={() => setConfigOpen(true)}
             style={{ padding: "10px 20px", backgroundColor: C.navy, color: "white", border: "none", borderRadius: 3, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
@@ -4333,7 +4432,7 @@ function FinanzasDashboard() {
                   return (
                     <div key={w.col} style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "18px 20px" }}>
                       <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 8 }}>{w.label}</div>
-                      <div style={{ fontSize: 26, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", lineHeight: 1 }}>{w.value}</div>
+                      <div style={{ fontSize: 26, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", lineHeight: 1 }}>{fmtNum(w.value)}</div>
                       {w.delta !== null && (
                         <div style={{ fontSize: 11, color: isPos ? C.green : C.brick, marginTop: 6, fontWeight: 500 }}>
                           {isPos ? "▲" : "▼"} {Math.abs(w.delta).toLocaleString("es-PE")} vs anterior
@@ -4346,30 +4445,42 @@ function FinanzasDashboard() {
             </section>
           )}
 
-          {/* Chart */}
+          {/* Chart · curva si el eje es temporal, barras si es un desglose */}
           {chart && chartData.length > 0 && (
             <section className="mb-10">
-              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Evolución temporal</div>
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>{chartTemporal ? "Evolución temporal" : "Desglose"}</div>
               <div style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, padding: "20px 16px" }}>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
+                    {chartTemporal ? (
+                      <AreaChart data={chartData}>
+                        <defs>
+                          {chart.numCols.map((col, i) => (
+                            <linearGradient key={col} id={`fz_grad_${i}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={CHART_COLORS[i]} stopOpacity={0.2} />
+                              <stop offset="100%" stopColor={CHART_COLORS[i]} stopOpacity={0} />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
+                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={{ fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2 }} formatter={fmtTip} />
                         {chart.numCols.map((col, i) => (
-                          <linearGradient key={col} id={`fz_grad_${i}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={CHART_COLORS[i]} stopOpacity={0.2} />
-                            <stop offset="100%" stopColor={CHART_COLORS[i]} stopOpacity={0} />
-                          </linearGradient>
+                          <Area key={col} type="monotone" dataKey={col} stroke={CHART_COLORS[i]} strokeWidth={1.5} fill={`url(#fz_grad_${i})`} name={col} />
                         ))}
-                      </defs>
-                      <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} />
-                      <YAxis hide />
-                      <Tooltip contentStyle={{ fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2 }} />
-                      {chart.numCols.map((col, i) => (
-                        <Area key={col} type="monotone" dataKey={col} stroke={CHART_COLORS[i]} strokeWidth={1.5} fill={`url(#fz_grad_${i})`} name={col} />
-                      ))}
-                    </AreaChart>
+                      </AreaChart>
+                    ) : (
+                      <BarChart data={chartData}>
+                        <CartesianGrid stroke={C.lineSoft} strokeDasharray="2 4" vertical={false} />
+                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={{ fontSize: 12, border: `1px solid ${C.line}`, borderRadius: 2 }} formatter={fmtTip} cursor={{ fill: C.lineSoft, opacity: 0.4 }} />
+                        {chart.numCols.map((col, i) => (
+                          <Bar key={col} dataKey={col} fill={CHART_COLORS[i]} radius={[2, 2, 0, 0]} name={col} />
+                        ))}
+                      </BarChart>
+                    )}
                   </ResponsiveContainer>
                 </div>
                 <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
@@ -4384,30 +4495,36 @@ function FinanzasDashboard() {
             </section>
           )}
 
-          {/* Raw table (collapsible) */}
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ fontSize: 11, color: C.muted, cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase", userSelect: "none" }}>
-              Ver tabla completa ({data.rows.length} filas)
-            </summary>
-            <div style={{ overflowX: "auto", marginTop: 12, backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3 }}>
+          {/* Tabla · siempre visible, cifras formateadas y alineadas */}
+          <section className="mb-4">
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>
+              Tabla · {data.rows.length} {data.rows.length === 1 ? "fila" : "filas"}
+            </div>
+            <div style={{ overflowX: "auto", backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 3 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
-                  <tr>{data.headers.map(h => (
-                    <th key={h} style={{ textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${C.line}`, fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
-                  ))}</tr>
+                  <tr>{data.headers.map(h => {
+                    const num = numericCols.has(h);
+                    return (
+                      <th key={h} style={{ textAlign: num ? "right" : "left", padding: "9px 14px", borderBottom: `1px solid ${C.line}`, fontSize: 10, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", position: "sticky", top: 0, background: C.paper }}>{h}</th>
+                    );
+                  })}</tr>
                 </thead>
                 <tbody>
                   {data.rows.map((row, i) => (
                     <tr key={i} style={{ borderBottom: i < data.rows.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
-                      {data.headers.map(h => (
-                        <td key={h} style={{ padding: "8px 12px", color: C.ink, whiteSpace: "nowrap" }}>{row[h]}</td>
-                      ))}
+                      {data.headers.map(h => {
+                        const num = numericCols.has(h);
+                        return (
+                          <td key={h} style={{ padding: "9px 14px", color: C.ink, whiteSpace: "nowrap", textAlign: num ? "right" : "left", fontFamily: num ? "ui-monospace, monospace" : "inherit", fontVariantNumeric: "tabular-nums" }}>{num ? fmtNum(row[h]) : (row[h] || "—")}</td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </details>
+          </section>
         </>
       )}
 
@@ -6748,7 +6865,7 @@ function CreateSpaceModal({ open, onClose, onCreate, parentSpace }) {
 }
 
 // ═══ DROPBOX SYNC MODALS ════════════════════════════════════════════════
-function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
+function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose, title = "Carpetas nuevas en Dropbox", noun = "space", ctaLabel = "Crear space" }) {
   if (!items || items.length === 0) return null;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9990, backgroundColor: "rgba(10,11,15,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
@@ -6756,7 +6873,7 @@ function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
         <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.lineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Dropbox · Sync</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>Carpetas nuevas en Dropbox</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>{title}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ModalBlob state="thinking" />
@@ -6765,7 +6882,7 @@ function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
         </div>
         <div style={{ padding: "20px 24px" }}>
           <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 16 }}>
-            Se {items.length === 1 ? "detectó una carpeta" : `detectaron ${items.length} carpetas`} en Dropbox que no {items.length === 1 ? "tiene" : "tienen"} space en ALICE. ¿Querés crear {items.length === 1 ? "el space" : "los spaces"}?
+            Se {items.length === 1 ? "detectó una carpeta" : `detectaron ${items.length} carpetas`} en Dropbox que no {items.length === 1 ? `tiene ${noun}` : `tienen ${noun}`} en ALICE. ¿Querés {items.length === 1 ? `crear el ${noun}` : `crearlos`}?
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {items.map(item => (
@@ -6776,7 +6893,7 @@ function DropboxSyncModal({ items, onCreateSpace, onIgnore, onClose }) {
                   <span style={{ fontSize: 10.5, color: C.muted }}>{item.path}</span>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  <button onClick={() => onCreateSpace(item)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", backgroundColor: C.cobalt, color: "white", border: "none", borderRadius: 2, cursor: "pointer" }}>Crear space</button>
+                  <button onClick={() => onCreateSpace(item)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", backgroundColor: C.cobalt, color: "white", border: "none", borderRadius: 2, cursor: "pointer" }}>{ctaLabel}</button>
                   <button onClick={() => onIgnore(item)} style={{ fontSize: 11, padding: "4px 10px", backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, cursor: "pointer" }}>Ignorar</button>
                 </div>
               </div>
@@ -8841,7 +8958,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
 
       {/* Crear proyecto · mismo modal con template vacío */}
       {creatingProject && <CEOProjectEditModal
-        project={{ name: "", fase: "Pre-venta", progreso: 0, vencimiento: "", unidades: { total: 0, vendidas: 0, reservadas: 0, disponibles: 0 }, revenue: { proyectado: 0, captado: 0 }, fc: { estado: "neutro", saldo: 0 } }}
+        project={{ name: "", code: "", fase: "Pre-venta", progreso: 0, vencimiento: "", unidades: { total: 0, vendidas: 0, reservadas: 0, disponibles: 0 }, revenue: { proyectado: 0, captado: 0 }, fc: { estado: "neutro", saldo: 0 } }}
         isNew
         onSave={(form) => { onAddProject(form); setCreatingProject(false); }}
         onClose={() => setCreatingProject(false)} />}
@@ -8863,6 +8980,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
 function CEOProjectEditModal({ project, isNew = false, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     name: project.name,
+    code: project.code || "",   // usado para la carpeta espejo en Dropbox: <CODE>_<slug>
     fase: project.fase,
     progreso: project.progreso,
     vencimiento: project.vencimiento,
@@ -8913,6 +9031,10 @@ function CEOProjectEditModal({ project, isNew = false, onSave, onDelete, onClose
               <label className="block">
                 <span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Nombre</span>
                 <input value={form.name} onChange={(e) => setField("name", e.target.value)} className="w-full px-2 py-1.5 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12 }} />
+              </label>
+              <label className="block">
+                <span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Código {isNew && <span style={{ fontWeight: 400 }}>· carpeta Dropbox</span>}</span>
+                <input value={form.code} onChange={(e) => setField("code", e.target.value.toUpperCase())} placeholder="ej. DC01" className="w-full px-2 py-1.5 outline-none" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 12, fontFamily: "ui-monospace, monospace" }} />
               </label>
               <label className="block">
                 <span style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 2 }}>Fase</span>
@@ -14393,6 +14515,9 @@ export default function HyggeOS({ authUser } = {}) {
   const [dropboxSyncItems, setDropboxSyncItems] = useState(null); // null = not checked yet, [] = checked no items
   const [dropboxFolderPrompt, setDropboxFolderPrompt] = useState(null);
   const dropboxSyncCheckedRef = useRef(false);
+  // Sync inverso de proyectos: carpetas nuevas en /Hygge/02_PROYECTOS → ofrecer crear proyecto en el CEO Dashboard
+  const [dropboxProjectSyncItems, setDropboxProjectSyncItems] = useState(null);
+  const dropboxProjectSyncCheckedRef = useRef(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
@@ -14632,6 +14757,34 @@ export default function HyggeOS({ authUser } = {}) {
       } catch (_) { /* silent */ }
     })();
   }, [loaded, authUser]);
+
+  // Sync inverso de proyectos (CEO): carpetas nuevas en /Hygge/02_PROYECTOS sin proyecto en ALICE.
+  // Solo el CEO (el CEO Dashboard es de Sebastián), una vez por sesión.
+  useEffect(() => {
+    if (!loaded || !authUser?.isCEO || dropboxProjectSyncCheckedRef.current) return;
+    dropboxProjectSyncCheckedRef.current = true;
+    (async () => {
+      try {
+        const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:proj_ignored") || "[]");
+        const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(PROYECTOS_ROOT)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const folders = (data.entries || []).filter(e => e.type === "folder");
+        // carpetas ya representadas: proyectos del CEO + SPVs mapeados en SPACE_DROPBOX_PATHS
+        const known = new Set(ceoProjects.map(p => projectFolderName(p).toLowerCase()));
+        Object.values(SPACE_DROPBOX_PATHS).forEach(p => {
+          const parts = p.split("/");
+          if (parts.length === 4 && parts[2] === "02_PROYECTOS") known.add(parts[3].toLowerCase());
+        });
+        const newFolders = folders.filter(f =>
+          !f.name.startsWith("_") &&
+          !known.has(f.name.toLowerCase()) &&
+          !ignored.includes(f.path)
+        );
+        if (newFolders.length > 0) setDropboxProjectSyncItems(newFolders.map(f => ({ name: f.name, path: f.path })));
+      } catch (_) { /* silent */ }
+    })();
+  }, [loaded, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSpaceExpansion = useCallback((id) => {
     setExpandedSpaces(prev => ({ ...prev, [id]: !prev[id] }));
@@ -15444,10 +15597,20 @@ REGLAS:
         projects={ceoProjects} nps={ceoNps}
         navigate={navigate} openDetail={openDetail}
         onEditProject={(id, patch) => setCeoProjects(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
-        onAddProject={(form) => setCeoProjects(prev => {
-          const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
-          return [...prev, { ...form, id: Date.now(), color: palette[prev.length % palette.length] }];
-        })}
+        onAddProject={(form) => {
+          setCeoProjects(prev => {
+            const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
+            return [...prev, { ...form, id: Date.now(), color: palette[prev.length % palette.length] }];
+          });
+          // Espejo en Dropbox: crear /Hygge/02_PROYECTOS/<CODE>_<slug>. Fire-and-forget;
+          // si Dropbox no está configurado el proyecto igual queda creado en ALICE.
+          if (form?.name?.trim() && !form._fromDropbox) {
+            fetch(`${ALICIA_BRAIN_URL}/api/dropbox/create_folder`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path: projectDropboxPath(form) }),
+            }).catch(() => {});
+          }
+        }}
         onDeleteProject={(id) => setCeoProjects(prev => prev.filter(p => p.id !== id))}
         blocks={ceoBlocks}
         onAddBlock={(data) => setCeoBlocks(prev => [...prev, { ...data, id: Date.now() }])}
@@ -15688,6 +15851,36 @@ REGLAS:
           setDropboxSyncItems(prev => prev.filter(i => i.path !== item.path));
         }}
         onClose={() => setDropboxSyncItems([])}
+      />
+      <DropboxSyncModal
+        items={dropboxProjectSyncItems}
+        title="Proyectos nuevos en Dropbox"
+        noun="proyecto"
+        ctaLabel="Crear proyecto"
+        onCreateSpace={(item) => {
+          // Dropbox → ALICE: la carpeta ya existe, así que agregamos el proyecto sin recrearla.
+          const { code, name } = projectFromFolderName(item.name);
+          setCeoProjects(prev => {
+            const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
+            return [...prev, {
+              id: Date.now(), code, name,
+              fase: "Pre-venta", progreso: 0, vencimiento: "",
+              district: "Miraflores", lat: null, lng: null,
+              unidades: { total: 0, vendidas: 0, reservadas: 0, disponibles: 0 },
+              revenue: { proyectado: 0, captado: 0 },
+              fc: { estado: "neutro", saldo: 0 },
+              color: palette[prev.length % palette.length],
+            }];
+          });
+          setDropboxProjectSyncItems(prev => prev.filter(i => i.path !== item.path));
+        }}
+        onIgnore={(item) => {
+          const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:proj_ignored") || "[]");
+          ignored.push(item.path);
+          saveStored("hygge:dropbox:proj_ignored", ignored);
+          setDropboxProjectSyncItems(prev => prev.filter(i => i.path !== item.path));
+        }}
+        onClose={() => setDropboxProjectSyncItems([])}
       />
       <DropboxFolderPrompt
         prompt={dropboxFolderPrompt}

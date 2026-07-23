@@ -1315,17 +1315,26 @@ app.get("/api/dropbox/download", async (req, res) => {
   }
 });
 
-// Fuente Flujo ERP · convención por proyecto: asegura la carpeta
-// "{raízProyecto}/Fuente Flujo ERP" (la crea si no existe), busca el CSV/TSV más
-// reciente y lo devuelve. Así Finanzas arma el link directo sin tipear rutas: la
-// fuente es solo verla y aprobarla. Idempotente (si la carpeta ya existe, sigue).
+// Reporte financiero por proyecto. Nueva convención (requisito de Sebastián):
+// "/Hygge/Finanzas/{proyecto}/FUENTE_ERP/{tipo}" donde tipo = "factibilidad" | "flujo financiero"
+// (subcarpeta que contiene el archivo). Asegura la carpeta (idempotente), busca el
+// archivo más reciente (csv/tsv/xlsx/xls/xlsm) y lo devuelve como CSV.
+// Compat: si llega { projectRoot } se usa la vieja convención "{raíz}/Fuente Flujo ERP"
+// (deprecada). Así Finanzas arma el link directo sin tipear rutas: verla y aprobarla.
 app.post("/api/dropbox/flujo", async (req, res) => {
   try {
-    const { projectRoot } = req.body || {};
-    if (!projectRoot) return res.status(400).json({ error: "projectRoot requerido" });
+    const { projectRoot, proyecto, tipo } = req.body || {};
+    const clean = (s) => String(s).replace(/^\/+|\/+$/g, "");
+    let folder;
+    if (proyecto && tipo) {
+      folder = `/Hygge/Finanzas/${clean(proyecto)}/FUENTE_ERP/${clean(tipo)}`;
+    } else if (projectRoot) {
+      folder = `${String(projectRoot).replace(/\/+$/, "")}/Fuente Flujo ERP`;
+    } else {
+      return res.status(400).json({ error: "proyecto+tipo (o projectRoot) requerido" });
+    }
     const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
     if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
-    const folder = `${String(projectRoot).replace(/\/+$/, "")}/Fuente Flujo ERP`;
     try { await dropbox.createFolder(folder); }
     catch (e) { if (!/conflict|already exists|409/i.test(e.message || "")) throw e; } // ya existía → ok
     const { isSpreadsheet, spreadsheetBufferToCsv } = await import("./lib/sheets.js");
