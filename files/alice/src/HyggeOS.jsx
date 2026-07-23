@@ -200,6 +200,7 @@ const SYNCED_KEYS = new Set([
   "hygge:spvs", "hygge:hq:cifras", "hygge:whiteboards", "hygge:knowledgeLinks",
   "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:ceoBlocks", "hygge:hqWidgets",
   "hygge:hqSummaries", "hygge:finanzas:source", "hygge:finanzas:approved", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
+  "hygge:ceoOverrides", "hygge:finanzas:tipo", "hygge:finanzas:project", "hygge:dropbox:proj_ignored",
 ]);
 
 async function loadStored(key, fallback) {
@@ -4060,6 +4061,43 @@ function fmtNum(raw) {
   const pct = /%\s*$/.test(s) ? "%" : "";
   const dec = n % 1 !== 0 ? 2 : 0;
   return cur + n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: 2 }) + pct;
+}
+
+// ── CEO Dashboard "auto": deriva proyectos de Finanzas (reportes) + SPVs, sin tipear ──
+function _finClean(s) { return String(s == null ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+function _finNum(v) { const n = parseFloat(String(v == null ? "" : v).replace(/[,\sS/%$]/g, "")); return isNaN(n) ? null : n; }
+// Busca una métrica por patrones: formato ancho (header numérico) o largo (fila etiqueta/valor).
+function finMetric(data, patterns) {
+  if (!data?.headers?.length || !data.rows?.length) return null;
+  const hit = (t) => patterns.some(p => _finClean(t).includes(p));
+  const col = data.headers.find(h => hit(h) && data.rows.some(r => _finNum(r[h]) != null));
+  if (col) { for (let i = data.rows.length - 1; i >= 0; i--) { const n = _finNum(data.rows[i][col]); if (n != null) return n; } }
+  const labelCol = data.headers.find(h => data.rows.every(r => _finNum(r[h]) == null));
+  const numCol = data.headers.find(h => data.rows.some(r => _finNum(r[h]) != null));
+  if (labelCol && numCol) { const row = data.rows.find(r => hit(r[labelCol])); if (row) { const n = _finNum(row[numCol]); if (n != null) return n; } }
+  return null;
+}
+// Matchea el nombre de carpeta de Finanzas contra un SPV (por código o token de nombre, normalizado).
+function matchSpv(folderName, spvs) {
+  if (!Array.isArray(spvs) || !spvs.length) return null;
+  const f = _finClean(folderName);
+  const ftoks = f.split(/[^a-z0-9]+/).filter(Boolean);
+  return spvs.find(s => {
+    const code = _finClean(s.code);
+    if (code && f.includes(code)) return true;
+    const ntoks = _finClean(s.name).split(/[^a-z0-9]+/).filter(t => t && t !== "hygge");
+    return ntoks.some(nt => nt.length > 2 && ftoks.includes(nt));
+  }) || null;
+}
+// status de SPV → fase del CEO Dashboard.
+function spvStatusToFase(status) {
+  const s = _finClean(status || "");
+  if (s.includes("venta")) return "Pre-venta";
+  if (s.includes("desarrollo") || s.includes("construc")) return "Construcción";
+  if (s.includes("post")) return "Post-entrega";
+  if (s.includes("entrega")) return "Entrega";
+  if (s.includes("supervis") || s.includes("adquisic")) return "Permisos";
+  return "Pre-venta";
 }
 
 const BACKEND = ALICIA_URL;
@@ -8483,7 +8521,7 @@ function LabView({ labId, ...allProps }) {
   );
 }
 
-function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, navigate, openDetail, onEditProject, onAddProject, onDeleteProject, onEditNps, onAddBlock, onEditBlock, onDeleteBlock, onMoveBlock, onResetSeed }) {
+function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, navigate, openDetail, onEditProject, onAddProject, onDeleteProject, onEditNps, onAddBlock, onEditBlock, onDeleteBlock, onMoveBlock, onResetSeed, autoMode = false }) {
   const [activeProject, setActiveProject] = useState(null);
   const [audience, setAudience] = useState("internal");
   const [shareOpen, setShareOpen] = useState(false);
@@ -8564,7 +8602,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
           <button onClick={() => printDashboard({ title: "CEO Dashboard · " + CEO_AUDIENCE_PRESETS[audience].label, htmlSelector: "#ceo-dashboard-printable" })} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:opacity-80" style={{ color: C.inkSoft, border: `1px solid ${C.line}`, borderRadius: 2, fontWeight: 500 }} title="Descarga HTML imprimible · abrílo y usá Cmd+P para Save as PDF">
             <Download size={11} /> Descargar PDF
           </button>
-          {audience === "internal" && (
+          {audience === "internal" && !autoMode && (
             <button onClick={() => { if (confirm("¿Resetear todos los proyectos a datos seed iniciales? Tu edición manual se pierde.")) onResetSeed && onResetSeed(); }} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] hover:opacity-70" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }} title="Resetear a seed">
               ↺ Reset
             </button>
@@ -8642,8 +8680,9 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
               <div className="px-4 py-3 flex items-center justify-between">
                 <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: "-0.01em", color: C.ink }}>Proyectos Activos · SPVs</span>
                 <div className="flex items-center gap-2">
+                  {autoMode && <span style={{ fontSize: 9, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", border: `1px solid ${C.lineSoft}`, borderRadius: 999, padding: "1px 7px" }} title="Datos derivados de Finanzas (reportes) + SPVs · sin carga manual">auto · Finanzas</span>}
                   <span style={{ fontSize: 10, color: C.muted }}>{projects.length} proyectos</span>
-                  {audience === "internal" && (
+                  {audience === "internal" && !autoMode && (
                     <button onClick={() => setCreatingProject(true)} className="flex items-center gap-1 px-2 py-1 text-[10px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }} title="Agregar proyecto">
                       <Plus size={10} /> Agregar
                     </button>
@@ -8652,8 +8691,10 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
               </div>
               {projects.length === 0 && (
                 <div className="px-4 py-8 text-center" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Sin proyectos todavía · los KPIs de arriba se calculan de acá</div>
-                  {audience === "internal" && (
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
+                    {autoMode ? "Sin proyectos en /04_FINANZAS/FINANZAS · creá una carpeta por proyecto en Dropbox" : "Sin proyectos todavía · los KPIs de arriba se calculan de acá"}
+                  </div>
+                  {audience === "internal" && !autoMode && (
                     <button onClick={() => setCreatingProject(true)} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 600 }}>
                       + Agregar tu primer proyecto
                     </button>
@@ -8675,7 +8716,7 @@ function CEODashboardView({ tasks, terrenos, allSpaces, projects, nps, blocks, n
                           <div className="flex items-center gap-2">
                             <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 12, backgroundColor: fc.bg, color: fc.fg, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>{p.fase}</span>
                             <span style={{ fontSize: 10, color: C.muted }}>{p.vencimiento}</span>
-                            {audience === "internal" && (
+                            {audience === "internal" && !autoMode && (
                               <button onClick={(e) => { e.stopPropagation(); setEditingProject(p); }} className="p-1 hover:opacity-100 transition-opacity" title="Editar proyecto" style={{ color: C.muted, opacity: 0.6 }}>
                                 <PenSquare size={11} />
                               </button>
@@ -14519,6 +14560,10 @@ export default function HyggeOS({ authUser } = {}) {
   // Sync inverso de proyectos: carpetas nuevas en /Hygge/02_PROYECTOS → ofrecer crear proyecto en el CEO Dashboard
   const [dropboxProjectSyncItems, setDropboxProjectSyncItems] = useState(null);
   const dropboxProjectSyncCheckedRef = useRef(false);
+  // CEO Dashboard "auto": proyectos derivados de Finanzas + SPVs. null = no cargado (usa fallback manual).
+  const [finanzasProjects, setFinanzasProjects] = useState(null);
+  const [ceoOverrides, setCeoOverrides] = useState({});   // ediciones manuales por proyecto (ej. fase via slider)
+  const ceoAutoCheckedRef = useRef(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
@@ -14787,6 +14832,56 @@ export default function HyggeOS({ authUser } = {}) {
     })();
   }, [loaded, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // CEO Dashboard "auto": arma la lista de proyectos desde las carpetas de Finanzas,
+  // deriva $ y cabida de los reportes (factibilidad/flujo) y matchea comercial/avance/
+  // ubicación desde los SPVs. Fuente única, sin re-tipear. Solo CEO, una vez por sesión.
+  useEffect(() => {
+    if (!loaded || !authUser?.isCEO || ceoAutoCheckedRef.current) return;
+    ceoAutoCheckedRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(FINANZAS_ROOT)}`);
+        if (!res.ok) return; // deja fallback manual (finanzasProjects sigue null)
+        const j = await res.json();
+        const folders = (j.entries || []).filter(e => e.type === "folder" && !e.name.startsWith("_")).map(e => e.name);
+        const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
+        const getReport = async (proyecto, tipo) => {
+          try {
+            const r = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/flujo`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ proyecto, tipo }) });
+            if (!r.ok) return null;
+            const d = await r.json();
+            return d.file && d.content != null ? parseCSV(d.content) : null;
+          } catch { return null; }
+        };
+        const built = await Promise.all(folders.map(async (name, i) => {
+          const [fact, flujo] = await Promise.all([getReport(name, "factibilidad"), getReport(name, "flujo financiero")]);
+          const revenueProyectado = fact ? (finMetric(fact, ["ingreso", "venta", "revenue"]) ?? 0) : 0;
+          const unidadesTotal = fact ? Math.round(finMetric(fact, ["unidad", "cabida", "depto", "departamento"]) ?? 0) : 0;
+          const saldo = flujo ? (finMetric(flujo, ["saldo", "caja", "disponible"]) ?? 0) : 0;
+          const captado = flujo ? (finMetric(flujo, ["captado", "cobrado", "recaudado", "acumulado"]) ?? 0) : 0;
+          const spv = matchSpv(name, spvs);
+          const vendidas = spv?.sold ?? 0;
+          const reservadas = spv?.reserved ?? 0;
+          const disponibles = Math.max(0, unidadesTotal - vendidas - reservadas);
+          const district = spv?.district || "Miraflores";
+          const coords = LIMA_DISTRICTS[district] || null;
+          return {
+            id: name, name, code: spv?.code || "",
+            color: palette[i % palette.length],
+            fase: spv ? spvStatusToFase(spv.status) : "Pre-venta",
+            progreso: spv?.construction ?? 0,
+            vencimiento: spv?.nextMilestone || "—",
+            district, lat: coords ? coords[0] : null, lng: coords ? coords[1] : null,
+            unidades: { total: unidadesTotal, vendidas, reservadas, disponibles },
+            revenue: { proyectado: revenueProyectado, captado },
+            fc: { estado: saldo > 0 ? "positivo" : saldo < 0 ? "negativo" : "neutro", saldo },
+          };
+        }));
+        setFinanzasProjects(built);
+      } catch (_) { setFinanzasProjects([]); }
+    })();
+  }, [loaded, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleSpaceExpansion = useCallback((id) => {
     setExpandedSpaces(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
@@ -14833,6 +14928,9 @@ export default function HyggeOS({ authUser } = {}) {
   // Bloques del CEO Dashboard · carga propia + guardado gateado por su flag
   useEffect(() => { loadStored("hygge:ceoBlocks", []).then(v => { setCeoBlocks(Array.isArray(v) ? v : []); setCeoBlocksLoaded(true); }); }, []);
   useEffect(() => { if (ceoBlocksLoaded) saveStored("hygge:ceoBlocks", ceoBlocks); }, [ceoBlocks, ceoBlocksLoaded]);
+  // Overrides del CEO Dashboard auto (ej. fase movida con el slider), keyed por proyecto
+  useEffect(() => { loadStored("hygge:ceoOverrides", {}).then(v => { if (v && typeof v === "object") setCeoOverrides(v); }); }, []);
+  useEffect(() => { if (loaded) saveStored("hygge:ceoOverrides", ceoOverrides); }, [ceoOverrides, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:ceoNps", ceoNps); }, [ceoNps, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:features", features); }, [features, loaded]);
   useEffect(() => { if (loaded) saveStored("hygge:spaceViewports", spaceViewports); }, [spaceViewports, loaded]);
@@ -15593,11 +15691,20 @@ REGLAS:
       return <WikiHyggeView openDetail={openDetail} allSpaces={allSpaces} spaceViewports={spaceViewports} setSpaceViewports={setSpaceViewports} knowledgeLinks={knowledgeLinks} setKnowledgeLinks={setKnowledgeLinks} navigate={navigate} />;
     }
     if (currentSpace === "ceo-dashboard") {
+      // Auto: proyectos derivados de Finanzas+SPVs (finanzasProjects). Si aún no cargó
+      // (null) o falló, cae al listado manual (ceoProjects). Los overrides (fase, etc.) se
+      // mergean encima sin re-tipear números.
+      const autoMode = finanzasProjects !== null;
+      const projSrc = autoMode ? finanzasProjects : ceoProjects;
+      const mergedProjects = projSrc.map(p => ({ ...p, ...(ceoOverrides[p.id] || {}) }));
       return <CEODashboardView
         tasks={tasks} terrenos={terrenos} allSpaces={allSpaces}
-        projects={ceoProjects} nps={ceoNps}
+        projects={mergedProjects} nps={ceoNps} autoMode={autoMode}
         navigate={navigate} openDetail={openDetail}
-        onEditProject={(id, patch) => setCeoProjects(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
+        onEditProject={(id, patch) => {
+          if (autoMode) setCeoOverrides(prev => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
+          else setCeoProjects(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+        }}
         onAddProject={(form) => {
           setCeoProjects(prev => {
             const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
