@@ -4243,7 +4243,11 @@ function FinanzasDashboard() {
   const selectProject = (name) => {
     setProject(name); setSource(null);
     try { localStorage.setItem("hygge:finanzas:project", name); } catch { /* cuota */ }
-    fetchReport(name, tipo);
+    // Las entidades General (prefijo _) son solo Flujo Financiero — no tienen factibilidad.
+    const isGeneral = String(name).startsWith("_");
+    const t = isGeneral ? "flujo financiero" : tipo;
+    if (isGeneral && tipo !== t) { setTipo(t); try { localStorage.setItem("hygge:finanzas:tipo", t); } catch { /* cuota */ } }
+    fetchReport(name, t);
   };
   const selectTipo = (t) => {
     setTipo(t);
@@ -4382,8 +4386,8 @@ function FinanzasDashboard() {
           })}
         </div>
 
-        {/* Toggle tipo de reporte */}
-        {project && (
+        {/* Toggle tipo de reporte · solo proyectos. Las entidades General son solo Flujo Financiero. */}
+        {project && !project.startsWith("_") && (
           <div style={{ marginTop: 14 }}>
             <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Reporte</div>
             <div style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 3, overflow: "hidden" }}>
@@ -4399,6 +4403,12 @@ function FinanzasDashboard() {
                 );
               })}
             </div>
+          </div>
+        )}
+        {project && project.startsWith("_") && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Reporte</div>
+            <span style={{ display: "inline-block", padding: "7px 16px", border: `1px solid ${C.line}`, borderRadius: 3, background: C.navy, color: "white", fontSize: 12, fontWeight: 600 }}>Flujo Financiero</span>
           </div>
         )}
 
