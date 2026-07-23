@@ -14,6 +14,14 @@ import { scrapeWynwoodHouseLima } from "./rentalScraper.js";
 
 const BCRP_API = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api";
 const NEXO_API_URL = process.env.NEXO_API_URL || "";
+// ScrapingBee: salta el Cloudflare de Nexo desde IPs de datacenter (Railway). Sin key,
+// se hace fetch directo (funciona desde IP residencial, no desde el server).
+const SCRAPINGBEE_API_KEY = process.env.SCRAPINGBEE_API_KEY || "";
+function viaScrapingBee(target) {
+  if (!SCRAPINGBEE_API_KEY) return target;
+  const qs = new URLSearchParams({ api_key: SCRAPINGBEE_API_KEY, url: target, premium_proxy: "true", country_code: "pe" });
+  return `https://app.scrapingbee.com/api/v1/?${qs.toString()}`;
+}
 
 // Returns { period, value } for the latest non-null observation of a BCRP series
 async function fetchBCRP(seriesCode) {
@@ -150,17 +158,21 @@ async function fetchNexoProjects() {
   // Strategy 2: la web de Nexo NO es Next.js — embebe los proyectos de cada página
   // en `var search_data=[...]` (SSR + filtrado client-side, verificado jul 2026).
   // Se recorren páginas por distrito (24 proyectos c/u) y se mergea por project_id.
-  const NEXO_PAGES = [
-    "venta-de-inmuebles", "departamentos/lima", "departamentos/miraflores",
-    "departamentos/san-isidro", "departamentos/barranco", "departamentos/santiago-de-surco",
-    "departamentos/jesus-maria", "departamentos/magdalena-del-mar", "departamentos/san-miguel",
-    "departamentos/lince", "departamentos/pueblo-libre", "departamentos/san-borja",
-  ];
+  // Con ScrapingBee, la página nacional /departamentos ya trae ~800 proyectos en un solo
+  // request (menos créditos y más rápido). Sin key, se recorren páginas por distrito.
+  const NEXO_PAGES = SCRAPINGBEE_API_KEY
+    ? ["departamentos"]
+    : [
+        "venta-de-inmuebles", "departamentos/lima", "departamentos/miraflores",
+        "departamentos/san-isidro", "departamentos/barranco", "departamentos/santiago-de-surco",
+        "departamentos/jesus-maria", "departamentos/magdalena-del-mar", "departamentos/san-miguel",
+        "departamentos/lince", "departamentos/pueblo-libre", "departamentos/san-borja",
+      ];
   const byId = new Map();
   for (const slug of NEXO_PAGES) {
     try {
-      const res = await fetch(`https://nexoinmobiliario.pe/${slug}`, {
-        headers, redirect: "follow", signal: AbortSignal.timeout(30000),
+      const res = await fetch(viaScrapingBee(`https://nexoinmobiliario.pe/${slug}`), {
+        headers, redirect: "follow", signal: AbortSignal.timeout(90000),
       });
       if (!res.ok) continue;
       for (const p of extractSearchData(await res.text())) {
