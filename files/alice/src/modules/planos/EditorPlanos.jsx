@@ -46,6 +46,40 @@ function RepoAmbientesPanel({ onAdd, onClose }) {
     </div>
   );
 }
+
+// Configurador por tipología: elegís el programa con botones y ensambla la planta desde la librería.
+function ConfigTipologiaPanel({ onArmar, onClose }) {
+  const [p, setP] = useState({ dorms: 2, banos: 2, visita: false, closet: true, cocinaCerrada: true, lavanderia: true });
+  const upd = (k, v) => setP((s) => ({ ...s, [k]: v }));
+  const row = { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "7px 0", fontSize: 12, color: "#0A0B0F" };
+  const step = { width: 24, height: 24, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", fontWeight: 700, color: "#0A0B0F", lineHeight: "20px" };
+  const Counter = ({ k, min = 0, max = 6 }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <button style={step} onClick={() => upd(k, Math.max(min, p[k] - 1))}>−</button>
+      <span style={{ minWidth: 16, textAlign: "center", fontWeight: 700 }}>{p[k]}</span>
+      <button style={step} onClick={() => upd(k, Math.min(max, p[k] + 1))}>+</button>
+    </div>
+  );
+  const Tog = ({ k, on = "Sí", off = "No" }) => (
+    <button onClick={() => upd(k, !p[k])} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: p[k] ? "#1E2A4A" : "#F4F1EA", color: p[k] ? "#fff" : "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>{p[k] ? on : off}</button>
+  );
+  return (
+    <div style={{ position: "absolute", right: 12, top: 60, width: 252, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Configurar tipología</span>
+        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
+      </div>
+      <div style={row}><span>Habitaciones</span><Counter k="dorms" min={1} max={5} /></div>
+      <div style={row}><span>Baños</span><Counter k="banos" min={1} max={4} /></div>
+      <div style={row}><span>Baño de visita</span><Tog k="visita" /></div>
+      <div style={row}><span>Clóset (walk-in)</span><Tog k="closet" /></div>
+      <div style={row}><span>Lavandería</span><Tog k="lavanderia" /></div>
+      <div style={row}><span>Cocina</span><button onClick={() => upd("cocinaCerrada", !p.cocinaCerrada)} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", color: "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>{p.cocinaCerrada ? "Cerrada" : "Abierta"}</button></div>
+      <button onClick={() => onArmar(p)} style={{ width: "100%", marginTop: 10, padding: "9px 0", background: "#F7643B", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Armar planta</button>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Ensambla los ambientes de la librería. Después los movés y ajustás a mano.</div>
+    </div>
+  );
+}
 import { validarPlan } from "./validacion.js";
 
 const Vista3D = lazy(() => import("./Vista3D.jsx"));
@@ -419,6 +453,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
   const [showLib, setShowLib] = useState(false);
   const [showRepo, setShowRepo] = useState(false);   // repositorio de ambientes amueblados
+  const [showTipoCfg, setShowTipoCfg] = useState(false); // configurador por tipología (ensambla desde librería)
   const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3
@@ -721,6 +756,43 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setSelId(roomObj.id); setSelItem(null); setTool("select"); setShowRepo(false);
   }, [rooms, items, commit, toWorldRaw]);
 
+  // Fase 2: ensambla la planta a partir del programa (contadores/toggles), tomando los
+  // ambientes de la librería y colocándolos en una grilla sin solape. Reemplaza rooms/items;
+  // el usuario los mueve y ajusta a mano (no regenera con Feyd).
+  const armarTipologia = useCallback((prog) => {
+    const byId = Object.fromEntries(AMBIENTES_LIB.map((a) => [a.id, a]));
+    const list = [];
+    // social (cocina abierta → sala-comedor-cocina más ancha con kitchenette; cerrada → cocina aparte)
+    if (prog.cocinaCerrada) {
+      list.push({ ...byId.sala });
+      list.push({ ...byId.cocina });
+    } else {
+      list.push({ id: "sala", name: "sala-comedor-cocina", tipo: "social", w: 5.4, h: 4.6,
+        furnish: (R) => [...amoblarSocial({ ...R, w: R.w - 1.9 }, "C"), furnIt("cocina", R.x + R.w - 1.0, R.y + 1.0, 0, { w: 1.7 })] });
+    }
+    for (let i = 0; i < prog.dorms; i++) list.push({ ...byId.habitacion, name: i === 0 ? "dormitorio principal" : `dormitorio ${i + 1}` });
+    for (let i = 0; i < prog.banos; i++) list.push({ ...byId.bano, name: `baño ${i + 1}` });
+    if (prog.visita) list.push({ ...byId.bano, name: "baño visita", w: 1.1, h: 1.6, furnish: (R) => amoblarBano(R, false, { wall: "top" }) });
+    if (prog.closet) list.push({ ...byId.closet, name: "clóset" });
+    if (prog.lavanderia) list.push({ ...byId.lavanderia });
+
+    const gap = 0.4, maxW = 12;
+    let x = 0, y = 0, rowH = 0;
+    const rooms = [], items = [];
+    for (const s of list) {
+      if (x > 0 && x + s.w > maxW) { x = 0; y += rowH + gap; rowH = 0; }
+      const R = { x, y, w: s.w, h: s.h };
+      const pts = [{ x: R.x, y: R.y }, { x: R.x + R.w, y: R.y }, { x: R.x + R.w, y: R.y + R.h }, { x: R.x, y: R.y + R.h }];
+      rooms.push({ id: uid(), name: s.name, pts, tipo: s.tipo });
+      let its = []; try { its = (s.furnish(R) || []).map((t) => ({ ...t, id: uid() })); } catch { its = []; }
+      items.push(...its);
+      x += s.w + gap; rowH = Math.max(rowH, s.h);
+    }
+    commit(rooms, items);
+    setShowTipoCfg(false); setSelId(null); setSelItem(null); setTool("select");
+    requestAnimationFrame(() => fitTo(rooms));
+  }, [commit, fitTo]);
+
   const useVariant = useCallback((v) => {
     const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
     commit(nr, (v.items || []).map((t) => ({ ...t })));
@@ -970,6 +1042,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
         <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
+        <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Configurar tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología</Btn>
         <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
@@ -1302,6 +1375,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
 
         {showLib && <LibPanel onAdd={addItem} onClose={() => setShowLib(false)} />}
         {showRepo && <RepoAmbientesPanel onAdd={insertAmbiente} onClose={() => setShowRepo(false)} />}
+        {showTipoCfg && <ConfigTipologiaPanel onArmar={armarTipologia} onClose={() => setShowTipoCfg(false)} />}
 
         {/* visor 3D vivo — flota abajo a la derecha, reacciona al plano en vivo */}
         {show3D && (
