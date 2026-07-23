@@ -121,6 +121,22 @@ const apiDropbox = {
     return Buffer.from(buffer).toString("utf8");
   },
 
+  // Igual que getFileContent pero devuelve el Buffer binario intacto
+  // (necesario para .xlsx/.xls, que son ZIPs y se corrompen si se decodifican a UTF-8).
+  getFileBuffer: async (filePath) => {
+    const token = await getToken();
+    const res = await fetch("https://content.dropboxapi.com/2/files/download", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Dropbox-API-Arg": JSON.stringify({ path: filePath }),
+        ...(await pathRootHeader(token)),
+      },
+    });
+    if (!res.ok) throw new Error(`Dropbox download error ${res.status}: ${await res.text()}`);
+    return Buffer.from(await res.arrayBuffer());
+  },
+
   listFolder: async (path = "") => {
     const data = await dbxFetch("/files/list_folder", { path, limit: 50 });
     return (data.entries || []).map(e => ({
@@ -241,6 +257,9 @@ const localDropbox = {
     // Archivos online-only: macOS los materializa solo al leer (puede tardar la 1ª vez)
     return fs.readFile(toLocal(filePath), "utf8");
   },
+
+  // Buffer binario (para .xlsx/.xls)
+  getFileBuffer: async (filePath) => fs.readFile(toLocal(filePath)),
 
   listFolder: async (path = "") => {
     const dir = toLocal(path);

@@ -1328,15 +1328,23 @@ app.post("/api/dropbox/flujo", async (req, res) => {
     const folder = `${String(projectRoot).replace(/\/+$/, "")}/Fuente Flujo ERP`;
     try { await dropbox.createFolder(folder); }
     catch (e) { if (!/conflict|already exists|409/i.test(e.message || "")) throw e; } // ya existía → ok
+    const { isSpreadsheet, spreadsheetBufferToCsv } = await import("./lib/sheets.js");
     let entries = [];
     try { entries = await dropbox.listFolder(folder); } catch { entries = []; }
     const csvs = entries
-      .filter((e) => e.type === "file" && /\.(csv|tsv)$/i.test(e.name))
+      .filter((e) => e.type === "file" && /\.(csv|tsv|xlsx|xls|xlsm)$/i.test(e.name))
       .sort((a, b) => new Date(b.modified || 0) - new Date(a.modified || 0));
     if (!csvs.length) return res.json({ folder, file: null });
     const file = csvs[0];
-    const content = await dropbox.getFileContent(file.path);
-    res.json({ folder, file, content, otros: csvs.slice(1).map((f) => ({ name: f.name, path: f.path, modified: f.modified })) });
+    let content, sheets;
+    if (isSpreadsheet(file.name)) {
+      const buf = await dropbox.getFileBuffer(file.path);
+      const out = spreadsheetBufferToCsv(buf, req.body?.sheet || undefined);
+      content = out.csv; sheets = out.sheets; file.sheet = out.sheet;
+    } else {
+      content = await dropbox.getFileContent(file.path);
+    }
+    res.json({ folder, file, content, sheets, otros: csvs.slice(1).map((f) => ({ name: f.name, path: f.path, modified: f.modified })) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
