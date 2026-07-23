@@ -1304,10 +1304,32 @@ app.get("/api/dropbox/download", async (req, res) => {
   try {
     const path = req.query.path || "";
     if (!path) return res.status(400).json({ error: "path requerido" });
+    const { isSpreadsheet, spreadsheetBufferToCsv } = await import("./lib/sheets.js");
+
+    // Link compartido de Dropbox (https://www.dropbox.com/scl/...) → bajar directo con dl=1,
+    // sin tratarlo como ruta de la API (eso da 409 malformed_path). Sirve CSV/TSV y xlsx.
+    if (/^https?:\/\//i.test(path)) {
+      const dl = /[?&]dl=/.test(path) ? path.replace(/([?&])dl=0(\b)/, "$1dl=1$2") : path + (path.includes("?") ? "&" : "?") + "dl=1";
+      const r = await fetch(dl, { redirect: "follow" });
+      if (!r.ok) return res.status(r.status).json({ error: `No se pudo bajar el link compartido (${r.status})` });
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      if (isSpreadsheet(path.split("?")[0])) {
+        const buf = Buffer.from(await r.arrayBuffer());
+        return res.send(spreadsheetBufferToCsv(buf, req.query.sheet || undefined).csv);
+      }
+      return res.send(await r.text());
+    }
+
     const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
     if (!dropboxAvailable()) return res.status(503).json({ error: "Dropbox no configurado" });
-    const content = await dropbox.getFileContent(path);
-    // Return as plain text so the frontend can parse CSV/TSV
+    // Ruta normal de Dropbox: xlsx → CSV vía sheets.js; el resto como texto (CSV/TSV).
+    let content;
+    if (isSpreadsheet(path)) {
+      const buf = await dropbox.getFileBuffer(path);
+      content = spreadsheetBufferToCsv(buf, req.query.sheet || undefined).csv;
+    } else {
+      content = await dropbox.getFileContent(path);
+    }
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.send(content);
   } catch (e) {

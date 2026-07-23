@@ -4135,6 +4135,15 @@ const FINANZAS_TIPOS = [
   { id: "factibilidad", label: "Factibilidad" },
   { id: "flujo financiero", label: "Flujo Financiero" },
 ];
+// Carpetas bajo /04_FINANZAS/FINANZAS que NO son proyectos (no aparecen en el selector
+// ni alimentan el CEO Dashboard). Convención: prefijo "_" también las esconde.
+const FINANZAS_SKIP = new Set([
+  "original images", "reportes", "reporte", "templates", "template", "plantillas",
+  "docs", "shared", "compartido", "archivo", "archivos", "general", "misc", "backup",
+]);
+function isFinanzasProjectFolder(name) {
+  return !!name && !name.startsWith("_") && !FINANZAS_SKIP.has(name.trim().toLowerCase());
+}
 
 function FinanzasDashboard() {
   const [source, setSource] = useState(() => {
@@ -4185,7 +4194,7 @@ function FinanzasDashboard() {
       const res = await fetch(`${BACKEND}/api/dropbox/browse?path=${encodeURIComponent(FINANZAS_ROOT)}`);
       if (!res.ok) throw dropboxGateError(res) || new Error(`Error ${res.status}`);
       const j = await res.json();
-      setProjects((j.entries || []).filter(e => e.type === "folder" && !e.name.startsWith("_")).map(e => e.name));
+      setProjects((j.entries || []).filter(e => e.type === "folder" && isFinanzasProjectFolder(e.name)).map(e => e.name));
     } catch (e) {
       setError({ message: e.message, kind: e.kind });
     } finally {
@@ -14843,7 +14852,7 @@ export default function HyggeOS({ authUser } = {}) {
         const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(FINANZAS_ROOT)}`);
         if (!res.ok) return; // deja fallback manual (finanzasProjects sigue null)
         const j = await res.json();
-        const folders = (j.entries || []).filter(e => e.type === "folder" && !e.name.startsWith("_")).map(e => e.name);
+        const folders = (j.entries || []).filter(e => e.type === "folder" && isFinanzasProjectFolder(e.name)).map(e => e.name);
         const palette = [C.cobalt, C.ochre, C.green, C.brick, C.navy];
         const getReport = async (proyecto, tipo) => {
           try {
