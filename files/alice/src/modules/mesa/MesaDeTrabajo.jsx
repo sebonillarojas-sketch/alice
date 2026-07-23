@@ -8,7 +8,7 @@ import { Save, Printer, RefreshCw, Trash2, Download, Upload } from "lucide-react
 import ConceptoBam from "./ConceptoBam.jsx";
 import { useProyectos } from "../cabida/proyectos.js";
 import {
-  calcCabida, loadTerrenos, loadProyectos, saveProyecto, cargarProyecto, borrarProyecto, loadLS, K,
+  calcCabida, loadTerrenos, loadProyectos, saveProyecto, cargarProyecto, borrarProyecto, loadLS, K, kFor,
 } from "./proyecto.js";
 import {
   A4W, A4H, LamPortada, LamProyecto, LamUbicacion, LamAnalisis, LamEconomico,
@@ -70,8 +70,9 @@ export default function MesaDeTrabajo() {
     const id = setTimeout(() => { try { localStorage.removeItem("hygge:mesaTabInicial"); } catch { /* noop */ } }, 1500);
     return () => clearTimeout(id);
   }, []);
-  const [nombre, setNombre] = useState(meta0.nombre || proyectoActivo?.nombre || "");
-  const [terrenoId, setTerrenoId] = useState(meta0.terrenoId ?? proyectoActivo?.terrenoId ?? "");
+  const [nombre, setNombre] = useState(proyectoActivo?.nombre || meta0.nombre || "");
+  // el terreno abierto desde Growth manda (proyectoActivo); meta guardada solo como fallback
+  const [terrenoId, setTerrenoId] = useState(proyectoActivo?.terrenoId ?? meta0.terrenoId ?? "");
   // si desde Growth abriste otro terreno, la Mesa lo sigue
   useEffect(() => {
     if (proyectoActivo?.terrenoId != null && String(proyectoActivo.terrenoId) !== String(terrenoId)) {
@@ -91,9 +92,14 @@ export default function MesaDeTrabajo() {
     () => terrenos.find((t) => String(t.id) === String(terrenoId)) || null,
     [terrenos, terrenoId]
   );
-  // recalcula cabida cada vez que cambias de pestaña (recoge lo último de la app Cabida)
-  const cab = useMemo(() => calcCabida(), [tick, tab]);
-  const editor = useMemo(() => loadLS(K.editor), [tick, tab]);
+  // recalcula cabida del terreno activo (misma key scopeada que escribe Cabida)
+  const cab = useMemo(() => calcCabida(terrenoId), [tick, tab, terrenoId]);
+  // plano: el del proyecto activo (Editor guarda ahí vía abrirParaTerreno); fallback a key scopeada/global
+  const editor = useMemo(() => {
+    const p = proyectoActivo?.plano;
+    if (p && (p.rooms || p.items)) return p;
+    return loadLS(kFor(K.editor, terrenoId)) || loadLS(K.editor);
+  }, [tick, tab, terrenoId, proyectoActivo]);
   const nombreEf = nombre.trim() || terreno?.name || "Nuevo proyecto";
   const fecha = new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 

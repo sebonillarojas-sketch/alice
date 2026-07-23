@@ -31,8 +31,13 @@ const CABIDA_DEF = {
   precioM2: 2600, factorAzotea: 50, precioEst: 15000, costoM2: 950,
 };
 
-export function calcCabida() {
-  const s = { ...CABIDA_DEF, ...(loadLS(K.cabida) || {}) };
+// Key scopeada por terreno (cada terreno guarda su cabida/plano aparte). Sin id → key global (legacy).
+export const kFor = (base, terrenoId) => (terrenoId != null && terrenoId !== "") ? `${base}:${terrenoId}` : base;
+
+export function calcCabida(terrenoId) {
+  // lee la cabida del terreno (misma key que escribe CabidaView con scopeKey); si no hay, global legacy
+  const raw = loadLS(kFor(K.cabida, terrenoId)) || loadLS(K.cabida) || {};
+  const s = { ...CABIDA_DEF, ...raw };
   const libre = s.terreno * s.areaLibre / 100;
   const huella = s.terreno - libre;
   const torre = huella * s.pisos;
