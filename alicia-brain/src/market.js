@@ -158,27 +158,34 @@ async function fetchNexoProjects() {
   // Strategy 2: la web de Nexo NO es Next.js — embebe los proyectos de cada página
   // en `var search_data=[...]` (SSR + filtrado client-side, verificado jul 2026).
   // Se recorren páginas por distrito (24 proyectos c/u) y se mergea por project_id.
-  // Con ScrapingBee, la página nacional /departamentos ya trae ~800 proyectos en un solo
-  // request (menos créditos y más rápido). Sin key, se recorren páginas por distrito.
-  const NEXO_PAGES = SCRAPINGBEE_API_KEY
-    ? ["departamentos"]
-    : [
-        "venta-de-inmuebles", "departamentos/lima", "departamentos/miraflores",
-        "departamentos/san-isidro", "departamentos/barranco", "departamentos/santiago-de-surco",
-        "departamentos/jesus-maria", "departamentos/magdalena-del-mar", "departamentos/san-miguel",
-        "departamentos/lince", "departamentos/pueblo-libre", "departamentos/san-borja",
-      ];
+  // Cada página por distrito embebe ~24 proyectos en `var search_data=[...]`. Se recorren
+  // varios distritos y se mergea por project_id.
+  const NEXO_PAGES = [
+    "venta-de-inmuebles", "departamentos/lima", "departamentos/miraflores",
+    "departamentos/san-isidro", "departamentos/barranco", "departamentos/santiago-de-surco",
+    "departamentos/jesus-maria", "departamentos/magdalena-del-mar", "departamentos/san-miguel",
+    "departamentos/lince", "departamentos/pueblo-libre", "departamentos/san-borja",
+  ];
   const byId = new Map();
+  const addFrom = (html) => {
+    for (const p of extractSearchData(html)) {
+      if (p.project_id && !byId.has(p.project_id)) byId.set(p.project_id, p);
+    }
+  };
   for (const slug of NEXO_PAGES) {
+    const target = `https://nexoinmobiliario.pe/${slug}`;
+    let got = 0;
+    // 1) fetch directo (gratis). 2) si Cloudflare bloquea o viene vacío → ScrapingBee (paga, solo si hace falta).
     try {
-      const res = await fetch(viaScrapingBee(`https://nexoinmobiliario.pe/${slug}`), {
-        headers, redirect: "follow", signal: AbortSignal.timeout(90000),
-      });
-      if (!res.ok) continue;
-      for (const p of extractSearchData(await res.text())) {
-        if (p.project_id && !byId.has(p.project_id)) byId.set(p.project_id, p);
-      }
-    } catch { /* siguiente página */ }
+      const res = await fetch(target, { headers, redirect: "follow", signal: AbortSignal.timeout(20000) });
+      if (res.ok) { const before = byId.size; addFrom(await res.text()); got = byId.size - before; }
+    } catch { /* intento ScrapingBee abajo */ }
+    if (got === 0 && SCRAPINGBEE_API_KEY) {
+      try {
+        const res = await fetch(viaScrapingBee(target), { headers, redirect: "follow", signal: AbortSignal.timeout(90000) });
+        if (res.ok) addFrom(await res.text());
+      } catch { /* siguiente página */ }
+    }
   }
   if (byId.size > 0) {
     const projects = mapNexoSearchData([...byId.values()]);
