@@ -163,3 +163,13 @@ Reglas verificables mecánicamente sobre el JSON del layout (esquema documentado
 ## Cómo reportar
 
 Al validar, emitir una tabla `CHK-XX | PASA/FALLA | detalle` con el valor medido y el umbral. Todo [B] que falle se corrige y se re-valida el checklist completo (una corrección puede romper otra regla). Los [A] que se dejen pasar se justifican en una línea.
+
+
+## CHK-22 [B] Toda habitación tiene puerta
+- **Enunciado**: cada `ambiente` aparece como `a` (o `de`) en al menos una `puerta`. Ningún ambiente queda sin puerta que lo conecte.
+- **Verificación**: para cada `ambientes.nombre`, existe ≥ 1 entrada en `puertas` con `de` == nombre o `a` == nombre.
+- **Fuente**: requisito BAM — toda habitación se ingresa por una puerta.
+
+## CHK-23 [A] Sin tramos muertos > 3 m
+- **Enunciado**: no debe quedar ningún tramo de muro o franja de espacio útil mayor a 3.00 m sin amoblar ni resolver (paño muerto). Advertencia de diseño — el JSON no lleva mobiliario, así que se evalúa por criterio; Feyd debe resolverlo con la librería de layouts amueblados.
+- **Fuente**: requisito BAM.

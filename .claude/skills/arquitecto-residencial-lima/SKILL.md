@@ -152,3 +152,9 @@ Convenciones duras del emisor: coordenadas con máx. 3 decimales; polígonos cer
 ## Paso 8 — AUTOCRÍTICA obligatoria
 
 Antes de entregar, recorré `references/checklist-validacion.md` ítem por ítem (CHK-01 a CHK-21) haciendo los cálculos geométricos reales (shoelace, rectángulo inscrito, grafo de puertas, distancias al muro húmedo). Reportá `CHK-XX | PASA/FALLA | valor medido vs umbral`. Todo bloqueante [B] que falle se corrige en el JSON y se RE-VALIDA el checklist completo desde CHK-01 (una corrección puede romper otra regla). Las advertencias [A] que se dejen pasar se justifican en una línea. Solo se entrega un layout con cero bloqueantes.
+
+
+## Reglas duras adicionales (requisito de Sebastián / BAM)
+
+- **Toda habitación tiene puerta.** Ningún `ambiente` puede quedar sin al menos una puerta que lo conecte (refuerza CHK-13; verificado por CHK-22). Un ambiente sin puerta es error BLOQUEANTE — corregilo.
+- **Nada sin resolver: no dejes tramos mayores a 3.00 m sin amoblar ni resolver.** Todo largo de muro o espacio útil debe tener función o mobiliario dentro de 3 m — sin paños muertos ni rincones vacíos. Si un tramo supera 3 m sin uso, agregá mobiliario, un clóset, un mueble empotrado o reconfigurá el ambiente. (En el Editor de Planos esto se materializa con la librería de layouts amueblados por ambiente.)
