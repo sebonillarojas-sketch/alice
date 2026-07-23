@@ -67,8 +67,13 @@ function extraerJSON(texto) {
   const ini = t.indexOf("{");
   const fin = t.lastIndexOf("}");
   if (ini === -1 || fin <= ini) throw new Error("Feyd-Rautha no devolvió JSON (respuesta cortada o vacía)");
-  return JSON.parse(t.slice(ini, fin + 1));
+  try { return JSON.parse(t.slice(ini, fin + 1)); }
+  catch (e) { throw new Error("Feyd-Rautha devolvió JSON inválido (probable truncado): " + String(e.message).slice(0, 80)); }
 }
+// Fuerza salida JSON-first: se hace prefill del turno del assistant con "{" para que el
+// modelo NO escriba razonamiento antes (que se cortaba y dejaba la respuesta sin JSON).
+const PREFILL = { role: "assistant", content: "{" };
+function textoDe(resp) { return resp.content.find(b => b.type === "text")?.text || ""; }
 
 // brief: { dormitorios, banos, area_m2, frente_m, fondo_m, fachadas, notas } — todo opcional;
 // lo no especificado se completa con la estadística de mercado del skill.
@@ -79,16 +84,17 @@ export async function disenarPlano(brief, { autocritica = true } = {}) {
     role: "user",
     content: `Diseñá una planta con este brief (completá lo no especificado con la estadística de mercado del skill):\n${JSON.stringify(brief ?? {}, null, 1)}\n\nRespondé ÚNICAMENTE con el JSON estricto del layout — sin markdown, sin comentarios.`,
   }];
-  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 12000, system, messages });
-  let texto = r1.content.find(b => b.type === "text")?.text || "";
+  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages: [...messages, PREFILL] });
+  let texto = "{" + textoDe(r1);
   if (autocritica) {
     // 2ª llamada reusa el MISMO system block → pega en el cache de prompt (barata)
     messages.push(
       { role: "assistant", content: texto },
-      { role: "user", content: "Recorré references/checklist-validacion.md ítem por ítem contra tu layout. Si TODO pasa, repetí el mismo JSON idéntico; si algo falla, corregilo. Respondé solo el JSON." },
+      { role: "user", content: "Recorré references/checklist-validacion.md ítem por ítem contra tu layout. Si TODO pasa, repetí el mismo JSON idéntico; si algo falla, corregilo. Respondé SOLO el JSON, sin texto antes." },
     );
-    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 12000, system, messages });
-    texto = r2.content.find(b => b.type === "text")?.text || texto;
+    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages: [...messages, PREFILL] });
+    const t2 = "{" + textoDe(r2);
+    if (t2.length > 2) texto = t2;
   }
   return extraerJSON(texto);
 }
@@ -107,6 +113,6 @@ Recorré references/checklist-validacion.md ítem por ítem contra la planta. De
 {"veredicto": "<1-2 líneas en tu voz>", "problemas": ["<máx 8, los más graves; problema + regla citada (RNE Art. / CHK-XX)>"], "layout": <la planta corregida en tu formato estricto>}
 Sé conciso en veredicto y problemas para no cortar el JSON. Si la planta ya está impecable, decilo (sin regalar elogios) y devolvé el layout igual.`,
   }];
-  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 12000, system, messages });
-  return extraerJSON(r.content.find(b => b.type === "text")?.text || "");
+  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages: [...messages, PREFILL] });
+  return extraerJSON("{" + textoDe(r));
 }
