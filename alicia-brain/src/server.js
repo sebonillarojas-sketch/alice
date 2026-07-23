@@ -1312,12 +1312,19 @@ app.get("/api/dropbox/download", async (req, res) => {
       const dl = /[?&]dl=/.test(path) ? path.replace(/([?&])dl=0(\b)/, "$1dl=1$2") : path + (path.includes("?") ? "&" : "?") + "dl=1";
       const r = await fetch(dl, { redirect: "follow" });
       if (!r.ok) return res.status(r.status).json({ error: `No se pudo bajar el link compartido (${r.status})` });
+      const buf = Buffer.from(await r.arrayBuffer());
+      // Dropbox devuelve una página HTML ("File Deleted"/login) con status 200 cuando el
+      // link está muerto o vencido. Detectarlo y avisar claro en vez de servir el HTML como CSV.
+      const head = buf.slice(0, 300).toString("utf8").trimStart().toLowerCase();
+      const ct = (r.headers.get("content-type") || "").toLowerCase();
+      if (ct.includes("text/html") || head.startsWith("<!doctype html") || head.startsWith("<html")) {
+        return res.status(422).json({ error: "El link de Dropbox no apunta a un archivo (puede estar borrado o vencido). Regenerá el link o dejá el archivo en la carpeta del proyecto." });
+      }
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       if (isSpreadsheet(path.split("?")[0])) {
-        const buf = Buffer.from(await r.arrayBuffer());
         return res.send(spreadsheetBufferToCsv(buf, req.query.sheet || undefined).csv);
       }
-      return res.send(await r.text());
+      return res.send(buf.toString("utf8"));
     }
 
     const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");

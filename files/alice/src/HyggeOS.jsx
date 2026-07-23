@@ -4100,6 +4100,13 @@ function spvStatusToFase(status) {
   return "Pre-venta";
 }
 
+// Un link muerto/vencido de Dropbox devuelve una página HTML (200) — detectarla para no
+// parsearla como CSV (si no, se ve una "tabla" de cientos de filas de tags HTML).
+function looksLikeHtml(text) {
+  const t = String(text || "").trimStart().slice(0, 200).toLowerCase();
+  return t.startsWith("<!doctype html") || t.startsWith("<html") || (t.includes("<head") && t.includes("<meta"));
+}
+
 const BACKEND = ALICIA_URL;
 const FZ_SOURCE_KEY = "hygge:finanzas:source";
 
@@ -4182,8 +4189,19 @@ function FinanzasDashboard() {
     setLoading(true); setError(null);
     try {
       const res = await fetch(`${BACKEND}/api/dropbox/download?path=${encodeURIComponent(src.path)}`);
-      if (!res.ok) throw dropboxGateError(res) || new Error(await res.text());
+      if (!res.ok) {
+        const gate = dropboxGateError(res);
+        if (gate) throw gate;
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Error ${res.status}`);
+      }
       const text = await res.text();
+      if (looksLikeHtml(text)) {
+        // link muerto/vencido → limpiar la fuente para no seguir mostrando basura, y avisar
+        try { localStorage.removeItem(FZ_SOURCE_KEY); } catch { /* noop */ }
+        setSource(null);
+        throw new Error("El link/archivo de esta fuente no es válido (puede estar borrado o vencido). Elegí un proyecto arriba o conectá otra fuente.");
+      }
       const parsed = parseCSV(text);
       if (parsed.headers.length === 0) throw new Error("El archivo no tiene columnas reconocibles");
       setData(parsed);
@@ -4228,6 +4246,7 @@ function FinanzasDashboard() {
       const j = await res.json();
       setReport({ folder: j.folder, file: j.file });
       if (j.file && j.content != null) {
+        if (looksLikeHtml(j.content)) throw new Error("El archivo del reporte no es un CSV/Excel válido (parece una página web). Revisá el archivo en Dropbox.");
         const parsed = parseCSV(j.content);
         if (parsed.headers.length === 0) throw new Error("El archivo no tiene columnas reconocibles");
         setData(parsed);
