@@ -1315,8 +1315,8 @@ app.get("/api/dropbox/download", async (req, res) => {
   }
 });
 
-// Reporte financiero por proyecto. Nueva convención (requisito de Sebastián):
-// "/Hygge/Finanzas/{proyecto}/FUENTE_ERP/{tipo}" donde tipo = "factibilidad" | "flujo financiero"
+// Reporte financiero por proyecto. Fuente única = la carpeta anclada al space Finanzas:
+// "/Hygge/04_FINANZAS/FINANZAS/{proyecto}/FUENTE_ERP/{tipo}" con tipo = "factibilidad" | "flujo financiero"
 // (subcarpeta que contiene el archivo). Asegura la carpeta (idempotente), busca el
 // archivo más reciente (csv/tsv/xlsx/xls/xlsm) y lo devuelve como CSV.
 // Compat: si llega { projectRoot } se usa la vieja convención "{raíz}/Fuente Flujo ERP"
@@ -1327,7 +1327,7 @@ app.post("/api/dropbox/flujo", async (req, res) => {
     const clean = (s) => String(s).replace(/^\/+|\/+$/g, "");
     let folder;
     if (proyecto && tipo) {
-      folder = `/Hygge/Finanzas/${clean(proyecto)}/FUENTE_ERP/${clean(tipo)}`;
+      folder = `/Hygge/04_FINANZAS/FINANZAS/${clean(proyecto)}/FUENTE_ERP/${clean(tipo)}`;
     } else if (projectRoot) {
       folder = `${String(projectRoot).replace(/\/+$/, "")}/Fuente Flujo ERP`;
     } else {

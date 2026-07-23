@@ -4087,11 +4087,12 @@ function dropboxGateError(res) {
 
 // Proyectos con flujo financiero en Dropbox. La raíz sale del mapeo real de carpetas;
 // el backend crea/lee "{raíz}/Fuente Flujo ERP" → link directo, sin tipear rutas.
-// Fuente de Finanzas: /Hygge/Finanzas/{PROYECTO}/{tipo}. Los proyectos se listan
-// dinámicamente desde Dropbox (cada subcarpeta = un proyecto). Dos reportes por
-// proyecto: Factibilidad y Flujo Financiero (subcarpeta con el archivo más reciente).
-// Deprecada la vieja convención "{raíz}/Fuente Flujo ERP".
-const FINANZAS_ROOT = "/Hygge/Finanzas";
+// Fuente de Finanzas = la carpeta ya anclada al space Finanzas: /Hygge/04_FINANZAS/FINANZAS.
+// Cada subcarpeta = un proyecto. Dos reportes por proyecto en subcarpetas bajo FUENTE_ERP:
+// {proyecto}/FUENTE_ERP/factibilidad y {proyecto}/FUENTE_ERP/flujo financiero (archivo más
+// reciente). Fuente única — el CEO Dashboard se alimenta de acá, sin re-tipear.
+// Deprecadas: la vieja "{raíz}/Fuente Flujo ERP" y el árbol paralelo /Hygge/Finanzas.
+const FINANZAS_ROOT = "/Hygge/04_FINANZAS/FINANZAS";
 const FINANZAS_TIPOS = [
   { id: "factibilidad", label: "Factibilidad" },
   { id: "flujo financiero", label: "Flujo Financiero" },
