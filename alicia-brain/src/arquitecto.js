@@ -70,9 +70,9 @@ function extraerJSON(texto) {
   try { return JSON.parse(t.slice(ini, fin + 1)); }
   catch (e) { throw new Error("Feyd-Rautha devolvió JSON inválido (probable truncado): " + String(e.message).slice(0, 80)); }
 }
-// Fuerza salida JSON-first: se hace prefill del turno del assistant con "{" para que el
-// modelo NO escriba razonamiento antes (que se cortaba y dejaba la respuesta sin JSON).
-const PREFILL = { role: "assistant", content: "{" };
+// El modelo no soporta prefill de assistant (la conversación debe terminar en user),
+// así que forzamos JSON-first por instrucción dura en el prompt + parser robusto.
+const SOLO_JSON = "\n\nIMPORTANTE: empezá tu respuesta directamente con { y terminá con }. NO escribas texto, explicación ni checklist antes del JSON (el análisis va DENTRO del JSON en sus campos, no como prosa suelta).";
 function textoDe(resp) { return resp.content.find(b => b.type === "text")?.text || ""; }
 
 // brief: { dormitorios, banos, area_m2, frente_m, fondo_m, fachadas, notas } — todo opcional;
@@ -82,19 +82,19 @@ export async function disenarPlano(brief, { autocritica = true } = {}) {
   const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill("full")}`, cache_control: { type: "ephemeral" } }];
   const messages = [{
     role: "user",
-    content: `Diseñá una planta con este brief (completá lo no especificado con la estadística de mercado del skill):\n${JSON.stringify(brief ?? {}, null, 1)}\n\nRespondé ÚNICAMENTE con el JSON estricto del layout — sin markdown, sin comentarios.`,
+    content: `Diseñá una planta con este brief (completá lo no especificado con la estadística de mercado del skill):\n${JSON.stringify(brief ?? {}, null, 1)}\n\nRespondé ÚNICAMENTE con el JSON estricto del layout — sin markdown, sin comentarios.${SOLO_JSON}`,
   }];
-  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages: [...messages, PREFILL] });
-  let texto = "{" + textoDe(r1);
+  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages });
+  let texto = textoDe(r1);
   if (autocritica) {
     // 2ª llamada reusa el MISMO system block → pega en el cache de prompt (barata)
     messages.push(
       { role: "assistant", content: texto },
-      { role: "user", content: "Recorré references/checklist-validacion.md ítem por ítem contra tu layout. Si TODO pasa, repetí el mismo JSON idéntico; si algo falla, corregilo. Respondé SOLO el JSON, sin texto antes." },
+      { role: "user", content: `Recorré references/checklist-validacion.md ítem por ítem contra tu layout. Si TODO pasa, repetí el mismo JSON idéntico; si algo falla, corregilo.${SOLO_JSON}` },
     );
-    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages: [...messages, PREFILL] });
-    const t2 = "{" + textoDe(r2);
-    if (t2.length > 2) texto = t2;
+    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages });
+    const t2 = textoDe(r2);
+    if (t2) texto = t2;
   }
   return extraerJSON(texto);
 }
@@ -111,8 +111,8 @@ ${JSON.stringify(layout)}
 
 Recorré references/checklist-validacion.md ítem por ítem contra la planta. Después corregila: mantené la huella, el frente y la intención del parti todo lo posible — cirugía, no demolición (salvo que esté indefendible, y en ese caso decilo en tu veredicto). Respondé ÚNICAMENTE con este JSON:
 {"veredicto": "<1-2 líneas en tu voz>", "problemas": ["<máx 8, los más graves; problema + regla citada (RNE Art. / CHK-XX)>"], "layout": <la planta corregida en tu formato estricto>}
-Sé conciso en veredicto y problemas para no cortar el JSON. Si la planta ya está impecable, decilo (sin regalar elogios) y devolvé el layout igual.`,
+Sé conciso en veredicto y problemas para no cortar el JSON. Si la planta ya está impecable, decilo (sin regalar elogios) y devolvé el layout igual.${SOLO_JSON}`,
   }];
-  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages: [...messages, PREFILL] });
-  return extraerJSON("{" + textoDe(r));
+  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages });
+  return extraerJSON(textoDe(r));
 }
