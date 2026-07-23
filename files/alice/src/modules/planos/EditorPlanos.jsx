@@ -12,6 +12,40 @@ import {
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
+import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt } from "./distribucion.js";
+
+// Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
+// Reusa el motor de amoblado (amoblar*) + el catálogo. Cada uno respeta holguras Neufert.
+const AMBIENTES_LIB = [
+  { id: "sala",       label: "Sala",       name: "sala-comedor", tipo: "social",   w: 4.2, h: 4.6, furnish: (R) => amoblarSocial(R, "C") },
+  { id: "comedor",    label: "Comedor",    name: "comedor",      tipo: "social",   w: 3.2, h: 3.4, furnish: (R) => [furnIt("comedor-6", R.x + R.w / 2, R.y + R.h / 2, 0)] },
+  { id: "habitacion", label: "Habitación", name: "dormitorio",   tipo: "intima",   w: 3.3, h: 3.6, furnish: (R) => amoblarDorm(R, true, "hall-abajo", "arriba", "C") },
+  { id: "bano",       label: "Baño",       name: "baño",         tipo: "servicio", w: 1.6, h: 2.6, furnish: (R) => amoblarBano(R, true, { wall: "top" }) },
+  { id: "cocina",     label: "Cocina",     name: "cocina",       tipo: "servicio", w: 2.4, h: 3.2, furnish: (R) => amoblarCocina(R, "C") },
+  { id: "closet",     label: "Clóset",     name: "clóset",       tipo: "servicio", w: 2.0, h: 0.9, furnish: (R) => [furnIt("closet", R.x + R.w / 2, R.y + R.h / 2, 0, { w: R.w - 0.1 })] },
+  { id: "lavanderia", label: "Lavandería", name: "lavandería",   tipo: "servicio", w: 1.8, h: 2.0, furnish: (R) => [furnIt("lavanderia", R.x + R.w / 2, R.y + R.h / 2, 0)] },
+];
+
+function RepoAmbientesPanel({ onAdd, onClose }) {
+  return (
+    <div style={{ position: "absolute", right: 12, top: 60, width: 210, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Ambientes</span>
+        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {AMBIENTES_LIB.map((a) => (
+          <button key={a.id} onClick={() => onAdd(a)}
+            style={{ padding: "9px 6px", fontSize: 11.5, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", color: "#0A0B0F", fontWeight: 600, textAlign: "center" }}>
+            {a.label}
+            <div style={{ fontSize: 9, color: "#6B6863", fontWeight: 400, marginTop: 2 }}>{a.w}×{a.h} m</div>
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.45 }}>Inserta el ambiente amueblado al centro del lienzo. Arrastrable y editable.</div>
+    </div>
+  );
+}
 import { validarPlan } from "./validacion.js";
 
 const Vista3D = lazy(() => import("./Vista3D.jsx"));
@@ -384,6 +418,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [selId, setSelId] = useState(null);         // ambiente seleccionado
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
   const [showLib, setShowLib] = useState(false);
+  const [showRepo, setShowRepo] = useState(false);   // repositorio de ambientes amueblados
   const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3
@@ -672,6 +707,20 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setSelItem(t.id); setSelId(null); setTool("select");
   }, [items, commit, toWorldRaw]);
 
+  // Insertar un ambiente amueblado del repositorio: polígono + mobiliario al centro del lienzo.
+  const insertAmbiente = useCallback((spec) => {
+    const box = wrapRef.current?.getBoundingClientRect();
+    const c = box ? toWorldRaw(box.width / 2, box.height / 2) : { x: 0, y: 0 };
+    const p = snapPt({ x: c.x - spec.w / 2, y: c.y - spec.h / 2 }, 0.05);
+    const R = { x: p.x, y: p.y, w: spec.w, h: spec.h };
+    const pts = [{ x: R.x, y: R.y }, { x: R.x + R.w, y: R.y }, { x: R.x + R.w, y: R.y + R.h }, { x: R.x, y: R.y + R.h }];
+    const roomObj = { id: uid(), name: spec.name, pts, tipo: spec.tipo };
+    let newItems = [];
+    try { newItems = (spec.furnish(R) || []).map((t) => ({ ...t, id: uid() })); } catch { newItems = []; }
+    commit([...rooms, roomObj], [...items, ...newItems]);
+    setSelId(roomObj.id); setSelItem(null); setTool("select"); setShowRepo(false);
+  }, [rooms, items, commit, toWorldRaw]);
+
   const useVariant = useCallback((v) => {
     const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
     commit(nr, (v.items || []).map((t) => ({ ...t })));
@@ -920,6 +969,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
+        <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
         <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
@@ -1251,6 +1301,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         )}
 
         {showLib && <LibPanel onAdd={addItem} onClose={() => setShowLib(false)} />}
+        {showRepo && <RepoAmbientesPanel onAdd={insertAmbiente} onClose={() => setShowRepo(false)} />}
 
         {/* visor 3D vivo — flota abajo a la derecha, reacciona al plano en vivo */}
         {show3D && (

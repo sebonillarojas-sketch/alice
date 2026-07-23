@@ -155,6 +155,9 @@ function ventana(R, lado /* 'frente'|'fondo' */, W) {
   return lado === "frente" ? it(ref, R.x + R.w / 2, 0, 0) : it(ref, R.x + R.w / 2, W, 180);
 }
 
+// Exportadas para el Repositorio de Ambientes del Editor (insertar un ambiente amueblado suelto).
+export { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it, rect };
+
 // ── layout de una unidad ───────────────────────────────────
 // dev = { W (frente), D (fondo), swap (bool: social atrás), nse }
 export function layout(W, D, nd, nb, opts = {}) {
