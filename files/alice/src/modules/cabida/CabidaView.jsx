@@ -126,7 +126,7 @@ function Kpi({ label, value, unit, accent }) {
 
 const loadCabida = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || {}; } catch { return {}; } };
 
-export default function CabidaView({ initialTerreno, initialValorTerreno, compact, scopeKey }) {
+export default function CabidaView({ initialTerreno, initialValorTerreno, compact, scopeKey, onTerrenoChange }) {
   // scopeKey (ej. terreno.id) → cada terreno guarda su cabida aparte; sin scope, estado global (app standalone)
   const STORE_KEY = scopeKey ? `hygge:cabidaState:${scopeKey}` : "hygge:cabidaState";
   const S = useRef(loadCabida(STORE_KEY)).current;            // snapshot guardado (ida y vuelta al editor)
@@ -205,6 +205,14 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   const [costoVentas, setCostoVentas] = useState(S.costoVentas ?? 15); // costo sobre ventas %: comisiones, mkt, admin, legal, financiamiento (todo lo demás)
   const [valorTerreno, setValorTerreno] = useState(S.valorTerreno ?? initialValorTerreno ?? 0); // valor del terreno (viene de Growth)
   const [impuesto, setImpuesto] = useState(S.impuesto ?? 29.5); // impuesto a la renta % sobre la utilidad
+
+  // Ida y vuelta con el terreno de Growth: al cambiar área o valor del terreno, se guardan
+  // de vuelta en el registro del terreno (aparecen en el detalle y en la Mesa). Salta el mount.
+  const _firstSync = useRef(true);
+  useEffect(() => {
+    if (_firstSync.current) { _firstSync.current = false; return; }
+    if (onTerrenoChange) onTerrenoChange({ areaM2: terreno, price: valorTerreno });
+  }, [terreno, valorTerreno]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const r = useMemo(() => {
     const libre = terreno * areaLibre / 100;
