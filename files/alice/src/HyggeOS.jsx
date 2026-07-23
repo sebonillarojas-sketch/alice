@@ -4142,6 +4142,9 @@ const FINANZAS_TIPOS = [
   { id: "factibilidad", label: "Factibilidad" },
   { id: "flujo financiero", label: "Flujo Financiero" },
 ];
+// Entidades General por defecto: siempre aparecen en el selector y se crean en Dropbox
+// al entrar a Finanzas (aunque la carpeta no exista todavía). Solo Flujo Financiero.
+const FINANZAS_GENERALS_DEFAULT = ["_HYGGE HOLDING", "_BAM STUDIO"];
 // Carpetas bajo /04_FINANZAS/FINANZAS que NO son proyectos (no aparecen en el selector
 // ni alimentan el CEO Dashboard). Convención: prefijo "_" también las esconde.
 const FINANZAS_SKIP = new Set([
@@ -4224,7 +4227,10 @@ function FinanzasDashboard() {
       const j = await res.json();
       const folders = (j.entries || []).filter(e => e.type === "folder");
       setProjects(folders.filter(e => isFinanzasProjectFolder(e.name)).map(e => e.name));
-      setGenerals(folders.filter(e => isFinanzasGeneralFolder(e.name)).map(e => e.name));
+      // Generales: los defaults (holding, BAM) siempre primero + los que existan en Dropbox.
+      const discovered = folders.filter(e => isFinanzasGeneralFolder(e.name)).map(e => e.name);
+      const merged = [...FINANZAS_GENERALS_DEFAULT, ...discovered.filter(n => !FINANZAS_GENERALS_DEFAULT.some(d => d.toLowerCase() === n.toLowerCase()))];
+      setGenerals(merged);
     } catch (e) {
       setError({ message: e.message, kind: e.kind });
     } finally {
@@ -4283,6 +4289,17 @@ function FinanzasDashboard() {
     saveStored("hygge:finanzas:approved", next);
   };
   const reportAprobado = approvalKey && report?.file && approved[approvalKey]?.modified === report.file.modified;
+
+  // al montar: crear en Dropbox las entidades General por defecto (holding, BAM) si no existen,
+  // así aparecen como carpetas reales donde dejar el archivo. Idempotente (create_folder no falla si existe).
+  useEffect(() => {
+    FINANZAS_GENERALS_DEFAULT.forEach(g => {
+      fetch(`${BACKEND}/api/dropbox/create_folder`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: `${FINANZAS_ROOT}/${g}/FUENTE_ERP/flujo financiero` }),
+      }).then(() => loadProjects()).catch(() => {});
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // al montar: cargar la lista de proyectos y, si había uno elegido, su reporte
   useEffect(() => { loadProjects(); }, [loadProjects]);
