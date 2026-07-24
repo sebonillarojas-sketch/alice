@@ -96,7 +96,10 @@ export async function startWAWeb(onIncoming) {
 
     sock.ev.on("creds.update", saveCreds);
 
+    // try/catch total: un throw acá sería un unhandledRejection (Baileys no lo
+    // captura) y además dejaría la reconexión sin agendar.
     sock.ev.on("connection.update", async (u) => {
+      try {
       const { connection, lastDisconnect, qr } = u;
 
       if (qr) {
@@ -133,6 +136,11 @@ export async function startWAWeb(onIncoming) {
           console.warn(`🔁 WA Web desconectado (${code || "?"}) — reintento en ${Math.round(delay / 1000)}s`);
           scheduleReconnect(delay);
         }
+      }
+      } catch (e) {
+        console.error("WA Web connection.update error:", e.message);
+        state.lastError = e.message;
+        scheduleReconnect(10_000);
       }
     });
 

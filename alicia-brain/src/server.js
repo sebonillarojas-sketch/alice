@@ -13,6 +13,19 @@ import { readFile } from "fs/promises";
 import crypto from "crypto";
 dotenv.config();
 
+// ── Red de seguridad del proceso ──────────────────────────────────────────────
+// Baileys dispara rechazos async fuera de todo try/catch nuestro (p.ej. el retry
+// interno sendRetryRequest → Boom 428 "Connection Closed" cuando la sesión WA se
+// cae). Sin esto Node mata el proceso entero y se lleva ERP, agentes Wonderland
+// y panel. Una sesión de WhatsApp caída NUNCA debe tumbar el backend: se loguea
+// y el watchdog de waweb.js se encarga de reconectar.
+process.on("unhandledRejection", (err) => {
+  console.error("⛑️ unhandledRejection (el proceso sigue vivo):", err?.stack || err);
+});
+process.on("uncaughtException", (err) => {
+  console.error("⛑️ uncaughtException (el proceso sigue vivo):", err?.stack || err);
+});
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
