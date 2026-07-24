@@ -26,6 +26,66 @@ const AMBIENTES_LIB = [
   { id: "lavanderia", label: "Lavandería", name: "lavandería",   tipo: "servicio", w: 1.8, h: 2.0, furnish: (R) => [furnIt("lavanderia", R.x + R.w / 2, R.y + R.h / 2, 0)] },
 ];
 
+// ── Dibujo (whiteboard) estilo Diagramatic: variantes de lápiz, formas y colores ──
+const PEN_VARIANTS = [
+  { id: "pencil", label: "Lápiz", w: 1.6, opacity: 0.95 },
+  { id: "marker", label: "Plumón", w: 4.5, opacity: 0.6 },
+  { id: "fine", label: "Fino", w: 0.8, opacity: 1 },
+  { id: "highlighter", label: "Resaltador", w: 12, opacity: 0.28 },
+];
+const DIBUJO_TOOLS = [
+  { id: "draw", label: "Lápiz", ico: "✏️" },
+  { id: "line", label: "Línea", ico: "╱" },
+  { id: "arrow", label: "Flecha", ico: "↗" },
+  { id: "rect", label: "Rectángulo", ico: "▭" },
+  { id: "ellipse", label: "Elipse", ico: "◯" },
+  { id: "erase", label: "Goma", ico: "◇" },
+];
+const DIBUJO_COLORS = ["#F7643B", "#3D52D5", "#0A0B0F", "#5F8A6A", "#C2A45A", "#A85B5B", "#9BCBE3", "#A89BD9"];
+
+// Panel de dibujo a la IZQUIERDA (como Diagramatic): herramientas + variantes de trazo + colores.
+function DibujoPalette({ tool, setTool, penVariant, setPenVariant, penColor, setPenColor, onClear, onClose, hayTrazos }) {
+  const btn = (active) => ({ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 9px", fontSize: 12, textAlign: "left", border: `1px solid ${active ? "#0A0B0F" : "#d9d5cd"}`, borderRadius: 4, background: active ? "#1E2A4A" : "#F4F1EA", color: active ? "#fff" : "#0A0B0F", cursor: "pointer", fontWeight: active ? 600 : 500 });
+  return (
+    <div style={{ position: "absolute", left: 12, top: 60, width: 150, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 41, padding: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Dibujo</span>
+        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {DIBUJO_TOOLS.map((t) => (
+          <button key={t.id} onClick={() => setTool(t.id)} style={btn(tool === t.id)}>
+            <span style={{ width: 16, textAlign: "center" }}>{t.ico}</span>{t.label}
+          </button>
+        ))}
+      </div>
+      {tool === "draw" && (
+        <>
+          <div style={{ fontSize: 9.5, color: "#6B6863", margin: "10px 0 5px", letterSpacing: "0.06em", textTransform: "uppercase" }}>Trazo</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {PEN_VARIANTS.map((v) => (
+              <button key={v.id} onClick={() => setPenVariant(v.id)} style={{ ...btn(penVariant === v.id), justifyContent: "space-between" }}>
+                {v.label}<span style={{ width: 34, height: Math.max(2, v.w), background: penVariant === v.id ? "#fff" : penColor, opacity: v.opacity, borderRadius: 3 }} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {tool !== "erase" && (
+        <>
+          <div style={{ fontSize: 9.5, color: "#6B6863", margin: "10px 0 5px", letterSpacing: "0.06em", textTransform: "uppercase" }}>Color</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {DIBUJO_COLORS.map((c) => (
+              <button key={c} onClick={() => setPenColor(c)} title="Color" style={{ width: 22, height: 22, borderRadius: 999, background: c, border: penColor === c ? "2px solid #0A0B0F" : "1px solid #d9d5cd", cursor: "pointer", padding: 0 }} />
+            ))}
+          </div>
+        </>
+      )}
+      {hayTrazos && <button onClick={onClear} style={{ ...btn(false), marginTop: 10, justifyContent: "center", color: "#A85B5B" }}>Borrar todo</button>}
+    </div>
+  );
+}
+
 function RepoAmbientesPanel({ onAdd, onClose }) {
   return (
     <div style={{ position: "absolute", right: 12, top: 60, width: 210, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 10 }}>
@@ -531,6 +591,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [trazos, setTrazos] = useState(P.trazos || []);  // [{ id, pts:[{x,y}], color, w }]
   const [curTrazo, setCurTrazo] = useState(null);        // trazo en curso
   const [penColor, setPenColor] = useState("#F7643B");   // color del lápiz
+  const [penVariant, setPenVariant] = useState("pencil"); // variante de trazo (lápiz/plumón/fino/resaltador)
+  const [showDibujo, setShowDibujo] = useState(false);    // panel de dibujo (izquierda)
   const [tool, setTool] = useState("select");
   const [snapOn, setSnapOn] = useState(true);
   const [orthoOn, setOrthoOn] = useState(true);
@@ -951,8 +1013,10 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       return;
     }
 
-    if (tool === "draw") {
-      setCurTrazo({ id: uid(), pts: [world], color: penColor, w: 2 });
+    if (tool === "draw" || tool === "line" || tool === "arrow" || tool === "rect" || tool === "ellipse") {
+      const v = PEN_VARIANTS.find((x) => x.id === penVariant) || PEN_VARIANTS[0];
+      const kind = tool === "draw" ? "path" : tool;
+      setCurTrazo({ id: uid(), kind, pts: kind === "path" ? [world] : [world, world], color: penColor, w: kind === "path" ? v.w : 2, opacity: kind === "path" ? v.opacity : 1 });
       drag.current = { kind: "draw" };
       svgRef.current.setPointerCapture(e.pointerId);
       return;
@@ -1014,7 +1078,10 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       setView({ ...d.view, tx: d.view.tx + (e.clientX - d.sx), ty: d.view.ty + (e.clientY - d.sy) });
       return;
     }
-    if (d.kind === "draw") { setCurTrazo((c) => (c ? { ...c, pts: [...c.pts, world] } : c)); return; }
+    if (d.kind === "draw") {
+      setCurTrazo((c) => { if (!c) return c; return c.kind === "path" ? { ...c, pts: [...c.pts, world] } : { ...c, pts: [c.pts[0], world] }; });
+      return;
+    }
     if (d.kind === "item") {
       const p = snapPt({ x: world.x - d.grab.x, y: world.y - d.grab.y }, 0.05);
       setItems((ts) => ts.map((t) => (t.id === d.id ? { ...t, x: p.x, y: p.y } : t)));
@@ -1052,7 +1119,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     drag.current = null;
     try { svgRef.current.releasePointerCapture(e.pointerId); } catch { /* sin captura */ }
     if (d && d.kind === "draw") {
-      if (curTrazo && curTrazo.pts.length > 1) setTrazos((ts) => [...ts, curTrazo]);
+      const c = curTrazo;
+      const ok = c && (c.kind === "path" ? c.pts.length > 1 : dist(c.pts[0], c.pts[1]) > 0.15);
+      if (ok) setTrazos((ts) => [...ts, c]);
       setCurTrazo(null);
       return;
     }
@@ -1208,17 +1277,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Configurar tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología</Btn>
         <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Visor de tipologías del mercado (Nexo) redibujadas por Feyd"><Plus size={13} /> Nexo</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
-        <Btn active={tool === "draw"} onClick={() => setTool(tool === "draw" ? "select" : "draw")} title="Dibujo lineal · lápiz a mano alzada sobre el plano">✏️ dibujo</Btn>
-        <Btn active={tool === "erase"} onClick={() => setTool(tool === "erase" ? "select" : "erase")} title="Goma · borrar trazos">◇ goma</Btn>
-        {(tool === "draw" || tool === "erase") && (
-          <>
-            {["#F7643B", "#3D52D5", "#0A0B0F", "#5F8A6A", "#C2A45A"].map((c) => (
-              <button key={c} onClick={() => { setPenColor(c); setTool("draw"); }} title="Color del lápiz"
-                style={{ width: 18, height: 18, borderRadius: 999, background: c, border: penColor === c ? "2px solid #0A0B0F" : "1px solid #d9d5cd", cursor: "pointer", padding: 0 }} />
-            ))}
-            {trazos.length > 0 && <Btn onClick={() => setTrazos([])} title="Borrar todos los trazos">borrar dibujos</Btn>}
-          </>
-        )}
+        <Btn active={showDibujo} onClick={() => { const n = !showDibujo; setShowDibujo(n); setTool(n ? "draw" : "select"); }} title="Dibujo · lápiz, formas y colores (panel a la izquierda, como Diagramatic)">✏️ dibujo</Btn>
         <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
@@ -1456,12 +1515,31 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={t.id === selItem || inMulti("item", t.id)} />;
           })}
 
-          {/* dibujo lineal (croquis a mano alzada) — capa encima del plano */}
-          {[...trazos, ...(curTrazo ? [curTrazo] : [])].map((tr) => (
-            <polyline key={tr.id}
-              points={tr.pts.map((p) => { const s = toScreen(p); return `${s.x},${s.y}`; }).join(" ")}
-              fill="none" stroke={tr.color} strokeWidth={tr.w || 2} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }} />
-          ))}
+          {/* dibujo (croquis) — capa encima del plano · path / línea / flecha / rect / elipse */}
+          {[...trazos, ...(curTrazo ? [curTrazo] : [])].map((tr) => {
+            const sp = tr.pts.map(toScreen);
+            const stroke = tr.color, sw = tr.w || 2, op = tr.opacity ?? 1;
+            const none = { pointerEvents: "none" };
+            if ((tr.kind === "line" || tr.kind === "arrow") && sp.length >= 2) {
+              const a = sp[0], b = sp[sp.length - 1];
+              const ang = Math.atan2(b.y - a.y, b.x - a.x), L = 11;
+              return (
+                <g key={tr.id} opacity={op} style={none}>
+                  <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+                  {tr.kind === "arrow" && <polyline points={`${b.x - L * Math.cos(ang - 0.4)},${b.y - L * Math.sin(ang - 0.4)} ${b.x},${b.y} ${b.x - L * Math.cos(ang + 0.4)},${b.y - L * Math.sin(ang + 0.4)}`} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />}
+                </g>
+              );
+            }
+            if (tr.kind === "rect" && sp.length >= 2) {
+              const a = sp[0], b = sp[1];
+              return <rect key={tr.id} x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} fill="none" stroke={stroke} strokeWidth={sw} opacity={op} style={none} />;
+            }
+            if (tr.kind === "ellipse" && sp.length >= 2) {
+              const a = sp[0], b = sp[1];
+              return <ellipse key={tr.id} cx={(a.x + b.x) / 2} cy={(a.y + b.y) / 2} rx={Math.abs(b.x - a.x) / 2} ry={Math.abs(b.y - a.y) / 2} fill="none" stroke={stroke} strokeWidth={sw} opacity={op} style={none} />;
+            }
+            return <polyline key={tr.id} points={sp.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" opacity={op} style={none} />;
+          })}
 
           {/* reglas — resalta lo que incumple (fuera del lote / sin piso / sin acceso) */}
           {val.ids.size > 0 && (
@@ -1560,6 +1638,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         {showRepo && <RepoAmbientesPanel onAdd={insertAmbiente} onClose={() => setShowRepo(false)} />}
         {showTipoCfg && <ConfigTipologiaPanel onArmar={armarTipologia} onClose={() => setShowTipoCfg(false)} />}
         {showTipoNexo && <TipologiasNexoPanel onInsert={insertTipologia} onClose={() => setShowTipoNexo(false)} />}
+        {showDibujo && <DibujoPalette tool={tool} setTool={setTool} penVariant={penVariant} setPenVariant={setPenVariant} penColor={penColor} setPenColor={setPenColor} onClear={() => setTrazos([])} onClose={() => { setShowDibujo(false); setTool("select"); }} hayTrazos={trazos.length > 0} />}
 
         {/* visor 3D vivo — flota abajo a la derecha, reacciona al plano en vivo */}
         {show3D && (
