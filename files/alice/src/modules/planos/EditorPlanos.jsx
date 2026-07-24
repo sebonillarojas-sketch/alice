@@ -831,6 +831,11 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
             <Btn2 onClick={() => setRot((r) => (r - 90 + 360) % 360)} disabled={!tipoId}>⟲</Btn2>
             <Btn2 onClick={() => setRot((r) => (r + 90) % 360)} disabled={!tipoId}>⟳</Btn2>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#6B6863" }}>
+              <input type="range" min={0} max={359} step={1} value={((rot % 360) + 360) % 360} disabled={!tipoId} onChange={(e) => setRot(parseInt(e.target.value, 10))} style={{ width: 92 }} />
+              <input type="number" min={0} max={359} step={1} value={Math.round(((rot % 360) + 360) % 360)} disabled={!tipoId} onChange={(e) => setRot(((parseInt(e.target.value, 10) || 0) % 360 + 360) % 360)}
+                style={{ width: 48, border: "1px solid #d9d5cd", borderRadius: 4, padding: "5px 6px", fontSize: 12, fontFamily: "ui-monospace, monospace" }} />°
+            </label>
             <Btn2 onClick={() => { setTx(0); setTy(0); setRot(0); }} disabled={!tipoId}>reset</Btn2>
             <div style={{ flex: 1 }} />
             <Btn2 onClick={confirmar} accent disabled={!tipoId || !rms.length}>Pasar al plano →</Btn2>
