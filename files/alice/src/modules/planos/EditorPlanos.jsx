@@ -669,7 +669,7 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
   const [its, setIts] = useState([]);
   const [sel, setSel] = useState(null);
   const [tx, setTx] = useState(0), [ty, setTy] = useState(0), [rot, setRot] = useState(0);
-  const [aiBusy, setAiBusy] = useState(false), [aiErr, setAiErr] = useState("");
+  const [aiErr, setAiErr] = useState("");
   const drag = useRef(null), svgRef = useRef(null);
 
   // adapta una tipología (programa) a la huella del depto con el motor determinístico (rápido, amueblado)
@@ -689,18 +689,6 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
     if (!L?.rooms?.length) { setAiErr("esa tipología no entra en este depto"); return; }
     setTipoId(t.id); setRms(L.rooms); setIts(L.items || []); setSel(null); setTx(0); setTy(0); setRot(0); setAiErr("");
   };
-  // afinar con IA: adapta a la huella REAL (incluso irregular) siguiendo reglas
-  const afinarIA = async () => {
-    const t = TIPOLOGIAS.find((x) => x.id === tipoId); if (!t) return;
-    setAiBusy(true); setAiErr("");
-    try {
-      const L = await disenarConFeyd({ pts: unit.pts, dorms: t.dorms, banos: t.banos, visita: prog.visita });
-      if (!L?.rooms?.length) throw new Error("sin ambientes");
-      setRms(L.rooms); setIts(L.items || []); setSel(null); setTx(0); setTy(0); setRot(0);
-    } catch (e) { setAiErr((e.message || "falló") + " — quedó la adaptación rápida"); }
-    finally { setAiBusy(false); }
-  };
-
   const cx = W / 2, cy = D / 2;
   const rad = (rot * Math.PI) / 180, cs = Math.cos(rad), sn = Math.sin(rad);
   const tp = (p) => ({ x: cx + (p.x - cx) * cs - (p.y - cy) * sn + tx, y: cy + (p.x - cx) * sn + (p.y - cy) * cs + ty });
@@ -720,6 +708,18 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
   const onUp = () => { drag.current = null; };
   const renameSel = (name) => setRms((rs) => rs.map((r, i) => i === sel ? { ...r, name } : r));
   const delSel = () => { setRms((rs) => rs.filter((_, i) => i !== sel)); setSel(null); };
+  // redimensiona el ambiente seleccionado por tamaño (ancho o fondo), escalando desde su esquina sup-izq
+  const resizeSel = (dim, val) => {
+    if (!(val > 0.3)) return;
+    setRms((rs) => rs.map((r, i) => {
+      if (i !== sel) return r;
+      const xs = r.pts.map((p) => p.x), ys = r.pts.map((p) => p.y);
+      const x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
+      const sx = dim === "w" && w > 0.05 ? val / w : 1, sy = dim === "h" && h > 0.05 ? val / h : 1;
+      return { ...r, pts: r.pts.map((p) => ({ x: x0 + (p.x - x0) * sx, y: y0 + (p.y - y0) * sy })) };
+    }));
+  };
+  const bbWH = (pts) => { const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y); return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) }; };
   const confirmar = () => {
     const nr = rms.map((r) => ({ ...r, pts: r.pts.map((p) => tp(p)) }));
     const ni = (its || []).map((t) => { const q = tp({ x: t.x, y: t.y }); return { ...t, x: q.x, y: q.y, rot: ((t.rot || 0) + rot) % 360 }; });
@@ -796,8 +796,8 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
                   </g>
                 );
               })}
-              {/* mobiliario + aberturas reales (no cuadrados) */}
-              {(its || []).map((t, i) => { const q = S(tp({ x: t.x, y: t.y })); return <Simbolo key={i} it={{ ...t, rot: ((t.rot || 0) + rot) }} px={q.x} py={q.y} k={sc} selected={false} />; })}
+              {/* mobiliario + aberturas reales (no cuadrados) · no captura el puntero (para seleccionar ambientes) */}
+              {(its || []).map((t, i) => { const q = S(tp({ x: t.x, y: t.y })); return <g key={i} style={{ pointerEvents: "none" }}><Simbolo it={{ ...t, rot: ((t.rot || 0) + rot) }} px={q.x} py={q.y} k={sc} selected={false} /></g>; })}
               {/* muros deduplicados (una arista compartida = un solo muro) */}
               {(() => {
                 const q = (n) => Math.round(n / 0.15) * 0.15, seen = new Set(), segs = [];
@@ -810,8 +810,18 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
               <div style={{ position: "absolute", right: 10, top: 10, width: 172, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 6px 18px rgba(0,0,0,0.14)", padding: 11 }}>
                 <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863", marginBottom: 6 }}>Ambiente</div>
                 <input value={selRoom.name || ""} onChange={(e) => renameSel(e.target.value)} style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "5px 7px", fontSize: 12, marginBottom: 7, boxSizing: "border-box" }} />
+                <div style={{ display: "flex", gap: 6, marginBottom: 7 }}>
+                  <label style={{ flex: 1, fontSize: 9.5, color: "#6B6863" }}>ancho (m)
+                    <input type="number" step={0.1} min={0.5} value={bbWH(selRoom.pts).w.toFixed(2)} onChange={(e) => resizeSel("w", parseFloat(e.target.value))}
+                      style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "4px 6px", fontSize: 12, boxSizing: "border-box", fontFamily: "ui-monospace, monospace" }} />
+                  </label>
+                  <label style={{ flex: 1, fontSize: 9.5, color: "#6B6863" }}>fondo (m)
+                    <input type="number" step={0.1} min={0.5} value={bbWH(selRoom.pts).h.toFixed(2)} onChange={(e) => resizeSel("h", parseFloat(e.target.value))}
+                      style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "4px 6px", fontSize: 12, boxSizing: "border-box", fontFamily: "ui-monospace, monospace" }} />
+                  </label>
+                </div>
                 <div style={{ fontSize: 10.5, color: "#6B6863", marginBottom: 8, fontFamily: "ui-monospace, monospace" }}>{areaLocal(selRoom.pts).toFixed(1)} m²</div>
-                <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 8, lineHeight: 1.4 }}>Arrastrá los puntos naranjas para cambiar su forma.</div>
+                <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 8, lineHeight: 1.4 }}>Cambiá ancho/fondo, o arrastrá los puntos naranjas.</div>
                 <button onClick={delSel} style={{ width: "100%", border: "1px solid #A85B5B", color: "#A85B5B", background: "#fff", borderRadius: 4, padding: "6px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Eliminar ambiente</button>
                 <button onClick={() => setSel(null)} style={{ width: "100%", border: "none", color: "#6B6863", background: "none", padding: "6px 0 0", fontSize: 10.5, cursor: "pointer" }}>deseleccionar</button>
               </div>
@@ -822,7 +832,6 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
             <Btn2 onClick={() => setRot((r) => (r - 90 + 360) % 360)} disabled={!tipoId}>⟲</Btn2>
             <Btn2 onClick={() => setRot((r) => (r + 90) % 360)} disabled={!tipoId}>⟳</Btn2>
             <Btn2 onClick={() => { setTx(0); setTy(0); setRot(0); }} disabled={!tipoId}>reset</Btn2>
-            <Btn2 onClick={afinarIA} disabled={!tipoId || aiBusy}>{aiBusy ? "Feyd afinando…" : "afinar con Feyd (forma real)"}</Btn2>
             <div style={{ flex: 1 }} />
             <Btn2 onClick={confirmar} accent disabled={!tipoId || !rms.length}>Pasar al plano →</Btn2>
           </div>
