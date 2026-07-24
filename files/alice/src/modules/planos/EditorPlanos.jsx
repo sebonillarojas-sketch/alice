@@ -1739,20 +1739,41 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             return <circle key={i} cx={s.x} cy={s.y} r={5} fill={C.orange} stroke={C.card} strokeWidth={1.5} />;
           })}
 
-          {/* ambientes (muros al espesor configurado) */}
+          {/* ambientes: SOLO relleno (el muro va en una capa aparte para no duplicarlo) */}
           {rooms.map((r, i) => {
             const scr = r.pts.map(toScreen);
             const selected = r.id === selId || inMulti("room", r.id);
-            const terraza = r.tipo === "terraza"; // borde fino, no es muro
+            const terraza = r.tipo === "terraza"; // borde fino punteado, no es muro
             return (
               <polygon key={r.id} points={scr.map((p) => `${p.x},${p.y}`).join(" ")}
                 fill={roomFill(r, i)} fillOpacity={selected ? 0.95 : 0.8}
-                stroke={selected ? C.orange : C.ink}
-                strokeWidth={selected ? (terraza ? 2.5 : wallPx + 1) : (terraza ? 1.2 : wallPx)}
-                strokeDasharray={terraza ? "6 4" : undefined}
-                strokeLinejoin="miter" />
+                stroke={terraza ? C.ink : "none"} strokeWidth={terraza ? 1.2 : 0}
+                strokeDasharray={terraza ? "6 4" : undefined} strokeLinejoin="miter" />
             );
           })}
+          {/* muros: aristas deduplicadas (una arista compartida = un solo muro; sin terrazas) */}
+          <g pointerEvents="none">
+            {(() => {
+              const q = (n) => Math.round(n / 0.1) * 0.1, seen = new Set(), segs = [];
+              rooms.forEach((r) => {
+                if (r.tipo === "terraza" || !r.pts?.length) return;
+                const p = r.pts;
+                for (let i = 0; i < p.length; i++) {
+                  const a = p[i], b = p[(i + 1) % p.length];
+                  const ka = `${q(a.x)},${q(a.y)}`, kb = `${q(b.x)},${q(b.y)}`;
+                  const key = ka < kb ? ka + "|" + kb : kb + "|" + ka;
+                  if (seen.has(key)) continue;
+                  seen.add(key); segs.push([a, b]);
+                }
+              });
+              return segs.map(([a, b], idx) => { const A = toScreen(a), B = toScreen(b); return <line key={idx} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke={C.ink} strokeWidth={wallPx} strokeLinecap="square" />; });
+            })()}
+          </g>
+          {/* resalte del ambiente seleccionado (encima de los muros) */}
+          {rooms.map((r) => ((r.id === selId || inMulti("room", r.id)) && r.tipo !== "terraza") ? (
+            <polygon key={`sel-${r.id}`} points={r.pts.map(toScreen).map((p) => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke={C.orange} strokeWidth={wallPx + 1.5} strokeLinejoin="miter" pointerEvents="none" />
+          ) : null)}
 
           {/* aberturas (cortan el muro) */}
           {aberturas.map((t) => {
