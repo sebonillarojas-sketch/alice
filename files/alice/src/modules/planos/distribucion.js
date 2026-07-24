@@ -16,6 +16,39 @@ const it = (ref, x, y, rot = 0, over = {}) => {
   return { id: rid(), ref, x: round(x), y: round(y), rot, w: over.w ?? c.w, d: over.d ?? c.d };
 };
 
+// Puertas interiores + alcanzabilidad: árbol de adyacencias desde la sala/social; una puerta
+// en cada muro compartido → ningún ambiente queda sin acceso (reglas CHK-13/CHK-22 de Feyd).
+function _bb(pts) { const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
+function _muroComun(a, b) {
+  const [ax0, ay0, ax1, ay1] = _bb(a.pts), [bx0, by0, bx1, by1] = _bb(b.pts), E = 0.28;
+  const xl = Math.abs(ax1 - bx0) < E ? (ax1 + bx0) / 2 : Math.abs(bx1 - ax0) < E ? (bx1 + ax0) / 2 : null;
+  if (xl != null) { const lo = Math.max(ay0, by0), hi = Math.min(ay1, by1); if (hi - lo > 0.85) return { x: xl, y: (lo + hi) / 2, vert: true }; }
+  const yl = Math.abs(ay1 - by0) < E ? (ay1 + by0) / 2 : Math.abs(by1 - ay0) < E ? (by1 + ay0) / 2 : null;
+  if (yl != null) { const lo = Math.max(ax0, bx0), hi = Math.min(ax1, bx1); if (hi - lo > 0.85) return { x: (lo + hi) / 2, y: yl, vert: false }; }
+  return null;
+}
+export function generarPuertas(rooms) {
+  if (!rooms || rooms.length < 2) return [];
+  const areaOf = (r) => { const [x0, y0, x1, y1] = _bb(r.pts); return (x1 - x0) * (y1 - y0); };
+  const pool = rooms.filter((r) => /sala|social|comedor|estar|hall/i.test(r.name || r.tipo || ""));
+  const base = pool.length ? pool : rooms;
+  const hub = base.reduce((m, r) => (areaOf(r) > areaOf(m) ? r : m), base[0]);
+  const doors = [], visited = new Set([hub.id]), queue = [hub];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const r of rooms) {
+      if (visited.has(r.id)) continue;
+      const w = _muroComun(cur, r);
+      if (w) {
+        visited.add(r.id); queue.push(r);
+        const ancho = /baño|bano/i.test(r.name || "") ? "70" : "80";
+        doors.push(it("puerta-" + ancho, w.x, w.y, w.vert ? 0 : 90));
+      }
+    }
+  }
+  return doors;
+}
+
 // ── amueblado por ambiente (holguras reales) ───────────────
 // convención: y=0 fachada frente (calle) · y=D fachada fondo (patio) · muro húmedo en x=0
 
@@ -266,7 +299,7 @@ export function layout(W, D, nd, nb, opts = {}) {
   items.push(it("puerta-90", lx + 0.6, hallY + hall / 2 - hall / 2, 0, { d: 0.14 }));
 
   const areaTotal = W * D;
-  return { rooms, items, warns, W, D, areaTotal };
+  return { rooms, items: [...items, ...generarPuertas(rooms)], warns, W, D, areaTotal };
 }
 
 // ── layout SIMPLE (el caballito de batalla: SIEMPRE parte el bloque) ──
@@ -336,7 +369,7 @@ export function layoutProfundo(W, D, nd, nb, opts = {}) {
   // ingreso desde el corredor del edificio (y=D) directo al social
   items.push(it("puerta-90", clamp(wWet + 0.75, wWet + 0.55, W - 0.6), D, 0));
 
-  return { rooms, items, warns, W, D, areaTotal: W * D };
+  return { rooms, items: [...items, ...generarPuertas(rooms)], warns, W, D, areaTotal: W * D };
 }
 
 function variante(nombre, notaBase, W, D, nd, nb, opts) {
