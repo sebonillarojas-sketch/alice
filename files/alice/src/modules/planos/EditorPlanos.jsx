@@ -12,7 +12,7 @@ import {
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
-import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, layout as feydLayout } from "./distribucion.js";
+import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, layout as feydLayout, layoutProfundo as feydLayoutProfundo } from "./distribucion.js";
 
 // Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
 // Reusa el motor de amoblado (amoblar*) + el catálogo. Cada uno respeta holguras Neufert.
@@ -115,6 +115,14 @@ function MiniPlano({ L, W, D }) {
           </g>
         );
       })}
+      {/* mobiliario + puertas → muestra la distribución real, no solo cajas */}
+      {(L.items || []).map((it2, i) => {
+        const esPuerta = /puerta|vano/.test(it2.ref || "");
+        const w = (it2.w || 0.6) * S, d = (it2.d || 0.6) * S;
+        const x = it2.x * S, y = it2.y * S;
+        if (esPuerta) return <circle key={"i" + i} cx={x} cy={y} r={1.6} fill="#5F8A6A" />;
+        return <rect key={"i" + i} x={-w / 2} y={-d / 2} width={w} height={d} rx={0.8} fill="#0A0B0F" opacity="0.14" transform={`translate(${x} ${y}) rotate(${it2.rot || 0})`} />;
+      })}
     </svg>
   );
 }
@@ -123,7 +131,10 @@ function TipologiasNexoPanel({ onInsert, onClose }) {
     const aIdeal = t.area[1];
     const W = Math.max(t.frenteMin, 6);
     const D = Math.max(4, Math.round((aIdeal / W) * 10) / 10);
-    let L = null; try { L = feydLayout(W, D, t.dorms, t.banos, { visita: t.banos >= 3 }); } catch { L = null; }
+    const opts = { visita: t.banos >= 3 };
+    let L = null;
+    try { L = feydLayout(W, D, t.dorms, t.banos, opts); } catch { L = null; }
+    if (!L || !L.rooms?.length) { try { L = feydLayoutProfundo(W, D, t.dorms, t.banos, opts); } catch { L = null; } } // fallback si el motor plano no arma
     return { t, L, W, D };
   }), []);
   return (
