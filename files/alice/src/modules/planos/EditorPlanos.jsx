@@ -593,6 +593,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [penColor, setPenColor] = useState("#F7643B");   // color del lápiz
   const [penVariant, setPenVariant] = useState("pencil"); // variante de trazo (lápiz/plumón/fino/resaltador)
   const [showDibujo, setShowDibujo] = useState(false);    // panel de dibujo (izquierda)
+  const [maximized, setMaximized] = useState(false);      // zona de trabajo a pantalla completa
   const [tool, setTool] = useState("select");
   const [snapOn, setSnapOn] = useState(true);
   const [orthoOn, setOrthoOn] = useState(true);
@@ -1252,7 +1253,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.paper, minHeight: 520, position: "relative" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: maximized ? "100vh" : "100%", background: C.paper, minHeight: 520, position: maximized ? "fixed" : "relative", inset: maximized ? 0 : undefined, zIndex: maximized ? 200 : undefined }}>
       {/* toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "12px 16px", borderBottom: `1px solid ${C.line}` }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, marginRight: 4 }}>
@@ -1278,6 +1279,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Visor de tipologías del mercado (Nexo) redibujadas por Feyd"><Plus size={13} /> Nexo</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={showDibujo} onClick={() => { const n = !showDibujo; setShowDibujo(n); setTool(n ? "draw" : "select"); }} title="Dibujo · lápiz, formas y colores (panel a la izquierda, como Diagramatic)">✏️ dibujo</Btn>
+        <Btn active={maximized} onClick={() => setMaximized((m) => !m)} title={maximized ? "Reducir la zona de trabajo" : "Ampliar la zona de trabajo a pantalla completa"}>{maximized ? "⤡ reducir" : "⤢ ampliar"}</Btn>
         <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
