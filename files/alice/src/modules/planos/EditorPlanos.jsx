@@ -200,7 +200,7 @@ function TipologiasNexoPanel({ onInsert, onClose }) {
   return (
     <div style={{ position: "absolute", right: 12, top: 60, bottom: 12, width: 288, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 12, overflowY: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipologías Nexo</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipologías</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
       </div>
       <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>{cards.length} tipologías de TODOS los tamaños (22–210 m²), redibujadas por Feyd. Click para insertarla en el lienzo.</div>
@@ -291,6 +291,28 @@ const Btn = ({ active, onClick, title, children, disabled, accent }) => (
     {children}
   </button>
 );
+
+// menú desplegable para agrupar botones y no saturar la toolbar
+function ToolMenu({ label, icon, children, width = 172 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("pointerdown", h);
+    return () => document.removeEventListener("pointerdown", h);
+  }, [open]);
+  return (
+    <span ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <Btn active={open} onClick={() => setOpen((o) => !o)}>{icon}{label} ▾</Btn>
+      {open && (
+        <div onClick={() => setOpen(false)} style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 50, background: C.card, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 10px 28px rgba(0,0,0,0.16)", padding: 6, display: "flex", flexDirection: "column", gap: 4, minWidth: width }}>
+          {children}
+        </div>
+      )}
+    </span>
+  );
+}
 
 // ── preview miniatura de una variante ─────────────────────────
 function VariantPreview({ v, W = 236, H = 170 }) {
@@ -1497,49 +1519,52 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           <Sparkles size={13} /> <b>3</b> tipologías
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
-        <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
-        <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
-        <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Configurar tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología</Btn>
-        <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Visor de tipologías del mercado (Nexo) redibujadas por Feyd"><Plus size={13} /> Nexo</Btn>
-        <div style={{ width: 1, height: 22, background: C.line }} />
-        <Btn active={showDibujo} onClick={() => { const n = !showDibujo; setShowDibujo(n); setTool(n ? "draw" : "select"); }} title="Dibujo · lápiz, formas y colores (panel a la izquierda, como Diagramatic)">✏️ dibujo</Btn>
-        <Btn active={maximized} onClick={toggleMax} title={maximized ? "Reducir la zona de trabajo" : "Ampliar la zona de trabajo a pantalla completa"}>{maximized ? "⤡ reducir" : "⤢ ampliar"}</Btn>
-        <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
-        <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
         <Btn active={tool === "wall"} onClick={() => setTool("wall")} title="Dibujar muros (W)"><PenLine size={13} /> muro</Btn>
+
+        <ToolMenu label="insertar" icon={<Plus size={13} style={{ marginRight: 4 }} />} width={210}>
+          <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
+          <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
+          <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Armar una tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología (armar)</Btn>
+          <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Biblioteca de tipologías (todos los tamaños) redibujadas por Feyd"><Plus size={13} /> biblioteca de tipologías</Btn>
+        </ToolMenu>
+
+        <ToolMenu label="vista" icon={<Box size={13} style={{ marginRight: 4 }} />} width={210}>
+          <Btn active={showDibujo} onClick={() => { const n = !showDibujo; setShowDibujo(n); setTool(n ? "draw" : "select"); }} title="Dibujo lineal (whiteboard)">✏️ dibujo</Btn>
+          <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
+          <Btn active={maximized} onClick={toggleMax} title={maximized ? "Reducir" : "Ampliar la zona de trabajo"}>{maximized ? "⤡ reducir" : "⤢ ampliar"}</Btn>
+          <div style={{ height: 1, background: C.line, margin: "2px 0" }} />
+          <Btn active={snapOn} onClick={() => setSnapOn((s) => !s)} title="Ajustar a rejilla"><Magnet size={13} /> rejilla</Btn>
+          <Btn active={orthoOn} onClick={() => setOrthoOn((s) => !s)} title="Bloqueo ortogonal">⌐ ortogonal</Btn>
+          <Btn active={dims} onClick={() => setDims((s) => !s)} title="Mostrar cotas"><Ruler size={13} /> cotas</Btn>
+          <div style={{ height: 1, background: C.line, margin: "2px 0" }} />
+          <div style={{ display: "flex", gap: 8, padding: "2px 4px" }}>
+            <label style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft }}>
+              muro
+              <input type="number" value={muro} step={0.025} min={0.08} max={0.35} onChange={(e) => setMuro(parseFloat(e.target.value) || 0.15)}
+                style={{ fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 46, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" }} /> m
+            </label>
+            <label style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft }}>
+              altura
+              <input type="number" value={altura} step={0.05} min={2.2} max={3.5} onChange={(e) => setAltura(parseFloat(e.target.value) || 2.4)}
+                style={{ fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 46, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" }} /> m
+            </label>
+          </div>
+        </ToolMenu>
+
+        <ToolMenu label="editar" icon={<Undo2 size={13} style={{ marginRight: 4 }} />}>
+          <Btn onClick={undo} disabled={!past.current.length} title="Deshacer (⌘Z)"><Undo2 size={13} /> deshacer</Btn>
+          <Btn onClick={redo} disabled={!future.current.length} title="Rehacer (⌘⇧Z)"><Redo2 size={13} /> rehacer</Btn>
+          <Btn onClick={fitView} title="Encuadrar"><Maximize2 size={13} /> encuadrar</Btn>
+          <Btn onClick={() => setShowFicha(true)} title="Editar membrete de la lámina"><StickyNote size={13} /> membrete</Btn>
+        </ToolMenu>
+
         <div style={{ width: 1, height: 22, background: C.line }} />
-        <Btn active={snapOn} onClick={() => setSnapOn((s) => !s)} title="Ajustar a rejilla"><Magnet size={13} /></Btn>
-        <Btn active={orthoOn} onClick={() => setOrthoOn((s) => !s)} title="Bloqueo ortogonal">⌐</Btn>
-        <Btn active={dims} onClick={() => setDims((s) => !s)} title="Mostrar cotas"><Ruler size={13} /></Btn>
-        <div style={{ width: 1, height: 22, background: C.line }} />
-        {/* muro / altura */}
-        <label style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft }}>
-          muro
-          <input type="number" value={muro} step={0.025} min={0.08} max={0.35}
-            onChange={(e) => setMuro(parseFloat(e.target.value) || 0.15)}
-            style={{ fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 50, textAlign: "right",
-              border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" }} />
-          m
-        </label>
-        <label style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: mono, fontSize: 10, color: C.soft }}>
-          altura
-          <input type="number" value={altura} step={0.05} min={2.2} max={3.5}
-            onChange={(e) => setAltura(parseFloat(e.target.value) || 2.4)}
-            style={{ fontFamily: mono, fontSize: 11, fontWeight: 600, color: C.ink, width: 50, textAlign: "right",
-              border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "3px 5px" }} />
-          m
-        </label>
-        <div style={{ width: 1, height: 22, background: C.line }} />
-        <Btn onClick={undo} disabled={!past.current.length} title="Deshacer (⌘Z)"><Undo2 size={13} /></Btn>
-        <Btn onClick={redo} disabled={!future.current.length} title="Rehacer (⌘⇧Z)"><Redo2 size={13} /></Btn>
-        <Btn onClick={fitView} title="Encuadrar"><Maximize2 size={13} /></Btn>
-        <Btn onClick={() => setShowFicha(true)} title="Editar membrete de la lámina">membrete</Btn>
         <Btn onClick={exportSVG} disabled={!rooms.length} title="Exportar lámina BAM (.svg)"><Download size={13} /> lámina</Btn>
-        <Btn onClick={exportarAMesa} disabled={!rooms.length || !navigate} title="Enviar esta lámina a la Mesa de Trabajo (pestaña Planos, formato horizontal)"><StickyNote size={13} /> → mesa de trabajo</Btn>
+        <Btn onClick={exportarAMesa} disabled={!rooms.length || !navigate} title="Enviar a la Mesa de Trabajo (pestaña Planos)"><StickyNote size={13} /> → mesa</Btn>
         <Btn onClick={consultarFeyd} disabled={!rooms.length || feyd === "cargando"}
           title="Feyd-Rautha 🗡️ audita la planta contra RNE + Neufert + checklist BAM y propone la corrección">
-          <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd-rautha"}
+          <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd"}
         </Btn>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
