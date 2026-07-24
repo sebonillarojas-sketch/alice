@@ -12,7 +12,7 @@ import {
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
-import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt } from "./distribucion.js";
+import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, layout as feydLayout } from "./distribucion.js";
 
 // Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
 // Reusa el motor de amoblado (amoblar*) + el catálogo. Cada uno respeta holguras Neufert.
@@ -89,6 +89,68 @@ function ConfigTipologiaPanel({ onArmar, onClose }) {
     </div>
   );
 }
+
+// ── Visor de Tipologías Nexo: Feyd redibuja las tipologías del mercado (TIPOLOGIAS de tipologias.js,
+// derivadas del scraping de Nexo) con su motor layout(), identificando ambientes (nombre + tamaño). ──
+const _areaPoly = (pts) => { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a.x * b.y - b.x * a.y; } return Math.abs(s) / 2; };
+const _ZC = { social: "#3D52D5", intima: "#A89BD9", servicio: "#C2A45A", baño: "#C2A45A" };
+function MiniPlano({ L, W, D }) {
+  if (!L || !L.rooms?.length) return <div style={{ fontSize: 10, color: "#6B6863", padding: "12px 0", textAlign: "center" }}>sin distribución</div>;
+  const S = Math.min(232 / W, 168 / D);
+  const w = W * S, h = D * S;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: "auto", background: "#fff", border: "1px solid #d9d5cd", borderRadius: 4 }}>
+      {L.rooms.map((r, i) => {
+        const pts = r.pts.map((p) => `${p.x * S},${p.y * S}`).join(" ");
+        const cx = r.pts.reduce((a, p) => a + p.x, 0) / r.pts.length * S;
+        const cy = r.pts.reduce((a, p) => a + p.y, 0) / r.pts.length * S;
+        const ar = _areaPoly(r.pts);
+        const col = _ZC[r.zona || r.tipo] || "#C2A45A";
+        const nm = (r.name || "").replace("dormitorio", "dorm.").replace(" principal", " ppal");
+        return (
+          <g key={i}>
+            <polygon points={pts} fill={col + "22"} stroke={col} strokeWidth="0.7" />
+            <text x={cx} y={cy - 1} textAnchor="middle" fontSize="6.4" fontWeight="600" fill="#0A0B0F">{nm}</text>
+            <text x={cx} y={cy + 7} textAnchor="middle" fontSize="5.4" fill="#6B6863">{ar.toFixed(1)} m²</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+function TipologiasNexoPanel({ onInsert, onClose }) {
+  const cards = useMemo(() => TIPOLOGIAS.map((t) => {
+    const aIdeal = t.area[1];
+    const W = Math.max(t.frenteMin, 6);
+    const D = Math.max(4, Math.round((aIdeal / W) * 10) / 10);
+    let L = null; try { L = feydLayout(W, D, t.dorms, t.banos, { visita: t.banos >= 3 }); } catch { L = null; }
+    return { t, L, W, D };
+  }), []);
+  return (
+    <div style={{ position: "absolute", right: 12, top: 60, bottom: 12, width: 288, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 12, overflowY: "auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipologías Nexo</span>
+        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
+      </div>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>Feyd redibuja las tipologías del mercado (Nexo · 6,687 modelos) e identifica cada ambiente con nombre y tamaño. Click para insertarla en el lienzo.</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cards.map(({ t, L, W, D }) => (
+          <div key={t.id} style={{ border: "1px solid #d9d5cd", borderRadius: 5, padding: 8, background: "#F4F1EA" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#0A0B0F" }}>{t.nombre}</span>
+              <span style={{ fontSize: 9, color: "#6B6863" }}>{t.peso}% mdo</span>
+            </div>
+            <MiniPlano L={L} W={W} D={D} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+              <span style={{ fontSize: 9.5, color: "#6B6863", fontFamily: "ui-monospace, monospace" }}>{t.dorms}D · {t.banos}B · {t.area[1]} m²</span>
+              <button onClick={() => onInsert(L, t)} disabled={!L} style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", border: "none", borderRadius: 3, background: L ? "#F7643B" : "#ccc", color: "#fff", cursor: L ? "pointer" : "default" }}>Insertar</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 import { validarPlan } from "./validacion.js";
 
 const Vista3D = lazy(() => import("./Vista3D.jsx"));
@@ -100,7 +162,7 @@ class Vista3DBoundary extends Component {
     return this.props.children;
   }
 }
-import { tipologiasCandidatas, porTipologia } from "./tipologias.js";
+import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
@@ -463,6 +525,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [showLib, setShowLib] = useState(false);
   const [showRepo, setShowRepo] = useState(false);   // repositorio de ambientes amueblados
   const [showTipoCfg, setShowTipoCfg] = useState(false); // configurador por tipología (ensambla desde librería)
+  const [showTipoNexo, setShowTipoNexo] = useState(false); // visor de tipologías de mercado (Nexo) redibujadas por Feyd
   const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3
@@ -807,6 +870,19 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     requestAnimationFrame(() => fitTo(allRooms));
   }, [rooms, items, commit, fitTo]);
 
+  // Inserta una tipología Nexo ya redibujada por Feyd (layout()) al lienzo, offset debajo, etiquetada.
+  const insertTipologia = useCallback((L, t) => {
+    if (!L || !L.rooms?.length) return;
+    const oy = rooms.length ? Math.max(...rooms.flatMap((r) => r.pts.map((p) => p.y))) + 1.2 : 0;
+    const pre = t?.nombre ? `${t.nombre} · ` : "";
+    const nr = L.rooms.map((r) => ({ id: uid(), name: pre + r.name, tipo: r.zona || r.tipo, pts: r.pts.map((p) => ({ x: p.x, y: p.y + oy })) }));
+    const ni = (L.items || []).map((t2) => ({ ...t2, id: uid(), y: t2.y + oy }));
+    const allRooms = [...rooms, ...nr];
+    commit(allRooms, [...items, ...ni]);
+    setShowTipoNexo(false); setSelId(null); setSelItem(null); setTool("select");
+    requestAnimationFrame(() => fitTo(allRooms));
+  }, [rooms, items, commit, fitTo]);
+
   const useVariant = useCallback((v) => {
     const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
     commit(nr, (v.items || []).map((t) => ({ ...t })));
@@ -1057,6 +1133,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
         <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
         <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Configurar tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología</Btn>
+        <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Visor de tipologías del mercado (Nexo) redibujadas por Feyd"><Plus size={13} /> Nexo</Btn>
         <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
@@ -1390,6 +1467,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         {showLib && <LibPanel onAdd={addItem} onClose={() => setShowLib(false)} />}
         {showRepo && <RepoAmbientesPanel onAdd={insertAmbiente} onClose={() => setShowRepo(false)} />}
         {showTipoCfg && <ConfigTipologiaPanel onArmar={armarTipologia} onClose={() => setShowTipoCfg(false)} />}
+        {showTipoNexo && <TipologiasNexoPanel onInsert={insertTipologia} onClose={() => setShowTipoNexo(false)} />}
 
         {/* visor 3D vivo — flota abajo a la derecha, reacciona al plano en vivo */}
         {show3D && (
