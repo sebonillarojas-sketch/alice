@@ -299,7 +299,7 @@ export function layout(W, D, nd, nb, opts = {}) {
   items.push(it("puerta-90", lx + 0.6, hallY + hall / 2 - hall / 2, 0, { d: 0.14 }));
 
   const areaTotal = W * D;
-  return { rooms, items: [...items, ...generarPuertas(rooms)], warns, W, D, areaTotal };
+  return { rooms, items, warns, W, D, areaTotal };
 }
 
 // ── layout SIMPLE (el caballito de batalla: SIEMPRE parte el bloque) ──
@@ -369,7 +369,7 @@ export function layoutProfundo(W, D, nd, nb, opts = {}) {
   // ingreso desde el corredor del edificio (y=D) directo al social
   items.push(it("puerta-90", clamp(wWet + 0.75, wWet + 0.55, W - 0.6), D, 0));
 
-  return { rooms, items: [...items, ...generarPuertas(rooms)], warns, W, D, areaTotal: W * D };
+  return { rooms, items, warns, W, D, areaTotal: W * D };
 }
 
 function variante(nombre, notaBase, W, D, nd, nb, opts) {
