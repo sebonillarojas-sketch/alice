@@ -527,6 +527,10 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [items, setItems] = useState(P.items || []);   // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
   const [muro, setMuro] = useState(P.muro ?? 0.15);    // espesor de muro (m)
   const [altura, setAltura] = useState(P.altura ?? 2.4); // altura libre (m)
+  // dibujo lineal (whiteboard): trazos a mano alzada sobre el plano
+  const [trazos, setTrazos] = useState(P.trazos || []);  // [{ id, pts:[{x,y}], color, w }]
+  const [curTrazo, setCurTrazo] = useState(null);        // trazo en curso
+  const [penColor, setPenColor] = useState("#F7643B");   // color del lápiz
   const [tool, setTool] = useState("select");
   const [snapOn, setSnapOn] = useState(true);
   const [orthoOn, setOrthoOn] = useState(true);
@@ -609,10 +613,10 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
   // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
   useEffect(() => {
-    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha };
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos };
     if (onSavePlano) onSavePlano(snap);
     else { try { localStorage.setItem(STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
-  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha]);
+  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos]);
 
   // ── historial ─────────────────────────────────────────────
   const snapshot = useCallback(() => ({ rooms, items }), [rooms, items]);
@@ -947,6 +951,21 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       return;
     }
 
+    if (tool === "draw") {
+      setCurTrazo({ id: uid(), pts: [world], color: penColor, w: 2 });
+      drag.current = { kind: "draw" };
+      svgRef.current.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (tool === "erase") {
+      setTrazos((ts) => {
+        let bi = -1, bd = 18 / view.scale;
+        ts.forEach((tr, i) => tr.pts.forEach((p) => { const dd = Math.hypot(p.x - world.x, p.y - world.y); if (dd < bd) { bd = dd; bi = i; } }));
+        return bi >= 0 ? ts.filter((_, i) => i !== bi) : ts;
+      });
+      return;
+    }
+
     // select: mueble > vértice > ambiente
     const t = hitItem(world);
     if (t) {
@@ -995,6 +1014,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       setView({ ...d.view, tx: d.view.tx + (e.clientX - d.sx), ty: d.view.ty + (e.clientY - d.sy) });
       return;
     }
+    if (d.kind === "draw") { setCurTrazo((c) => (c ? { ...c, pts: [...c.pts, world] } : c)); return; }
     if (d.kind === "item") {
       const p = snapPt({ x: world.x - d.grab.x, y: world.y - d.grab.y }, 0.05);
       setItems((ts) => ts.map((t) => (t.id === d.id ? { ...t, x: p.x, y: p.y } : t)));
@@ -1031,6 +1051,11 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const d = drag.current;
     drag.current = null;
     try { svgRef.current.releasePointerCapture(e.pointerId); } catch { /* sin captura */ }
+    if (d && d.kind === "draw") {
+      if (curTrazo && curTrazo.pts.length > 1) setTrazos((ts) => [...ts, curTrazo]);
+      setCurTrazo(null);
+      return;
+    }
     if (d && d.before) pushPast(d.before);
   };
 
@@ -1182,6 +1207,18 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
         <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Configurar tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología</Btn>
         <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Visor de tipologías del mercado (Nexo) redibujadas por Feyd"><Plus size={13} /> Nexo</Btn>
+        <div style={{ width: 1, height: 22, background: C.line }} />
+        <Btn active={tool === "draw"} onClick={() => setTool(tool === "draw" ? "select" : "draw")} title="Dibujo lineal · lápiz a mano alzada sobre el plano">✏️ dibujo</Btn>
+        <Btn active={tool === "erase"} onClick={() => setTool(tool === "erase" ? "select" : "erase")} title="Goma · borrar trazos">◇ goma</Btn>
+        {(tool === "draw" || tool === "erase") && (
+          <>
+            {["#F7643B", "#3D52D5", "#0A0B0F", "#5F8A6A", "#C2A45A"].map((c) => (
+              <button key={c} onClick={() => { setPenColor(c); setTool("draw"); }} title="Color del lápiz"
+                style={{ width: 18, height: 18, borderRadius: 999, background: c, border: penColor === c ? "2px solid #0A0B0F" : "1px solid #d9d5cd", cursor: "pointer", padding: 0 }} />
+            ))}
+            {trazos.length > 0 && <Btn onClick={() => setTrazos([])} title="Borrar todos los trazos">borrar dibujos</Btn>}
+          </>
+        )}
         <Btn active={show3D} onClick={() => setShow3D((s) => !s)} title="Visor 3D vivo del plano"><Box size={13} /> 3D</Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
@@ -1418,6 +1455,13 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             const s = toScreen({ x: t.x, y: t.y });
             return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={t.id === selItem || inMulti("item", t.id)} />;
           })}
+
+          {/* dibujo lineal (croquis a mano alzada) — capa encima del plano */}
+          {[...trazos, ...(curTrazo ? [curTrazo] : [])].map((tr) => (
+            <polyline key={tr.id}
+              points={tr.pts.map((p) => { const s = toScreen(p); return `${s.x},${s.y}`; }).join(" ")}
+              fill="none" stroke={tr.color} strokeWidth={tr.w || 2} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }} />
+          ))}
 
           {/* reglas — resalta lo que incumple (fuera del lote / sin piso / sin acceso) */}
           {val.ids.size > 0 && (
