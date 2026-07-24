@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Component } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Component, Fragment } from "react";
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
@@ -203,10 +203,16 @@ function TipologiasNexoPanel({ onInsert, onClose }) {
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipologías Nexo</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
       </div>
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>Feyd redibuja las tipologías del mercado (Nexo · 6,687 modelos) e identifica cada ambiente con nombre y tamaño. Click para insertarla en el lienzo.</div>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>{cards.length} tipologías de TODOS los tamaños (22–210 m²), redibujadas por Feyd. Click para insertarla en el lienzo.</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {cards.map(({ t, L, W, D }) => (
-          <div key={t.id} style={{ border: "1px solid #d9d5cd", borderRadius: 5, padding: 8, background: "#F4F1EA" }}>
+        {cards.map(({ t, L, W, D }, idx) => (
+          <Fragment key={t.id}>
+          {(idx === 0 || cards[idx - 1].t.dorms !== t.dorms) && (
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1E2A4A", marginTop: idx ? 6 : 0, borderBottom: "1px solid #d9d5cd", paddingBottom: 3 }}>
+              {t.dorms === 1 ? "Studios / 1 dormitorio" : `${t.dorms} dormitorios`}
+            </div>
+          )}
+          <div style={{ border: "1px solid #d9d5cd", borderRadius: 5, padding: 8, background: "#F4F1EA" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#0A0B0F" }}>{t.nombre}</span>
               <span style={{ fontSize: 9, color: "#6B6863" }}>{t.peso}% mdo</span>
@@ -217,6 +223,7 @@ function TipologiasNexoPanel({ onInsert, onClose }) {
               <button onClick={() => onInsert(L, t)} disabled={!L} style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", border: "none", borderRadius: 3, background: L ? "#F7643B" : "#ccc", color: "#fff", cursor: L ? "pointer" : "default" }}>Insertar</button>
             </div>
           </div>
+          </Fragment>
         ))}
       </div>
     </div>
