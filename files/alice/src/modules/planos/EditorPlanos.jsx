@@ -578,6 +578,45 @@ export default function EditorPlanos({ navigate }) {
   );
 }
 
+// Panel lateral del paso 3: tocás un depto desnudo → variables → Feyd lo redibuja a ESE
+// footprint (con puertas) → insertás. Después cada ambiente se puede redimensionar a mano.
+function TipoUnitPanel({ W, D, onAplicar, onClose }) {
+  const [prog, setProg] = useState({ dorms: 2, banos: 2, visita: false });
+  const L = useMemo(() => { try { return feydLayout(W, D, prog.dorms, prog.banos, { visita: prog.visita }); } catch { return null; } }, [prog]); // eslint-disable-line
+  const upd = (k, v) => setProg((s) => ({ ...s, [k]: v }));
+  const step = { width: 24, height: 24, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", fontWeight: 700, color: "#0A0B0F", lineHeight: "20px" };
+  const row = { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "7px 0", fontSize: 12, color: "#0A0B0F" };
+  const Counter = ({ k, min, max }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <button style={step} onClick={() => upd(k, Math.max(min, prog[k] - 1))}>−</button>
+      <span style={{ minWidth: 16, textAlign: "center", fontWeight: 700 }}>{prog[k]}</span>
+      <button style={step} onClick={() => upd(k, Math.min(max, prog[k] + 1))}>+</button>
+    </div>
+  );
+  const areaU = W * D;
+  return (
+    <div style={{ position: "absolute", right: 12, top: 60, width: 272, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 41, padding: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipología del depto</span>
+        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#6B6863", fontFamily: "ui-monospace, monospace", marginBottom: 8 }}>{W.toFixed(1)} × {D.toFixed(1)} m · {areaU.toFixed(0)} m²</div>
+      <div style={row}><span>Dormitorios</span><Counter k="dorms" min={1} max={5} /></div>
+      <div style={row}><span>Baños</span><Counter k="banos" min={1} max={4} /></div>
+      <div style={row}><span>Baño de visita</span>
+        <button onClick={() => upd("visita", !prog.visita)} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: prog.visita ? "#1E2A4A" : "#F4F1EA", color: prog.visita ? "#fff" : "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>{prog.visita ? "Sí" : "No"}</button>
+      </div>
+      <div style={{ margin: "10px 0 6px", fontSize: 9.5, color: "#6B6863", letterSpacing: "0.06em", textTransform: "uppercase" }}>Feyd lo redibuja</div>
+      <MiniPlano L={L} W={W} D={D} />
+      <button onClick={() => onAplicar(L)} disabled={!L || !L.rooms?.length}
+        style={{ width: "100%", marginTop: 10, padding: "9px 0", background: (L && L.rooms?.length) ? "#F7643B" : "#ccc", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: (L && L.rooms?.length) ? "pointer" : "default" }}>
+        Insertar en el depto
+      </button>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Se aplica a ese depto con puertas. Después redimensionás cada ambiente arrastrando sus vértices.</div>
+    </div>
+  );
+}
+
 function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
@@ -622,7 +661,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [showTipoNexo, setShowTipoNexo] = useState(false); // visor de tipologías de mercado (Nexo) redibujadas por Feyd
   const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
-  const [showTipo, setShowTipo] = useState(false);       // paso 3
+  const [showTipo, setShowTipo] = useState(false);       // paso 3 = modo "asignar tipología" (click en depto)
+  const [tipoUnit, setTipoUnit] = useState(null);        // depto clickeado para asignarle tipología
   const [partis, setPartis] = useState([]);
   const [parti, setParti] = useState(null);              // distribución elegida (en memoria, no persiste)
   const [brief, setBrief] = useState({
@@ -991,6 +1031,24 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     useVariant(p);
   }, [useVariant]);
 
+  // paso 3 → aplicar la tipología que Feyd redibujó (L) al depto clickeado (unit):
+  // se reemplaza el bloque desnudo por los ambientes generados (con puertas), reposicionados
+  // al footprint del depto. Después cada ambiente se redimensiona arrastrando sus vértices.
+  const aplicarTipoAUnit = useCallback((unit, L) => {
+    if (!unit || !L || !L.rooms?.length) return;
+    const xs = unit.pts.map((p) => p.x), ys = unit.pts.map((p) => p.y);
+    const ux0 = Math.min(...xs), uy0 = Math.min(...ys);
+    const nr = L.rooms.map((r) => ({
+      id: uid(), name: r.name, tipo: r.zona || r.tipo || "amb",
+      pts: (r.pts || []).map((p) => ({ x: p.x + ux0, y: p.y + uy0 })),
+    }));
+    const ni = (L.items || []).map((t) => ({ ...t, id: uid(), x: t.x + ux0, y: t.y + uy0 }));
+    const otras = rooms.filter((r) => r.id !== unit.id);
+    const otrosItems = items.filter((t) => !pointInPolygon({ x: t.x, y: t.y }, unit.pts));
+    commit([...otras, ...nr], [...otrosItems, ...ni]);
+    setTipoUnit(null); setSelId(null); setSelItem(null);
+  }, [rooms, items, commit]);
+
   // ── punteros ──────────────────────────────────────────────
   // arrastre grupal: junta las salas seleccionadas (+ sus muebles contenidos) y los items sueltos
   const buildMultiDrag = (world) => {
@@ -1041,6 +1099,14 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         ts.forEach((tr, i) => tr.pts.forEach((p) => { const dd = Math.hypot(p.x - world.x, p.y - world.y); if (dd < bd) { bd = dd; bi = i; } }));
         return bi >= 0 ? ts.filter((_, i) => i !== bi) : ts;
       });
+      return;
+    }
+
+    // modo tipología (paso 3): click en un depto → abre el panel para asignarle tipología
+    if (showTipo) {
+      const insideT = rooms.findIndex((r) => pointInPolygon(world, r.pts));
+      if (insideT >= 0) { const r = rooms[insideT]; setTipoUnit(r); setSelId(r.id); setSelItem(null); }
+      else { setTipoUnit(null); setSelId(null); }
       return;
     }
 
@@ -1281,8 +1347,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           title={footprint ? "Paso 2 · elegir la distribución de la planta (core, corredor, bloques)" : "Primero calca el lote (paso 1)"}>
           <b style={{ color: footprint ? C.orange : C.line }}>2</b> distribución {parti ? "✓" : ""}
         </Btn>
-        <Btn accent onClick={() => setShowTipo(true)} disabled={!parti}
-          title={parti ? "Paso 3 · asignar tipologías y amoblar (NSE, terraza)" : "Primero elige una distribución (paso 2)"}>
+        <Btn accent active={showTipo} onClick={() => { setShowTipo((s) => !s); setTipoUnit(null); }} disabled={!parti}
+          title={parti ? "Paso 3 · tocá un depto para asignarle su tipología (Feyd la redibuja a su medida)" : "Primero elige una distribución (paso 2)"}>
           <Sparkles size={13} /> <b>3</b> tipologías
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
@@ -1711,13 +1777,19 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             onClose={() => setShowDistrib(false)} />
         );
       })()}
-      {showTipo && parti && (() => {
-        const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
-        const info = fr ? `${tipoLote} · ${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
+      {showTipo && !tipoUnit && (
+        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", top: 60, zIndex: 40, background: "#1E2A4A", color: "#fff", padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, boxShadow: "0 4px 14px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
+          Paso 3 · tocá un depto para asignarle su tipología
+          <button onClick={() => setShowTipo(false)} style={{ border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", cursor: "pointer", borderRadius: 10, width: 18, height: 18, lineHeight: "16px", fontSize: 11 }}>✕</button>
+        </div>
+      )}
+      {tipoUnit && (() => {
+        const xs = tipoUnit.pts.map((p) => p.x), ys = tipoUnit.pts.map((p) => p.y);
+        const uW = Math.max(...xs) - Math.min(...xs), uD = Math.max(...ys) - Math.min(...ys);
         return (
-          <TipoModal parti={parti} brief={brief} setBrief={setBrief} loteInfo={info}
-            onAplicar={useVariant}
-            onClose={() => setShowTipo(false)} />
+          <TipoUnitPanel W={uW} D={uD}
+            onAplicar={(L) => aplicarTipoAUnit(tipoUnit, L)}
+            onClose={() => setTipoUnit(null)} />
         );
       })()}
       {showFicha && <FichaModal ficha={ficha} setFicha={setFicha} onClose={() => setShowFicha(false)} />}
