@@ -2062,7 +2062,8 @@ app.post("/api/arquitecto/disenar", async (req, res) => {
   try {
     const { disenarPlano, arquitectoDisponible } = await import("./arquitecto.js");
     if (!arquitectoDisponible()) return res.status(503).json({ error: "skill arquitecto-residencial-lima no disponible en este deploy" });
-    res.json({ layout: await disenarPlano(req.body || {}) });
+    const { autocritica = true, ...brief } = req.body || {};   // autocritica:false = 1 sola llamada (rápido, para el loop del editor)
+    res.json({ layout: await disenarPlano(brief, { autocritica }) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

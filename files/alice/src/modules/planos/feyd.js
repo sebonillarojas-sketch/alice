@@ -3,6 +3,7 @@
 // El na-Barón audita la planta contra su checklist (RNE + Neufert + mercado)
 // y devuelve veredicto + layout corregido, que acá se traduce de vuelta a rooms.
 import { snapPt, area, centroid, pointInPolygon } from "./geometry.js";
+import { amoblarDesdeLayout } from "./distribucion.js";
 import { ALICIA_URL } from "../../lib/brain.js";
 
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -89,6 +90,45 @@ export function reanclarItems(items, roomsPrev, roomsNew) {
     const d = delta[ri];
     return { ...t, x: r2(t.x + d.x), y: r2(t.y + d.y) };
   });
+}
+
+// Paso 3 del editor: Feyd DISEÑA la planta de un depto adaptándola a la HUELLA REAL
+// (polígono, que puede ser irregular/inclinado) siguiendo sus reglas — ventila cada
+// habitable, pone puertas, crece los ambientes en proporción y no deja espacio muerto.
+// Modo rápido (autocritica:false = 1 sola llamada) para no trabar el loop del editor.
+export async function disenarConFeyd({ pts, dorms = 2, banos = 2, visita = false, closet = false, lavanderia = true, cocinaCerrada = false, nse = "C" } = {}) {
+  if (!pts?.length) throw new Error("falta la huella del depto");
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  const poly = pts.map((p) => [r2(p.x - x0), r2(p.y - y0)]);      // huella en coords locales (0,0)
+  const frente = r2(Math.max(...xs) - x0), fondo = r2(Math.max(...ys) - y0);
+  const rectangular = poly.length === 4 &&
+    poly.every(([x, y]) => (x < 0.05 || x > frente - 0.05) && (y < 0.05 || y > fondo - 0.05));
+  const brief = {
+    dormitorios: dorms, banos, bano_visita: visita, nse,
+    closet_walkin: closet, lavanderia, cocina: cocinaCerrada ? "cerrada" : "abierta",
+    frente_m: frente, fondo_m: fondo, area_objetivo: r2(frente * fondo),
+    huella_poligono: poly,
+    nota: `La huella real del depto es el polígono 'huella_poligono' (metros, origen 0,0)${rectangular ? "" : " y NO es un rectángulo: seguí sus muros inclinados, los ambientes perimetrales deben calzar contra el borde real, sin dejar zonas triangulares muertas"}. Usá TODA la huella (${r2(frente * fondo)} m²): hacé crecer los ambientes en proporción hasta llenarla, sin dejar espacio muerto. Ventilá cada habitable a fachada/pozo y dale puerta a cada ambiente.`,
+    autocritica: false,
+  };
+  const res = await fetch(`${ALICIA_URL}/api/arquitecto/disenar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(brief),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("tu sesión venció — volvé a entrar");
+    if (res.status === 503) throw new Error("Feyd no está disponible en este deploy");
+    throw new Error(data.error || `arquitecto ${res.status}`);
+  }
+  const layout = data.layout;
+  if (!layout?.ambientes?.length) throw new Error("Feyd no devolvió una planta válida");
+  const rooms = layoutARooms(layout);
+  const W = layout.frente_m || frente, D = layout.fondo_m || fondo;
+  const items = amoblarDesdeLayout(rooms, W, D, nse);
+  return { rooms, items, W, D };
 }
 
 // consulta al na-Barón vía alicia-brain (el interceptor de lib/supabase.js adjunta el JWT)

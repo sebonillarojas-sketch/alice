@@ -49,6 +49,60 @@ export function generarPuertas(rooms) {
   return doors;
 }
 
+// Amuebla una planta que Feyd (IA) ya adaptó a la huella del depto: reusa los amoblados
+// por ambiente sobre cada polígono, ventila cada habitable a fachada y usa UN solo sistema
+// de puertas (descarta las que trae cada amoblado y las regenera con generarPuertas → sin
+// puertas dobles). W,D = frente/fondo del layout (para detectar qué borde da a fachada).
+export function amoblarDesdeLayout(rooms, W, D, nse = "C") {
+  if (!rooms?.length) return [];
+  const items = [];
+  const E = 0.35;
+  const cen = (r) => { const [x0, y0, x1, y1] = _bb(r.pts); return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 }; };
+  const esSocial = (o) => /sala|social|hall|pasillo|comedor|estar|living/.test((o.name || "").toLowerCase());
+  for (const r of rooms) {
+    if (!r.pts?.length) continue;
+    const [x0, y0, x1, y1] = _bb(r.pts);
+    const R = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    if (R.w < 0.8 || R.h < 0.8) continue;
+    const n = (r.name || r.tipo || "").toLowerCase();
+    const facTop = y0 < E, facBot = y1 > D - E, facLeft = x0 < E, facRight = x1 > W - E;
+    let furn = [];
+    if (/dorm/.test(n)) {
+      const hall = rooms.find((o) => o !== r && esSocial(o) && _muroComun(r, o));
+      const hallArriba = hall ? cen(hall).y < cen(r).y : !facTop;
+      furn = amoblarDorm(R, /ppal|principal/.test(n), hallArriba ? "hall-arriba" : "hall-abajo", "frente", nse);
+    } else if (/baño|bano/.test(n)) {
+      const vecino = rooms.find((o) => o !== r && _muroComun(r, o));
+      let wall = "top";
+      if (vecino) { const w = _muroComun(r, vecino); if (w) wall = w.vert ? (w.x < cen(r).x ? "left" : "right") : (w.y < cen(r).y ? "top" : "bottom"); }
+      furn = amoblarBano(R, R.w * R.h >= 3.0, { wall });
+    } else if (/cocina|kitchen/.test(n)) {
+      furn = amoblarCocina(R, nse);
+    } else if (/sala|social|comedor|estar|living/.test(n)) {
+      furn = amoblarSocial(R, nse);
+    }
+    items.push(...furn.filter((i) => !/puerta/.test(i.ref)));   // las puertas las pone generarPuertas
+    if (/dorm|sala|social|comedor|estar|living|estudio|cocina/.test(n)) {
+      const ref = (a, b) => (b - a >= 2.7 ? "ventana-180" : "ventana-120");
+      if (facTop) items.push(it(ref(x0, x1), (x0 + x1) / 2, y0, 0));
+      else if (facBot) items.push(it(ref(x0, x1), (x0 + x1) / 2, y1, 180));
+      else if (facLeft) items.push(it(ref(y0, y1), x0, (y0 + y1) / 2, 90));
+      else if (facRight) items.push(it(ref(y0, y1), x1, (y0 + y1) / 2, 270));
+    }
+  }
+  // puerta de ingreso en el borde a fachada del ambiente social más grande
+  const soc = rooms.filter(esSocial).sort((a, b) => { const [,, ax1, ay1] = _bb(a.pts), [ax0, ay0] = _bb(a.pts); const [,, bx1, by1] = _bb(b.pts), [bx0, by0] = _bb(b.pts); return (bx1 - bx0) * (by1 - by0) - (ax1 - ax0) * (ay1 - ay0); })[0];
+  if (soc) {
+    const [sx0, sy0, sx1, sy1] = _bb(soc.pts);
+    if (sy0 < E) items.push(it("puerta-90", (sx0 + sx1) / 2, sy0, 0));
+    else if (sy1 > D - E) items.push(it("puerta-90", (sx0 + sx1) / 2, sy1, 180));
+    else if (sx0 < E) items.push(it("puerta-90", sx0, (sy0 + sy1) / 2, 90));
+    else if (sx1 > W - E) items.push(it("puerta-90", sx1, (sy0 + sy1) / 2, 270));
+  }
+  items.push(...generarPuertas(rooms));
+  return items;
+}
+
 // ── amueblado por ambiente (holguras reales) ───────────────
 // convención: y=0 fachada frente (calle) · y=D fachada fondo (patio) · muro húmedo en x=0
 

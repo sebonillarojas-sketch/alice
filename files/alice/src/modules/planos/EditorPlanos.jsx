@@ -237,7 +237,7 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { corregirConFeyd, reanclarItems } from "./feyd.js";
+import { corregirConFeyd, reanclarItems, disenarConFeyd } from "./feyd.js";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
 import { useProyectos } from "../cabida/proyectos.js";
 import { clasificarBordes } from "../cabida/loteReal.js";
@@ -580,10 +580,13 @@ export default function EditorPlanos({ navigate }) {
 
 // Panel lateral del paso 3: tocás un depto desnudo → variables → Feyd lo redibuja a ESE
 // footprint (con puertas) → insertás. Después cada ambiente se puede redimensionar a mano.
-function TipoUnitPanel({ W, D, onAplicar, onClose }) {
-  const [prog, setProg] = useState({ dorms: 2, banos: 2, visita: false });
+function TipoUnitPanel({ W, D, busy, err, onAplicar, onClose }) {
+  const [prog, setProg] = useState({ dorms: 2, banos: 2, visita: false, closet: false, lavanderia: true, cocinaCerrada: false });
   const L = useMemo(() => { try { return feydLayout(W, D, prog.dorms, prog.banos, { visita: prog.visita }); } catch { return null; } }, [prog]); // eslint-disable-line
   const upd = (k, v) => setProg((s) => ({ ...s, [k]: v }));
+  const Tog = ({ k, on, off }) => (
+    <button onClick={() => upd(k, !prog[k])} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: prog[k] ? "#1E2A4A" : "#F4F1EA", color: prog[k] ? "#fff" : "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600, minWidth: 58 }}>{prog[k] ? (on || "Sí") : (off || "No")}</button>
+  );
   const step = { width: 24, height: 24, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", fontWeight: 700, color: "#0A0B0F", lineHeight: "20px" };
   const row = { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "7px 0", fontSize: 12, color: "#0A0B0F" };
   const Counter = ({ k, min, max }) => (
@@ -603,16 +606,127 @@ function TipoUnitPanel({ W, D, onAplicar, onClose }) {
       <div style={{ fontSize: 10.5, color: "#6B6863", fontFamily: "ui-monospace, monospace", marginBottom: 8 }}>{W.toFixed(1)} × {D.toFixed(1)} m · {areaU.toFixed(0)} m²</div>
       <div style={row}><span>Dormitorios</span><Counter k="dorms" min={1} max={5} /></div>
       <div style={row}><span>Baños</span><Counter k="banos" min={1} max={4} /></div>
-      <div style={row}><span>Baño de visita</span>
-        <button onClick={() => upd("visita", !prog.visita)} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: prog.visita ? "#1E2A4A" : "#F4F1EA", color: prog.visita ? "#fff" : "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>{prog.visita ? "Sí" : "No"}</button>
-      </div>
-      <div style={{ margin: "10px 0 6px", fontSize: 9.5, color: "#6B6863", letterSpacing: "0.06em", textTransform: "uppercase" }}>Feyd lo redibuja</div>
+      <div style={row}><span>Baño de visita</span><Tog k="visita" /></div>
+      <div style={row}><span>Clóset (walk-in)</span><Tog k="closet" /></div>
+      <div style={row}><span>Lavandería</span><Tog k="lavanderia" /></div>
+      <div style={row}><span>Cocina</span><Tog k="cocinaCerrada" on="Cerrada" off="Abierta" /></div>
+      <div style={{ margin: "10px 0 6px", fontSize: 9.5, color: "#6B6863", letterSpacing: "0.06em", textTransform: "uppercase" }}>Borrador (previa rápida)</div>
       <MiniPlano L={L} W={W} D={D} />
-      <button onClick={() => onAplicar(L)} disabled={!L || !L.rooms?.length}
-        style={{ width: "100%", marginTop: 10, padding: "9px 0", background: (L && L.rooms?.length) ? "#F7643B" : "#ccc", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: (L && L.rooms?.length) ? "pointer" : "default" }}>
-        Insertar en el depto
+      <button onClick={() => onAplicar(prog)} disabled={busy}
+        style={{ width: "100%", marginTop: 10, padding: "9px 0", background: busy ? "#c9a99c" : "#F7643B", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: busy ? "wait" : "pointer" }}>
+        {busy ? "Feyd está adaptando a la forma…" : "Insertar con Feyd (adapta a la forma)"}
       </button>
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Se aplica a ese depto con puertas. Después redimensionás cada ambiente arrastrando sus vértices.</div>
+      {err && <div style={{ fontSize: 10, color: "#A85B5B", marginTop: 7, lineHeight: 1.4 }}>{err}</div>}
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Feyd sigue la huella real (aunque sea irregular), ventila cada habitable, pone puertas y crece los ambientes en proporción. Después redimensionás cada uno arrastrando sus vértices.</div>
+    </div>
+  );
+}
+
+// Ventana GRANDE de revisión (staging): Feyd ya adaptó la planta a la huella; acá la ves
+// en grande sobre el contorno real del depto, la movés (arrastrás), la rotás y ves los
+// puntos de anclaje en los muros — recién cuando calza, "Pasar al plano".
+function TipoStageModal({ stage, onConfirm, onCancel, onAjustar }) {
+  const [tx, setTx] = useState(0), [ty, setTy] = useState(0), [rot, setRot] = useState(0);
+  const [rms, setRms] = useState(stage.rooms);          // ambientes editables en el staging
+  const [its] = useState(stage.items || []);
+  const [sel, setSel] = useState(null);                 // índice de ambiente seleccionado
+  const drag = useRef(null);
+  const svgRef = useRef(null);
+  const { unit, W, D } = stage;
+  const xs = unit.pts.map((p) => p.x), ys = unit.pts.map((p) => p.y);
+  const ux0 = Math.min(...xs), uy0 = Math.min(...ys);
+  const foot = unit.pts.map((p) => ({ x: p.x - ux0, y: p.y - uy0 }));   // huella en local (0,0)
+  const cx = W / 2, cy = D / 2;
+  const rad = (rot * Math.PI) / 180, cs = Math.cos(rad), sn = Math.sin(rad);
+  const tp = (p) => ({ x: cx + (p.x - cx) * cs - (p.y - cy) * sn + tx, y: cy + (p.x - cx) * sn + (p.y - cy) * cs + ty });
+  const CW = 660, CH = 480, P = 34;
+  const sc = Math.min((CW - 2 * P) / Math.max(W, 0.5), (CH - 2 * P) / Math.max(D, 0.5));
+  const S = (p) => ({ x: P + p.x * sc, y: P + p.y * sc });
+  const colOf = (r) => { const n = (r.name || r.tipo || "").toLowerCase(); if (/dorm/.test(n)) return "#A89BD9"; if (/baño|bano/.test(n)) return "#9BCBE3"; if (/cocina/.test(n)) return "#C2A45A"; if (/sala|social|comedor|estar|living/.test(n)) return "#5F8A6A"; if (/hall|pasillo|core/.test(n)) return "#D9D5CD"; return "#E5E1D6"; };
+  // pantalla → local (invierte encuadre y rotación del grupo; la traslación no afecta al delta)
+  const invRotDelta = (dxs, dys) => ({ x: dxs * cs + dys * sn, y: -dxs * sn + dys * cs });
+  const onDownVertex = (e, ri, vi) => { e.stopPropagation(); drag.current = { kind: "vertex", ri, vi, sx: e.clientX, sy: e.clientY, orig: rms[ri].pts[vi] }; svgRef.current.setPointerCapture(e.pointerId); };
+  const onDown = (e) => { drag.current = { kind: "group", sx: e.clientX, sy: e.clientY, tx, ty }; e.currentTarget.setPointerCapture(e.pointerId); };
+  const onMove = (e) => {
+    const d = drag.current; if (!d) return;
+    if (d.kind === "group") { setTx(d.tx + (e.clientX - d.sx) / sc); setTy(d.ty + (e.clientY - d.sy) / sc); return; }
+    // vertex: delta pantalla → local (sin rotar por el grupo)
+    const dl = invRotDelta((e.clientX - d.sx) / sc, (e.clientY - d.sy) / sc);
+    setRms((rs) => rs.map((r, i) => i === d.ri ? { ...r, pts: r.pts.map((p, j) => j === d.vi ? { x: d.orig.x + dl.x, y: d.orig.y + dl.y } : p) } : r));
+  };
+  const onUp = () => { drag.current = null; };
+  const renameSel = (name) => setRms((rs) => rs.map((r, i) => i === sel ? { ...r, name } : r));
+  const delSel = () => { setRms((rs) => rs.filter((_, i) => i !== sel)); setSel(null); };
+  const confirmar = () => {
+    const nr = rms.map((r) => ({ ...r, pts: r.pts.map((p) => tp(p)) }));
+    const ni = (its || []).map((t) => { const q = tp({ x: t.x, y: t.y }); return { ...t, x: q.x, y: q.y, rot: ((t.rot || 0) + rot) % 360 }; });
+    onConfirm(nr, ni);
+  };
+  const Btn2 = ({ onClick, children, accent }) => (
+    <button onClick={onClick} style={{ border: "1px solid " + (accent ? "#F7643B" : "#d9d5cd"), background: accent ? "#F7643B" : "#fff", color: accent ? "#fff" : "#0A0B0F", borderRadius: 5, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{children}</button>
+  );
+  const selRoom = sel != null ? rms[sel] : null;
+  const areaLocal = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p.x * q.y - q.x * p.y; } return Math.abs(a) / 2; };
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(10,11,15,0.55)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", padding: 18, maxWidth: CW + 40, width: "100%" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B6863" }}>Revisar adaptación · Feyd</div>
+            <div style={{ fontSize: 12, color: "#0A0B0F", marginTop: 2 }}>{W.toFixed(1)} × {D.toFixed(1)} m · {(W * D).toFixed(0)} m² · {rms.length} ambientes</div>
+          </div>
+          <button onClick={onCancel} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 18 }}>✕</button>
+        </div>
+        <div style={{ position: "relative" }}>
+          <svg ref={svgRef} width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ background: "#F4F1EA", borderRadius: 6, touchAction: "none", cursor: drag.current?.kind === "group" ? "grabbing" : "default" }}
+            onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}>
+            <polygon points={foot.map((p) => { const q = S(p); return `${q.x},${q.y}`; }).join(" ")} fill="none" stroke="#1E2A4A" strokeWidth={2.5} strokeDasharray="6 4" />
+            {/* relleno + etiqueta (SIN contorno por ambiente, para no dibujar muros dobles) */}
+            {rms.map((r, i) => {
+              const pts = r.pts.map((p) => S(tp(p)));
+              const cxr = pts.reduce((a, p) => a + p.x, 0) / pts.length, cyr = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+              const on = i === sel;
+              return (
+                <g key={i}>
+                  <polygon points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill={colOf(r)} fillOpacity={on ? 0.72 : 0.5} stroke={on ? "#F7643B" : "none"} strokeWidth={on ? 2 : 0}
+                    style={{ cursor: "pointer" }} onPointerDown={(e) => { e.stopPropagation(); setSel(i); }} />
+                  <text x={cxr} y={cyr} fontSize={9} fill="#0A0B0F" textAnchor="middle" style={{ pointerEvents: "none" }}>{r.name}</text>
+                  <text x={cxr} y={cyr + 10} fontSize={7.5} fill="#6B6863" textAnchor="middle" style={{ pointerEvents: "none" }}>{areaLocal(r.pts).toFixed(1)} m²</text>
+                </g>
+              );
+            })}
+            {/* muros: aristas deduplicadas (una arista compartida = un solo muro) */}
+            {(() => {
+              const q = (n) => Math.round(n / 0.2) * 0.2, seen = new Set(), segs = [];
+              rms.forEach((r) => { const pts = r.pts; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; const ka = `${q(a.x)},${q(a.y)}`, kb = `${q(b.x)},${q(b.y)}`; const k = ka < kb ? ka + "|" + kb : kb + "|" + ka; if (seen.has(k)) continue; seen.add(k); segs.push([a, b]); } });
+              return segs.map(([a, b], i) => { const A = S(tp(a)), B = S(tp(b)); return <line key={i} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#0A0B0F" strokeWidth={1.6} strokeLinecap="round" style={{ pointerEvents: "none" }} />; });
+            })()}
+            {/* anclajes del ambiente seleccionado */}
+            {sel != null && rms[sel] && rms[sel].pts.map((p, j) => { const q = S(tp(p)); return <circle key={j} cx={q.x} cy={q.y} r={4.5} fill="#F7643B" stroke="#fff" strokeWidth={1.4} style={{ cursor: "grab" }} onPointerDown={(e) => onDownVertex(e, sel, j)} />; })}
+            {(its || []).map((t, i) => { const q = S(tp({ x: t.x, y: t.y })); const isP = /puerta/.test(t.ref), isV = /ventana/.test(t.ref); if (!isP && !isV) return null; return <circle key={i} cx={q.x} cy={q.y} r={isP ? 3.2 : 2.6} fill={isP ? "#5F8A6A" : "#3D52D5"} style={{ pointerEvents: "none" }} />; })}
+          </svg>
+          {/* ventana de ambiente: modificar el ambiente seleccionado ahí mismo */}
+          {selRoom && (
+            <div style={{ position: "absolute", right: 10, top: 10, width: 180, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 6px 18px rgba(0,0,0,0.14)", padding: 11 }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863", marginBottom: 6 }}>Ambiente</div>
+              <input value={selRoom.name || ""} onChange={(e) => renameSel(e.target.value)} style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "5px 7px", fontSize: 12, marginBottom: 7, boxSizing: "border-box" }} />
+              <div style={{ fontSize: 10.5, color: "#6B6863", marginBottom: 8, fontFamily: "ui-monospace, monospace" }}>{areaLocal(selRoom.pts).toFixed(1)} m²</div>
+              <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 8, lineHeight: 1.4 }}>Arrastrá los puntos naranjas para cambiar su tamaño/forma.</div>
+              <button onClick={delSel} style={{ width: "100%", border: "1px solid #A85B5B", color: "#A85B5B", background: "#fff", borderRadius: 4, padding: "6px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Eliminar ambiente</button>
+              <button onClick={() => setSel(null)} style={{ width: "100%", border: "none", color: "#6B6863", background: "none", borderRadius: 4, padding: "6px 0 0", fontSize: 10.5, cursor: "pointer" }}>deseleccionar</button>
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+          <Btn2 onClick={() => setRot((r) => (r - 90 + 360) % 360)}>⟲ rotar</Btn2>
+          <Btn2 onClick={() => setRot((r) => (r + 90) % 360)}>⟳ rotar</Btn2>
+          <Btn2 onClick={() => { setTx(0); setTy(0); setRot(0); }}>reset</Btn2>
+          <span style={{ fontSize: 10.5, color: "#6B6863", marginLeft: 4 }}>clic en un ambiente para editarlo · arrastrá el fondo para mover todo</span>
+          <div style={{ flex: 1 }} />
+          <Btn2 onClick={onAjustar}>← variables</Btn2>
+          <Btn2 onClick={confirmar} accent>Pasar al plano →</Btn2>
+        </div>
+      </div>
     </div>
   );
 }
@@ -663,6 +777,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3 = modo "asignar tipología" (click en depto)
   const [tipoUnit, setTipoUnit] = useState(null);        // depto clickeado para asignarle tipología
+  const [tipoBusy, setTipoBusy] = useState(false);       // Feyd adaptando la tipología al footprint
+  const [tipoErr, setTipoErr] = useState("");
+  const [tipoStage, setTipoStage] = useState(null);      // { unit, rooms, items, W, D } → ventana grande de revisión antes de pasar al plano
   const [partis, setPartis] = useState([]);
   const [parti, setParti] = useState(null);              // distribución elegida (en memoria, no persiste)
   const [brief, setBrief] = useState({
@@ -1048,6 +1165,27 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     commit([...otras, ...nr], [...otrosItems, ...ni]);
     setTipoUnit(null); setSelId(null); setSelItem(null);
   }, [rooms, items, commit]);
+
+  // paso 3 (con IA): Feyd diseña el depto adaptándolo a la HUELLA real (polígono, incluso
+  // irregular) y siguiendo reglas; el resultado NO se inserta directo: va a un staging grande
+  // (tipoStage) para revisar/mover/rotar antes de pasarlo al plano. Si falla, cae al borrador.
+  const generarTipoConFeyd = useCallback(async (unit, prog) => {
+    if (!unit) return;
+    setTipoBusy(true); setTipoErr("");
+    const xs = unit.pts.map((p) => p.x), ys = unit.pts.map((p) => p.y);
+    const uW = Math.max(...xs) - Math.min(...xs), uD = Math.max(...ys) - Math.min(...ys);
+    try {
+      const L = await disenarConFeyd({ pts: unit.pts, dorms: prog.dorms, banos: prog.banos, visita: prog.visita, closet: prog.closet, lavanderia: prog.lavanderia, cocinaCerrada: prog.cocinaCerrada, nse: brief.nse || "C" });
+      if (!L?.rooms?.length) throw new Error("Feyd no devolvió ambientes");
+      setTipoStage({ unit, rooms: L.rooms, items: L.items || [], W: uW, D: uD });
+    } catch (e) {
+      const L = (() => { try { return feydLayout(uW, uD, prog.dorms, prog.banos, { visita: prog.visita }); } catch { return null; } })();
+      if (L?.rooms?.length) { setTipoStage({ unit, rooms: L.rooms, items: L.items || [], W: uW, D: uD }); setTipoErr(`${e.message} — borrador local`); }
+      else { setTipoErr(e.message || "no se pudo generar"); }
+    } finally {
+      setTipoBusy(false);
+    }
+  }, [brief]);
 
   // ── punteros ──────────────────────────────────────────────
   // arrastre grupal: junta las salas seleccionadas (+ sus muebles contenidos) y los items sueltos
@@ -1777,21 +1915,27 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             onClose={() => setShowDistrib(false)} />
         );
       })()}
-      {showTipo && !tipoUnit && (
+      {showTipo && !tipoUnit && !tipoStage && (
         <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", top: 60, zIndex: 40, background: "#1E2A4A", color: "#fff", padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, boxShadow: "0 4px 14px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
           Paso 3 · tocá un depto para asignarle su tipología
           <button onClick={() => setShowTipo(false)} style={{ border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", cursor: "pointer", borderRadius: 10, width: 18, height: 18, lineHeight: "16px", fontSize: 11 }}>✕</button>
         </div>
       )}
-      {tipoUnit && (() => {
+      {tipoUnit && !tipoStage && (() => {
         const xs = tipoUnit.pts.map((p) => p.x), ys = tipoUnit.pts.map((p) => p.y);
         const uW = Math.max(...xs) - Math.min(...xs), uD = Math.max(...ys) - Math.min(...ys);
         return (
-          <TipoUnitPanel W={uW} D={uD}
-            onAplicar={(L) => aplicarTipoAUnit(tipoUnit, L)}
-            onClose={() => setTipoUnit(null)} />
+          <TipoUnitPanel W={uW} D={uD} busy={tipoBusy} err={tipoErr}
+            onAplicar={(prog) => generarTipoConFeyd(tipoUnit, prog)}
+            onClose={() => { setTipoUnit(null); setTipoErr(""); }} />
         );
       })()}
+      {tipoStage && (
+        <TipoStageModal stage={tipoStage}
+          onConfirm={(nr, ni) => { aplicarTipoAUnit(tipoStage.unit, { rooms: nr, items: ni }); setTipoStage(null); setTipoErr(""); }}
+          onAjustar={() => setTipoStage(null)}
+          onCancel={() => { setTipoStage(null); setTipoUnit(null); setTipoErr(""); }} />
+      )}
       {showFicha && <FichaModal ficha={ficha} setFicha={setFicha} onClose={() => setShowFicha(false)} />}
     </div>
   );
