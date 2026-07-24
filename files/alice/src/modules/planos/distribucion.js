@@ -245,6 +245,33 @@ function ventana(R, lado /* 'frente'|'fondo' */, W) {
 // Exportadas para el Repositorio de Ambientes del Editor (insertar un ambiente amueblado suelto).
 export { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it, rect };
 
+// ── studio / 1D chico (open plan) ──────────────────────────
+// Unidades muy chicas (≈22–40 m²) no entran en el parti social+hall+dormitorio: se
+// resuelven como studio — un ambiente único (dormir-estar-cocina) + baño en esquina.
+function layoutStudio(W, D, nb = 1) {
+  const rooms = [], items = [];
+  const bw = clamp(W * 0.34, 1.4, 1.9), bh = clamp(D * 0.4, 1.7, 2.4);
+  const bano = room("baño", "servicio", 0, D - bh, bw, bh);   // esquina fondo, muro húmedo x=0
+  rooms.push(bano);
+  items.push(...amoblarBano(bano._box, true, { wall: "top" }));
+  // ambiente único en L (todo menos el baño)
+  const studio = room("studio", "social", 0, 0, W, D);
+  studio.pts = [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: D }, { x: bw, y: D }, { x: bw, y: D - bh }, { x: 0, y: D - bh }];
+  studio._box = { x: 0, y: 0, w: W, h: D - bh };
+  rooms.push(studio);
+  // kitchenette contra el muro húmedo (arriba del baño)
+  const kRun = clamp(D - bh - 0.4, 1.4, 2.4);
+  items.push(it("cocina", 0.31, 0.15 + kRun / 2, 90, { w: kRun, hornillas: 2, refriW: 0.6 }));
+  // cama contra la pared derecha, al fondo
+  const camaRef = camaPara("dormitorio", W - bw);
+  items.push(it(camaRef, W - (porId[camaRef]?.d || 2) / 2 - 0.06, D - bh - 1.0, 270));
+  // sofá al frente (estar) + ventana + puerta de ingreso
+  if (W >= 3.0) items.push(it("sofa-2c", (bw + W) / 2, 1.2, 180));
+  items.push(it(W >= 2.7 ? "ventana-180" : "ventana-120", W / 2, 0, 0));
+  items.push(it("puerta-90", W - 0.6, D, 180));
+  return { rooms, items, warns: [], W, D, areaTotal: W * D };
+}
+
 // ── layout de una unidad ───────────────────────────────────
 // dev = { W (frente), D (fondo), swap (bool: social atrás), nse }
 export function layout(W, D, nd, nb, opts = {}) {
@@ -254,6 +281,7 @@ export function layout(W, D, nd, nb, opts = {}) {
 
   const wWet = clamp(W * 0.32, 2.2, 2.6);      // franja húmeda (cocina+baños)
   const wLiv = W - wWet;                         // franja habitable
+  if (nd === 1 && (W * D < 42 || wLiv < 3.0 || D < 4.2)) return layoutStudio(W, D, nb);
   if (wLiv < 3.0) return null;
 
   const hall = HOLGURA.corredorMin + 0.1;       // ~1.0
