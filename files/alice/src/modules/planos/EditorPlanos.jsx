@@ -17,7 +17,7 @@ import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, l
 // Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
 // Reusa el motor de amoblado (amoblar*) + el catálogo. Cada uno respeta holguras Neufert.
 const AMBIENTES_LIB = [
-  { id: "sala",       label: "Sala",       name: "sala-comedor", tipo: "social",   w: 4.2, h: 4.6, furnish: (R) => amoblarSocial(R, "C") },
+  { id: "sala",       label: "Sala",       name: "sala",         tipo: "social",   w: 3.8, h: 4.2, furnish: (R) => amoblarSocial(R, "C") },
   { id: "comedor",    label: "Comedor",    name: "comedor",      tipo: "social",   w: 3.2, h: 3.4, furnish: (R) => [furnIt("comedor-6", R.x + R.w / 2, R.y + R.h / 2, 0)] },
   { id: "habitacion", label: "Habitación", name: "dormitorio",   tipo: "intima",   w: 3.3, h: 3.6, furnish: (R) => amoblarDorm(R, true, "hall-abajo", "arriba", "C") },
   { id: "bano",       label: "Baño",       name: "baño",         tipo: "servicio", w: 1.6, h: 2.6, furnish: (R) => amoblarBano(R, true, { wall: "top" }) },
@@ -533,6 +533,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [dims, setDims] = useState(true);
   const [selId, setSelId] = useState(null);         // ambiente seleccionado
   const [selItem, setSelItem] = useState(null);     // mueble seleccionado
+  const [multiSel, setMultiSel] = useState([]);     // multi-selección con shift-click: [{t:'room'|'item', id}]
+  const inMulti = (t, id) => multiSel.some((m) => m.t === t && m.id === id);
+  const toggleMulti = (t, id) => setMultiSel((s) => s.some((m) => m.t === t && m.id === id) ? s.filter((m) => !(m.t === t && m.id === id)) : [...s, { t, id }]);
   const [showLib, setShowLib] = useState(false);
   const [showRepo, setShowRepo] = useState(false);   // repositorio de ambientes amueblados
   const [showTipoCfg, setShowTipoCfg] = useState(false); // configurador por tipología (ensambla desde librería)
@@ -847,9 +850,11 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const list = [];
     // social (cocina abierta → sala-comedor-cocina más ancha con kitchenette; cerrada → cocina aparte)
     if (prog.cocinaCerrada) {
-      list.push({ ...byId.sala });
+      list.push({ ...byId.sala });       // sala (estar)
+      list.push({ ...byId.comedor });    // comedor como ambiente propio
       list.push({ ...byId.cocina });
     } else {
+      // cocina abierta = concepto integrado sala-comedor-cocina (un solo ambiente)
       list.push({ id: "sala", name: "sala-comedor-cocina", tipo: "social", w: 5.4, h: 4.6,
         furnish: (R) => [...amoblarSocial({ ...R, w: R.w - 1.9 }, "C"), furnIt("cocina", R.x + R.w - 1.0, R.y + 1.0, 0, { w: 1.7 })] });
     }
@@ -864,13 +869,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const gap = 0.4, maxW = 12;
     const oy = rooms.length ? Math.max(...rooms.flatMap((r) => r.pts.map((p) => p.y))) + 1.2 : 0;
     let x = 0, y = oy, rowH = 0;
-    const pre = label ? `${label} · ` : "";
     const nr = [], ni = [];
     for (const s of list) {
       if (x > 0 && x + s.w > maxW) { x = 0; y += rowH + gap; rowH = 0; }
       const R = { x, y, w: s.w, h: s.h };
       const pts = [{ x: R.x, y: R.y }, { x: R.x + R.w, y: R.y }, { x: R.x + R.w, y: R.y + R.h }, { x: R.x, y: R.y + R.h }];
-      nr.push({ id: uid(), name: pre + s.name, pts, tipo: s.tipo });
+      nr.push({ id: uid(), name: s.name, pts, tipo: s.tipo });
       let its = []; try { its = (s.furnish(R) || []).map((t) => ({ ...t, id: uid() })); } catch { its = []; }
       ni.push(...its);
       x += s.w + gap; rowH = Math.max(rowH, s.h);
@@ -885,8 +889,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const insertTipologia = useCallback((L, t) => {
     if (!L || !L.rooms?.length) return;
     const oy = rooms.length ? Math.max(...rooms.flatMap((r) => r.pts.map((p) => p.y))) + 1.2 : 0;
-    const pre = t?.nombre ? `${t.nombre} · ` : "";
-    const nr = L.rooms.map((r) => ({ id: uid(), name: pre + r.name, tipo: r.zona || r.tipo, pts: r.pts.map((p) => ({ x: p.x, y: p.y + oy })) }));
+    const nr = L.rooms.map((r) => ({ id: uid(), name: r.name, tipo: r.zona || r.tipo, pts: r.pts.map((p) => ({ x: p.x, y: p.y + oy })) }));
     const ni = (L.items || []).map((t2) => ({ ...t2, id: uid(), y: t2.y + oy }));
     const allRooms = [...rooms, ...nr];
     commit(allRooms, [...items, ...ni]);
@@ -909,6 +912,17 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   }, [useVariant]);
 
   // ── punteros ──────────────────────────────────────────────
+  // arrastre grupal: junta las salas seleccionadas (+ sus muebles contenidos) y los items sueltos
+  const buildMultiDrag = (world) => {
+    const selRooms = [], selItemIds = new Set(multiSel.filter((m) => m.t === "item").map((m) => m.id));
+    multiSel.filter((m) => m.t === "room").forEach((m) => {
+      const r = rooms.find((x) => x.id === m.id);
+      if (r) { selRooms.push({ id: r.id, orig: r.pts }); items.forEach((it) => { if (pointInPolygon({ x: it.x, y: it.y }, r.pts)) selItemIds.add(it.id); }); }
+    });
+    const selItems = [...selItemIds].map((id) => { const it = items.find((x) => x.id === id); return it ? { id, x: it.x, y: it.y } : null; }).filter(Boolean);
+    return { kind: "multi", start: world, rooms: selRooms, items: selItems, before: snapshot() };
+  };
+
   const onDown = (e) => {
     if (e.button === 1 || e.button === 2 || e.altKey) {
       drag.current = { kind: "pan", sx: e.clientX, sy: e.clientY, view };
@@ -936,7 +950,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     // select: mueble > vértice > ambiente
     const t = hitItem(world);
     if (t) {
-      setSelItem(t.id); setSelId(null);
+      if (e.shiftKey) { toggleMulti("item", t.id); setSelItem(t.id); setSelId(null); return; }
+      if (inMulti("item", t.id) && multiSel.length > 1) { drag.current = buildMultiDrag(world); svgRef.current.setPointerCapture(e.pointerId); return; }
+      setMultiSel([]); setSelItem(t.id); setSelId(null);
       drag.current = { kind: "item", id: t.id, grab: { x: world.x - t.x, y: world.y - t.y }, before: snapshot() };
       svgRef.current.setPointerCapture(e.pointerId);
       return;
@@ -951,6 +967,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const inside = rooms.findIndex((r) => pointInPolygon(world, r.pts));
     if (inside >= 0) {
       const r = rooms[inside];
+      if (e.shiftKey) { toggleMulti("room", r.id); setSelId(r.id); setSelItem(null); return; }
+      if (inMulti("room", r.id) && multiSel.length > 1) { drag.current = buildMultiDrag(world); svgRef.current.setPointerCapture(e.pointerId); return; }
+      setMultiSel([]);
       setSelId(r.id); setSelItem(null);
       const contained = items.map((tt, i) => (pointInPolygon({ x: tt.x, y: tt.y }, r.pts) ? i : -1)).filter((i) => i >= 0);
       drag.current = {
@@ -961,7 +980,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       svgRef.current.setPointerCapture(e.pointerId);
       return;
     }
-    setSelId(null); setSelItem(null);
+    setSelId(null); setSelItem(null); setMultiSel([]);
   };
 
   const onMove = (e) => {
@@ -985,6 +1004,15 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       const p = snapOn ? snapPt(world) : world;
       setRooms((rs) => rs.map((r, ri) =>
         ri === d.roomIdx ? { ...r, pts: r.pts.map((v, pi) => (pi === d.ptIdx ? { x: p.x, y: p.y } : v)) } : r));
+      return;
+    }
+    if (d.kind === "multi") {
+      let dx = world.x - d.start.x, dy = world.y - d.start.y;
+      if (snapOn) { dx = Math.round(dx / GRID) * GRID; dy = Math.round(dy / GRID) * GRID; }
+      const rMap = new Map(d.rooms.map((r) => [r.id, r.orig]));
+      const iMap = new Map(d.items.map((t) => [t.id, t]));
+      setRooms((rs) => rs.map((r) => rMap.has(r.id) ? { ...r, pts: rMap.get(r.id).map((v) => ({ x: v.x + dx, y: v.y + dy })) } : r));
+      setItems((ts) => ts.map((t) => iMap.has(t.id) ? { ...t, x: iMap.get(t.id).x + dx, y: iMap.get(t.id).y + dy } : t));
       return;
     }
     if (d.kind === "room") {
@@ -1027,11 +1055,20 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
-      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setShowDistrib(false); setShowTipo(false); setShowLib(false); setCalib([]); }
+      if (e.key === "Escape") { setDraft([]); setSelId(null); setSelItem(null); setMultiSel([]); setShowDistrib(false); setShowTipo(false); setShowLib(false); setCalib([]); }
       if (e.key === "Enter" && tool === "wall") onDouble();
       if (e.key === "r" || e.key === "R") rotateSel();
       if (e.key === "Backspace" || e.key === "Delete") {
         if (tool === "wall" && draft.length) { e.preventDefault(); setDraft(draft.slice(0, -1)); }
+        else if (multiSel.length) {
+          e.preventDefault();
+          const rIds = new Set(multiSel.filter((m) => m.t === "room").map((m) => m.id));
+          const iIds = new Set(multiSel.filter((m) => m.t === "item").map((m) => m.id));
+          const delRooms = rooms.filter((r) => rIds.has(r.id));
+          items.forEach((it) => { if (delRooms.some((r) => pointInPolygon({ x: it.x, y: it.y }, r.pts))) iIds.add(it.id); });
+          commit(rooms.filter((r) => !rIds.has(r.id)), items.filter((t) => !iIds.has(t.id)));
+          setMultiSel([]); setSelId(null); setSelItem(null);
+        }
         else if (selItem || selId) { e.preventDefault(); deleteSel(); }
       }
       if (e.key === "v" || e.key === "V") setTool("select");
@@ -1039,7 +1076,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [undo, redo, tool, draft, selId, selItem, deleteSel, rotateSel]); // eslint-disable-line
+  }, [undo, redo, tool, draft, selId, selItem, deleteSel, rotateSel, multiSel, rooms, items, commit]); // eslint-disable-line
 
   // ── export lámina BAM ─────────────────────────────────────
   const exportSVG = () => {
@@ -1358,7 +1395,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           {/* ambientes (muros al espesor configurado) */}
           {rooms.map((r, i) => {
             const scr = r.pts.map(toScreen);
-            const selected = r.id === selId;
+            const selected = r.id === selId || inMulti("room", r.id);
             const terraza = r.tipo === "terraza"; // borde fino, no es muro
             return (
               <polygon key={r.id} points={scr.map((p) => `${p.x},${p.y}`).join(" ")}
@@ -1373,13 +1410,13 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           {/* aberturas (cortan el muro) */}
           {aberturas.map((t) => {
             const s = toScreen({ x: t.x, y: t.y });
-            return <Simbolo key={t.id} it={{ ...t, d: Math.max(t.d, muro) }} px={s.x} py={s.y} k={k} selected={t.id === selItem} />;
+            return <Simbolo key={t.id} it={{ ...t, d: Math.max(t.d, muro) }} px={s.x} py={s.y} k={k} selected={t.id === selItem || inMulti("item", t.id)} />;
           })}
 
           {/* mobiliario */}
           {muebles.map((t) => {
             const s = toScreen({ x: t.x, y: t.y });
-            return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={t.id === selItem} />;
+            return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={t.id === selItem || inMulti("item", t.id)} />;
           })}
 
           {/* reglas — resalta lo que incumple (fuera del lote / sin piso / sin acceso) */}
