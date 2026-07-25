@@ -62,8 +62,10 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
   // ni las tipologías ni el core ni el corredor sobresalgan jamás del lote.
   const recortar = (rectPts) => { const c = clipConvex(footprint, rectPts); return c.length >= 3 ? c.map(round) : null; };
 
-  // core en el frente: centrado o pegado a un lado
-  const coreU0 = corePos === "izq" ? 0 : (frente - coreW) / 2;
+  // core en el frente: posición explícita (arrastrable, opts.coreU0) o centro/lateral.
+  const coreU0 = opts.coreU0 != null
+    ? Math.max(0, Math.min(frente - coreW, opts.coreU0))
+    : (corePos === "izq" ? 0 : (frente - coreW) / 2);
   const coreU1 = coreU0 + coreW;
   const coreRect = [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, fondo), F.toWorld(coreU0, fondo)];
   const core = { id: rid(), tipo: "core", pts: recortar(coreRect) || coreRect.map(round) };
@@ -81,15 +83,30 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     });
   } else filas[0].units.push(...[...lista].sort(orden));
 
-  // empaquetar a lo largo del frente, saltando el hueco del core
+  // empaquetar a lo largo del frente rellenando a ÁREA OBJETIVO (no estirar un
+  // conteo fijo). Antes: k = disponible/sumW estiraba `udsPiso` unidades hasta llenar
+  // el frente → en pisos grandes cada unidad se inflaba a piso/uds (el "5D 345 m²").
+  // Ahora: se repite el patrón del mix hasta cubrir el frente y se snapea con un k
+  // acotado (0.82–1.18) → las áreas quedan realistas y tipologiaCercana no salta a 5D.
   const disponible = Math.max(frente - coreW, 1);
   const units = [];
+  let colocadas = 0;
 
   filas.forEach((fila) => {
-    const sumW = fila.units.reduce((a, u) => a + u.area / fila.depth, 0) || 1;
-    const k = disponible / sumW;
+    if (!fila.units.length) return;
+    // secuencia: ciclar el mix (ya ordenado) hasta cubrir el frente disponible
+    const seq = [];
+    let acc = 0, i = 0;
+    while (acc < disponible - 0.4 && seq.length < 40) {
+      const unit = fila.units[i % fila.units.length];
+      seq.push(unit);
+      acc += Math.max(unit.area / fila.depth, 0.5);
+      i++;
+    }
+    const sumW = seq.reduce((a, u) => a + u.area / fila.depth, 0) || 1;
+    const k = Math.min(1.18, Math.max(0.82, disponible / sumW));  // clamp: nada de inflar
     let u = 0;
-    fila.units.forEach((unit) => {
+    seq.forEach((unit) => {
       const w = (unit.area / fila.depth) * k;
       const a = u, b = u + w;
       // rectángulos en (u,v); si cruza el core, se parte
@@ -116,8 +133,12 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
         });
       });
       u = b;
+      colocadas++;
     });
   });
+  if (unidades && unidades.length && colocadas !== unidades.length) {
+    warns.push(`ajusté a ${colocadas} unidades/piso para áreas realistas (pediste ${unidades.length})`);
+  }
 
   const corrRect = doble
     ? [F.toWorld(0, bandDepth), F.toWorld(frente, bandDepth), F.toWorld(frente, bandDepth + corrDepth), F.toWorld(0, bandDepth + corrDepth)]

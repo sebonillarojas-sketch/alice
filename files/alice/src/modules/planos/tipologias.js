@@ -98,10 +98,17 @@ export function mixTipologias(n, { pct1 = 25, pct2 = 40, areaObjetivo = 60 } = {
   const n1 = Math.round((n * pct1) / 100);
   const n3 = Math.round((n * pct3) / 100);
   const n2 = Math.max(0, n - n1 - n3);
+  // Tamaño objetivo POR TIPO, escalado según su mediana de mercado (1D<2D<3D) de modo
+  // que el promedio ponderado por el mix = areaObjetivo. Antes todos apuntaban al mismo
+  // areaObjetivo → salían casi iguales (sin mezcla de tamaños). Ahora hay mix real.
+  const med = { 1: 42, 2: 58, 3: 74 };
+  const wAvg = (pct1 * med[1] + pct2 * med[2] + pct3 * med[3]) / 100 || med[2];
+  const esc = areaObjetivo / wAvg;
+  const target = { 1: med[1] * esc, 2: med[2] * esc, 3: med[3] * esc };
   const pick = (dorms) => {
     const cands = TIPOLOGIAS.filter((t) => t.dorms === dorms);
     return cands.sort((a, b) =>
-      Math.abs(a.area[1] - areaObjetivo) - Math.abs(b.area[1] - areaObjetivo) - (a.peso - b.peso) / 100)[0];
+      Math.abs(a.area[1] - target[dorms]) - Math.abs(b.area[1] - target[dorms]) - (a.peso - b.peso) / 100)[0];
   };
   return [
     ...Array(n3).fill(null).map(() => pick(3)),
