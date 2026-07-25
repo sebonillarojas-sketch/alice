@@ -1501,7 +1501,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         }
         else if (selItem || selId) { e.preventDefault(); deleteSel(); }
       }
-      if (e.key === "v" || e.key === "V") setTool("select");
+      if (e.key === "v" || e.key === "V") { setTool("select"); setShowTipo(false); }
       if (e.key === "w" || e.key === "W") setTool("wall");
     };
     window.addEventListener("keydown", h);
@@ -1608,7 +1608,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           <Sparkles size={13} /> <b>3</b> tipologías
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
-        <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
+        <Btn active={tool === "select" && !showTipo} onClick={() => { setTool("select"); setShowTipo(false); }} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
         <Btn active={tool === "wall"} onClick={() => setTool("wall")} title="Dibujar muros (W)"><PenLine size={13} /> muro</Btn>
 
         <ToolMenu label="insertar" icon={<Plus size={13} style={{ marginRight: 4 }} />} width={210}>
