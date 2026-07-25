@@ -170,7 +170,7 @@ function fachada(units, F, { terraza = true } = {}) {
  * cfg: { udsPiso, pct1, pct2, areaObjetivo }
  */
 export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
-  const { udsPiso = 4, pct1 = 25, pct2 = 40, areaObjetivo = 60 } = cfg;
+  const { udsPiso = 4, pct1 = 25, pct2 = 40, areaObjetivo = 60, coreU0, coreW } = cfg;
   const unidades = mixTipologias(Math.max(1, udsPiso), { pct1, pct2, areaObjetivo });
 
   const configs = [
@@ -182,7 +182,7 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
 
   const partis = [];
   for (const c of configs) {
-    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar });
+    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar, coreU0, coreW });
     if (!res.units.length) continue;
     const rooms = [];
     if (res.core) rooms.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });

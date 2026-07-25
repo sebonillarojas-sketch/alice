@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, lazy, Suspense, Component } from "react";
 import { computeEsquema } from "./esquema.js";
 import { footprintReal } from "./loteReal.js";
 import { generarDistribuciones } from "../planos/plantas.js";
+import PlantaFina from "../planos/PlantaFina.jsx";
 import { bbox as polyBbox, centroid, dist, area as polyArea } from "../planos/geometry.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
@@ -33,7 +34,7 @@ const C = {
 };
 const mono = "'JetBrains Mono', 'SF Mono', Menlo, monospace";
 const sans = "'Hanken Grotesk', 'Helvetica Neue', sans-serif";
-const TIP_COLOR = { "1D": "#D8E0F7", "2D": "#95ABE8", "3D": "#F7936F" };
+const TIP_COLOR = { "studio": "#C9DCEC", "1D": "#95ABE8", "2D": "#A89BD9", "3D": "#F7936F", "4D": "#C2A45A", "5D": "#B07A4E", "depósito": "#CFCCC4" };
 
 const fmt = (n, d = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -279,6 +280,7 @@ export default function EsquemaPlanta({
 }) {
   const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
+  const [showPlano, setShowPlano] = useState(false);
   const svgRef = useRef(null);
 
   // retiros efectivos (solo los activos cuentan); vienen definidos en el card 01
@@ -362,6 +364,15 @@ export default function EsquemaPlanta({
             {show3D ? "▣ masa 3D" : "◱ masa 3D"}
           </button>
           )}
+          {!soloPlanta && (
+          <button onClick={() => setShowPlano((v) => !v)} style={{
+            fontFamily: mono, fontSize: 10.5, color: showPlano ? C.card : C.ink,
+            background: showPlano ? C.ink : C.paper, border: `1px solid ${showPlano ? C.ink : C.line}`,
+            borderRadius: 2, padding: "6px 12px", cursor: "pointer",
+          }}>
+            {showPlano ? "▤ planta amoblada" : "▢ planta amoblada"}
+          </button>
+          )}
           <button onClick={descargar} style={{
             fontFamily: mono, fontSize: 10.5, color: C.ink, background: C.paper,
             border: `1px solid ${C.line}`, borderRadius: 2, padding: "6px 12px", cursor: "pointer",
@@ -403,9 +414,11 @@ export default function EsquemaPlanta({
                   ))}
                 </span>
               </div>
-              <PlantaReal lote={real.lote} footprint={real.footprint} parti={parti} frenteIdx={frenteIdx}
-                partiIdx={partiIdx} movs={movs} onFrenteClick={elegirFrente}
-                onMove={(k, d) => onMovs?.({ ...movs, [k]: d })} svgRef={svgRef} />
+              {showPlano
+                ? <PlantaFina parti={parti} brief={{ terraza: true }} />
+                : <PlantaReal lote={real.lote} footprint={real.footprint} parti={parti} frenteIdx={frenteIdx}
+                    partiIdx={partiIdx} movs={movs} onFrenteClick={elegirFrente}
+                    onMove={(k, d) => onMovs?.({ ...movs, [k]: d })} svgRef={svgRef} />}
               <div style={{ fontFamily: mono, fontSize: 9, color: C.soft, marginTop: 6 }}>
                 clic en un lindero = marcarlo como frente · arrastra un bloque para moverlo
               </div>
