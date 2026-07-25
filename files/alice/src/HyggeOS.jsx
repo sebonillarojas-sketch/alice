@@ -15559,7 +15559,16 @@ export default function HyggeOS({ authUser } = {}) {
       const next = prev.map(t => {
         if (t.id !== id) return t;
         const activity = [...(t.activity || [])];
-        if (patch.assignee && patch.assignee !== t.assignee) { activity.push({ when: nowHHMM(), text: `Asignada a ${findPerson(patch.assignee)?.name || patch.assignee}` }); recordActivity(`asignó "${t.title}" a ${findPerson(patch.assignee)?.name || patch.assignee}`, { taskId: id, space: t.space }); }
+        if (Array.isArray(patch.assignees) || (patch.assignee && patch.assignee !== t.assignee)) {
+          const prevIds = t.assignees?.length ? t.assignees : (t.assignee ? [t.assignee] : []);
+          const nextIds = Array.isArray(patch.assignees) ? patch.assignees.filter(Boolean) : (patch.assignee ? [patch.assignee] : prevIds);
+          const nuevos = nextIds.filter(x => !prevIds.includes(x));
+          if (nuevos.length) {
+            const nombres = nuevos.map(x => findPerson(x)?.name?.split(" ")[0] || x).join(", ");
+            activity.push({ when: nowHHMM(), text: `Asignada a ${nombres}` });
+            recordActivity(`te asignó "${t.title}"`, { taskId: id, space: t.space, notify: nuevos });
+          }
+        }
         if (patch.priority && patch.priority !== t.priority) { activity.push({ when: nowHHMM(), text: `Prioridad: ${patch.priority}` }); recordActivity(`cambió prioridad de "${t.title}" a ${patch.priority}`, { taskId: id, space: t.space }); }
         if (patch.title && patch.title !== t.title) { activity.push({ when: nowHHMM(), text: "Título editado" }); recordActivity(`renombró tarea a "${patch.title}"`, { taskId: id, space: t.space }); }
         return { ...t, ...patch, activity };
