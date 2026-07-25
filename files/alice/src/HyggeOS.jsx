@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, createContext
 import { C, toneMap, SPACE_COLORS } from "./ui/theme";
 import { NavyRule, Eyebrow, SectionHead, Panel, Hero, KpiBar, fieldClass, fieldStyle } from "./ui/primitives";
 import { ModalBlob, useModalBlob } from "./ui/AliceBlob";
+import { ExportToClaude } from "./ui/ExportToClaude";
+import { fmtTime, nowHHMM } from "./lib/format";
+import { KNOWN_DRIVE_REFS, KNOWN_DRIVE_FILES, PROJECT_DRIVE_MAP } from "./data/drive";
 import ObraTrackerModule from "./modules/obra/ObraTracker";
 import AliciaView from "./modules/alicia/AliciaView";
 import MercadoView from "./modules/mercado/MercadoView";
@@ -601,8 +604,7 @@ Context: ${context || "default"}. Map type to space: pago/detraccion/estados →
 
 // n < 1000 va literal: "S/ 0K" se leía "S/ OK" en los dashboards financieros
 const pen = (n) => n >= 1_000_000 ? "S/ " + (n/1_000_000).toFixed(2) + "M" : n >= 1_000 ? "S/ " + (n/1_000).toFixed(0) + "K" : "S/ " + Math.round(n || 0);
-const fmtTime = (s) => { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return [h,m,sec].map(n => String(n).padStart(2,"0")).join(":"); };
-const nowHHMM = () => { const d = new Date(); return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"); };
+// fmtTime, nowHHMM → ./lib/format.js (importados arriba).
 
 // ═══ PRIMITIVES ══════════════════════════════════════════════════════════
 // NavyRule, Eyebrow, SectionHead, Panel, Hero, KpiBar, fieldClass, fieldStyle
@@ -10558,64 +10560,7 @@ function AdminTab({ subTab, setSubTab, users, createUser, updateUser, deleteUser
 }
 
 // ─── EXPORTAR A CLAUDE · helper compartido por todos los agentes ───
-function ExportToClaude({ markdown, filename }) {
-  const [copied, setCopied] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
-
-  const copyMd = async () => {
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (e) {
-      // Fallback for browsers that block clipboard
-      const ta = document.createElement("textarea");
-      ta.value = markdown;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand("copy"); setCopied(true); setTimeout(() => setCopied(false), 2500); }
-      catch (err) { alert("No pude copiar al clipboard · usá descargar .md"); }
-      document.body.removeChild(ta);
-    }
-  };
-
-  const downloadMd = () => {
-    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setDownloaded(true);
-    setTimeout(() => setDownloaded(false), 2500);
-  };
-
-  const openClaude = () => window.open("https://claude.ai/new", "_blank", "noopener,noreferrer");
-
-  return (
-    <div className="py-3 px-4 flex items-center flex-wrap gap-2" style={{ backgroundColor: `${C.cobalt}08`, border: `1px solid ${C.cobalt}30`, borderRadius: 2 }}>
-      <Sparkles size={13} style={{ color: C.cobalt, flexShrink: 0 }} />
-      <div className="flex-1 min-w-[160px]">
-        <div className="text-[11px]" style={{ color: C.ink, fontWeight: 600 }}>Exportar reporte a Claude</div>
-        <div className="text-[10px]" style={{ color: C.muted }}>Markdown estructurado · pegalo en una conversación nueva</div>
-      </div>
-      <button onClick={copyMd} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] hover:opacity-90 flex-shrink-0" style={{ backgroundColor: C.ink, color: "white", borderRadius: 2, fontWeight: 500 }}>
-        {copied ? <><Check size={10} /> Copiado</> : <><Copy size={10} /> Copiar</>}
-      </button>
-      <button onClick={downloadMd} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] hover:opacity-70 flex-shrink-0" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-        {downloaded ? <><Check size={10} /> Bajado</> : <><Download size={10} /> .md</>}
-      </button>
-      <button onClick={openClaude} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] hover:opacity-70 flex-shrink-0" style={{ color: C.muted, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-        <ExternalLink size={10} /> Abrir Claude
-      </button>
-    </div>
-  );
-}
+// ExportToClaude → ./ui/ExportToClaude.jsx (importado arriba).
 
 // ─── EL CHESHIRE CAT · analista de UX gaps · capability catalog ───
 // ─── EL MAD HATTER · analista de performance · sugiere acciones ───
@@ -11045,35 +10990,7 @@ function AddWidgetModal({ onClose, onAdd, allSpaces, existing }) {
 }
 
 // ─── EL CONEJO BLANCO · audita y repara links externos · sugiere nuevos ───
-const KNOWN_DRIVE_REFS = {
-  // Folders raíz
-  "BAM root": "1ZV54PfOLzrGRpw4nz8nIkA6oESdtTHIj",
-  "HYGGE GRUPPE": "15ZcobnMQ7NTf_u6UmFMiJsb4c8liQquy",
-  "Brand Hygge Bronca": "1TZvxsncwDME0qFP3jJZq3mMpAGjG_ZvA",
-  "eecc HYGGE": "18UWqbv-rNpJlsY5Ur_YdeqzFBnuM40pk",
-  // Diseño por proyecto
-  "Del Castillo · Diseño": "1FZ52l9N69NM6TJ5FlPD08HLogdWlo3m5",
-  "Paula Ugarriza · Diseño": "1qrt9odgJ9BUOQ5kdNJQ0pE3JE8ou-fRL",
-  "De la Torre · Diseño": "1dGlGY6vWpD5ODS12d6GFjnhyP7lei79o",
-  "Larco 1036 · Supervisión": "1NLCOo1bfaeKHJyNWfJaluMK0YGYzrOMY",
-  "Estudio BAM": "1-FWqI1EaKtX6zViJsGzcApuHOXDZVP-8",
-  // FC (Fit Capital) por proyecto
-  "FC · Del Castillo": "1jeSZJLyUfsrsxeOImlDV8kxqHeds6F3w",
-  "FC · Paula Ugarriza": "1v1cDIR0FMXZu15YBXOuggKiTibtmrgxr",
-  "FC · De la Torre": "1zho6xqpXHac2p4VAmVJF8iSH4eOOtVXJ",
-};
-const KNOWN_DRIVE_FILES = {
-  "Edificio Legendre · ventas": "12cSCNNGz6QuREEuIVAk6NcVrvNb4eomM",
-  "Cash flow Hygge 2026": "1KUp7z4OtuQ24EXZvTdsLf0JQP8dQk1Jn4v3Md3a63Bo",
-  "Cap Table investors": "1eR98gF1wpxTlGNBY6qeovxSsykrkauogaYOv07cIQkY",
-  "ACUERDO PRIVADO Libre 5": "1fToxXb332tY23TGHweCJuMtjZiE9t8iJ",
-};
-const PROJECT_DRIVE_MAP = {
-  "dc01": { design: "1FZ52l9N69NM6TJ5FlPD08HLogdWlo3m5", fc: "1jeSZJLyUfsrsxeOImlDV8kxqHeds6F3w", projectName: "Del Castillo" },
-  "pu01": { design: "1qrt9odgJ9BUOQ5kdNJQ0pE3JE8ou-fRL", fc: "1v1cDIR0FMXZu15YBXOuggKiTibtmrgxr", projectName: "Paula Ugarriza" },
-  "tg01": { design: "1dGlGY6vWpD5ODS12d6GFjnhyP7lei79o", fc: "1zho6xqpXHac2p4VAmVJF8iSH4eOOtVXJ", projectName: "De la Torre" },
-  "l36":  { design: "1NLCOo1bfaeKHJyNWfJaluMK0YGYzrOMY", projectName: "Larco 1036" },
-};
+// KNOWN_DRIVE_REFS, KNOWN_DRIVE_FILES, PROJECT_DRIVE_MAP → ./data/drive.js (importados arriba).
 
 function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terrenos, smartViews, recordAgentRun }) {
   const [phase, setPhase] = useState("dormant");
