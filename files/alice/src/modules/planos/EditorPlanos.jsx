@@ -410,8 +410,9 @@ function DistribModal({ partis, brief, setBrief, onUse, onRegen, onClose, loteIn
         <Btn onClick={onRegen} accent title="Regenerar distribuciones"><Sparkles size={13} /> regenerar</Btn>
       </div>
       {!partis.length && (
-        <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>
-          el footprint no admite unidades — revisa retiros/frente o reduce uds/piso
+        <div style={{ fontFamily: mono, fontSize: 11, color: C.orange, padding: 20, lineHeight: 1.7 }}>
+          ▲ No entra ninguna unidad en el footprint ({loteInfo}).<br />
+          Probá una de estas: reducí los retiros en el <b>paso 1</b> (si el fondo es chico), bajá el <b>área objetivo</b>, o reducí <b>uds/piso</b>.
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
@@ -663,7 +664,9 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
   const areaDepto = W * D, frenteDepto = Math.min(W, D);
   const foot = unit.pts.map((p) => ({ x: p.x - ux0, y: p.y - uy0 }));
 
-  const [prog, setProg] = useState({ dorms: 2, banos: 2, visita: false });
+  // default sensato según el área real del depto (no arrancar en 2D para un studio)
+  const dormsDef = areaDepto < 42 ? 1 : areaDepto < 72 ? 2 : 3;
+  const [prog, setProg] = useState({ dorms: dormsDef, banos: dormsDef === 1 ? 1 : 2, visita: false });
   const [tipoId, setTipoId] = useState(null);
   const [rms, setRms] = useState([]);
   const [its, setIts] = useState([]);
@@ -682,6 +685,7 @@ function TipoStageModal({ stage, onConfirm, onCancel }) {
   // candidatos: tipologías redibujadas que pasan el filtro de variables, más cercanas en área al depto
   const cands = useMemo(() => TIPOLOGIAS
     .filter((t) => t.dorms === prog.dorms && (prog.banos === 0 || t.banos === prog.banos))
+    .filter((t) => t.area[0] <= areaDepto * 1.1)   // solo las que de verdad caben en la huella real del depto
     .sort((a, b) => Math.abs(a.area[1] - areaDepto) - Math.abs(b.area[1] - areaDepto))
     .slice(0, 8), [prog.dorms, prog.banos, areaDepto]);
   const elegir = (t) => {
@@ -1755,9 +1759,11 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             {cabidaMsg && <span style={{ fontFamily: mono, fontSize: 10, color: C.peri }}>{cabidaMsg}</span>}
             <div style={{ width: 1, height: 20, background: C.line }} />
             <Btn onClick={cycleFront} disabled={!lote} title="Rotar el borde-frente (hacia la calle); en esquina, la calle lateral es el borde siguiente"><RefreshCw size={12} /> frente</Btn>
-            {fr && <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>footprint {fmt(area(footprint), 0)} m² · {fmt(fr.frente, 1)}×{fmt(fr.fondo, 1)} m{isConvex(footprint) ? "" : " · no convexo"}</span>}
+            {fr && <span style={{ fontFamily: mono, fontSize: 10, color: (fr.frente < 4 || fr.fondo < 4) ? C.orange : C.soft }}>footprint {fmt(area(footprint), 0)} m² · {fmt(fr.frente, 1)}×{fmt(fr.fondo, 1)} m{isConvex(footprint) ? "" : " · no convexo"}</span>}
             {lote && !footprint && <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>▲ los retiros dejan el lote sin área construible</span>}
-            {footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>listo → 2 · distribución</span>}
+            {fr && (fr.frente < 4 || fr.fondo < 4)
+              ? <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.orange, fontWeight: 700 }}>▲ footprint muy chico ({fmt(fr.fondo, 1)} m de fondo) — reducí los retiros o agrandá el lote</span>
+              : footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>listo → 2 · distribución</span>}
           </div>
         );
       })()}
@@ -1980,7 +1986,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           )}
         </svg>
 
-        {!rooms.length && !draft.length && (
+        {!rooms.length && !draft.length && !lote && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <div style={{ textAlign: "center", fontFamily: mono, fontSize: 12, color: C.soft, lineHeight: 1.9 }}>
               <b style={{ color: C.orange }}>1 lote</b> elige medianera/esquina, retiros y calca el terreno ·{" "}

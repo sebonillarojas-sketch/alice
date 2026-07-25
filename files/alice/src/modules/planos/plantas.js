@@ -188,6 +188,7 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
   for (const c of configs) {
     const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar, coreU0, coreW });
     if (!res.units.length) continue;
+    if (res.units.every((u) => esDeposito(u))) continue;   // parti puro depósito (ninguna vivienda viable) → no es una distribución válida
     const rooms = [];
     if (res.core) rooms.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });
     if (res.corridor) rooms.push({ id: res.corridor.id, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
