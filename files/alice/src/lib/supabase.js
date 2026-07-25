@@ -36,7 +36,16 @@ export const db = {
   },
 
   async upsertTask(task) {
-    const { error } = await supabase.from("tasks").upsert(toRow(task), { onConflict: "id" });
+    const row = toRow(task);
+    let { error } = await supabase.from("tasks").upsert(row, { onConflict: "id" });
+    if (error && /assignees/i.test(error.message || "")) {
+      // La columna `assignees` todavía no existe en Supabase (falta correr
+      // supabase/migrations/add-assignees.sql) — guardar sin ella para no
+      // romper el guardado; el resto de asignados vive solo en memoria.
+      console.warn("⚠️ tasks.assignees no existe en Supabase — corré la migración add-assignees.sql");
+      const { assignees, ...legacy } = row;
+      ({ error } = await supabase.from("tasks").upsert(legacy, { onConflict: "id" }));
+    }
     if (error) throw error;
   },
 
@@ -141,6 +150,11 @@ export const db = {
 
 // ─── row mappers ─────────────────────────────────────────────
 function toRow(t) {
+  // Multi-asignación: `assignees` (array) es la fuente; `assignee` queda como
+  // principal (el primero) para compat con vistas viejas, ERP sync y Alicia.
+  const assignees = Array.isArray(t.assignees) && t.assignees.length
+    ? t.assignees
+    : (t.assignee ? [t.assignee] : []);
   return {
     id: t.id,
     parent_id: t.parentId ?? null,
@@ -155,7 +169,8 @@ function toRow(t) {
     checked: !!t.checked,
     status: t.status ?? "pendiente",   // requiere columna (ALTER TABLE 13 jul 2026) — sin esto el estado volvía a "pendiente" en cada reload
     archived: !!t.archived,
-    assignee: t.assignee ?? "sb",
+    assignee: assignees[0] ?? t.assignee ?? "sb",
+    assignees,
     tags: t.tags ?? [],
     type: t.type ?? null,
     amount: t.amount ?? null,
@@ -186,7 +201,10 @@ function fromRow(r) {
     checked: r.checked,
     status: r.status ?? "pendiente",
     archived: !!r.archived,
-    assignee: r.assignee,
+    assignee: r.assignee ?? (Array.isArray(r.assignees) ? r.assignees[0] : null) ?? null,
+    assignees: Array.isArray(r.assignees) && r.assignees.length
+      ? r.assignees
+      : (r.assignee ? [r.assignee] : []),
     tags: r.tags ?? [],
     type: r.type,
     amount: r.amount,
