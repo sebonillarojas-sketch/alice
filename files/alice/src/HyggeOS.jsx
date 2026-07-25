@@ -797,7 +797,14 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
 
   if (!task) return null;
   const children = allTasks.filter(t => t.parentId === task.id);
-  const assignee = findPerson(task.assignee);
+  // Asignación multi-humano: `assignees` (array) es la fuente; `assignee` (singular)
+  // se mantiene = primero para compatibilidad con badges/logs/filtros existentes.
+  const assigneeIds = task.assignees?.length ? task.assignees : (task.assignee ? [task.assignee] : []);
+  const assignees = assigneeIds.map(findPerson).filter(Boolean);
+  const toggleAssignee = (pid) => {
+    const next = assigneeIds.includes(pid) ? assigneeIds.filter(x => x !== pid) : [...assigneeIds, pid];
+    onUpdate(task.id, { assignees: next, assignee: next[0] || null });
+  };
 
   const onFileChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -866,24 +873,38 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
 
           {/* Meta row */}
           <div className="flex flex-wrap items-center gap-3 mb-7 text-[12px]">
-            {/* Assignee */}
+            {/* Assignee(s) — multi-humano */}
             <div className="relative">
               <button onClick={() => setShowAssigneePicker(!showAssigneePicker)} className="flex items-center gap-2 px-2.5 py-1.5 hover:opacity-90" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-                {assignee ? <><Avatar personId={assignee.id} size={20} /><span style={{ color: C.ink, fontWeight: 500 }}>{assignee.name.split(" ")[0]}</span></> : <><UserIcon size={13} style={{ color: C.muted }} /><span style={{ color: C.muted }}>Sin asignar</span></>}
+                {assignees.length ? <>
+                  <div className="flex items-center">
+                    {assignees.slice(0, 3).map((a, i) => (
+                      <span key={a.id} style={{ marginLeft: i ? -6 : 0, border: `1.5px solid ${C.surface}`, borderRadius: 999, display: "inline-flex" }}><Avatar personId={a.id} size={20} /></span>
+                    ))}
+                  </div>
+                  <span style={{ color: C.ink, fontWeight: 500 }}>
+                    {assignees.length === 1 ? assignees[0].name.split(" ")[0] : `${assignees.length} asignados`}
+                  </span>
+                </> : <><UserIcon size={13} style={{ color: C.muted }} /><span style={{ color: C.muted }}>Sin asignar</span></>}
               </button>
               {showAssigneePicker && (
                 <div className="absolute top-full left-0 mt-1 w-[240px] max-w-[calc(100vw-32px)] z-10" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }}>
-                  {PEOPLE.map(p => (
-                    <button key={p.id} onClick={() => { onUpdate(task.id, { assignee: p.id }); setShowAssigneePicker(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:opacity-90"
-                      style={{ backgroundColor: assignee?.id === p.id ? C.surface : "transparent" }}>
-                      <Avatar personId={p.id} size={22} />
-                      <div className="flex-1">
-                        <div className="text-[12px]" style={{ color: C.ink, fontWeight: 500 }}>{p.name}</div>
-                        <div className="text-[10px]" style={{ color: C.muted }}>{p.role}</div>
-                      </div>
-                    </button>
-                  ))}
+                  <div className="px-3 py-1.5 text-[10px]" style={{ color: C.muted, borderBottom: `1px solid ${C.lineSoft}` }}>Asignar a (varios)</div>
+                  {PEOPLE.map(p => {
+                    const sel = assigneeIds.includes(p.id);
+                    return (
+                      <button key={p.id} onClick={() => toggleAssignee(p.id)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:opacity-90"
+                        style={{ backgroundColor: sel ? C.surface : "transparent" }}>
+                        <Avatar personId={p.id} size={22} />
+                        <div className="flex-1">
+                          <div className="text-[12px]" style={{ color: C.ink, fontWeight: 500 }}>{p.name}</div>
+                          <div className="text-[10px]" style={{ color: C.muted }}>{p.role}</div>
+                        </div>
+                        <span style={{ color: sel ? C.cobalt : C.line, fontWeight: 700, fontSize: 13 }}>{sel ? "✓" : ""}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1088,7 +1109,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
   }, [tasks]);
   // conteo de tareas pendientes asignadas al usuario actual (badge de "Mis tareas")
   const myTaskCount = useMemo(
-    () => (tasks || []).filter(t => !t.checked && t.assignee === currentUser?.id).length,
+    () => (tasks || []).filter(t => !t.checked && (t.assignee === currentUser?.id || t.assignees?.includes(currentUser?.id))).length,
     [tasks, currentUser]
   );
   const sidebarTools = tools || TOOLS;
@@ -2238,7 +2259,33 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
   );
 }
 
-function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, allSpaces, timerProps, setTaskStatus }) {
+// Quick-add reusable (Lista + Board): crea una tarea y deja ELEGIR/CAMBIAR el space
+// (por defecto el actual, pero no rígido — podés mandarla a otro space o al inbox).
+function QuickAddInline({ currentSpace, allSpaces, onCreate }) {
+  const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
+  const def = (currentSpace === "hq" || currentSpace === "mistareas") ? "" : (currentSpace || "");
+  const [qt, setQt] = React.useState("");
+  const [sp, setSp] = React.useState(def);
+  React.useEffect(() => { setSp((currentSpace === "hq" || currentSpace === "mistareas") ? "" : (currentSpace || "")); }, [currentSpace]);
+  if (!onCreate) return null;
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); const t = qt.trim(); if (!t) return; onCreate({ title: t, space: sp || null }); setQt(""); }}
+      className="mb-8 flex items-center gap-2 flex-wrap" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2, padding: 8 }}>
+      <Plus size={14} style={{ color: C.cobalt, flexShrink: 0, marginLeft: 4 }} />
+      <input value={qt} onChange={e => setQt(e.target.value)} placeholder="Crear tarea…"
+        className="flex-1 min-w-[120px] outline-none bg-transparent text-[13px]" style={{ color: C.ink, fontWeight: 500 }} />
+      <select value={sp} onChange={e => setSp(e.target.value)} title="Space de la tarea (cambiable)"
+        className="text-[11px] px-2 py-1 outline-none flex-shrink-0" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }}>
+        <option value="">Inbox (sin space)</option>
+        {flat.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+      </select>
+      <button type="submit" disabled={!qt.trim()} className="px-3 py-1 text-[11px] hover:opacity-90 flex-shrink-0"
+        style={{ backgroundColor: qt.trim() ? C.ink : C.muted, color: C.bg, borderRadius: 2, fontWeight: 500, opacity: qt.trim() ? 1 : 0.5 }}>Crear ⏎</button>
+    </form>
+  );
+}
+
+function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, allSpaces, timerProps, setTaskStatus, onCreate }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
   const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
@@ -2263,6 +2310,7 @@ function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, a
         </h1>
         <p className="text-[12px] mt-2" style={{ color: C.muted }}>Click una tarea para ver el detalle, asignar, comentar, subir archivos.</p>
       </div>
+      <QuickAddInline currentSpace={currentSpace} allSpaces={allSpaces} onCreate={onCreate} />
       <section className="mb-12">
         <Eyebrow>Pendientes</Eyebrow>
         <div className="mt-4" style={{ backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
@@ -2282,7 +2330,7 @@ function ListView({ tasks, toggleTask, toggleExpand, openDetail, currentSpace, a
   );
 }
 
-function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }) {
+function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus, onCreate }) {
   const flat = [...(allSpaces || []), ...(allSpaces || []).flatMap(s => s.children || [])];
   const spaceObj = flat.find(s => s.id === currentSpace);
   const spaceName = spaceObj?.name || (currentSpace === "hq" ? "Hygge HQ · Todos" : currentSpace === "mistareas" ? "Mis tareas · todos los spaces" : currentSpace);
@@ -2294,6 +2342,7 @@ function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12">
       <div className="mb-10"><NavyRule /><div className="mt-4"><Eyebrow>{spaceName} · board</Eyebrow></div><h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Kanban</h1><div className="text-[12px] mt-2" style={{ color: C.muted }}>{filtered.length} {filtered.length === 1 ? "tarea" : "tareas"}</div></div>
+      <QuickAddInline currentSpace={currentSpace} allSpaces={allSpaces} onCreate={onCreate} />
       <div className="flex gap-4 overflow-x-auto pb-4" style={{ minWidth: 0 }}>
         {cols.map(col => (
           <div key={col.id} style={{ minWidth: 220, width: 220, flexShrink: 0 }}>
@@ -7313,7 +7362,7 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
     }
     if (a.relatedTaskId && tasks) {
       const t = tasks.find(t => t.id === a.relatedTaskId);
-      if (t && t.assignee === authUser.id) return true;
+      if (t && (t.assignee === authUser.id || t.assignees?.includes(authUser.id))) return true;
       if (t && allowedSpaces && allowedSpaces.includes(t.space)) return true;
       if (t && !allowedSpaces) return true;
     }
@@ -11818,7 +11867,7 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
 
     // Per-collaborator metrics
     const collabMetrics = users.filter(u => u.id !== "system").map(u => {
-      const assigned = tasks.filter(t => t.assignee === u.id);
+      const assigned = tasks.filter(t => t.assignee === u.id || t.assignees?.includes(u.id));
       const done = assigned.filter(t => t.checked).length;
       const open = assigned.filter(t => !t.checked);
       const overdue = open.filter(t => {
@@ -15383,16 +15432,28 @@ export default function HyggeOS({ authUser } = {}) {
   // ─── Task actions ───
   // Activity / Notificaciones feed · registra eventos REALES del sistema (creación/edición/cierre de tareas, etc.)
   // Cada entry tiene `read: false` por default. Se diferencia conceptualmente de `messages` (mensajes humanos).
+  // WhatsApp de Alicia — PENDIENTE DE ACTIVACIÓN. Hoy es un stub que loguea; cuando
+  // el número de Alicia (Twilio/WA Business en aliceai) esté listo, poné WHATSAPP_ACTIVO=true
+  // y esto notifica al backend. No se envía nada real hasta entonces.
+  const sendAlicaWhatsApp = useCallback((userIds, text) => {
+    const ids = (Array.isArray(userIds) ? userIds : [userIds]).filter(Boolean);
+    if (!ids.length) return;
+    const WHATSAPP_ACTIVO = false; // ← activar cuando el número de Alicia esté operativo
+    if (!WHATSAPP_ACTIVO) { console.log("[Alicia WhatsApp · pendiente activación] →", ids, "·", text); return; }
+    ids.forEach(id => {
+      const u = users.find(x => x.id === id);
+      if (u?.phone) fetch(`${ALICIA_BRAIN_URL}/api/wa/notify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: u.phone, text }) }).catch(console.error);
+    });
+  }, [users]);
+
   const recordActivity = useCallback((what, opts = {}) => {
-    // Identidad canónica = authUser (AuthContext). Antes esto hacía
-    // `users.find(currentUserId) || users[0]` y leía `u?.name` — pero los
-    // objetos de `users` tienen `firstName`/`lastName`, NO `name`, así que
-    // `u.name` era siempre undefined y CUALQUIER actividad caía al literal
-    // "Sebastián" (bug 21 jul 2026: "figura como si yo la hubiera creado").
-    // Ahora resolvemos por authUser.id y usamos firstName, sin fallback silencioso.
+    // Identidad canónica = authUser (AuthContext). Resolvemos por authUser.id y usamos
+    // firstName, sin fallback silencioso (bug 21 jul 2026: todo caía a "Sebastián").
     const me = users.find(x => x.id === authUser?.id)
             || users.find(x => x.id === currentUserId);
     const who = me?.firstName || authUser?.firstName || me?.name?.split(" ")[0] || "—";
+    // opts.notify = usuarios a notificar (asignados). No te notificás a vos mismo.
+    const notify = (opts.notify || []).filter(id => id && id !== authUser?.id);
     setActivity(prev => [{
       id: Date.now() + Math.random(),
       who,
@@ -15402,8 +15463,10 @@ export default function HyggeOS({ authUser } = {}) {
       read: false,
       relatedTaskId: opts.taskId || null,
       relatedSpace: opts.space || null,
+      notifyUsers: notify.length ? notify : null,
     }, ...prev].slice(0, 50));
-  }, [users, currentUserId, authUser]);
+    if (notify.length) sendAlicaWhatsApp(notify, `${who} ${what}`);
+  }, [users, currentUserId, authUser, sendAlicaWhatsApp]);
 
   const markNotifRead = useCallback((id) => {
     setActivity(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
@@ -15412,6 +15475,35 @@ export default function HyggeOS({ authUser } = {}) {
   const markAllNotifsRead = useCallback(() => {
     setActivity(prev => prev.map(a => ({ ...a, read: true })));
   }, []);
+
+  // Motor de vencimientos: próxima a vencer (≤24h) → notifica al asignado (ERP + WhatsApp);
+  // vencida → notifica al asignado + Vanessa (vd) + Sebastián (sb) por ERP + WhatsApp para
+  // tomar acción. Evita duplicados con notifiedDueRef (por sesión). Corre cada 5 min.
+  const notifiedDueRef = useRef({});
+  useEffect(() => {
+    const check = () => {
+      const now = Date.now();
+      (tasks || []).forEach(t => {
+        if (t.checked || !t.due) return;
+        const dueTs = new Date(t.due).getTime();
+        if (isNaN(dueTs)) return;
+        const asignados = t.assignees?.length ? t.assignees : (t.assignee ? [t.assignee] : []);
+        const horas = (dueTs - now) / 3600000;
+        if (horas > 0 && horas <= 24 && !notifiedDueRef.current[`${t.id}:prox`]) {
+          notifiedDueRef.current[`${t.id}:prox`] = true;
+          recordActivity(`⏰ "${t.title}" vence pronto`, { taskId: t.id, space: t.space, notify: asignados });
+        }
+        if (horas <= 0 && !notifiedDueRef.current[`${t.id}:venc`]) {
+          notifiedDueRef.current[`${t.id}:venc`] = true;
+          const escalada = Array.from(new Set([...asignados, "vd", "sb"]));
+          recordActivity(`🔴 "${t.title}" VENCIÓ · tomar acción`, { taskId: t.id, space: t.space, notify: escalada });
+        }
+      });
+    };
+    check();
+    const iv = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [tasks, recordActivity]);
 
   const approveDropboxDelete = useCallback(async (notif) => {
     try {
@@ -15453,7 +15545,7 @@ export default function HyggeOS({ authUser } = {}) {
       const next = prev.map(t => {
         if (t.id !== id) return t;
         const checked = status === "completada";
-        recordActivity(`cambió estado de "${t.title}" a ${status}`, { taskId: id, space: t.space });
+        recordActivity(`cambió estado de "${t.title}" a ${status}`, { taskId: id, space: t.space, notify: t.assignees?.length ? t.assignees : (t.assignee ? [t.assignee] : []) });
         return { ...t, status, checked, activity: [...(t.activity || []), { when: nowHHMM(), text: `Estado: ${taskStatusDef(status).label}` }] };
       });
       const updated = next.find(t => t.id === id);
@@ -15974,7 +16066,7 @@ REGLAS:
       const mineIds = new Set();
       tasks.forEach(t => { if (t.assignee === currentUserId) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
       const misTareas = tasks.filter(t => mineIds.has(t.id));
-      return <ListView tasks={misTareas} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace="mistareas" allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
+      return <ListView tasks={misTareas} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace="mistareas" allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} onCreate={addTask} />;
     }
     // LAB · agentes Wonderland en el sidebar
     if (currentSpace && currentSpace.startsWith("lab-")) {
@@ -15992,8 +16084,8 @@ REGLAS:
         setSubTab={() => {}}
       />;
     }
-    if (view === "list") return <ListView tasks={visibleTasks} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace={currentSpace} allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
-    if (view === "board") return <BoardView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} setTaskStatus={setTaskStatus} />;
+    if (view === "list") return <ListView tasks={visibleTasks} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace={currentSpace} allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} onCreate={addTask} />;
+    if (view === "board") return <BoardView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} setTaskStatus={setTaskStatus} onCreate={addTask} />;
     if (view === "gantt") return <GanttView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} />;
     if (view === "calendar") return <CalendarView tasks={visibleTasks} currentSpace={currentSpace} allSpaces={allSpaces} openDetail={openDetail} onCreate={createFromSmartCapture} users={users} />;
     if (view === "table") return <TableView tasks={visibleTasks} currentSpace={currentSpace} openDetail={openDetail} allSpaces={allSpaces} />;
