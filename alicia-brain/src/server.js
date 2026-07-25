@@ -1957,6 +1957,22 @@ app.post("/api/rental-refresh", async (req, res) => {
   res.json(result);
 });
 
+// Corre el agente scraper (SBS / Urbania · fuentes que exigen render JS). Bajo el
+// panelGate: lo dispara un admin desde el cockpit. body: { sources?: ["sbs","urbania"] }.
+app.post("/api/scrapers/run", async (req, res) => {
+  try {
+    const { runScraperAgent, SCRAPER_SOURCES } = await import("./scrapers/index.js");
+    const sources = Array.isArray(req.body?.sources) && req.body.sources.length
+      ? req.body.sources.filter(s => SCRAPER_SOURCES.includes(s))
+      : SCRAPER_SOURCES;
+    res.json({ ok: true, status: "scraper_started", sources });
+    // Async: los scrapers con render tardan; la respuesta vuelve ya.
+    runScraperAgent({ sources }).catch(e => console.error("scraper agent error:", e.message));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Sala de operaciones de Wonderland (pública, solo lectura del estado de agentes)
 app.get("/wonderland", (_, res) => res.sendFile(join(__dirname, "../public/wonderland.html")));
 

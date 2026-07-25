@@ -104,19 +104,42 @@ export function ensureMarketSchema() {
 }
 
 // ── Latest snapshot ───────────────────────────────────────────────────────────
+// Mergea el último snapshot de CADA fuente (nexo + urbania + …). Cada proyecto ya
+// trae su campo `source`, así el Radar muestra ambos portales combinados. Con una
+// sola fuente el comportamiento es idéntico al anterior.
 export function getLatestSnapshot() {
   const { rows } = query(
-    `SELECT id, source, total, scraped_at, data FROM market_snapshots ORDER BY scraped_at DESC LIMIT 1`
+    `SELECT m.id, m.source, m.total, m.scraped_at, m.data
+       FROM market_snapshots m
+       INNER JOIN (SELECT source, MAX(id) AS mx FROM market_snapshots GROUP BY source) t
+         ON m.id = t.mx
+      ORDER BY m.scraped_at DESC`
+  );
+  if (!rows.length) return null;
+  const projects = [];
+  let scraped_at = null;
+  for (const r of rows) {
+    projects.push(...JSON.parse(r.data || "[]"));
+    if (!scraped_at || r.scraped_at > scraped_at) scraped_at = r.scraped_at;
+  }
+  return {
+    id:         rows[0].id,
+    source:     rows.map((r) => r.source).join("+"),
+    total:      projects.length,
+    scraped_at,
+    projects,
+  };
+}
+
+// Último snapshot de una fuente puntual (nexo | urbania | …).
+export function getLatestSnapshotBySource(source) {
+  const { rows } = query(
+    `SELECT id, source, total, scraped_at, data FROM market_snapshots
+      WHERE source = ? ORDER BY scraped_at DESC LIMIT 1`,
+    [source]
   );
   if (!rows[0]) return null;
-  const row = rows[0];
-  return {
-    id:         row.id,
-    source:     row.source,
-    total:      row.total,
-    scraped_at: row.scraped_at,
-    projects:   JSON.parse(row.data || "[]"),
-  };
+  return { ...rows[0], projects: JSON.parse(rows[0].data || "[]") };
 }
 
 // ── Fetch fresh data from Nexo ────────────────────────────────────────────────
@@ -291,13 +314,19 @@ function normalizeProjects(arr) {
 }
 
 // ── Save snapshot ─────────────────────────────────────────────────────────────
-function saveSnapshot(projects) {
+// Guarda un snapshot etiquetado por fuente y mantiene los últimos 5 POR fuente
+// (así urbania no expulsa a nexo ni viceversa).
+export function saveSnapshot(projects, source = "nexo") {
   query(
     `INSERT INTO market_snapshots (source, total, data, scraped_at) VALUES (?, ?, ?, datetime('now'))`,
-    ["nexo", projects.length, JSON.stringify(projects)]
+    [source, projects.length, JSON.stringify(projects)]
   );
-  // Keep only last 10 snapshots
-  query(`DELETE FROM market_snapshots WHERE id NOT IN (SELECT id FROM market_snapshots ORDER BY scraped_at DESC LIMIT 10)`);
+  query(
+    `DELETE FROM market_snapshots
+      WHERE source = ?
+        AND id NOT IN (SELECT id FROM market_snapshots WHERE source = ? ORDER BY scraped_at DESC LIMIT 5)`,
+    [source, source]
+  );
 }
 
 // ── Macro data (BCRP) ────────────────────────────────────────────────────────

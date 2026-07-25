@@ -26,3 +26,5 @@ jobs:
             node --check "$f"
           done
           echo "✅ Sintaxis OK"
+      - name: Tests de scrapers (parsers vs capturas reales, sin deps)
+        run: node --test alicia-brain/test/scrapers.test.mjs

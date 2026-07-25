@@ -49,6 +49,22 @@ export function startCron() {
     await runDarkAlice({ notify: true }).catch(e => console.error("Dark Alice error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Scraper agent 🐰 · SBS (tasas hipotecarias por banco) diario 6:00am Lima.
+  // Fuente dura (Incapsula) → render JS; las tasas cambian a diario.
+  cron.schedule("0 6 * * *", async () => {
+    console.log("🐰 Cron: scraper SBS (tasas por banco)");
+    const { runScraperAgent } = await import("./scrapers/index.js");
+    await runScraperAgent({ sources: ["sbs"] }).catch(e => console.error("Scraper SBS error:", e.message));
+  }, { timezone: "America/Lima" });
+
+  // Scraper agent 🐰 · Urbania (listings Lima) cada 12h. Fuente dura (Cloudflare) →
+  // render JS + proxy premium PE; cadencia baja porque cada corrida gasta proxy.
+  cron.schedule("30 5,17 * * *", async () => {
+    console.log("🐰 Cron: scraper Urbania (listings Lima)");
+    const { runScraperAgent } = await import("./scrapers/index.js");
+    await runScraperAgent({ sources: ["urbania"] }).catch(e => console.error("Scraper Urbania error:", e.message));
+  }, { timezone: "America/Lima" });
+
   // Cerebro → Dropbox · espejo nocturno 3:30am Lima
   cron.schedule("30 3 * * *", async () => {
     console.log("🧠 Cron: export cerebro a Dropbox");
@@ -67,5 +83,5 @@ export function startCron() {
     await refreshRentalListings().catch(e => console.error("Rental listings boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 7am · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 7am · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · cerebro→Dropbox 3:30am");
 }
