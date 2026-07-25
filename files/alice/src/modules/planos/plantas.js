@@ -170,11 +170,15 @@ function fachada(units, F, { terraza = true } = {}) {
  * cfg: { udsPiso, pct1, pct2, areaObjetivo }
  */
 export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
-  const { udsPiso = 4, pct1 = 25, pct2 = 40, areaObjetivo = 60, coreU0, coreW } = cfg;
+  // defaults del playbook de Bammy (estudio de mercado Nexo, Lima): 2D+3D dominan
+  // las ventas, área media ~65 m². Se usan solo si el caller no manda valores.
+  const { udsPiso = 4, pct1 = 22, pct2 = 40, areaObjetivo = 66, coreU0, coreW } = cfg;
   const unidades = mixTipologias(Math.max(1, udsPiso), { pct1, pct2, areaObjetivo });
 
+  // Orden = prioridad. Primero el patrón que Bammy aprendió del proyecto real
+  // Del Castillo: núcleo central + servicio a pozos de luz + doble crujía.
   const configs = [
-    { nombre: "core al centro", corePos: "centro", ordenar: "desc" },
+    { nombre: "núcleo central · patrón BAM", corePos: "centro", ordenar: "desc", sello: "patrón BAM · núcleo central · servicio a pozos · doble crujía" },
     { nombre: "core lateral", corePos: "izq", ordenar: "desc" },
     { nombre: "chicos a las esquinas", corePos: "centro", ordenar: "asc" },
     { nombre: "core lateral · chicos al frente", corePos: "izq", ordenar: "asc" },
@@ -197,6 +201,7 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
       notas: [
         res.units.map((u) => `${etiqueta(u.tipologia)} ${u.areaReal.toFixed(0)}m²`).join(" · "),
         res.doble ? "doble crujía" : "crujía simple",
+        ...(c.sello ? [c.sello] : []),
       ],
       stats: { uds: res.units.length },
     });
