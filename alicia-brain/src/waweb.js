@@ -4,7 +4,7 @@
 // Reconexión automática con backoff + watchdog cada 60s. Si el teléfono lo
 // desvincula (loggedOut), limpia la sesión y queda esperando un QR nuevo.
 //
-// Canal preferido de salida (ver wa.js): WA Web → Cloud API → Twilio.
+// Canal preferido de salida (ver wa.js): WA Web → Cloud API.
 // Desactivable con WA_WEB_ENABLED=0.
 
 import { existsSync, mkdirSync, rmSync } from "node:fs";

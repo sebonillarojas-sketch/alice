@@ -53,8 +53,11 @@ async function liveChecks() {
 
   checks.push({ id: "zoom", label: "Zoom", ok: !!(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID) });
   checks.push({ id: "tavily", label: "Búsqueda web (Tavily)", ok: !!process.env.TAVILY_API_KEY });
-  // WhatsApp: el canal real es Twilio (WA Cloud API nunca se configuró)
-  checks.push({ id: "whatsapp", label: "WhatsApp (Twilio)", ok: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) });
+  // WhatsApp: canal = WA Web (Baileys, teléfono propio) → WA Cloud API. Twilio removido.
+  let waWebOk = false;
+  try { const { isWAWebConnected } = await import("./waweb.js"); waWebOk = isWAWebConnected(); } catch {}
+  const waCloudOk = !!(process.env.WA_PHONE_NUMBER_ID && process.env.WA_ACCESS_TOKEN);
+  checks.push({ id: "whatsapp", label: "WhatsApp (WA Web / Cloud)", ok: waWebOk || waCloudOk });
   return checks;
 }
 

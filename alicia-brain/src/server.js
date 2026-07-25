@@ -738,7 +738,7 @@ app.post("/webhook", async (req, res) => {
     const userId = phoneToUserId(fromPhone);
     if (!userId) return;
 
-    // Audio entrante → descargar de Graph API y transcribir (paridad con el path de Twilio)
+    // Audio entrante → descargar de Graph API y transcribir
     let userText, inputWasAudio = false;
     if (message.type === "audio") {
       console.log(`🎤 WA Cloud audio [${userId}]`);
@@ -766,7 +766,7 @@ app.post("/webhook", async (req, res) => {
       onThinking: () => sendWA(fromPhone, pickAck()).catch(() => {}),
     });
 
-    // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
+    // Nota de voz de vuelta si la entrada fue audio (mismo criterio que WA Cloud).
     // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza,
     // cae a texto. Conversión a ogg/opus pendiente para paridad total.
     if (inputWasAudio) {
@@ -836,7 +836,7 @@ async function handleWAWebIncoming({ phone, text, media }) {
     onThinking: () => sendWAWebText(phone, pickAck()).catch(() => {}),
   });
 
-  // Nota de voz de vuelta si la entrada fue audio (paridad con Cloud/Twilio).
+  // Nota de voz de vuelta si la entrada fue audio (paridad con WA Cloud).
   // El TTS emite wav — va como audio normal, no como nota de voz (eso pide ogg/opus).
   if (inputWasAudio) {
     try {
@@ -871,78 +871,12 @@ app.post("/api/waweb/logout", async (_, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Twilio webhook ────────────────────────────────────────────────────────────
-
-// Acks naturales cuando Alicia sale a buscar/hacer algo (no dejar al usuario esperando)
+// ── WhatsApp acks ─────────────────────────────────────────────────────────────
+// Acks naturales cuando Alicia sale a buscar/hacer algo (no dejar al usuario esperando).
+// Twilio removido (2026-07-25): el webhook /webhook/twilio no verificaba firma y
+// caía a userId "sb" (suplantación del CEO). Canal WhatsApp = WA Web (Baileys) → WA Cloud API.
 const ALICIA_ACKS = ["Dale, dejame revisar 👀", "Ya, un toque que reviso y te digo.", "Ahí lo miro, un segundo.", "Dame un segundo que junto la info.", "Ok, reviso y te confirmo enseguida."];
 const pickAck = () => ALICIA_ACKS[Math.floor(Math.random() * ALICIA_ACKS.length)];
-
-app.post("/webhook/twilio", async (req, res) => {
-  const from = req.body.From || "";
-  const body = (req.body.Body || "").trim();
-  const numMedia = parseInt(req.body.NumMedia || "0");
-  const mediaUrl = req.body.MediaUrl0 || "";
-  const mediaType = req.body.MediaContentType0 || "";
-  const phone = from.replace("whatsapp:", "");
-  // Responder al webhook YA — Twilio corta a los ~15s. La respuesta real va async por REST.
-  res.set("Content-Type", "text/xml").send("<Response/>");
-
-  (async () => {
-    const { sendWA, sendWAMedia } = await import("./wa.js");
-    try {
-      const userId = phoneToUserId(phone) || "sb";
-      let userText = body, inputWasAudio = false;
-      if (numMedia > 0 && mediaType.startsWith("audio/")) {
-        userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
-        inputWasAudio = true;
-      } else if (numMedia > 0 && mediaUrl) {
-        // Documento/imagen → al buzón; Alicia lo sube a Dropbox con dropbox_upload
-        const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-        const fRes = await fetch(mediaUrl, { headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64") } });
-        if (fRes.ok) {
-          const buffer = Buffer.from(await fRes.arrayBuffer());
-          const { setLastFile, extForMime } = await import("./inbox-files.js");
-          const filename = `whatsapp-${Date.now()}.${extForMime(mediaType)}`;
-          setLastFile(userId, { buffer, mediaType, filename });
-          userText = `[Adjunté un archivo: ${filename} · ${mediaType} · ${Math.round(buffer.length / 1024)} KB]${body ? ` ${body}` : " ¿Qué hacés con esto?"}`;
-          console.log(`📎 Twilio archivo [${userId}]: ${filename} (${Math.round(buffer.length / 1024)} KB)`);
-        }
-      }
-      if (!userText) return;
-      console.log(`📱 Twilio [${userId}] ${userText}`);
-
-      const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
-        onThinking: () => sendWA(phone, pickAck()).catch(() => {}),
-      });
-
-      if (inputWasAudio) {
-        try {
-          const audioBuf = await generateSpeech(reply);
-          const id = Math.random().toString(36).slice(2);
-          ttsCache.set(id, audioBuf);
-          setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
-          await sendWAMedia(phone, `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`);
-          return;
-        } catch (ttsErr) { console.error("TTS async falló, respondiendo texto:", ttsErr.message); }
-      }
-      await sendWA(phone, reply);
-    } catch (e) {
-      console.error("Twilio async error:", e.message);
-      sendWA(phone, "Tuve un problema, probá de nuevo.").catch(() => {});
-    }
-  })();
-});
-
-async function transcribeAudio(mediaUrl, mediaType) {
-  // Twilio: descarga con basic auth, luego transcripción compartida
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const audioRes = await fetch(mediaUrl, {
-    headers: { Authorization: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64") },
-  });
-  if (!audioRes.ok) throw new Error(`Audio download failed: ${audioRes.status}`);
-  return transcribeBuffer(Buffer.from(await audioRes.arrayBuffer()), mediaType);
-}
 
 async function sttWith(provider, audioBuffer, mediaType) {
   // Whisper deduce el formato por la extensión del archivo, así que mentirle acá
@@ -1069,7 +1003,7 @@ app.post("/api/tts", async (req, res) => {
   if (!text) return res.status(400).json({ error: "No text" });
   try {
     // Panel del browser: mp3 (~10x más liviano que wav → llega mucho antes en 4G).
-    // Twilio/WA siguen usando generateSpeech() wav vía ttsCache — no se tocan.
+    // WhatsApp sigue usando generateSpeech() wav vía ttsCache — no se toca.
     if (process.env.OPENAI_API_KEY) {
       try {
         const buf = await ttsOpenAI(text, voice, "mp3");
@@ -1084,7 +1018,7 @@ app.post("/api/tts", async (req, res) => {
   }
 });
 
-// Serve cached TTS audio for Twilio (needs public URL)
+// Serve cached TTS audio for WhatsApp voice notes (needs public URL)
 app.get("/tts/:id.wav", (req, res) => {
   const buf = ttsCache.get(req.params.id);
   if (!buf) return res.status(404).send("Not found");
@@ -1515,7 +1449,7 @@ app.post("/api/agents/report", requireAgentKey, async (req, res) => {
         [agent, runId, f.severity || "minor", f.category || "general", f.detail || "", f.status || "open"]
       );
     }
-    // Críticos → WhatsApp inmediato a Sebastián (vía Twilio)
+    // Críticos → WhatsApp inmediato a Sebastián (vía WA Web / Cloud)
     const criticals = findings.filter(f => f.severity === "critical");
     if (criticals.length > 0 && process.env.PHONE_sb) {
       const lines = criticals.map(f => `• [${f.category}] ${f.detail}`).join("\n");
