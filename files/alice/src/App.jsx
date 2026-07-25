@@ -557,9 +557,12 @@ function Gate() {
       </div>
     );
   }
-  if (!calGranted) return <CalendarConsentModal user={user} onGrant={handleGrant} />;
-  if (!waSet)      return <WhatsAppModal user={user} onDone={handleWa} />;
-  if (!pwSet)      return <SetPasswordModal user={user} onDone={handleSetPassword} />;
+  // dev: saltar el onboarding (Google/WhatsApp/password no cierran en localhost).
+  // import.meta.env.DEV es false en el build de producción ⇒ onboarding intacto en prod.
+  const skipOnboarding = import.meta.env.DEV;
+  if (!skipOnboarding && !calGranted) return <CalendarConsentModal user={user} onGrant={handleGrant} />;
+  if (!skipOnboarding && !waSet)      return <WhatsAppModal user={user} onDone={handleWa} />;
+  if (!skipOnboarding && !pwSet)      return <SetPasswordModal user={user} onDone={handleSetPassword} />;
 
   return <HyggeOS authUser={user} />;
 }
