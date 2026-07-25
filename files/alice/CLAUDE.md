@@ -2,6 +2,17 @@
 
 > Este archivo lo lee Claude al inicio de cada sesión. Mantenelo actualizado cuando tomemos decisiones de arquitectura, cambiemos stack, o agreguemos features importantes.
 
+> **⚠️ DESACTUALIZADO (banner al 2026-07-25).** El cuerpo de abajo es de 2026-06-17 y
+> ya NO refleja la realidad. Correcciones vigentes:
+> - **Hay backend.** Supabase live (auth real + Postgres + Realtime) — ver `src/lib/supabase.js`.
+>   La agente Alicia corre aparte en `alicia-brain` (Node/Express en Railway, aliceai.bam.pe).
+> - **Deploy real = Netlify** (no Vercel). `npm run build && netlify deploy --prod`.
+> - **`HyggeOS.jsx` ≈ 16.2k líneas** (no 13k). Partición en curso → ver `REFACTOR.md`.
+>   Ya existe `src/ui/` (theme, primitives, AliceBlob) como design system compartido.
+> - `_registry.js` nunca se construyó; los módulos se importan directo en HyggeOS.jsx.
+> - Los agentes Wonderland NO usan `window.claude`; van por el backend (`/api/analyze`,
+>   `/api/agents/*`). 4 corren en cron; 3 (Cheshire/Bandersnatch/Jabberwocky) sólo tienen panel frontend.
+
 ---
 
 ## Quién soy yo (el usuario)
