@@ -37,6 +37,13 @@ export function startCron() {
     await runWhiteRabbitChecks().catch(e => console.error("White Rabbit error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Knave of Hearts 🃏 · guardia de seguridad (postura externa) cada 30 min, offset de WR
+  cron.schedule("10,40 * * * *", async () => {
+    console.log("🃏 Cron: Knave of Hearts (seguridad)");
+    const { runKnaveChecks } = await import("./knave.js");
+    await runKnaveChecks().catch(e => console.error("Knave error:", e.message));
+  }, { timezone: "America/Lima" });
+
   // Mad Hatter 🎩 · performance/costos cada hora
   cron.schedule("15 * * * *", async () => {
     const { runMadHatter } = await import("./madhatter.js");

@@ -84,7 +84,7 @@ function initSchema(db) {
     );
     CREATE TABLE IF NOT EXISTS agent_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      agent TEXT NOT NULL CHECK (agent IN ('white-rabbit','cheshire','bandersnatch','mad-hatter','jabberwocky','dark-alice','tea-table')),
+      agent TEXT NOT NULL,
       started_at TEXT DEFAULT (datetime('now')),
       finished_at TEXT,
       result TEXT DEFAULT 'ok' CHECK (result IN ('ok','issues','error')),
@@ -140,6 +140,33 @@ function initSchema(db) {
   `);
   // Migración: DBs creadas antes de que agent_runs tuviera columna report
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
+  // Migración: quitar el CHECK restrictivo de agent_runs.agent (permite 'knave' y futuros
+  // agentes). SQLite no puede ALTER un CHECK → se reconstruye la tabla. Idempotente:
+  // solo corre si el SQL de la tabla todavía tiene el CHECK sobre agent.
+  try {
+    const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='agent_runs'").get();
+    if (row && /CHECK\s*\(\s*agent\s+IN/i.test(row.sql)) {
+      db.exec(`
+        CREATE TABLE agent_runs_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          agent TEXT NOT NULL,
+          started_at TEXT DEFAULT (datetime('now')),
+          finished_at TEXT,
+          result TEXT DEFAULT 'ok' CHECK (result IN ('ok','issues','error')),
+          summary TEXT,
+          actions_taken TEXT DEFAULT '[]',
+          report TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+        INSERT INTO agent_runs_new (id, agent, started_at, finished_at, result, summary, actions_taken, report, created_at)
+          SELECT id, agent, started_at, finished_at, result, summary, actions_taken, report, created_at FROM agent_runs;
+        DROP TABLE agent_runs;
+        ALTER TABLE agent_runs_new RENAME TO agent_runs;
+        CREATE INDEX IF NOT EXISTS idx_agent_runs ON agent_runs(agent, created_at DESC);
+      `);
+      console.log("✔ migración: agent_runs sin CHECK restrictivo (soporta knave)");
+    }
+  } catch (e) { console.error("mig agent_runs open-check:", e.message); }
   try { db.exec("ALTER TABLE profiles ADD COLUMN email TEXT"); } catch {}
   try { db.exec("UPDATE profiles SET email = 'sebastian@hygge.pe' WHERE user_id = 'sb' AND (email IS NULL OR email = '')"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}

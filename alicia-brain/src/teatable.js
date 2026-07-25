@@ -12,6 +12,7 @@ const AGENT_META = {
   "jabberwocky": { name: "Jabberwocky", emoji: "⚡", role: "Fuzzer · inputs adversariales" },
   "dark-alice": { name: "Dark Alice", emoji: "🖤", role: "Jefa de operaciones · L2" },
   "tea-table": { name: "Tea Table", emoji: "🫖", role: "Síntesis semanal" },
+  "knave": { name: "Knave of Hearts", emoji: "🃏", role: "Guardia de seguridad · postura externa" },
 };
 
 async function liveChecks() {
