@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { sugerirBrief } from "../planos/bammy.js";
 import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
 
@@ -179,6 +180,14 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   const [areaDpto, setAreaDpto] = useState(90);
   const [mix1, setMix1] = useState(20);
   const [mix2, setMix2] = useState(60);
+  // Bammy sugiere producto (área + mix) desde su aprendizaje de mercado por distrito.
+  const [distrito, setDistrito] = useState(S.distrito ?? "");
+  const aplicarBammy = () => {
+    const b = sugerirBrief({ distrito });
+    setAreaDpto(b.areaObjetivo);
+    setMix1(b.pct1);
+    setMix2(b.pct2);
+  };
 
   // deja el lote + el PRODUCTO (área promedio y mix de dorms) para el editor de planos.
   // así el editor ofrece depas cercanos a lo que ya definiste en cabida, no defaults.
@@ -372,6 +381,21 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
           </Card>
 
           <Card n="02" title="producto y estacionamientos">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <select value={distrito} onChange={(e) => setDistrito(e.target.value)}
+                style={{ flex: 1, minWidth: 130, padding: "7px 9px", border: "1px solid #D9D5CD", borderRadius: 3,
+                  fontSize: 12, fontFamily: sans, background: "#fff", color: "#0A0B0F" }}>
+                <option value="">distrito…</option>
+                {["Miraflores", "San Isidro", "Barranco", "Surco", "Magdalena", "Jesús María", "Lince", "Pueblo Libre", "San Miguel"].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <button onClick={aplicarBammy} title="Bammy sugiere área + mix según el mercado del distrito (Nexo)"
+                style={{ padding: "7px 14px", border: "none", borderRadius: 3, background: "#7B61D9", color: "#fff",
+                  fontSize: 12, fontWeight: 700, fontFamily: sans, cursor: "pointer", whiteSpace: "nowrap" }}>
+                🦀 Sugerir con Bammy
+              </button>
+            </div>
             <Num label="área promedio por departamento" value={areaDpto} onChange={setAreaDpto} unit="m²" step={5} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 24 }}>
               <Pct label="mix 1 dorm" value={mix1} onChange={setMix1} />
