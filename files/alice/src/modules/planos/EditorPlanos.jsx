@@ -203,7 +203,7 @@ function TipologiasNexoPanel({ onInsert, onClose }) {
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipologías</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
       </div>
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>{cards.length} tipologías de TODOS los tamaños (22–210 m²), redibujadas por Feyd. Click para insertarla en el lienzo.</div>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>{cards.length} tipologías de TODOS los tamaños (22–210 m²), redibujadas por Bammy. Click para insertarla en el lienzo.</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {cards.map(({ t, L, W, D }, idx) => (
           <Fragment key={t.id}>
@@ -644,10 +644,10 @@ function TipoUnitPanel({ W, D, busy, err, onAplicar, onClose }) {
       <MiniPlano L={L} W={W} D={D} />
       <button onClick={() => onAplicar(prog)} disabled={busy}
         style={{ width: "100%", marginTop: 10, padding: "9px 0", background: busy ? "#c9a99c" : "#F7643B", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: busy ? "wait" : "pointer" }}>
-        {busy ? "Feyd está adaptando a la forma…" : "Insertar con Feyd (adapta a la forma)"}
+        {busy ? "Bammy está adaptando a la forma…" : "Insertar con Bammy (adapta a la forma)"}
       </button>
       {err && <div style={{ fontSize: 10, color: "#A85B5B", marginTop: 7, lineHeight: 1.4 }}>{err}</div>}
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Feyd sigue la huella real (aunque sea irregular), ventila cada habitable, pone puertas y crece los ambientes en proporción. Después redimensionás cada uno arrastrando sus vértices.</div>
+      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Bammy sigue la huella real (aunque sea irregular), ventila cada habitable, pone puertas y crece los ambientes en proporción. Después redimensionás cada uno arrastrando sus vértices.</div>
     </div>
   );
 }
@@ -891,7 +891,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [showLib, setShowLib] = useState(false);
   const [showRepo, setShowRepo] = useState(false);   // repositorio de ambientes amueblados
   const [showTipoCfg, setShowTipoCfg] = useState(false); // configurador por tipología (ensambla desde librería)
-  const [showTipoNexo, setShowTipoNexo] = useState(false); // visor de tipologías de mercado (Nexo) redibujadas por Feyd
+  const [showTipoNexo, setShowTipoNexo] = useState(false); // visor de tipologías de mercado (Nexo) redibujadas por Bammy
   const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
   const [showDistrib, setShowDistrib] = useState(false); // paso 2
   const [showTipo, setShowTipo] = useState(false);       // paso 3 = modo "asignar tipología" (click en depto)
@@ -1295,7 +1295,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const uW = Math.max(...xs) - Math.min(...xs), uD = Math.max(...ys) - Math.min(...ys);
     try {
       const L = await disenarConFeyd({ pts: unit.pts, dorms: prog.dorms, banos: prog.banos, visita: prog.visita, closet: prog.closet, lavanderia: prog.lavanderia, cocinaCerrada: prog.cocinaCerrada, nse: brief.nse || "C" });
-      if (!L?.rooms?.length) throw new Error("Feyd no devolvió ambientes");
+      if (!L?.rooms?.length) throw new Error("Bammy no devolvió ambientes");
       setTipoStage({ unit, rooms: L.rooms, items: L.items || [], W: uW, D: uD });
     } catch (e) {
       const L = (() => { try { return feydLayout(uW, uD, prog.dorms, prog.banos, { visita: prog.visita }); } catch { return null; } })();
@@ -1569,16 +1569,23 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const aberturas = items.filter((t) => porId[t.ref]?.cat === "abertura");
   const muebles = items.filter((t) => porId[t.ref]?.cat !== "abertura");
 
-  // Feyd-Rautha 🗡️ · null | "cargando" | { veredicto, problemas, rooms }
+  // Bammy · master planner · audita la planta con el gate LOCAL (validarPlan) — sin backend.
+  // null | { veredicto, problemas, rooms }
   const [feyd, setFeyd] = useState(null);
-  const consultarFeyd = async () => {
-    if (!rooms.length || feyd === "cargando") return;
-    setFeyd("cargando");
-    try {
-      setFeyd(await corregirConFeyd(rooms, brief));
-    } catch (e) {
-      setFeyd({ veredicto: `no se pudo consultar: ${e.message}`, problemas: [], rooms: null });
-    }
+  const auditarBammy = () => {
+    if (!rooms.length) return;
+    const problemas = [
+      ...val.fueraLote.map((f) => `${f.name || f.tipo || "algo"} sale del terreno`),
+      ...val.sinPiso.map((f) => `${f.name || "mueble"} sin piso — cae fuera de todo ambiente`),
+      ...val.aislados.map((f) => `${f.name || "ambiente"} sin acceso desde el ingreso`),
+    ];
+    setFeyd({
+      veredicto: val.ok
+        ? "Todo en regla: nada fuera del lote, todo con piso y con acceso. La planta pasa el gate."
+        : `Encontré ${val.total} cosa${val.total > 1 ? "s" : ""} para corregir. Arreglalas arrastrando/redimensionando y el gate se pone en verde solo.`,
+      problemas,
+      rooms: null,
+    });
   };
   const aplicarFeyd = () => {
     // los muebles viajan con su ambiente corregido (F1) — antes quedaban en
@@ -1604,7 +1611,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           <b style={{ color: footprint ? C.orange : C.line }}>2</b> distribución {parti ? "✓" : ""}
         </Btn>
         <Btn accent active={showTipo} onClick={() => { setShowTipo((s) => !s); setTipoUnit(null); }} disabled={!parti}
-          title={parti ? "Paso 3 · tocá un depto para asignarle su tipología (Feyd la redibuja a su medida)" : "Primero elige una distribución (paso 2)"}>
+          title={parti ? "Paso 3 · tocá un depto para asignarle su tipología (Bammy la redibuja a su medida)" : "Primero elige una distribución (paso 2)"}>
           <Sparkles size={13} /> <b>3</b> tipologías
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
@@ -1615,7 +1622,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
           <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
           <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Armar una tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología (armar)</Btn>
-          <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Biblioteca de tipologías (todos los tamaños) redibujadas por Feyd"><Plus size={13} /> biblioteca de tipologías</Btn>
+          <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Biblioteca de tipologías (todos los tamaños) redibujadas por Bammy"><Plus size={13} /> biblioteca de tipologías</Btn>
         </ToolMenu>
 
         <ToolMenu label="vista" icon={<Box size={13} style={{ marginRight: 4 }} />} width={210}>
@@ -1651,9 +1658,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn onClick={exportSVG} disabled={!rooms.length} title="Exportar lámina BAM (.svg)"><Download size={13} /> lámina</Btn>
         <Btn onClick={exportarAMesa} disabled={!rooms.length || !navigate} title="Enviar a la Mesa de Trabajo (pestaña Planos)"><StickyNote size={13} /> → mesa</Btn>
-        <Btn onClick={consultarFeyd} disabled={!rooms.length || feyd === "cargando"}
-          title="Feyd-Rautha 🗡️ audita la planta contra RNE + Neufert + checklist BAM y propone la corrección">
-          <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd"}
+        <Btn onClick={auditarBammy} disabled={!rooms.length}
+          title="Bammy · master planner: audita la planta contra las reglas (nada fuera del lote · todo con piso · todo con acceso)">
+          <Sparkles size={13} /> bammy
         </Btn>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
@@ -1675,28 +1682,14 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         </div>
       </div>
 
-      {/* Feyd auditando · el análisis tarda ~30s, hay que mostrar que está trabajando */}
-      {feyd === "cargando" && (
+      {/* veredicto de Bammy · master planner */}
+      {feyd && (
         <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
-          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
-          padding: "14px 16px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 10 }}>
-          <style>{"@keyframes feydspin{to{transform:rotate(360deg)}}"}</style>
-          <Sword size={14} color="#A85B5B" style={{ animation: "feydspin 1.4s linear infinite", flexShrink: 0 }} />
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: C.ink }}>Feyd está destrozando tu planta…</div>
-            <div style={{ fontFamily: mono, fontSize: 10, color: C.soft, marginTop: 2 }}>audita contra RNE + checklist BAM · ~30s</div>
-          </div>
-        </div>
-      )}
-
-      {/* veredicto de Feyd-Rautha 🗡️ */}
-      {feyd && feyd !== "cargando" && (
-        <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
-          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
+          background: C.card, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.peri}`, borderRadius: 3,
           padding: "12px 14px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <Sword size={12} color="#A85B5B" />
-            <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>feyd-rautha</span>
+            <img src="/bammys/master-planner.gif" alt="" width={16} height={16} style={{ borderRadius: 3, flexShrink: 0 }} />
+            <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>bammy · master planner</span>
             <button onClick={() => setFeyd(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}><X size={13} color={C.soft} /></button>
           </div>
           <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, lineHeight: 1.55, marginBottom: feyd.problemas.length ? 8 : 0, whiteSpace: "pre-wrap" }}>
@@ -1711,9 +1704,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           {feyd.rooms?.length > 0 && (
             <button onClick={aplicarFeyd}
               style={{ width: "100%", marginTop: 10, fontFamily: mono, fontSize: 11.5, color: C.card,
-                background: "#A85B5B", border: "none", borderRadius: 2, padding: "8px 0", cursor: "pointer" }}
-              title="Reemplaza los ambientes por la corrección de Feyd (⌘Z deshace)">
-              aplicar corrección de feyd →
+                background: C.peri, border: "none", borderRadius: 2, padding: "8px 0", cursor: "pointer" }}
+              title="Aplica la corrección de Bammy (⌘Z deshace)">
+              aplicar corrección de bammy →
             </button>
           )}
         </div>
