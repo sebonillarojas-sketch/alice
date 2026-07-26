@@ -1532,6 +1532,27 @@ app.post("/api/agents/report", requireAgentKey, async (req, res) => {
 });
 
 // El Lab del cockpit lee el estado real (público, solo lectura)
+// Clon-stack 🪞 — snapshot SANITIZADO del alicia.db para levantar el clon en alicia-mac.
+// La sanitización ocurre en el origen (snapshot.js): credenciales/PII reales nunca salen.
+app.get("/api/admin/db-snapshot", requireAgentKey, async (req, res) => {
+  let path;
+  try {
+    const { makeSnapshot } = await import("./snapshot.js");
+    const { createReadStream } = await import("node:fs");
+    const { unlink } = await import("node:fs/promises");
+    path = await makeSnapshot();
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", 'attachment; filename="alice-clone.db"');
+    const stream = createReadStream(path);
+    stream.pipe(res);
+    stream.on("close", () => unlink(path).catch(() => {}));
+    stream.on("error", () => { res.destroy(); unlink(path).catch(() => {}); });
+  } catch (e) {
+    if (path) { const { unlink } = await import("node:fs/promises"); unlink(path).catch(() => {}); }
+    res.status(500).json({ error: "snapshot falló", detail: String(e.message) });
+  }
+});
+
 app.get("/api/agents/status", (req, res) => {
   try {
     const { rows: lastRuns } = query(`
