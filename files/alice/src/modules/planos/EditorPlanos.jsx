@@ -2053,7 +2053,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         );
       })()}
       {showTipo && !tipoUnit && !tipoStage && (
-        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", top: 60, zIndex: 40, background: "#1E2A4A", color: "#fff", padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, boxShadow: "0 4px 14px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: 24, zIndex: 40, background: "#1E2A4A", color: "#fff", padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, boxShadow: "0 4px 14px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
           Paso 3 · tocá un depto para asignarle su tipología
           <button onClick={() => setShowTipo(false)} style={{ border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", cursor: "pointer", borderRadius: 10, width: 18, height: 18, lineHeight: "16px", fontSize: 11 }}>✕</button>
         </div>
