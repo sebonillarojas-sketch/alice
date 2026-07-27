@@ -1066,8 +1066,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   // defecto); si el usuario ya lo tocó (≠4), se respeta su valor.
   const abrirDistribuciones = useCallback(() => {
     if (!footprint) { setLoteBar(true); return; }
-    const sugerido = Math.max(1, Math.min(8, Math.round(area(footprint) / Math.max(brief.areaObjetivo * 1.3, 30))));
-    const b = brief.udsPiso === 4 && sugerido !== 4 ? { ...brief, udsPiso: sugerido } : brief;
+    const A = area(footprint);
+    const sugerido = Math.max(1, Math.min(8, Math.round(A / Math.max(brief.areaObjetivo * 1.3, 30))));
+    const uds = brief.udsPiso === 4 && sugerido !== 4 ? sugerido : brief.udsPiso;
+    const cabe = Math.max(25, Math.round(A / uds));            // área que realmente entra por unidad
+    const areaObj = Math.min(brief.areaObjetivo, cabe);        // no pedir más m² de los que entran (coherencia con el footprint)
+    const b = (uds !== brief.udsPiso || areaObj !== brief.areaObjetivo) ? { ...brief, udsPiso: uds, areaObjetivo: areaObj } : brief;
     if (b !== brief) setBrief(b);
     setPartis(generarDistribuciones(footprint, frontIdx, b));
     setShowDistrib(true);
