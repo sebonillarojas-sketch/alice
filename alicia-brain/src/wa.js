@@ -6,10 +6,16 @@
 // esa; el Account SID se sigue necesitando aparte porque va en la ruta de la URL.
 // Sin API Key cae a Account SID + Auth Token, como antes.
 export function twilioCreds() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const user = process.env.TWILIO_API_KEY_SID || accountSid;
-  const pass = process.env.TWILIO_API_KEY_SECRET || process.env.TWILIO_AUTH_TOKEN;
-  if (!accountSid || !user || !pass) return null;
+  const accountSid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
+  if (!accountSid) return null;
+  const keySid = (process.env.TWILIO_API_KEY_SID || "").trim();
+  const keySecret = (process.env.TWILIO_API_KEY_SECRET || "").trim();
+  // La API Key vale solo como par completo: mezclar el Key SID con el Auth Token
+  // arma credenciales inválidas y Twilio responde 20003 (401).
+  const [user, pass] = keySid && keySecret
+    ? [keySid, keySecret]
+    : [accountSid, (process.env.TWILIO_AUTH_TOKEN || "").trim()];
+  if (!user || !pass) return null;
   return { accountSid, header: "Basic " + Buffer.from(`${user}:${pass}`).toString("base64") };
 }
 
