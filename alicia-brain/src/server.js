@@ -903,7 +903,12 @@ app.post("/webhook/twilio", async (req, res) => {
   (async () => {
     const { sendWA, sendWAMedia } = await import("./wa.js");
     try {
-      const userId = phoneToUserId(phone) || "sb";
+      // Mismo filtro que Cloud API y WA Web: el número es público, así que sin
+      // allowlist cualquier desconocido entraría — y antes caía por defecto a "sb".
+      const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, "")).filter(Boolean);
+      if (!allowed.includes(phone.replace(/\D/g, ""))) { console.log(`🚫 Twilio de ${phone} no autorizado`); return; }
+      const userId = phoneToUserId(phone);
+      if (!userId) return;
       let userText = body, inputWasAudio = false;
       if (numMedia > 0 && mediaType.startsWith("audio/")) {
         userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
