@@ -903,15 +903,21 @@ app.post("/webhook/twilio", async (req, res) => {
   (async () => {
     const { sendWA, sendWAMedia } = await import("./wa.js");
     try {
-      const userId = phoneToUserId(phone) || "sb";
+      // Mismo filtro que Cloud API y WA Web: el número es público, así que sin
+      // allowlist cualquier desconocido entraría — y antes caía por defecto a "sb".
+      const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, "")).filter(Boolean);
+      if (!allowed.includes(phone.replace(/\D/g, ""))) { console.log(`🚫 Twilio de ${phone} no autorizado`); return; }
+      const userId = phoneToUserId(phone);
+      if (!userId) return;
       let userText = body, inputWasAudio = false;
       if (numMedia > 0 && mediaType.startsWith("audio/")) {
         userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
         inputWasAudio = true;
       } else if (numMedia > 0 && mediaUrl) {
         // Documento/imagen → al buzón; Alicia lo sube a Dropbox con dropbox_upload
-        const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-        const fRes = await fetch(mediaUrl, { headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64") } });
+        const { twilioCreds } = await import("./wa.js");
+        const creds = twilioCreds();
+        const fRes = await fetch(mediaUrl, { headers: creds ? { Authorization: creds.header } : {} });
         if (fRes.ok) {
           const buffer = Buffer.from(await fRes.arrayBuffer());
           const { setLastFile, extForMime } = await import("./inbox-files.js");

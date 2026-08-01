@@ -187,3 +187,104 @@ Al copiar este handoff al repo se contrastó contra el código real de
    (`unhandledRejection` + `uncaughtException`), agregados al tope de
    `alicia-brain/src/server.js`. Además se blindó el handler async de
    `connection.update` en `waweb.js`, que corría sin try/catch.
+
+---
+
+## Addendum 2 · Intento de migración a Cloud API (27-31 jul 2026)
+
+Se intentó completar la Opción B (Cloud API). **El lado técnico quedó
+terminado; el bloqueo es administrativo del lado de Meta.**
+
+### Lo que quedó FUNCIONANDO y verificado
+
+| Item | Estado |
+|---|---|
+| `GET /webhook` verificado por Meta | ✅ log `✅ WhatsApp webhook verificado` (27 jul 10:43) |
+| Callback URL | `https://alice-production-462e.up.railway.app/webhook` |
+| `WA_VERIFY_TOKEN` | `alicia-hygge-2026` (Meta y Railway coinciden) |
+| `WA_WEB_ENABLED=0` | ✅ log `📵 WA Web desactivado` — Baileys ya no arranca |
+| `ALLOWED_USER_PHONES` | ✅ correcto, con código de país (`+51951869600,...`) |
+| Fix anti-crash (PR #24) | ✅ mergeado a `main` |
+
+`PROBLEMA 3` (DNS) quedó resuelto de facto: se usa el dominio
+`alice-production-462e.up.railway.app`, que sí responde. `aliceai.bam.pe`
+también responde 200 (incluido al crawler de Meta).
+
+### El bloqueo: cuentas de Meta deshabilitadas
+
+Los logs HTTP muestran **cero `POST /webhook`** — Meta nunca entregó un
+solo mensaje. La cadena de errores, en orden de descubrimiento:
+
+1. `(#200) API access blocked` — al llamar `subscribed_apps`
+2. `(#133010) Account not registered` — al enviar mensaje
+3. `Register endpoint is not available for SMB businesses` — al llamar
+   `/register`. El WABA se había creado vía la **app WhatsApp Business**
+   (tipo SMB), que Meta no deja usar con Cloud API.
+4. Modal `Account Restricted` al intentar agregar cualquier número.
+
+**Causa raíz:** los WhatsApp Business Accounts están deshabilitados
+porque **el negocio que los contiene está deshabilitado**:
+
+> *"This account has been disabled because the website listed in its
+> Business Manager profile couldn't be found."* — 1 jul 2026, Permanent
+
+WABAs afectados (portfolio Hygge `1334104998015596`):
+- `1766820844489531` — Test WhatsApp Business Account · Disabled
+- `1534675774316619` — Hygge · Disabled
+
+Crear un portfolio nuevo **no** funciona: `Bam Studio` fue restringido el
+31 jul 2026 (mismo día en que se creó) y queda *prohibited from claiming
+apps*. Meta vincula los portfolios por admin/dominio y lo lee como evasión.
+
+### Argumento para la apelación
+
+El motivo citado **ya no aplica**: `https://hygge.pe/` está online y
+responde `HTTP/2 200` al propio user-agent de Meta:
+
+```bash
+curl -sI -A "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)" https://hygge.pe/
+```
+
+Además, en los logs HTTP de Railway se ve a `facebookexternalhit/1.1`
+entrando a `aliceai.bam.pe` con 200. Y el portfolio Hygge figura como
+**Business verification: Verified** (Hygge Larco 1036 SAC, RUC 20612454613).
+
+Vía más efectiva: **chat en vivo** de Business Support Home, no el
+formulario.
+
+### ⚠️ Gotcha de código: Cloud API bloquea el fallback a Twilio
+
+`alicia-brain/src/wa.js:19` — si `WA_PHONE_NUMBER_ID` **y**
+`WA_ACCESS_TOKEN` están seteados, el envío toma el camino Cloud API y
+**lanza excepción** si falla (línea 28). Nunca cae a Twilio.
+
+→ **Para usar Twilio hay que BORRAR ambas variables de Railway**, no
+alcanza con configurar Twilio.
+
+El camino Twilio está completo en el código: endpoint `/webhook/twilio`
+(`server.js:893`) con paridad de texto, audio y archivos.
+Webhook a configurar en Twilio:
+`https://alice-production-462e.up.railway.app/webhook/twilio` (POST).
+
+### Datos de referencia
+
+- App ID: `2229024171220311`
+- Business portfolio Hygge: `1334104998015596`
+- Número nuevo disponible para Alicia: `+51 924 140 141` (sin WhatsApp previo)
+- Número anterior: `+51 919 108 689` (quedó liberado al borrarse su WABA)
+- Los tokens de *API Setup* son **temporales** y expiran a hora fija
+  (no a las 24h corridas). Para producción hace falta token de
+  **System User** con expiración `Never` y el WABA asignado como asset.
+
+### Próximos pasos
+
+1. **Apelar** las restricciones de Hygge y Bam Studio (chat en vivo).
+2. Mientras tanto, **Twilio Sandbox** para desbloquear al equipo
+   (recordar borrar `WA_PHONE_NUMBER_ID` y `WA_ACCESS_TOKEN`).
+3. Al levantarse la restricción: crear WABA nativo de Cloud API (no SMB),
+   agregar `+51 924 140 141`, `/register` con PIN, token de System User,
+   y setear `WA_PHONE_NUMBER_ID` + `WA_ACCESS_TOKEN`. El webhook y el
+   verify token **no cambian**.
+4. Alternativa a explorar: BSP tipo **360dialog**, que en algunos casos
+   da de alta el número bajo el WABA del proveedor (podría esquivar la
+   restricción). No verificado.
