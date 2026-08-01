@@ -915,8 +915,9 @@ app.post("/webhook/twilio", async (req, res) => {
         inputWasAudio = true;
       } else if (numMedia > 0 && mediaUrl) {
         // Documento/imagen → al buzón; Alicia lo sube a Dropbox con dropbox_upload
-        const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-        const fRes = await fetch(mediaUrl, { headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64") } });
+        const { twilioCreds } = await import("./wa.js");
+        const creds = twilioCreds();
+        const fRes = await fetch(mediaUrl, { headers: creds ? { Authorization: creds.header } : {} });
         if (fRes.ok) {
           const buffer = Buffer.from(await fRes.arrayBuffer());
           const { setLastFile, extForMime } = await import("./inbox-files.js");
