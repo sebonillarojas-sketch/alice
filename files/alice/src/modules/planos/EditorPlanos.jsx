@@ -240,7 +240,7 @@ class Vista3DBoundary extends Component {
     return this.props.children;
   }
 }
-import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js";
+import { tipologiasCandidatas, porTipologia, TIPOLOGIAS, minAreaViable } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
@@ -445,9 +445,10 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
   const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
   const [alicia, setAlicia] = useState(null);
   const [overrides, setOverrides] = useState({});   // { unitId: { tipologiaId, banos } }
-  const unidades = parti.res.units.filter((u) => !esDeposito(u));
-  // recortes chicos → solo cabe studio; cambiar dorms/½visita no hace nada aquí
-  const soloStudio = unidades.length > 0 && unidades.every((u) => u.areaReal < 42);
+  const minViable = minAreaViable(brief.minimos);   // vivienda compliant más chica según distrito
+  const unidades = parti.res.units.filter((u) => !esDeposito(u, minViable));
+  // recortes chicos (bajo el mínimo del distrito): cambiar dorms/½visita no hace nada aquí
+  const soloStudio = unidades.length > 0 && unidades.every((u) => u.areaReal < minViable + 2);
   const setOv = (id, k, v) => setOverrides((o) => ({ ...o, [id]: { ...o[id], [k]: v } }));
   // el amoblado se recalcula al cambiar tipología/baños/NSE/terraza
   const amoblado = (() => { try { return amoblarParti(parti, brief, overrides); } catch { return null; } })();
@@ -500,7 +501,7 @@ function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: "6px 18px", marginBottom: 14 }}>
         {unidades.map((u, i) => {
           const W = u.frame.ub - u.frame.ua;
-          const cands = tipologiasCandidatas(u.areaReal, W, 4);
+          const cands = tipologiasCandidatas(u.areaReal, W, 4, brief.minimos);
           const sel = overrides[u.id]?.tipologiaId || u.tipologia?.id || cands[0].id;
           const tSel = porTipologia[sel] || cands[0];
           return (
@@ -903,6 +904,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const [parti, setParti] = useState(null);              // distribución elegida (en memoria, no persiste)
   const [brief, setBrief] = useState({
     areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // distribución en lote
+    minimos: null,                                             // mínimos de área por tipo (RNE 40 por defecto; distrito/manual suben)
     nse: "C", terraza: true,                                   // tipologías
     ...(P.brief || {}),
   });
@@ -1170,6 +1172,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       areaObjetivo: Number(c.areaDpto) > 0 ? Math.round(c.areaDpto) : br.areaObjetivo,
       pct1: Number.isFinite(c.mix1) ? c.mix1 : br.pct1,
       pct2: Number.isFinite(c.mix2) ? c.mix2 : br.pct2,
+      minimos: c.minimos || br.minimos || null,   // mínimos de área por tipo (RNE/distrito) heredados de cabida
       udsPiso: 4,
     }));
     setLoteBar(true);

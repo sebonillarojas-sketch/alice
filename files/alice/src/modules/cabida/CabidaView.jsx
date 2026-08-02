@@ -180,14 +180,27 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   const [areaDpto, setAreaDpto] = useState(90);
   const [mix1, setMix1] = useState(20);
   const [mix2, setMix2] = useState(60);
-  // Bammy sugiere producto (área + mix) desde su aprendizaje de mercado por distrito.
+  // mínimos de área por tipología (m²): piso RNE 40 para 1D; el distrito los sube por norma.
+  const [min1D, setMin1D] = useState(40);
+  const [min2D, setMin2D] = useState(50);
+  const [min3D, setMin3D] = useState(65);
+  // Bammy sugiere producto (área + mix + mínimos) desde su aprendizaje de mercado + norma por distrito.
   const [distrito, setDistrito] = useState(S.distrito ?? "");
+  const [bammyOn, setBammyOn] = useState(false);   // switch: ON = Bammy manda y re-sincroniza al cambiar distrito
   const aplicarBammy = () => {
     const b = sugerirBrief({ distrito });
     setAreaDpto(b.areaObjetivo);
     setMix1(b.pct1);
     setMix2(b.pct2);
+    if (b.minimos) { setMin1D(b.minimos[1]); setMin2D(b.minimos[2]); setMin3D(b.minimos[3]); }
   };
+  const toggleBammy = () => {
+    const on = !bammyOn;
+    setBammyOn(on);
+    if (on) aplicarBammy();
+  };
+  // con Bammy ON, cambiar de distrito re-aplica su sugerencia (producto + mínimos).
+  useEffect(() => { if (bammyOn && distrito) aplicarBammy(); }, [distrito]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // deja el lote + el PRODUCTO (área promedio y mix de dorms) para el editor de planos.
   // así el editor ofrece depas cercanos a lo que ya definiste en cabida, no defaults.
@@ -197,10 +210,10 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
       localStorage.setItem("hygge:loteCabida", JSON.stringify({
         pts: lotePoly, area: cadInfo?.area, frente: cadInfo?.frente, frenteIdx: efFrenteIdx,
         tipoLote, retiros, pisos, units: cadInfo?.units,
-        areaDpto, mix1, mix2, ts: Date.now(),
+        areaDpto, mix1, mix2, minimos: { 1: min1D, 2: min2D, 3: min3D }, ts: Date.now(),
       }));
     } catch { /* cuota */ }
-  }, [lotePoly, cadInfo, tipoLote, retiros, pisos, efFrenteIdx, areaDpto, mix1, mix2]);
+  }, [lotePoly, cadInfo, tipoLote, retiros, pisos, efFrenteIdx, areaDpto, mix1, mix2, min1D, min2D, min3D]);
 
   const [est1, setEst1] = useState(1);
   const [est23, setEst23] = useState(2);
@@ -390,10 +403,17 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
-              <button onClick={aplicarBammy} title="Bammy sugiere área + mix según el mercado del distrito (Nexo)"
-                style={{ padding: "7px 14px", border: "none", borderRadius: 3, background: "#7B61D9", color: "#fff",
-                  fontSize: 12, fontWeight: 700, fontFamily: sans, cursor: "pointer", whiteSpace: "nowrap" }}>
-                🦀 Sugerir con Bammy
+              <button onClick={toggleBammy} disabled={!distrito}
+                title={distrito ? "Bammy manda: sugiere área, mix y mínimos de área según el mercado y la norma del distrito" : "elegí un distrito primero"}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 6px",
+                  border: `1px solid ${bammyOn ? C.peri : C.line}`, borderRadius: 999,
+                  background: bammyOn ? "#EEF1FB" : C.card, cursor: distrito ? "pointer" : "not-allowed",
+                  opacity: distrito ? 1 : 0.5, whiteSpace: "nowrap" }}>
+                <img src="/bammys/master-planner.gif" alt="" width={22} height={22} style={{ borderRadius: "50%", flexShrink: 0 }} />
+                <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: bammyOn ? C.peri : C.ink }}>bammy</span>
+                <span style={{ width: 26, height: 15, borderRadius: 9, background: bammyOn ? C.peri : C.line, position: "relative", flexShrink: 0, transition: "background .12s" }}>
+                  <span style={{ position: "absolute", top: 2, left: bammyOn ? 13 : 2, width: 11, height: 11, borderRadius: "50%", background: "#fff", transition: "left .12s" }} />
+                </span>
               </button>
             </div>
             <Num label="área promedio por departamento" value={areaDpto} onChange={setAreaDpto} unit="m²" step={5} />
@@ -403,6 +423,24 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
             </div>
             <div style={{ fontFamily: mono, fontSize: 11, color: mixWarn ? C.orange : C.soft, padding: "2px 0 10px" }}>
               {mixWarn ? "▲ el mix supera 100%" : `3 dorm = ${r.mix3}% (resto)`}
+            </div>
+            {/* mínimos de área por tipología (normativos): el 1D nunca baja de 40 m² (RNE A.020) */}
+            <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 8, marginTop: 2 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ fontFamily: sans, fontSize: 12.5, color: C.ink, textTransform: "lowercase" }}>área mínima por tipo</span>
+                <span style={{ fontFamily: mono, fontSize: 9, color: C.soft }}>m² · RNE + distrito</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", columnGap: 10 }}>
+                {[["1D", min1D, setMin1D], ["2D", min2D, setMin2D], ["3D", min3D, setMin3D]].map(([lb, v, set]) => (
+                  <label key={lb} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{lb}</span>
+                    <input type="number" value={v} step={5} min={lb === "1D" ? 40 : 0}
+                      onChange={(e) => set(Math.max(lb === "1D" ? 40 : 0, parseFloat(e.target.value) || 0))}
+                      style={{ fontFamily: mono, fontSize: 13, fontWeight: 600, color: C.ink, width: "100%",
+                        textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, outline: "none", padding: "5px 8px" }} />
+                  </label>
+                ))}
+              </div>
             </div>
             <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
               <Num label="est. por dpto 1 dorm" value={est1} onChange={setEst1} unit="est" step={0.5} />

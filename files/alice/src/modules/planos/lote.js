@@ -29,6 +29,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
   const {
     udsPiso = 4, mix1 = 40, mix2 = 40, areaObjetivo = 70,
     corrDepth = 1.6, coreW = 3, unidades = null, corePos = "centro", ordenar = "desc",
+    minViable = 40,   // área mínima de un departamento (RNE 40); por debajo, el recorte se absorbe en un vecino
   } = opts;
   const warns = [];
   const F = orientedFrame(footprint, frontIdx);
@@ -138,6 +139,55 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
   });
   if (unidades && unidades.length && colocadas !== unidades.length) {
     warns.push(`ajusté a ${colocadas} unidades/piso para áreas realistas (pediste ${unidades.length})`);
+  }
+
+  // ── absorción de slivers ────────────────────────────────────────────────────
+  // Un recorte demasiado chico/angosto NO debe quedar como "depósito" en los pisos
+  // superiores si puede sumarse al departamento con el que COMPARTE PARED: repartir
+  // ese espacio entre los depas vecinos es más inteligente que dejarlo muerto.
+  // Se fusiona en coords de marco (ua,ub, siempre rectangular) y se re-clipa a la
+  // forma real del lote. Solo sobrevive como depósito el sliver genuinamente aislado
+  // (separado por el core, o en una banda demasiado poco profunda para vivienda).
+  {
+    const ANCHO_MIN = 2.8, EPS = 0.05;
+    const anchoMarco = (u) => u.frame.ub - u.frame.ua;
+    // un recorte por debajo del mínimo de vivienda, o una astilla angosta, es candidato a
+    // fundirse con el vecino con el que comparte pared (mejor que dejarlo como depósito muerto).
+    const esSliver = (u) => anchoMarco(u) < ANCHO_MIN || u.areaReal < minViable;
+    for (const v0 of [...new Set(units.map((u) => u.frame.v0))]) {
+      let fila = units.filter((u) => u.frame.v0 === v0).sort((a, b) => a.frame.ua - b.frame.ua);
+      let cambio = true;
+      while (cambio) {
+        cambio = false;
+        for (let i = 0; i < fila.length; i++) {
+          const s = fila[i];
+          if (!esSliver(s)) continue;
+          // vecinos que comparten pared (tocan en ua/ub); el core deja un hueco de
+          // coreW entre bloques, así que el test de contigüidad ya lo excluye solo.
+          const izq = fila[i - 1] && Math.abs(fila[i - 1].frame.ub - s.frame.ua) < EPS ? fila[i - 1] : null;
+          const der = fila[i + 1] && Math.abs(s.frame.ub - fila[i + 1].frame.ua) < EPS ? fila[i + 1] : null;
+          const cand = [izq, der].filter(Boolean);
+          if (!cand.length) continue;                 // aislado → legítimamente queda depósito
+          const dst = cand.sort((a, b) => b.areaReal - a.areaReal)[0];  // el vecino más grande se lo traga
+          const nua = Math.min(dst.frame.ua, s.frame.ua);
+          const nub = Math.max(dst.frame.ub, s.frame.ub);
+          const rect = [
+            F.toWorld(nua, s.frame.v0), F.toWorld(nub, s.frame.v0),
+            F.toWorld(nub, s.frame.v1), F.toWorld(nua, s.frame.v1),
+          ];
+          const poly = recortar(rect);
+          if (!poly || area(poly) < 2) continue;
+          dst.frame = { ...dst.frame, ua: nua, ub: nub };
+          dst.pts = poly; dst.areaReal = area(poly);
+          dst.tipologia = null;                       // el recorte cambió → recalcular tipología aguas abajo
+          const gi = units.indexOf(s);
+          if (gi >= 0) units.splice(gi, 1);
+          fila = fila.filter((u) => u !== s);
+          cambio = true;
+          break;                                      // re-evaluar la fila desde cero
+        }
+      }
+    }
   }
 
   const corrRect = doble

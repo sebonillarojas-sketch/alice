@@ -20,6 +20,8 @@ export default defineConfig({
         main: "index.html",
         // banco de pruebas del generador de planos BAM (/test-planos.html)
         "test-planos": "test-planos.html",
+        // flujo BAM standalone cabida → planos → mesa (/bam-flow.html)
+        "bam-flow": "bam-flow.html",
       },
     },
   },

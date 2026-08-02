@@ -34,6 +34,30 @@ export const BAMMY = {
   partiPreferido: "core al centro",
   ordenPreferido: "desc",
 
+  // ── Mínimos de área por tipología (m²) ──────────────────────────────────────
+  // Piso = RNE A.020 Art. 8.1.b (departamento familiar en multifamiliar ≥ 40 m²);
+  // 2D/3D son mínimos FUNCIONALES derivados del programa. Un distrito que fija un
+  // mínimo mayor por parámetros urbanísticos lo sube (tabla `minPorDistrito`, poblada
+  // con la investigación normativa). Claves por n° de dormitorios (1|2|3).
+  minTipoDefault: { 1: 40, 2: 50, 3: 65 },
+  // Mínimos regulatorios por distrito (m², por n° de dormitorios) — investigación normativa
+  // de Bammy, verificada en texto de ordenanza. Donde el distrito NO fija un mínimo propio
+  // por dormitorios, rige el piso RNE 40 y los 2D/3D son funcionales (40 + ~10/dorm + baño).
+  // Se reporta el piso de la zona más permisiva del distrito; el certificado de parámetros
+  // del lote puede pedir más. San Isidro/Surco además imponen mezcla/área neta por zona
+  // (S.Isidro: 1D ≤20% de unidades, 3D ≥50%) que en la práctica sube el promedio.
+  minPorDistrito: {
+    "miraflores": { 1: 70, 2: 80, 3: 100 },                                  // Ord. 342-MM Art.10 (alta)
+    "san isidro": { 1: 70, 2: 90, 3: 110 },                                  // DA 002-ALC-MSI, Ámbito D (media)
+    "barranco": { 1: 40, 2: 50, 3: 75 },                                     // Ord. 1076-MML nota (a): solo fija 3D=75
+    "surco": { 1: 40, 2: 50, 3: 65 },                                        // no fija por dormitorio → RNE
+    "magdalena": { 1: 40, 2: 50, 3: 70 }, "magdalena del mar": { 1: 40, 2: 50, 3: 70 }, // Ord. 018-2018-MDMM (alta)
+    "jesus maria": { 1: 65, 2: 70, 3: 75 }, "jesús maría": { 1: 65, 2: 70, 3: 75 },     // Ord. 241-MDJM zonas C/D (media)
+    "lince": { 1: 40, 2: 50, 3: 65 },                                        // sin mínimo propio → RNE
+    "pueblo libre": { 1: 40, 2: 50, 3: 65 },                                 // sin mínimo propio → RNE
+    "san miguel": { 1: 40, 2: 50, 3: 65 },                                   // sin mínimo propio → RNE
+  },
+
   // ── Mínimos duros (RNE A.020 / A.010 / Neufert) — el generador nunca los cruza ──
   rne: {
     deptoMinM2: 40,        // A.020 vivienda unifamiliar/multifamiliar
@@ -66,13 +90,16 @@ export function sugerirBrief({ distrito, segmento, areaObjetivo } = {}) {
   const seg = segmento || BAMMY.segmentoPorDistrito[d] || "medio";
   const base = BAMMY.mixPorSegmento[seg] || BAMMY.mixPorSegmento.medio;
   const area = areaObjetivo || BAMMY.areaPorDistrito[d] || base.areaObjetivo;
+  // mínimos por tipología: piso normativo + lo que sube el distrito por parámetros urbanísticos
+  const minimos = { ...BAMMY.minTipoDefault, ...(BAMMY.minPorDistrito[d] || {}) };
   return {
     segmento: seg,
     pct1: base.pct1, pct2: base.pct2,
     areaObjetivo: area,
+    minimos,
     parti: BAMMY.partiPreferido,
     ordenar: BAMMY.ordenPreferido,
-    nota: `Bammy · ${seg}${d ? " · " + distrito : ""} · objetivo ${area} m²`,
+    nota: `Bammy · ${seg}${d ? " · " + distrito : ""} · objetivo ${area} m² · mín 1D ${minimos[1]}`,
   };
 }
 

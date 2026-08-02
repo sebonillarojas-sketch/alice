@@ -62,6 +62,25 @@ export default function PlantaFina({ parti, brief = {} }) {
         const q = T({ x: t.x, y: t.y });
         return <Simbolo key={t.id || i} it={t} px={q.x} py={q.y} k={s} selected={false} />;
       })}
+      {/* cotas generales (frente × fondo) */}
+      {(() => {
+        const BLUE = "#95ABE8", DIM = "#7C93D4";
+        const yb = PAD + h * s + 15, x0 = PAD, x1 = PAD + w * s;
+        const xl = PAD - 17, y0 = PAD, y1 = PAD + h * s;
+        return (
+          <g>
+            <line x1={x0} y1={yb} x2={x1} y2={yb} stroke={BLUE} strokeWidth="0.6" />
+            <line x1={x0} y1={yb - 3} x2={x0} y2={yb + 3} stroke={BLUE} strokeWidth="1" />
+            <line x1={x1} y1={yb - 3} x2={x1} y2={yb + 3} stroke={BLUE} strokeWidth="1" />
+            <text x={(x0 + x1) / 2} y={yb - 3} textAnchor="middle" fontFamily={mono} fontSize="6" fill={DIM}>{w.toFixed(2)}</text>
+            <line x1={xl} y1={y0} x2={xl} y2={y1} stroke={BLUE} strokeWidth="0.6" />
+            <line x1={xl - 3} y1={y0} x2={xl + 3} y2={y0} stroke={BLUE} strokeWidth="1" />
+            <line x1={xl - 3} y1={y1} x2={xl + 3} y2={y1} stroke={BLUE} strokeWidth="1" />
+            <text x={xl - 3} y={(y0 + y1) / 2} textAnchor="middle" fontFamily={mono} fontSize="6"
+              fill={DIM} transform={`rotate(-90 ${xl - 3} ${(y0 + y1) / 2})`}>{h.toFixed(2)}</text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }

@@ -6,16 +6,19 @@
 
 import { packFloor } from "./lote.js";
 import { layout } from "./distribucion.js";
-import { tipologiaCercana, mixTipologias, porTipologia } from "./tipologias.js";
+import { tipologiaCercana, mixTipologias, porTipologia, minAreaViable } from "./tipologias.js";
 import { area, clipConvex, pointInPolygon, isConvex } from "./geometry.js";
 import { porId, NSE } from "./mobiliario.js";
 
 let _n = 1;
 const oid = () => `o${_n++}_${Math.random().toString(36).slice(2, 5)}`;
-// etiqueta legible de una tipología: "2D", "3D", "studio", "depósito" (nada de códigos)
-const etiqueta = (t) => !t ? "?" : t.id === "depósito" ? "depósito" : t.dorms === 1 && t.area?.[1] <= 38 ? "studio" : `${t.dorms}D`;
-// recorte inservible como vivienda (chico O astilla angosta junto al core) → depósito
-export const esDeposito = (u) => u.areaReal < 16 || (u.frame.ub - u.frame.ua) < 2.8 || (u.frame.v1 - u.frame.v0) < 3.2;
+// etiqueta legible de una tipología: "1D", "2D", "3D", "depósito" (nada de códigos ni "studio")
+const etiqueta = (t) => !t ? "?" : t.id === "depósito" ? "depósito" : `${t.dorms}D`;
+// recorte inservible como vivienda → depósito. minViable = área mínima de un departamento
+// (RNE A.020 = 40 m²; el distrito/brief puede subirlo). Un recorte por debajo NO es un
+// departamento compliant: packFloor primero intenta sumarlo a un vecino; si queda aislado,
+// se marca depósito. También es depósito la astilla angosta (<2.8) o la banda poco profunda (<3.2).
+export const esDeposito = (u, minViable = 40) => u.areaReal < minViable || (u.frame.ub - u.frame.ua) < 2.8 || (u.frame.v1 - u.frame.v0) < 3.2;
 const round = (n) => +n.toFixed(3);
 const rect = (x, y, w, h) => [{ x: round(x), y: round(y) }, { x: round(x + w), y: round(y) }, { x: round(x + w), y: round(y + h) }, { x: round(x), y: round(y + h) }];
 const it = (ref, x, y, rot = 0, over = {}) => {
@@ -65,23 +68,23 @@ function layoutStudio(W, D, nse = "C") {
 
 /** amuebla una unidad rectangular del piso, transformando el layout local al mundo.
  *  override: { tipologiaId, banos } — elección manual del usuario para ESTE bloque. */
-function amoblarUnidad(unit, F, nse, override = null) {
+function amoblarUnidad(unit, F, nse, override = null, minimos = null) {
   const { ua, ub, v0, v1, banda } = unit.frame;
   const W = ub - ua, D = v1 - v0;
   const forzada = override?.tipologiaId ? porTipologia[override.tipologiaId] : null;
-  let t = forzada || unit.tipologia || tipologiaCercana(W * D, W);
+  let t = forzada || unit.tipologia || tipologiaCercana(W * D, W, null, minimos);
   const nb = override?.banos ?? t.banos;
   const visita = override?.visita ?? false;               // ½ baño de visita (opcional)
   let L = layout(W, D, t.dorms, nb, { swap: false, nse, visita })
     || (t.dorms <= 2 ? layoutStudio(W, D, nse) : null);   // recorte poco profundo → studio compacto
   if (!L && !forzada) {
     // la tipología pedida no cabe en este recorte → probar la más cercana SIN preferencia de dorms
-    const t2 = tipologiaCercana(W * D, W);
+    const t2 = tipologiaCercana(W * D, W, null, minimos);
     if (t2.id !== t.id) {
       L = layout(W, D, t2.dorms, t2.banos, { swap: false, nse }) || (t2.dorms <= 2 ? layoutStudio(W, D, nse) : null);
       if (L) t = t2;
     }
-    if (!L && W >= 2.8 && D >= 3.2) { L = layoutStudio(W, D, nse); if (L) t = tipologiaCercana(W * D, W, 1); }
+    if (!L && W >= 2.8 && D >= 3.2) { L = layoutStudio(W, D, nse); if (L) t = tipologiaCercana(W * D, W, 1, minimos); }
   }
   if (!L) return null; // el recorte no admite distribución interna — queda como bloque
 
@@ -172,8 +175,9 @@ function fachada(units, F, { terraza = true } = {}) {
 export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
   // defaults del playbook de Bammy (estudio de mercado Nexo, Lima): 2D+3D dominan
   // las ventas, área media ~65 m². Se usan solo si el caller no manda valores.
-  const { udsPiso = 4, pct1 = 22, pct2 = 40, areaObjetivo = 66, coreU0, coreW } = cfg;
-  const unidades = mixTipologias(Math.max(1, udsPiso), { pct1, pct2, areaObjetivo });
+  const { udsPiso = 4, pct1 = 22, pct2 = 40, areaObjetivo = 66, coreU0, coreW, minimos = null } = cfg;
+  const minViable = minAreaViable(minimos);   // vivienda compliant más chica REALMENTE disponible (sin tolerancia)
+  const unidades = mixTipologias(Math.max(1, udsPiso), { pct1, pct2, areaObjetivo, minimos });
 
   // Orden = prioridad. Primero el patrón que Bammy aprendió del proyecto real
   // Del Castillo: núcleo central + servicio a pozos de luz + doble crujía.
@@ -186,14 +190,14 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
 
   const partis = [];
   for (const c of configs) {
-    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar, coreU0, coreW });
+    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar, coreU0, coreW, minViable });
     if (!res.units.length) continue;
-    if (res.units.every((u) => esDeposito(u))) continue;   // parti puro depósito (ninguna vivienda viable) → no es una distribución válida
+    if (res.units.every((u) => esDeposito(u, minViable))) continue;   // parti puro depósito (ninguna vivienda viable) → no es una distribución válida
     const rooms = [];
     if (res.core) rooms.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });
     if (res.corridor) rooms.push({ id: res.corridor.id, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
     res.units.forEach((u) => {
-      const t = esDeposito(u) ? { id: "depósito" } : tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms);
+      const t = esDeposito(u, minViable) ? { id: "depósito" } : tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms, minimos);
       u.tipologia = t;
       rooms.push({ id: u.id, name: `${etiqueta(t)} · ${u.areaReal.toFixed(0)}m²`, tipo: "unidad", subtipo: u.subtipo, pts: u.pts });
     });
@@ -216,7 +220,8 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
  * overrides: { [unitId]: { tipologiaId, banos } } — elección/tweaks manuales por bloque.
  */
 export function amoblarParti(parti, brief = {}, overrides = {}) {
-  const { nse = "C", terraza = true } = brief;
+  const { nse = "C", terraza = true, minimos = null } = brief;
+  const minViable = minAreaViable(minimos);
   const { res } = parti;
   const rooms = [], items = [], notas = [];
   if (res.core) rooms.push({ id: `${res.core.id}a`, name: "core", tipo: "core", pts: res.core.pts });
@@ -224,11 +229,11 @@ export function amoblarParti(parti, brief = {}, overrides = {}) {
 
   let amobladas = 0;
   res.units.forEach((u) => {
-    if (esDeposito(u)) {
+    if (esDeposito(u, minViable)) {
       rooms.push({ id: `${u.id}a`, name: `depósito · ${u.areaReal.toFixed(0)}m²`, tipo: "servicio", pts: u.pts });
       return;
     }
-    const A = amoblarUnidad(u, res.F, nse, overrides[u.id]);
+    const A = amoblarUnidad(u, res.F, nse, overrides[u.id], minimos);
     if (A) {
       u.tipologia = A.tipologia;   // puede haber caído a la tipología que sí cabe
       rooms.push(...A.rooms.map((r) => ({ ...r, unidad: A.tipologia.id })));

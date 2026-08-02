@@ -9,8 +9,11 @@
 // Así el generador y el visor tienen un calce a cualquier recorte, no solo a los compactos.
 const _round = (n) => Math.round(n);
 // bandas por n° de dormitorios: [áreaMin, áreaMax, paso, medianaMercado (para el peso)]
+// piso RNE A.020 Art. 8.1.b: un departamento familiar en multifamiliar ≥ 40 m². Por eso
+// el 1D arranca en 40 (nada de studios/monoambientes sub-normativos); los distritos que
+// piden más por parámetros urbanísticos suben este piso vía el brief (minimos).
 const _BANDAS = [
-  { d: 1, min: 22,  max: 60,  step: 2.5, med: 42,  frente0: 3.0, fSlope: 0.035 },
+  { d: 1, min: 40,  max: 60,  step: 2.5, med: 46,  frente0: 3.0, fSlope: 0.035 },
   { d: 2, min: 42,  max: 94,  step: 2.5, med: 58,  frente0: 5.2, fSlope: 0.036 },
   { d: 3, min: 56,  max: 140, step: 3,   med: 74,  frente0: 6.6, fSlope: 0.027 },
   { d: 4, min: 86,  max: 176, step: 5,   med: 120, frente0: 8.0, fSlope: 0.016 },
@@ -33,7 +36,7 @@ const _seg = (d, a) => {
 };
 const _nombre = (d, a) => {
   const m = _BANDAS.find((b) => b.d === d).med;
-  const base = d === 1 ? (a < 31 ? "studio" : "1D") : `${d}D`;
+  const base = `${d}D`;   // sin "studio": el 1D mínimo normativo es 40 m²
   const tag = a < m * 0.82 ? "compacto" : a < m * 0.98 ? "" : a < m * 1.18 ? "confort" : a < m * 1.45 ? "amplio" : "premium";
   return `${base}${tag ? " " + tag : ""} · ${a}m²`;
 };
@@ -75,15 +78,46 @@ function costo(t, areaDisp, frenteDisp, dormsPref) {
   return c;
 }
 
-/** la tipología más cercana al recorte { area, frente } (opcional: dorms preferidos) */
-export function tipologiaCercana(areaDisp, frenteDisp, dormsPref = null) {
-  return [...TIPOLOGIAS].sort((a, b) =>
+// piso de área por n° de dormitorios (RNE 40 para 1D; 2D/3D funcionales). El brief
+// puede subirlo por distrito/parámetros urbanísticos. Filtra tipologías bajo mínimo.
+export const MINIMOS_DEFAULT = { 1: 40, 2: 50, 3: 65, 4: 86, 5: 150 };
+const minOf = (d, minimos) => (minimos?.[d] ?? MINIMOS_DEFAULT[d] ?? 0);
+const cumpleMin = (t, minimos) => t.area[1] >= minOf(t.dorms, minimos);
+
+/** área mínima REAL de una vivienda compliant: el menor mínimo por-tipo para el que existe
+ *  una tipología en el catálogo. Ej: Miraflores pide 1D≥70 pero el 1D llega solo a 60 → el
+ *  1D no es alcanzable ahí, y la vivienda más chica pasa a ser el 2D (mín 80). Sin este
+ *  cálculo, un recorte de 73 pasaría el filtro del 1D y se etiquetaría 2D quedando bajo mínimo. */
+export function minAreaViable(minimos) {
+  const mins = { ...MINIMOS_DEFAULT, ...(minimos || {}) };
+  let best = Infinity;
+  for (const d of [1, 2, 3, 4, 5]) {
+    const m = mins[d];
+    if (m == null) continue;
+    if (TIPOLOGIAS.some((t) => t.dorms === d && t.area[1] >= m)) best = Math.min(best, m);
+  }
+  return Number.isFinite(best) ? best : 40;
+}
+// pool de tipologías admisibles para un recorte de área `areaDisp` bajo `minimos`:
+//   1) la tipología cumple su propio mínimo de catálogo (t.area[1] ≥ mín[dorms]), y
+//   2) el recorte alcanza ese mínimo (areaDisp ≥ mín[dorms]) → NUNCA se etiqueta una
+//      unidad con un tipo cuyo mínimo no cubre. Sin (2), un recorte de 65 podría salir
+//      "2D" con 2D mín 70 y quedar bajo mínimo. Cae con gracia si el filtro vacía.
+const pool = (minimos, areaDisp = Infinity) => {
+  const full = TIPOLOGIAS.filter((t) => cumpleMin(t, minimos));
+  const ok = full.filter((t) => areaDisp >= minOf(t.dorms, minimos));
+  return ok.length ? ok : (full.length ? full : TIPOLOGIAS);
+};
+
+/** la tipología más cercana al recorte { area, frente } (opcional: dorms preferidos, mínimos) */
+export function tipologiaCercana(areaDisp, frenteDisp, dormsPref = null, minimos = null) {
+  return [...pool(minimos, areaDisp)].sort((a, b) =>
     costo(a, areaDisp, frenteDisp, dormsPref) - costo(b, areaDisp, frenteDisp, dormsPref))[0];
 }
 
 /** las N tipologías candidatas para un recorte, de mejor a peor calce */
-export function tipologiasCandidatas(areaDisp, frenteDisp, n = 4) {
-  return [...TIPOLOGIAS]
+export function tipologiasCandidatas(areaDisp, frenteDisp, n = 4, minimos = null) {
+  return [...pool(minimos, areaDisp)]
     .map((t) => ({ t, c: costo(t, areaDisp, frenteDisp, null) }))
     .sort((a, b) => a.c - b.c)
     .slice(0, n)
@@ -93,7 +127,7 @@ export function tipologiasCandidatas(areaDisp, frenteDisp, n = 4) {
 export const porTipologia = Object.fromEntries(TIPOLOGIAS.map((t) => [t.id, t]));
 
 /** mezcla de tipologías para un piso: reparte n unidades según el mix pedido (VIS→más 2D/3D chico) */
-export function mixTipologias(n, { pct1 = 25, pct2 = 40, areaObjetivo = 60 } = {}) {
+export function mixTipologias(n, { pct1 = 25, pct2 = 40, areaObjetivo = 60, minimos = null } = {}) {
   const pct3 = Math.max(0, 100 - pct1 - pct2);
   const n1 = Math.round((n * pct1) / 100);
   const n3 = Math.round((n * pct3) / 100);
@@ -106,7 +140,8 @@ export function mixTipologias(n, { pct1 = 25, pct2 = 40, areaObjetivo = 60 } = {
   const esc = areaObjetivo / wAvg;
   const target = { 1: med[1] * esc, 2: med[2] * esc, 3: med[3] * esc };
   const pick = (dorms) => {
-    const cands = TIPOLOGIAS.filter((t) => t.dorms === dorms);
+    let cands = TIPOLOGIAS.filter((t) => t.dorms === dorms && cumpleMin(t, minimos));
+    if (!cands.length) cands = TIPOLOGIAS.filter((t) => t.dorms === dorms);   // nunca vacío
     return cands.sort((a, b) =>
       Math.abs(a.area[1] - target[dorms]) - Math.abs(b.area[1] - target[dorms]) - (a.peso - b.peso) / 100)[0];
   };
