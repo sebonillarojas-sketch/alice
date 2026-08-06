@@ -5,3 +5,5 @@ Registro diario de las sesiones de estudio autónomo (distribución de vivienda 
 | Día | Fecha | Tema | Nota | 3 planos |
 |---|---|---|---|---|
 | 1 | 2026-08-06 | Partis por fachada (única frente-ancho, única lote-profundo, esquina, pozo) | [2026-08-06-partis-por-fachada.md](2026-08-06-partis-por-fachada.md) | [u01](planos/2026-08-06-u01.svg) 1D/1B lote interior con pozo lateral corrido, Pueblo Libre (5.10×7.20) · [u02](planos/2026-08-06-u02.svg) 2D/2B fachada única frente ancho, Lince (9.60×6.20) · [u03](planos/2026-08-06-u03.svg) 3D/2B esquina de aristas corridas, La Molina (7.20×11.30) |
+
+Nota día 1: aviso de WhatsApp no salió — el proxy de red de la sesión devolvió 403 (política de egreso) al intentar `POST aliceai.bam.pe/api/agents/notify`. Borrador de Gmail sí se creó correctamente. No se reintentó en loop.
