@@ -1553,7 +1553,8 @@ app.post("/api/agents/report", requireAgentKey, async (req, res) => {
 // Aviso puntual por WhatsApp (texto libre) para procesos externos —p.ej. la rutina
 // cloud de estudio de Bammy avisa que su reporte quedó listo. Guardado con x-agent-key;
 // entrega a Sebastián vía sendWA (Twilio). No persiste nada: es solo notificación.
-app.post("/api/notify", requireAgentKey, async (req, res) => {
+// Va bajo /api/agents/ para pasar el panelGate (solo abre x-agent-key en /agents/*).
+app.post("/api/agents/notify", requireAgentKey, async (req, res) => {
   try {
     const { text } = req.body || {};
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text requerido" });
