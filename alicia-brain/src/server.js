@@ -1550,6 +1550,24 @@ app.post("/api/agents/report", requireAgentKey, async (req, res) => {
   }
 });
 
+// Aviso puntual por WhatsApp (texto libre) para procesos externos —p.ej. la rutina
+// cloud de estudio de Bammy avisa que su reporte quedó listo. Guardado con x-agent-key;
+// entrega a Sebastián vía sendWA (Twilio). No persiste nada: es solo notificación.
+app.post("/api/notify", requireAgentKey, async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text || !String(text).trim()) return res.status(400).json({ error: "text requerido" });
+    if (!process.env.PHONE_sb) return res.status(500).json({ error: "PHONE_sb no configurado" });
+    const { sendWA } = await import("./wa.js");
+    const sent = await sendWA(process.env.PHONE_sb, String(text))
+      .catch(e => { console.error("notify WA falló:", e.message); return false; });
+    console.log(`🔔 /api/notify → WhatsApp a Sebastián (${sent ? "enviado" : "no enviado"})`);
+    res.json({ ok: true, sent: !!sent });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // El Lab del cockpit lee el estado real (público, solo lectura)
 app.get("/api/agents/status", (req, res) => {
   try {
