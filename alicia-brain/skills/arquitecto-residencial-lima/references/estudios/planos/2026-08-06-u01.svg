@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1618 816" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1618" height="816" fill="#ffffff"/>
+<polygon points="100.0,180.0 488.0,180.0 488.0,414.0 100.0,414.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="226.0,426.0 488.0,426.0 488.0,736.0 226.0,736.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="100.0,426.0 214.0,426.0 214.0,546.0 100.0,546.0" fill="#eef2ea" stroke="none"/>
+<polygon points="100.0,558.0 214.0,558.0 214.0,736.0 100.0,736.0" fill="#eef2ea" stroke="none"/>
+<rect x="498.0" y="170.0" width="176.0" height="576.0" fill="#eef7ee" stroke="#7fae7f" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="586.0" y="458.0" font-size="11" fill="#4a7a4a" text-anchor="middle" font-style="italic">pozo lateral 2.20 × 7.20 m</text>
+<rect x="90.0" y="160.0" width="408.0" height="20.0" fill="#2b2b2b"/>
+<rect x="488.0" y="170.0" width="20.0" height="576.0" fill="#2b2b2b"/>
+<rect x="90.0" y="736.0" width="408.0" height="20.0" fill="#2b2b2b"/>
+<rect x="80.0" y="170.0" width="20.0" height="576.0" fill="#2b2b2b"/>
+<rect x="100.0" y="414.0" width="388.0" height="12.0" fill="#2b2b2b"/>
+<rect x="214.0" y="426.0" width="12.0" height="310.0" fill="#2b2b2b"/>
+<rect x="100.0" y="546.0" width="114.0" height="12.0" fill="#2b2b2b"/>
+<rect x="258.0" y="157.0" width="72.0" height="26.0" fill="#ffffff"/>
+<rect x="325.0" y="411.0" width="64.0" height="18.0" fill="#ffffff"/>
+<rect x="125.0" y="411.0" width="64.0" height="18.0" fill="#ffffff"/>
+<rect x="211.0" y="619.0" width="18.0" height="56.0" fill="#ffffff"/>
+<line x1="190.0" y1="180.0" x2="398.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<line x1="488.0" y1="509.0" x2="488.0" y2="653.0" stroke="#2b6cb0" stroke-width="5"/>
+<text x="294.0" y="293.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">sala-comedor</text>
+<text x="294.0" y="309.0" font-size="11" fill="#444" text-anchor="middle">14.2 m²</text>
+<text x="357.0" y="577.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio principal</text>
+<text x="357.0" y="593.0" font-size="11" fill="#444" text-anchor="middle">12.7 m²</text>
+<text x="157.0" y="482.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">lavandería</text>
+<text x="157.0" y="498.0" font-size="11" fill="#444" text-anchor="middle">2.1 m²</text>
+<text x="157.0" y="643.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 1</text>
+<text x="157.0" y="659.0" font-size="11" fill="#444" text-anchor="middle">3.2 m²</text>
+<line x1="80.0" y1="768.0" x2="508.0" y2="768.0" stroke="#888" stroke-width="1"/>
+<text x="294.0" y="784.0" font-size="13" fill="#555" text-anchor="middle">frente 5.10 m</text>
+<line x1="696.0" y1="160.0" x2="696.0" y2="756.0" stroke="#888" stroke-width="1"/>
+<text x="714.0" y="458.0" font-size="13" fill="#555" text-anchor="middle" transform="rotate(90 714.0 458.0)">fondo 7.20 m</text>
+<text x="90" y="26" font-size="15" fill="#111" font-weight="700">2026-08-06-u01 — 33.5 m² — 1D/1B lote interior con pozo lateral corrido — Pueblo Libre, Lima Moderna</text>
+<text x="90" y="46" font-size="12" fill="#555">BRIEF TERRENO: lote interior de edificio multifamiliar (sin fachada a calle) — frente 5.10 m × fondo 7.20 m.</text>
+<text x="90" y="66" font-size="12" fill="#555">Única fachada libre: pozo de luz lateral corrido en el lado Este, 2.20 m de ancho × 7.20 m de largo (multifamiliar ≥ 2.10 m, RNE A.020 Art. 11.4.b), compartido en espejo con la unidad vecina.</text>
+<text x="90" y="86" font-size="12" fill="#555">Ingreso por el lado corto superior del plano: pasillo común techado del edificio, medianero/interior ciego, solo puerta de acceso, sin ventanas. El lado izquierdo (Oeste) y el inferior (Sur) son medianeros ciegos con unidades vecinas.</text>
+<text x="90" y="106" font-size="12" fill="#555">Orientación: pozo hacia el Este — sol de mañana entra a sala y dormitorio. Retiros: ninguno (edificación entre medianeras). Segmento: 1D compacto de inversión.</text>
+</svg>
