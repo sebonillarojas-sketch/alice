@@ -1,5 +1,5 @@
 // Cheshire 😺 · tester E2E de usabilidad v1 (ver docs/WONDERLAND_IT.md)
-// Corre en la Mac Studio (launchd cada 30 min) con Chromium REAL contra producción:
+// Corre en la hackintosh de Alicia (docs/hackintosh.md; launchd cada 30 min) con Chromium REAL contra producción:
 // lo que Cheshire ve es lo que ve un usuario (TLS estricto, JS real, viewport real).
 // v1 sin login con datos (no ensucia prod): superficie pública + error-path + responsive.
 // Reporta a /api/agents/report → Lab del ERP + WhatsApp automático si hay críticos.

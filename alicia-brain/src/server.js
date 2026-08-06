@@ -103,7 +103,7 @@ async function panelGate(req, res, next) {
   const bodyKey = req.headers["x-body-key"];
   if (BODY_KEY && bodyKey && bodyKey.length === BODY_KEY.length
     && crypto.timingSafeEqual(Buffer.from(bodyKey), Buffer.from(BODY_KEY))) return next();
-  // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
+  // Agentes externos (Cheshire en la hackintosh de Alicia): pasan con x-agent-key;
   // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
   if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "panel_locked", detail: "PANEL_PASSWORD no configurado en Railway" });
