@@ -1,4 +1,4 @@
-import { erp } from "./erp-client.js";
+import * as sbTasks from "./supabase-tasks.js";
 import { googleCalendar, gmail, googleAvailable } from "./integrations/google.js";
 import { zoom, zoomAvailable } from "./integrations/zoom.js";
 import { dropbox, dropboxAvailable } from "./integrations/dropbox.js";
@@ -305,19 +305,19 @@ export async function executeTool(toolName, input, userId) {
 
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
-      const task = await erp.createTask({ ...input, created_by: userId });
-      return `Tarea creada ✓ ID #${task.id}: "${task.title}" · ${task.space_id} · ${task.priority} · ${task.status}`;
+      const task = await sbTasks.createTask(input, userId);
+      return `Tarea creada ✓ "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
       const { task_id, ...fields } = input;
-      const task = await erp.updateTask(task_id, { ...fields, updated_by: userId });
-      return `Tarea #${task.id} actualizada ✓: ${JSON.stringify(fields)}`;
+      const task = await sbTasks.updateTask(task_id, fields);
+      return `Tarea actualizada ✓ "${task.title}": ${JSON.stringify(fields)}`;
     }
     case "get_tasks": {
-      const tasks = await erp.getTasks(input);
+      const tasks = await sbTasks.getTasks(input);
       if (!tasks.length) return "No hay tareas con esos filtros.";
       return tasks.map(t =>
-        `#${t.id} [${t.status}] ${t.title} — ${t.assignee_id || "sin asignar"} · ${t.priority}${t.due_date ? ` · vence ${t.due_date}` : ""}`
+        `${t.title} [${t.status}] — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`
       ).join("\n");
     }
 
