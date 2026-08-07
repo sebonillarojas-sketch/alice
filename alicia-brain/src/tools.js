@@ -1,4 +1,4 @@
-import { erp } from "./erp-client.js";
+import { erpTasks } from "./integrations/supabase.js";
 import { googleCalendar, gmail, googleAvailable } from "./integrations/google.js";
 import { zoom, zoomAvailable } from "./integrations/zoom.js";
 import { dropbox, dropboxAvailable } from "./integrations/dropbox.js";
@@ -33,7 +33,7 @@ export const ALICIA_TOOLS = [
       type: "object",
       properties: {
         task_id:     { type: "number" },
-        status:      { type: "string", enum: ["todo","in_progress","review","done","cancelled"] },
+        status:      { type: "string", enum: ["pendiente","en_proceso","en_revision","postergada","completada"] },
         priority:    { type: "string", enum: ["urgente","alta","media","baja"] },
         assignee_id: { type: "string" },
         due_date:    { type: "string" },
@@ -50,7 +50,7 @@ export const ALICIA_TOOLS = [
       properties: {
         space_id:    { type: "string" },
         assignee_id: { type: "string" },
-        status:      { type: "string", enum: ["todo","in_progress","review","done","cancelled"] },
+        status:      { type: "string", enum: ["pendiente","en_proceso","en_revision","postergada","completada"] },
       },
     },
   },
@@ -305,19 +305,34 @@ export async function executeTool(toolName, input, userId) {
 
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
-      const task = await erp.createTask({ ...input, created_by: userId });
-      return `Tarea creada ✓ ID #${task.id}: "${task.title}" · ${task.space_id} · ${task.priority} · ${task.status}`;
+      const task = await erpTasks.create({
+        title: input.title,
+        space: input.space_id,
+        assignee: input.assignee_id || userId || "sb",
+        priority: input.priority || "media",
+        due: input.due_date || "",
+        description: input.description || "",
+        parent_id: input.parent_id ?? null,
+      });
+      return `Tarea creada ✓ ID #${task.id}: "${task.title}" · ${task.space} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
-      const { task_id, ...fields } = input;
-      const task = await erp.updateTask(task_id, { ...fields, updated_by: userId });
+      const { task_id, status, priority, assignee_id, due_date, title } = input;
+      const fields = {};
+      if (status) { fields.status = status; fields.checked = status === "completada"; }
+      if (priority) fields.priority = priority;
+      if (assignee_id) fields.assignee = assignee_id;
+      if (due_date) fields.due = due_date;
+      if (title) fields.title = title;
+      const task = await erpTasks.update(task_id, fields);
+      if (!task) return `No encontré la tarea #${task_id} en el ERP.`;
       return `Tarea #${task.id} actualizada ✓: ${JSON.stringify(fields)}`;
     }
     case "get_tasks": {
-      const tasks = await erp.getTasks(input);
+      const tasks = await erpTasks.list({ space: input.space_id, assignee: input.assignee_id, status: input.status, limit: 50 });
       if (!tasks.length) return "No hay tareas con esos filtros.";
       return tasks.map(t =>
-        `#${t.id} [${t.status}] ${t.title} — ${t.assignee_id || "sin asignar"} · ${t.priority}${t.due_date ? ` · vence ${t.due_date}` : ""}`
+        `#${t.id} [${t.status}] ${t.title} — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`
       ).join("\n");
     }
 

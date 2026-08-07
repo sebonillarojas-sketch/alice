@@ -1805,8 +1805,8 @@ app.get("/api/home", async (req, res) => {
   // Tareas del ERP
   const tasks = (async () => {
     try {
-      const { erp } = await import("./erp-client.js");
-      const r = await erp.getTasks({ limit: 6 });
+      const { erpTasks } = await import("./integrations/supabase.js");
+      const r = await erpTasks.list({ open: true, limit: 6 });
       const list = Array.isArray(r) ? r : (r.tasks || r.data || []);
       return list.slice(0, 5).map(t => ({
         title: t.title || t.name || t.descripcion || "(tarea)",
