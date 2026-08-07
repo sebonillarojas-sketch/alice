@@ -159,6 +159,27 @@ function initSchema(db) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
   `);
+  // Taller de Bammy: el agente cuelga sus distribuciones (bammy_studies) y Sebastián
+  // las corrige dibujando encima (bammy_corrections). Bammy lee las correcciones abiertas
+  // en su siguiente corrida y aprende de ellas.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bammy_studies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      day INTEGER, date TEXT, topic TEXT,
+      units TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS bammy_corrections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      study_id INTEGER, unidad TEXT,
+      image TEXT, notas TEXT,
+      veredicto TEXT DEFAULT 'a_corregir',
+      status TEXT NOT NULL DEFAULT 'open',
+      created_at TEXT DEFAULT (datetime('now')),
+      applied_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_bammy_corr_status ON bammy_corrections(status, created_at DESC);
+  `);
   // Higiene: un turno de assistant vacío en el historial contamina los turnos
   // siguientes (el modelo tiende a repetir el silencio). Se borran al arrancar.
   db.exec(`DELETE FROM messages WHERE role = 'assistant' AND trim(content) = ''`);
