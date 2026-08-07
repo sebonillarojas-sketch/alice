@@ -2,6 +2,7 @@
 import cron from "node-cron";
 import { runDailyBriefing } from "./briefing.js";
 import { refreshMarketData, refreshRentalListings } from "./market.js";
+import { enqueueJob, activeWorkers, staleSources, raiseCoverageFinding } from "./fleet.js";
 
 export function startCron() {
   // Briefing diario a las 7:00am hora Lima (UTC-5 → 12:00 UTC)
@@ -63,6 +64,18 @@ export function startCron() {
     console.log("🐰 Cron: scraper Urbania (listings Lima)");
     const { runScraperAgent } = await import("./scrapers/index.js");
     await runScraperAgent({ sources: ["urbania"] }).catch(e => console.error("Scraper Urbania error:", e.message));
+  }, { timezone: "America/Lima" });
+
+  // Scout de la flota 🐰 · cada 30 min: encola jobs a los workers vivos + alarma de
+  // cobertura (mide el refresco REAL por fuente, no confía en que el cron disparó).
+  const FLEET_SOURCES = { urbania: 12 * 3600, nexo: 2 * 3600 };  // maxAge por fuente (seg)
+  cron.schedule("5,35 * * * *", async () => {
+    try {
+      const workers = activeWorkers(180);
+      if (workers.length) for (const src of Object.keys(FLEET_SOURCES)) enqueueJob(src);
+      const created = raiseCoverageFinding(staleSources(FLEET_SOURCES));
+      if (created) console.log(`🐰 Scout: ${created} finding(s) de cobertura de Radar`);
+    } catch (e) { console.error("Scout tick error:", e.message); }
   }, { timezone: "America/Lima" });
 
   // Cerebro → Dropbox · espejo nocturno 3:30am Lima
