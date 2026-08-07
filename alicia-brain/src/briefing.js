@@ -1,6 +1,6 @@
 // Briefing diario proactivo — corre cada mañana a las 7:00am Lima
 import Anthropic from "@anthropic-ai/sdk";
-import { erpTasks } from "./integrations/supabase.js";
+import * as sbTasks from "./supabase-tasks.js";
 import { googleCalendar, googleAvailable } from "./integrations/google.js";
 import { tavily, tavilyAvailable } from "./integrations/tavily.js";
 import { query } from "./db.js";
@@ -20,7 +20,7 @@ export async function runDailyBriefing() {
   const today = new Date().toLocaleDateString("es-PE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   // 1. Tareas vencidas
-  const allTasks = await erpTasks.list({ open: true }).catch(() => []);
+  const allTasks = await sbTasks.getTasks({ open: true, limit: 200 }).catch(() => []);
   const todayStr = new Date().toISOString().split("T")[0];
   const overdue = allTasks.filter(t => t.due && t.due < todayStr);
   const dueSoon = allTasks.filter(t => t.due && t.due === todayStr);

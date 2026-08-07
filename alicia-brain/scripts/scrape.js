@@ -3,25 +3,29 @@
 // Runs on the Mac (needs browser), pushes data to alicia-brain API
 //
 // Usage:
-//   node scripts/scrape.js            — scrapes everything
-//   node scripts/scrape.js nexo       — Nexo projects only
-//   node scripts/scrape.js banks      — SBS bank rates only
+//   node scripts/scrape.js              — todo (nexo + urbania + banks)
+//   node scripts/scrape.js nexo         — solo Nexo (proyectos)
+//   node scripts/scrape.js urbania      — solo Urbania (venta)
+//   node scripts/scrape.js banks        — solo SBS (tasas)
+//   node scripts/scrape.js all --dry-run — scrapea y muestra, sin pushear (prueba segura)
 //
 // Setup (one-time):
-//   npx playwright install chromium
+//   npm install && npx playwright install chromium
 
 import { chromium } from "playwright";
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { extractDetailUrls, parseDetail } from "../src/scrapers/urbania.js";
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const BRAIN_URL   = process.env.BRAIN_URL || "http://localhost:3001";
 const AUTH_TOKEN  = process.env.MARKET_REFRESH_TOKEN || "white-rabbit";
-const TARGET      = process.argv[2] || "all";
+const DRY         = process.argv.includes("--dry-run");   // scrapea pero NO pushea (prueba segura, no toca prod)
+const TARGET      = (process.argv[2] && !process.argv[2].startsWith("--")) ? process.argv[2] : "all";
 
 // ── Push to alicia-brain ──────────────────────────────────────────────────────
 async function pushToAPI(endpoint, data) {
@@ -256,6 +260,41 @@ async function scrapeSBSRates(page) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
+// ── Urbania (venta) ───────────────────────────────────────────────────────────
+// Urbania está tras Cloudflare managed challenge → el browser real de la bestia +
+// la IP residencial de Lima lo pasan sin proxy pago. Reusa los parsers PUROS de
+// src/scrapers/urbania.js (extractDetailUrls/parseDetail), solo cambia el transporte
+// (renderFetch/ScrapingBee → este page de Playwright).
+const URBANIA_DISTRICTS = [
+  "lima", "miraflores", "san-isidro", "barranco", "surco",
+  "san-borja", "jesus-maria", "magdalena-del-mar", "san-miguel", "pueblo-libre",
+];
+async function scrapeUrbania(page, maxDetails = 40) {
+  console.log("🐰 Urbania: iniciando scrape (browser real + IP residencial)...");
+  const detailUrls = new Set();
+  for (const d of URBANIA_DISTRICTS) {
+    if (detailUrls.size >= maxDetails) break;
+    const slug = d === "lima" ? "venta-de-departamentos-en-lima" : `venta-de-departamentos-en-${d}-lima`;
+    try {
+      await page.goto(`https://urbania.pe/buscar/${slug}`, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(2500 + Math.random() * 1000);
+      for (const u of extractDetailUrls(await page.content())) detailUrls.add(u);
+    } catch (e) { console.warn(`  Urbania búsqueda ${d}: ${e.message}`); }
+  }
+  const urls = [...detailUrls].slice(0, maxDetails);
+  const projects = [];
+  for (const url of urls) {
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(2000);
+      const rec = parseDetail(await page.content(), url, 3.4);
+      if (rec && rec.district) projects.push({ source: "urbania", ...rec });
+    } catch (e) { console.warn(`  Urbania detalle: ${e.message}`); }
+  }
+  console.log(`✅ Urbania: ${projects.length} proyectos de ${urls.length} detalles`);
+  return projects;
+}
+
 async function main() {
   console.log(`\n🐰 White Rabbit Scraper · target: ${TARGET}\n`);
   const browser = await chromium.launch({ headless: true });
@@ -271,16 +310,24 @@ async function main() {
     if (TARGET === "nexo" || TARGET === "all") {
       const projects = await scrapeNexo(page);
       if (projects.length > 0) {
-        const result = await pushToAPI("/api/market-import", { type: "projects", projects });
-        console.log("API response:", result);
+        if (DRY) console.log(`  [dry-run] ${projects.length} proyectos Nexo — NO se pushea`);
+        else { const result = await pushToAPI("/api/market-import", { type: "projects", source: "nexo", projects }); console.log("API response:", result); }
+      }
+    }
+
+    if (TARGET === "urbania" || TARGET === "all") {
+      const projects = await scrapeUrbania(page);
+      if (projects.length > 0) {
+        if (DRY) console.log(`  [dry-run] ${projects.length} proyectos Urbania — NO se pushea · muestra: ${JSON.stringify(projects[0]).slice(0, 200)}`);
+        else { const result = await pushToAPI("/api/market-import", { type: "projects", source: "urbania", projects }); console.log("API response:", result); }
       }
     }
 
     if (TARGET === "banks" || TARGET === "all") {
       const rates = await scrapeSBSRates(page);
       if (rates.length > 0) {
-        const result = await pushToAPI("/api/market-import", { type: "bank_rates", rates });
-        console.log("API response:", result);
+        if (DRY) console.log(`  [dry-run] ${rates.length} tasas SBS — NO se pushea`);
+        else { const result = await pushToAPI("/api/market-import", { type: "bank_rates", rates }); console.log("API response:", result); }
       }
     }
   } finally {

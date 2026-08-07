@@ -1,4 +1,4 @@
-import { erpTasks } from "./integrations/supabase.js";
+import * as sbTasks from "./supabase-tasks.js";
 import { googleCalendar, gmail, googleAvailable } from "./integrations/google.js";
 import { zoom, zoomAvailable } from "./integrations/zoom.js";
 import { dropbox, dropboxAvailable } from "./integrations/dropbox.js";
@@ -305,31 +305,16 @@ export async function executeTool(toolName, input, userId) {
 
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
-      const task = await erpTasks.create({
-        title: input.title,
-        space: input.space_id,
-        assignee: input.assignee_id || userId || "sb",
-        priority: input.priority || "media",
-        due: input.due_date || "",
-        description: input.description || "",
-        parent_id: input.parent_id ?? null,
-      });
-      return `Tarea creada ✓ ID #${task.id}: "${task.title}" · ${task.space} · ${task.priority} · ${task.status}`;
+      const task = await sbTasks.createTask(input, userId);
+      return `Tarea creada ✓ ID #${task.id}: "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
-      const { task_id, status, priority, assignee_id, due_date, title } = input;
-      const fields = {};
-      if (status) { fields.status = status; fields.checked = status === "completada"; }
-      if (priority) fields.priority = priority;
-      if (assignee_id) fields.assignee = assignee_id;
-      if (due_date) fields.due = due_date;
-      if (title) fields.title = title;
-      const task = await erpTasks.update(task_id, fields);
-      if (!task) return `No encontré la tarea #${task_id} en el ERP.`;
-      return `Tarea #${task.id} actualizada ✓: ${JSON.stringify(fields)}`;
+      const { task_id, ...fields } = input;
+      const task = await sbTasks.updateTask(task_id, fields);
+      return `Tarea #${task.id} actualizada ✓ "${task.title}": ${JSON.stringify(fields)}`;
     }
     case "get_tasks": {
-      const tasks = await erpTasks.list({ space: input.space_id, assignee: input.assignee_id, status: input.status, limit: 50 });
+      const tasks = await sbTasks.getTasks(input);
       if (!tasks.length) return "No hay tareas con esos filtros.";
       return tasks.map(t =>
         `#${t.id} [${t.status}] ${t.title} — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`

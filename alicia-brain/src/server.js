@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 import { query, parseArr } from "./db.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
-import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
+import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
 import crypto from "crypto";
 dotenv.config();
@@ -1569,6 +1569,67 @@ app.post("/api/agents/notify", requireAgentKey, async (req, res) => {
   }
 });
 
+// ── Taller de Bammy ──────────────────────────────────────────────────────────
+// Bammy CUELGA sus distribuciones del dia (una fila por dia, con sus unidades).
+// units = [{ unidad:"1D"|"2D"|"3D", brief:string, svg:string }].
+app.post("/api/agents/study", requireAgentKey, (req, res) => {
+  try {
+    const { day = null, date = null, topic = "", units = [] } = req.body || {};
+    if (!Array.isArray(units) || units.length === 0) return res.status(400).json({ error: "units requerido" });
+    const { lastID } = query(
+      `INSERT INTO bammy_studies (day, date, topic, units) VALUES (?,?,?,?)`,
+      [day, date, topic, JSON.stringify(units)]
+    );
+    console.log(`🏛️  Taller: Bammy colgo estudio #${lastID} (dia ${day}, ${units.length} unidades)`);
+    res.json({ ok: true, id: lastID });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// El Taller (ERP, usuario logueado via JWT — sin x-agent-key) lista los estudios colgados.
+app.get("/api/agents/studies", (req, res) => {
+  try {
+    const { rows } = query(`SELECT * FROM bammy_studies ORDER BY id DESC LIMIT 30`);
+    const studies = rows.map(r => ({ ...r, units: parseArr(r.units) }));
+    res.json({ ok: true, studies });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Sebastian guarda una correccion (imagen anotada + notas) sobre una unidad.
+app.post("/api/agents/correction", (req, res) => {
+  try {
+    const { study_id = null, unidad = "", image = "", notas = "", veredicto = "a_corregir" } = req.body || {};
+    if (!image && !notas) return res.status(400).json({ error: "image o notas requerido" });
+    const { lastID } = query(
+      `INSERT INTO bammy_corrections (study_id, unidad, image, notas, veredicto) VALUES (?,?,?,?,?)`,
+      [study_id, unidad, image, notas, veredicto]
+    );
+    res.json({ ok: true, id: lastID });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Bammy LEE las correcciones abiertas para aprender antes de disenar.
+app.get("/api/agents/corrections", requireAgentKey, (req, res) => {
+  try {
+    const { rows } = query(
+      `SELECT c.*, s.day AS study_day, s.topic AS study_topic
+       FROM bammy_corrections c LEFT JOIN bammy_studies s ON s.id = c.study_id
+       WHERE c.status = 'open' ORDER BY c.id ASC`
+    );
+    res.json({ ok: true, corrections: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Bammy marca correcciones como aplicadas (ya aprendidas) — body { ids:[..] }.
+app.post("/api/agents/corrections/ack", requireAgentKey, (req, res) => {
+  try {
+    const ids = (req.body && Array.isArray(req.body.ids)) ? req.body.ids : [];
+    if (!ids.length) return res.status(400).json({ error: "ids requerido" });
+    const marks = ids.map(() => "?").join(",");
+    query(`UPDATE bammy_corrections SET status='applied', applied_at=datetime('now') WHERE id IN (${marks})`, ids);
+    res.json({ ok: true, applied: ids.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // El Lab del cockpit lee el estado real (público, solo lectura)
 app.get("/api/agents/status", (req, res) => {
   try {
@@ -1805,8 +1866,8 @@ app.get("/api/home", async (req, res) => {
   // Tareas del ERP
   const tasks = (async () => {
     try {
-      const { erpTasks } = await import("./integrations/supabase.js");
-      const r = await erpTasks.list({ open: true, limit: 6 });
+      const sbTasks = await import("./supabase-tasks.js");
+      const r = await sbTasks.getTasks({ open: true, limit: 6 });
       const list = Array.isArray(r) ? r : (r.tasks || r.data || []);
       return list.slice(0, 5).map(t => ({
         title: t.title || t.name || t.descripcion || "(tarea)",
@@ -2027,10 +2088,12 @@ app.post("/api/market-import", (req, res) => {
   if (auth !== `Bearer ${token}`) return res.status(401).json({ ok: false, error: "unauthorized" });
 
   try {
-    const { type, projects, rates } = req.body;
+    const { type, projects, rates, source } = req.body;
     if (type === "projects" && Array.isArray(projects)) {
-      const saved = importProjects(projects);
-      return res.json({ ok: true, type, saved });
+      const src = source || "nexo";
+      saveSnapshot(projects, src);                  // snapshot por-fuente → Radar combina nexo + urbania
+      if (src === "nexo") importProjects(projects); // compat: path histórico de Nexo (tabla projects)
+      return res.json({ ok: true, type, source: src, saved: projects.length });
     }
     if (type === "bank_rates" && Array.isArray(rates)) {
       saveBankRates(rates);
