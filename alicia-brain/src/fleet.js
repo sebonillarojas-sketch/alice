@@ -69,3 +69,23 @@ export function staleSources(expected) {
   }
   return out;
 }
+
+// Por cada fuente stale, abre un finding de cobertura (agente white-rabbit, el CHECK
+// de agent_runs no admite un agente 'scout'). No duplica si ya hay uno abierto.
+export function raiseCoverageFinding(stale) {
+  let created = 0;
+  for (const s of stale) {
+    const exists = query(
+      `SELECT 1 FROM agent_findings WHERE category='coverage' AND status='open' AND detail LIKE ? LIMIT 1`,
+      [`%'${s.source}'%`]
+    ).rows[0];
+    if (exists) continue;
+    query(
+      `INSERT INTO agent_findings (agent, severity, category, detail, status)
+       VALUES ('white-rabbit', 'major', 'coverage', ?, 'open')`,
+      [`Radar: fuente '${s.source}' sin refrescar (${s.reason}). Revisar scraper/worker.`]
+    );
+    created++;
+  }
+  return created;
+}

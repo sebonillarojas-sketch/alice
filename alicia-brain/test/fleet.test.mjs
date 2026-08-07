@@ -54,3 +54,11 @@ test("staleSources detecta fuente vieja y fuente ausente", () => {
   assert.ok(bySource.urbania, "urbania ausente DEBE salir stale");
   assert.equal(bySource.urbania.lastScrapedAt, null);
 });
+
+test("raiseCoverageFinding crea 1 finding por fuente stale y no duplica", () => {
+  const stale = [{ source: "urbania", lastScrapedAt: null, ageSec: null, reason: "nunca scrapeada" }];
+  assert.equal(fleet.raiseCoverageFinding(stale), 1);
+  assert.equal(fleet.raiseCoverageFinding(stale), 0);   // ya hay uno abierto → no duplica
+  const open = query(`SELECT COUNT(*) AS c FROM agent_findings WHERE category='coverage' AND status='open'`).rows[0].c;
+  assert.equal(open, 1);
+});
