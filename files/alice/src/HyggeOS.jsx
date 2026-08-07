@@ -752,9 +752,6 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
   const [comment, setComment] = useState("");
   const [subtask, setSubtask] = useState("");
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-  // multiasignado: lista de ids (fallback al single assignee para compat)
-  const assigneeIds = (Array.isArray(task.assignees) && task.assignees.length) ? task.assignees : (task.assignee ? [task.assignee] : []);
-  const assigneesResolved = assigneeIds.map(findPerson).filter(Boolean);
   const fileInputRef = useRef(null);
   const titleSavedRef = useRef(false);
 
@@ -812,6 +809,9 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
   if (!task) return null;
   const children = allTasks.filter(t => t.parentId === task.id);
   const assignee = findPerson(task.assignee);
+  // multiasignado: lista de ids (fallback al single) — DESPUÉS del guard !task de arriba
+  const assigneeIds = (Array.isArray(task.assignees) && task.assignees.length) ? task.assignees : (task.assignee ? [task.assignee] : []);
+  const assigneesResolved = assigneeIds.map(findPerson).filter(Boolean);
 
   const onFileChange = (e) => {
     const files = Array.from(e.target.files || []);
