@@ -81,7 +81,18 @@ function costo(t, areaDisp, frenteDisp, dormsPref) {
 // piso de área por n° de dormitorios (RNE 40 para 1D; 2D/3D funcionales). El brief
 // puede subirlo por distrito/parámetros urbanísticos. Filtra tipologías bajo mínimo.
 export const MINIMOS_DEFAULT = { 1: 40, 2: 50, 3: 65, 4: 86, 5: 150 };
-const minOf = (d, minimos) => (minimos?.[d] ?? MINIMOS_DEFAULT[d] ?? 0);
+// incremento mínimo por dormitorio adicional (Neufert: dorm secundario ~7.4 m² + clóset +
+// circulación ≈ 10). Garantiza jerarquía: un 2D no puede ser ~del tamaño del piso de un 1D.
+export const INCR_DORM = 10;
+/** mínimos EFECTIVOS: monotónicos y con salto real por dormitorio. Cada tipo ≥ el anterior
+ *  + INCR_DORM, además de su propio mínimo pedido (distrito/manual). Así 1D=50 ⇒ 2D≥60, 3D≥70. */
+export function minimosEfectivos(minimos) {
+  const raw = (d) => (minimos?.[d] ?? MINIMOS_DEFAULT[d] ?? 0);
+  const eff = { 1: raw(1) };
+  for (let d = 2; d <= 5; d++) eff[d] = Math.max(raw(d), eff[d - 1] + INCR_DORM);
+  return eff;
+}
+const minOf = (d, minimos) => minimosEfectivos(minimos)[d] ?? 0;
 const cumpleMin = (t, minimos) => t.area[1] >= minOf(t.dorms, minimos);
 
 /** área mínima REAL de una vivienda compliant: el menor mínimo por-tipo para el que existe
@@ -89,12 +100,11 @@ const cumpleMin = (t, minimos) => t.area[1] >= minOf(t.dorms, minimos);
  *  1D no es alcanzable ahí, y la vivienda más chica pasa a ser el 2D (mín 80). Sin este
  *  cálculo, un recorte de 73 pasaría el filtro del 1D y se etiquetaría 2D quedando bajo mínimo. */
 export function minAreaViable(minimos) {
-  const mins = { ...MINIMOS_DEFAULT, ...(minimos || {}) };
+  const eff = minimosEfectivos(minimos);
   let best = Infinity;
   for (const d of [1, 2, 3, 4, 5]) {
-    const m = mins[d];
-    if (m == null) continue;
-    if (TIPOLOGIAS.some((t) => t.dorms === d && t.area[1] >= m)) best = Math.min(best, m);
+    if (eff[d] == null) continue;
+    if (TIPOLOGIAS.some((t) => t.dorms === d && t.area[1] >= eff[d])) best = Math.min(best, eff[d]);
   }
   return Number.isFinite(best) ? best : 40;
 }
@@ -104,8 +114,9 @@ export function minAreaViable(minimos) {
 //      unidad con un tipo cuyo mínimo no cubre. Sin (2), un recorte de 65 podría salir
 //      "2D" con 2D mín 70 y quedar bajo mínimo. Cae con gracia si el filtro vacía.
 const pool = (minimos, areaDisp = Infinity) => {
-  const full = TIPOLOGIAS.filter((t) => cumpleMin(t, minimos));
-  const ok = full.filter((t) => areaDisp >= minOf(t.dorms, minimos));
+  const eff = minimosEfectivos(minimos);
+  const full = TIPOLOGIAS.filter((t) => t.area[1] >= eff[t.dorms]);
+  const ok = full.filter((t) => areaDisp >= eff[t.dorms]);
   return ok.length ? ok : (full.length ? full : TIPOLOGIAS);
 };
 

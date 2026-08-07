@@ -175,7 +175,7 @@ function fachada(units, F, { terraza = true } = {}) {
 export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
   // defaults del playbook de Bammy (estudio de mercado Nexo, Lima): 2D+3D dominan
   // las ventas, área media ~65 m². Se usan solo si el caller no manda valores.
-  const { udsPiso = 4, pct1 = 22, pct2 = 40, areaObjetivo = 66, coreU0, coreW, minimos = null } = cfg;
+  const { udsPiso = 4, pct1 = 22, pct2 = 40, areaObjetivo = 66, coreU0, coreW, coreDepth, minimos = null } = cfg;
   const minViable = minAreaViable(minimos);   // vivienda compliant más chica REALMENTE disponible (sin tolerancia)
   const unidades = mixTipologias(Math.max(1, udsPiso), { pct1, pct2, areaObjetivo, minimos });
 
@@ -190,7 +190,7 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
 
   const partis = [];
   for (const c of configs) {
-    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar, coreU0, coreW, minViable });
+    const res = packFloor(footprint, frontIdx, { unidades, corePos: c.corePos, ordenar: c.ordenar, coreU0, coreW, coreDepth, minViable });
     if (!res.units.length) continue;
     if (res.units.every((u) => esDeposito(u, minViable))) continue;   // parti puro depósito (ninguna vivienda viable) → no es una distribución válida
     const rooms = [];

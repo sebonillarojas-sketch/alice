@@ -30,6 +30,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     udsPiso = 4, mix1 = 40, mix2 = 40, areaObjetivo = 70,
     corrDepth = 1.6, coreW = 3, unidades = null, corePos = "centro", ordenar = "desc",
     minViable = 40,   // área mínima de un departamento (RNE 40); por debajo, el recorte se absorbe en un vecino
+    pisos = 5, tipoLote = "medianera", pozos: conPozos = true,   // pozos de luz: dimensión por altura, ubicación por tipo de lote
   } = opts;
   const warns = [];
   const F = orientedFrame(footprint, frontIdx);
@@ -68,7 +69,12 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     ? Math.max(0, Math.min(frente - coreW, opts.coreU0))
     : (corePos === "izq" ? 0 : (frente - coreW) / 2);
   const coreU1 = coreU0 + coreW;
-  const coreRect = [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, fondo), F.toWorld(coreU0, fondo)];
+  // profundidad del core: es un BLOQUE (escalera + ascensor + hall), NO una tajada de punta
+  // a punta. Default = la banda del frente (llega al corredor, no al fondo del lote); editable
+  // (opts.coreDepth, arrastrable). Acotado a [2.5 m, fondo]. En doble crujía la banda del
+  // fondo NO la toca el core (se accede por el corredor) → ahí las unidades corren full frente.
+  const coreDepth = Math.max(2.5, Math.min(opts.coreDepth ?? bandDepth, fondo));
+  const coreRect = [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, coreDepth), F.toWorld(coreU0, coreDepth)];
   const core = { id: rid(), tipo: "core", pts: recortar(coreRect) || coreRect.map(round) };
 
   // filas (bandas) según crujía
@@ -89,53 +95,89 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
   // el frente → en pisos grandes cada unidad se inflaba a piso/uds (el "5D 345 m²").
   // Ahora: se repite el patrón del mix hasta cubrir el frente y se snapea con un k
   // acotado (0.82–1.18) → las áreas quedan realistas y tipologiaCercana no salta a 5D.
-  const disponible = Math.max(frente - coreW, 1);
   const units = [];
+  const pozos = [];
   let colocadas = 0;
+
+  // ── pozos de luz (RNE A.020 Art. 11.4.b, Cuadro N° 04) ──────────────────────
+  // dimensión POR ALTURA del edificio; sirven ambientes de SERVICIO (columna B).
+  const Hedif = Math.max(2.8, (pisos || 1) * 2.8);
+  const pctB = Hedif <= 18 ? 0.25 : Hedif <= 36 ? 0.13 : 0.10;   // % de la altura del paramento opuesto
+  const pozoPerp = Math.max(2.10, pctB * Hedif);                 // distancia servida (profundidad de luz)
+  const pozoW = Math.max(2.10, 0.5 * pozoPerp);                  // ancho del slot (u); mínimo absoluto 2.10 m (multifamiliar)
+
+  // columnas de exclusión de una banda: el core (donde la interrumpe) + pozos de luz.
+  // Modelo gap-filling: las unidades llenan los HUECOS entre columnas → nunca se solapan
+  // con core/pozo y no hace falta partirlas a mano.
+  const columnasBanda = (fila) => {
+    const cols = [];
+    if (fila.v0 < coreDepth - 0.01) cols.push({ u0: coreU0, u1: coreU1, kind: "core" });
+    const bandaProfunda = fila.depth >= 7;   // ambientes interiores lejos de fachada → piden pozo
+    if (conPozos && bandaProfunda && frente >= 9) {
+      if (tipoLote !== "esquina") {            // medianera: pozo contra cada muro lateral
+        cols.push({ u0: 0, u1: pozoW, kind: "pozo" });
+        cols.push({ u0: frente - pozoW, u1: frente, kind: "pozo" });
+      }
+      if (frente >= 15) {                      // interior: pozos a ~1/3 y 2/3 si no pisan el core
+        for (const frac of [0.30, 0.70]) {
+          const a = frac * frente - pozoW / 2, b = a + pozoW;
+          if (b <= coreU0 - 2 || a >= coreU1 + 2) cols.push({ u0: a, u1: b, kind: "pozo" });
+        }
+      }
+    }
+    const norm = cols.map((c) => ({ ...c, u0: Math.max(0, c.u0), u1: Math.min(frente, c.u1) }))
+      .filter((c) => c.u1 - c.u0 > 0.3).sort((a, b) => a.u0 - b.u0);
+    const merged = [];
+    for (const c of norm) {                    // fusiona solapes (el core gana el tipo)
+      const last = merged[merged.length - 1];
+      if (last && c.u0 <= last.u1 + 0.01) { last.u1 = Math.max(last.u1, c.u1); if (c.kind === "core") last.kind = "core"; }
+      else merged.push({ ...c });
+    }
+    return merged;
+  };
 
   filas.forEach((fila) => {
     if (!fila.units.length) return;
-    // secuencia: ciclar el mix (ya ordenado) hasta cubrir el frente disponible
-    const seq = [];
-    let acc = 0, i = 0;
-    while (acc < disponible - 0.4 && seq.length < 40) {
-      const unit = fila.units[i % fila.units.length];
-      seq.push(unit);
-      acc += Math.max(unit.area / fila.depth, 0.5);
-      i++;
-    }
-    const sumW = seq.reduce((a, u) => a + u.area / fila.depth, 0) || 1;
-    const k = Math.min(1.18, Math.max(0.82, disponible / sumW));  // clamp: nada de inflar
-    let u = 0;
-    seq.forEach((unit) => {
-      const w = (unit.area / fila.depth) * k;
-      const a = u, b = u + w;
-      // rectángulos en (u,v); si cruza el core, se parte
-      const segs = [];
-      if (b <= coreU0 || a >= coreU0) {
-        const off = a >= coreU0 ? coreW : 0;
-        segs.push([a + off, b + off]);
-      } else {
-        segs.push([a, coreU0]);
-        segs.push([coreU1, b + coreW]);
+    const v1 = fila.v0 + fila.depth;
+    const cols = columnasBanda(fila);
+    // huecos entre columnas (solo si dan para una unidad, ≥3 m de frente)
+    const gaps = []; let cur = 0;
+    for (const c of cols) { if (c.u0 - cur >= 3) gaps.push([cur, c.u0]); cur = Math.max(cur, c.u1); }
+    if (frente - cur >= 3) gaps.push([cur, frente]);
+
+    let ci = 0;   // índice cíclico dentro del mix de la banda
+    for (const [ga, gb] of gaps) {
+      const gw = gb - ga;
+      const seq = []; let acc = 0, guard = 0;
+      while (acc < gw - 0.4 && guard < 20) {
+        const unit = fila.units[ci % fila.units.length];
+        seq.push(unit); acc += Math.max(unit.area / fila.depth, 0.5); ci++; guard++;
       }
-      segs.forEach(([ua, ub], si) => {
-        const rect = [
-          F.toWorld(ua, fila.v0), F.toWorld(ub, fila.v0),
-          F.toWorld(ub, fila.v0 + fila.depth), F.toWorld(ua, fila.v0 + fila.depth),
-        ];
+      if (!seq.length) continue;
+      const sumW = seq.reduce((a, u) => a + u.area / fila.depth, 0) || 1;
+      const k = Math.min(1.18, Math.max(0.82, gw / sumW));   // clamp: nada de inflar
+      let u = ga;
+      seq.forEach((unit) => {
+        const w = (unit.area / fila.depth) * k;
+        const ua = u, ub = Math.min(u + w, gb);
+        u = ub; colocadas++;
+        if (ub - ua < 0.5) return;
+        const rect = [F.toWorld(ua, fila.v0), F.toWorld(ub, fila.v0), F.toWorld(ub, v1), F.toWorld(ua, v1)];
         const poly = recortar(rect);   // recorta la unidad a la forma real del lote
-        if (!poly) return;             // cae entera fuera del lote → no existe
-        if (area(poly) < 2) return;    // esquirla junto al core: ni depósito merece
+        if (!poly || area(poly) < 2) return;
         units.push({
           id: rid(), tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
-          tipologia: unit.tipologia || null, partida: segs.length > 1 ? si : null,
-          frame: { ua, ub, v0: fila.v0, v1: fila.v0 + fila.depth, banda: fila.v0 === 0 ? 0 : 1 },
+          tipologia: unit.tipologia || null, partida: null,
+          frame: { ua, ub, v0: fila.v0, v1, banda: fila.v0 === 0 ? 0 : 1 },
         });
       });
-      u = b;
-      colocadas++;
-    });
+    }
+    // pozos de luz de esta banda (void: se excluye del área vendible)
+    for (const c of cols) if (c.kind === "pozo") {
+      const rect = [F.toWorld(c.u0, fila.v0), F.toWorld(c.u1, fila.v0), F.toWorld(c.u1, v1), F.toWorld(c.u0, v1)];
+      const poly = recortar(rect);
+      if (poly && area(poly) >= 1) pozos.push({ id: rid(), tipo: "pozo", pts: poly, areaReal: area(poly) });
+    }
   });
   if (unidades && unidades.length && colocadas !== unidades.length) {
     warns.push(`ajusté a ${colocadas} unidades/piso para áreas realistas (pediste ${unidades.length})`);
@@ -195,5 +237,5 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     : null;
   const corridor = corrRect ? { id: rid(), tipo: "corredor", pts: recortar(corrRect) || corrRect.map(round) } : null;
 
-  return { units, core, corridor, F, frente, fondo, doble, bandDepth, corrDepth, warns };
+  return { units, core, corridor, pozos, F, frente, fondo, doble, bandDepth, corrDepth, warns };
 }

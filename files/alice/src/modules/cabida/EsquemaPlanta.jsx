@@ -209,10 +209,10 @@ function Planta({ e, frente, rf, ri, svgRef }) {
         })
       )}
 
-      {/* core */}
-      <rect x={ex + e.core.x * s} y={ey} width={e.core.w * s} height={e.fondoEdif * s} fill={C.ink} />
-      <text x={ex + (e.core.x + e.core.w / 2) * s} y={ey + (e.fondoEdif * s) / 2} fontSize="8.5"
-        fill={C.paper} textAnchor="middle" transform={`rotate(-90 ${ex + (e.core.x + e.core.w / 2) * s} ${ey + (e.fondoEdif * s) / 2})`}>
+      {/* core: bloque acotado a la banda del frente (no a todo el fondo) */}
+      <rect x={ex + e.core.x * s} y={ey} width={e.core.w * s} height={(e.core.depth ?? e.fondoEdif) * s} fill={C.ink} />
+      <text x={ex + (e.core.x + e.core.w / 2) * s} y={ey + ((e.core.depth ?? e.fondoEdif) * s) / 2} fontSize="8.5"
+        fill={C.paper} textAnchor="middle" transform={`rotate(-90 ${ex + (e.core.x + e.core.w / 2) * s} ${ey + ((e.core.depth ?? e.fondoEdif) * s) / 2})`}>
         core · esc + asc
       </text>
 
@@ -274,7 +274,7 @@ function Corte({ e, pisos, pisosSot, azoteaTechada }) {
 
 export default function EsquemaPlanta({
   terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
-  frente, tipoLote, retiros, lotePoly, cadInfo,
+  frente, tipoLote, retiros, lotePoly, cadInfo, minimos = null,
   frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
   soloPlanta = false,
 }) {
@@ -289,9 +289,10 @@ export default function EsquemaPlanta({
   const rd = retiros?.derecha?.on ? retiros.derecha.v : 0;
   const rp = retiros?.posterior?.on ? retiros.posterior.v : 0;
 
+  const minKey = minimos ? `${minimos[1]}-${minimos[2]}-${minimos[3]}` : "";   // dep estable (evita recomputar por objeto nuevo)
   const e = useMemo(
-    () => computeEsquema({ terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion }),
-    [terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion]
+    () => computeEsquema({ terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, minimos }),
+    [terreno, frente, rf, ri, rd, rp, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, minKey]   // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // con lote real: footprint (ochavo + retiros por borde) + distribución del motor del editor.
@@ -303,11 +304,11 @@ export default function EsquemaPlanta({
     let partis = [];
     try {
       partis = generarDistribuciones(footprint, frenteIdx, {
-        udsPiso: e.uPorPiso, pct1: mix1, pct2: mix2, areaObjetivo: areaDpto,
+        udsPiso: e.uPorPiso, pct1: mix1, pct2: mix2, areaObjetivo: areaDpto, minimos,
       }) || [];
     } catch { partis = []; }
     return { lote, footprint, partis };
-  }, [lotePoly, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
+  }, [lotePoly, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto, minKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   const parti = real?.partis?.[Math.min(partiIdx, Math.max((real?.partis?.length || 1) - 1, 0))] || null;
 
   // cambia el frente al clic en un lindero (y actualiza el frente numérico = largo del borde)

@@ -407,6 +407,9 @@ function DistribModal({ partis, brief, setBrief, onUse, onRegen, onClose, loteIn
         <label style={labelStyle}>2D%
           <input type="number" value={brief.pct2} step={5} min={0} max={100} onChange={(e) => setB("pct2", parseInt(e.target.value) || 0)} style={inputStyle} /></label>
         <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>3D {Math.max(0, 100 - brief.pct1 - brief.pct2)}%</span>
+        <label style={labelStyle} title="Profundidad del núcleo (escalera+ascensor+hall). Vacío = banda del frente. No llega al fondo del lote.">core prof.
+          <input type="number" value={brief.coreDepth ?? ""} step={0.5} min={2.5} placeholder="auto"
+            onChange={(e) => setB("coreDepth", e.target.value === "" ? undefined : (parseFloat(e.target.value) || undefined))} style={inputStyle} /> m</label>
         <Btn onClick={onRegen} accent title="Regenerar distribuciones"><Sparkles size={13} /> regenerar</Btn>
       </div>
       {!partis.length && (

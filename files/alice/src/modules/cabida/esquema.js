@@ -1,6 +1,8 @@
 // motor paramétrico de distribución esquemática
 // convierte los números de cabida en geometría de planta típica (todo en metros)
 
+import { minimosEfectivos } from "../planos/tipologias.js";
+
 // reparte `total` unidades según mix (%) sin exceder el total
 function repartir(total, mix1, mix2) {
   let n1 = Math.round((total * mix1) / 100);
@@ -13,8 +15,16 @@ function repartir(total, mix1, mix2) {
 
 export function computeEsquema({
   terreno, frente, rf = 0, ri = 0, rd = 0, rp = 0,   // retiros: frontal, izquierda, derecha, posterior
-  huella, pisos, dptos, mix1, mix2, areaDpto, circulacion,
+  huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, minimos = null,
 }) {
+  const efec = minimosEfectivos(minimos);   // mínimos por tipo, monotónicos (RNE/distrito/manual)
+  const dorm = (tip) => (tip === "1D" ? 1 : tip === "2D" ? 2 : 3);
+  // etiqueta compliant para un área real: el mayor tipo (≤ intención) cuyo mínimo cubre.
+  // si no llega ni al 1D → depósito. Así NUNCA se rotula una unidad bajo el mínimo de su tipo.
+  const etiquetaPorArea = (areaReal, tipIntent) => {
+    for (let d = dorm(tipIntent); d >= 1; d--) if (areaReal >= efec[d] - 1e-6) return `${d}D`;
+    return "depósito";
+  };
   const warns = [];
   const fondo = frente > 0 ? terreno / frente : 0;
 
@@ -36,7 +46,13 @@ export function computeEsquema({
   const ratios = { d1: 0.65, d2: 1.0, d3: 1.35 };
   const wAvg = (mix1 * ratios.d1 + mix2 * ratios.d2 + mix3 * ratios.d3) / 100 || 1;
   const esc = areaDpto / wAvg;
-  const areaTip = { "1D": ratios.d1 * esc, "2D": ratios.d2 * esc, "3D": ratios.d3 * esc };
+  // área objetivo por tipo, pero nunca por debajo del mínimo efectivo del tipo (el mínimo
+  // manda sobre el promedio: si areaDpto es chico, el 2D se dibuja a su mínimo, no menos).
+  const areaTip = {
+    "1D": Math.max(ratios.d1 * esc, efec[1]),
+    "2D": Math.max(ratios.d2 * esc, efec[2]),
+    "3D": Math.max(ratios.d3 * esc, efec[3]),
+  };
 
   const { n1, n2, n3 } = repartir(uPorPiso, mix1, mix2);
   // 3D en los extremos (esquinas), 1D junto al core
@@ -90,14 +106,21 @@ export function computeEsquema({
         rects.push({ x: coreX + coreW, w: b - coreX });
       }
       x = b;
-      return { ...u, rects, areaReal: w * fila.depth };
+      const areaReal = w * fila.depth;
+      return { ...u, tip: etiquetaPorArea(areaReal, u.tip), rects, areaReal };
     });
   });
+
+  // aviso si el área/uds no dan para viviendas compliant (quedaron bajo el mínimo → depósito)
+  const bajoMin = filas.reduce((a, f) => a + f.units.filter((u) => u.tip === "depósito").length, 0);
+  if (bajoMin > 0) {
+    warns.push(`${bajoMin} unidad(es) quedan bajo el mínimo de área (aparecen como depósito) — subí el área promedio o reducí uds/piso`);
+  }
 
   return {
     fondo, anchoEdif, fondoEdif, fondoLibre,
     uPorPiso, n1, n2, n3, areaTip,
-    core: { x: coreX, w: coreW },
+    core: { x: coreX, w: coreW, depth: stripDepth },   // bloque acotado a la banda del frente, no a todo el fondo
     corredor: { y: stripDepth, h: corrH },
     filas, doble, warns,
   };

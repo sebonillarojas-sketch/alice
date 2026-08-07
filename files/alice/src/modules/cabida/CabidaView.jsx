@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { sugerirBrief } from "../planos/bammy.js";
+import { INCR_DORM } from "../planos/tipologias.js";
 import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
 
@@ -184,6 +185,14 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
   const [min1D, setMin1D] = useState(40);
   const [min2D, setMin2D] = useState(50);
   const [min3D, setMin3D] = useState(65);
+  // cascada monotónica: cada tipo ≥ el anterior + un dormitorio. Así lo que se ve en los
+  // inputs = lo que usa el generador (un 2D nunca sale ~del tamaño del piso de un 1D).
+  const aplicarMinimos = (m1, m2, m3) => {
+    const e1 = Math.max(40, Math.round(m1));            // piso RNE
+    const e2 = Math.max(Math.round(m2), e1 + INCR_DORM);
+    const e3 = Math.max(Math.round(m3), e2 + INCR_DORM);
+    setMin1D(e1); setMin2D(e2); setMin3D(e3);
+  };
   // Bammy sugiere producto (área + mix + mínimos) desde su aprendizaje de mercado + norma por distrito.
   const [distrito, setDistrito] = useState(S.distrito ?? "");
   const [bammyOn, setBammyOn] = useState(false);   // switch: ON = Bammy manda y re-sincroniza al cambiar distrito
@@ -192,7 +201,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
     setAreaDpto(b.areaObjetivo);
     setMix1(b.pct1);
     setMix2(b.pct2);
-    if (b.minimos) { setMin1D(b.minimos[1]); setMin2D(b.minimos[2]); setMin3D(b.minimos[3]); }
+    if (b.minimos) aplicarMinimos(b.minimos[1], b.minimos[2], b.minimos[3]);
   };
   const toggleBammy = () => {
     const on = !bammyOn;
@@ -431,16 +440,18 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
                 <span style={{ fontFamily: mono, fontSize: 9, color: C.soft }}>m² · RNE + distrito</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", columnGap: 10 }}>
-                {[["1D", min1D, setMin1D], ["2D", min2D, setMin2D], ["3D", min3D, setMin3D]].map(([lb, v, set]) => (
+                {[["1D", min1D], ["2D", min2D], ["3D", min3D]].map(([lb, v], idx) => (
                   <label key={lb} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{lb}</span>
-                    <input type="number" value={v} step={5} min={lb === "1D" ? 40 : 0}
-                      onChange={(e) => set(Math.max(lb === "1D" ? 40 : 0, parseFloat(e.target.value) || 0))}
+                    <input type="number" value={v} step={5} min={idx === 0 ? 40 : 0}
+                      onChange={(e) => { const n = parseFloat(e.target.value) || 0;
+                        aplicarMinimos(idx === 0 ? n : min1D, idx === 1 ? n : min2D, idx === 2 ? n : min3D); }}
                       style={{ fontFamily: mono, fontSize: 13, fontWeight: 600, color: C.ink, width: "100%",
                         textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.paper, outline: "none", padding: "5px 8px" }} />
                   </label>
                 ))}
               </div>
+              <div style={{ fontFamily: mono, fontSize: 9, color: C.soft, marginTop: 4 }}>cada tipo ≥ el anterior + {INCR_DORM} m² (un dormitorio)</div>
             </div>
             <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
               <Num label="est. por dpto 1 dorm" value={est1} onChange={setEst1} unit="est" step={0.5} />
@@ -562,6 +573,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
             mix1={mix1} mix2={mix2} areaDpto={areaDpto} circulacion={circulacion}
             pisosSot={r.pisosSot} azoteaTechada={azoteaTechada}
             frente={frente} tipoLote={tipoLote} retiros={retiros}
+            minimos={{ 1: min1D, 2: min2D, 3: min3D }}
             lotePoly={modoLote === "cad" ? lotePoly : null} cadInfo={modoLote === "cad" ? cadInfo : null}
             frenteIdxOverride={frenteIdx} onFrente={setFrenteIdx}
             partiIdx={partiIdx} onParti={setPartiIdx}
