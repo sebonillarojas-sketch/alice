@@ -752,6 +752,9 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
   const [comment, setComment] = useState("");
   const [subtask, setSubtask] = useState("");
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
+  // multiasignado: lista de ids (fallback al single assignee para compat)
+  const assigneeIds = (Array.isArray(task.assignees) && task.assignees.length) ? task.assignees : (task.assignee ? [task.assignee] : []);
+  const assigneesResolved = assigneeIds.map(findPerson).filter(Boolean);
   const fileInputRef = useRef(null);
   const titleSavedRef = useRef(false);
 
@@ -880,21 +883,25 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
             {/* Assignee */}
             <div className="relative">
               <button onClick={() => setShowAssigneePicker(!showAssigneePicker)} className="flex items-center gap-2 px-2.5 py-1.5 hover:opacity-90" style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
-                {assignee ? <><Avatar personId={assignee.id} size={20} /><span style={{ color: C.ink, fontWeight: 500 }}>{assignee.name.split(" ")[0]}</span></> : <><UserIcon size={13} style={{ color: C.muted }} /><span style={{ color: C.muted }}>Sin asignar</span></>}
+                {assigneesResolved.length ? <><span className="flex" style={{ marginRight: 4 }}>{assigneesResolved.map((a, i) => <span key={a.id} style={{ marginLeft: i ? -6 : 0 }}><Avatar personId={a.id} size={20} /></span>)}</span><span style={{ color: C.ink, fontWeight: 500 }}>{assigneesResolved.length === 1 ? assigneesResolved[0].name.split(" ")[0] : `${assigneesResolved.length} asignados`}</span></> : <><UserIcon size={13} style={{ color: C.muted }} /><span style={{ color: C.muted }}>Sin asignar</span></>}
               </button>
               {showAssigneePicker && (
                 <div className="absolute top-full left-0 mt-1 w-[240px] max-w-[calc(100vw-32px)] z-10" style={{ backgroundColor: C.paper, border: `1px solid ${C.line}`, borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }}>
-                  {PEOPLE.map(p => (
-                    <button key={p.id} onClick={() => { onUpdate(task.id, { assignee: p.id }); setShowAssigneePicker(false); }}
+                  {PEOPLE.map(p => {
+                    const on = assigneeIds.includes(p.id);
+                    return (
+                    <button key={p.id} onClick={() => { const next = on ? assigneeIds.filter(x => x !== p.id) : [...assigneeIds, p.id]; onUpdate(task.id, { assignees: next, assignee: next[0] || null }); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:opacity-90"
-                      style={{ backgroundColor: assignee?.id === p.id ? C.surface : "transparent" }}>
+                      style={{ backgroundColor: on ? C.surface : "transparent" }}>
                       <Avatar personId={p.id} size={22} />
                       <div className="flex-1">
                         <div className="text-[12px]" style={{ color: C.ink, fontWeight: 500 }}>{p.name}</div>
                         <div className="text-[10px]" style={{ color: C.muted }}>{p.role}</div>
                       </div>
+                      {on && <span style={{ color: C.cobalt, fontWeight: 700 }}>✓</span>}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

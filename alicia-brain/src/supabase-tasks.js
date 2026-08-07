@@ -18,12 +18,17 @@ function headers(extra = {}) {
 
 // entrada semántica de Alicia (tolera nombres viejos assignee_id/space_id/due_date) → fila `tasks` del ERP
 function toRow(input = {}, userId) {
+  // multiasignado: assignee_ids[] manda; si no, cae al single (assignee/assignee_id) o al que la crea.
+  const assignees = Array.isArray(input.assignee_ids) && input.assignee_ids.length
+    ? [...new Set(input.assignee_ids)]
+    : [input.assignee ?? input.assignee_id ?? userId ?? "sb"];
   return {
     id: Date.now() * 1000 + Math.floor(Math.random() * 1000),  // entero (col bigint), baja colisión
     title: input.title,
     description: input.description ?? "",
     space: input.space ?? input.space_id ?? "hq",
-    assignee: input.assignee ?? input.assignee_id ?? userId ?? "sb",
+    assignees,                                        // lista completa
+    assignee: assignees[0],                           // primero = compat con lo single
     status: input.status ?? "pendiente",             // el ERP usa "pendiente", no "todo"
     priority: input.priority ?? "media",
     due: input.due ?? input.due_date ?? "",
@@ -40,6 +45,7 @@ function toRow(input = {}, userId) {
 // campos de update (mapea nombres viejos a las columnas del ERP)
 function mapFields(f = {}) {
   const out = { ...f, updated_at: new Date().toISOString() };
+  if (Array.isArray(out.assignee_ids)) { out.assignees = [...new Set(out.assignee_ids)]; out.assignee = out.assignees[0]; delete out.assignee_ids; }
   if ("assignee_id" in out) { out.assignee = out.assignee_id; delete out.assignee_id; }
   if ("space_id" in out) { out.space = out.space_id; delete out.space_id; }
   if ("due_date" in out) { out.due = out.due_date; delete out.due_date; }

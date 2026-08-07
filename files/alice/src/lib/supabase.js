@@ -155,7 +155,8 @@ function toRow(t) {
     checked: !!t.checked,
     status: t.status ?? "pendiente",   // requiere columna (ALTER TABLE 13 jul 2026) — sin esto el estado volvía a "pendiente" en cada reload
     archived: !!t.archived,
-    assignee: t.assignee ?? "sb",
+    assignee: (Array.isArray(t.assignees) && t.assignees[0]) || t.assignee || "sb",
+    assignees: (Array.isArray(t.assignees) && t.assignees.length) ? t.assignees : (t.assignee ? [t.assignee] : []),
     tags: t.tags ?? [],
     type: t.type ?? null,
     amount: t.amount ?? null,
@@ -187,6 +188,7 @@ function fromRow(r) {
     status: r.status ?? "pendiente",
     archived: !!r.archived,
     assignee: r.assignee,
+    assignees: Array.isArray(r.assignees) ? r.assignees : (r.assignee ? [r.assignee] : []),
     tags: r.tags ?? [],
     type: r.type,
     amount: r.amount,
