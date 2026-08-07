@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 import { query, parseArr } from "./db.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
-import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
+import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
 import crypto from "crypto";
 dotenv.config();
@@ -2088,10 +2088,12 @@ app.post("/api/market-import", (req, res) => {
   if (auth !== `Bearer ${token}`) return res.status(401).json({ ok: false, error: "unauthorized" });
 
   try {
-    const { type, projects, rates } = req.body;
+    const { type, projects, rates, source } = req.body;
     if (type === "projects" && Array.isArray(projects)) {
-      const saved = importProjects(projects);
-      return res.json({ ok: true, type, saved });
+      const src = source || "nexo";
+      saveSnapshot(projects, src);                  // snapshot por-fuente → Radar combina nexo + urbania
+      if (src === "nexo") importProjects(projects); // compat: path histórico de Nexo (tabla projects)
+      return res.json({ ok: true, type, source: src, saved: projects.length });
     }
     if (type === "bank_rates" && Array.isArray(rates)) {
       saveBankRates(rates);
