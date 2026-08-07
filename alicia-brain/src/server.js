@@ -1,6 +1,7 @@
 // ── Alicia Brain · Servidor Express ──────────────────────────────────────────
 import express from "express";
 import cors from "cors";
+import { fleetRouter } from "./fleet-routes.js";
 import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
@@ -1510,6 +1511,9 @@ function requireAgentKey(req, res, next) {
   }
   next();
 }
+
+// Flota de scrapers: protocolo de worker (heartbeat/next/result) bajo /api/agents/workers
+app.use("/api/agents/workers", fleetRouter());
 
 // Los agentes reportan una corrida completa (run + findings en una llamada)
 app.post("/api/agents/report", requireAgentKey, async (req, res) => {
