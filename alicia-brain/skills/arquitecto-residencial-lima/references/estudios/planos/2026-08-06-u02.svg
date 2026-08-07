@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1925 736" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1925" height="736" fill="#ffffff"/>
+<polygon points="100.0,180.0 348.0,180.0 348.0,444.0 100.0,444.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="360.0,180.0 604.0,180.0 604.0,656.0 360.0,656.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="616.0,180.0 848.0,180.0 848.0,444.0 616.0,444.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="100.0,456.0 228.0,456.0 228.0,656.0 100.0,656.0" fill="#eef2ea" stroke="none"/>
+<polygon points="240.0,456.0 348.0,456.0 348.0,656.0 240.0,656.0" fill="#eef2ea" stroke="none"/>
+<polygon points="616.0,456.0 760.0,456.0 760.0,656.0 616.0,656.0" fill="#eef2ea" stroke="none"/>
+<polygon points="772.0,456.0 848.0,456.0 848.0,656.0 772.0,656.0" fill="#eef2ea" stroke="none"/>
+<rect x="90.0" y="160.0" width="768.0" height="20.0" fill="#2b2b2b"/>
+<rect x="848.0" y="170.0" width="20.0" height="496.0" fill="#2b2b2b"/>
+<rect x="90.0" y="656.0" width="768.0" height="20.0" fill="#2b2b2b"/>
+<rect x="80.0" y="170.0" width="20.0" height="496.0" fill="#2b2b2b"/>
+<rect x="348.0" y="170.0" width="12.0" height="496.0" fill="#2b2b2b"/>
+<rect x="604.0" y="170.0" width="12.0" height="496.0" fill="#2b2b2b"/>
+<rect x="100.0" y="444.0" width="248.0" height="12.0" fill="#2b2b2b"/>
+<rect x="616.0" y="444.0" width="232.0" height="12.0" fill="#2b2b2b"/>
+<rect x="228.0" y="456.0" width="12.0" height="200.0" fill="#2b2b2b"/>
+<rect x="760.0" y="456.0" width="12.0" height="200.0" fill="#2b2b2b"/>
+<rect x="446.0" y="157.0" width="72.0" height="26.0" fill="#ffffff"/>
+<rect x="345.0" y="280.0" width="18.0" height="64.0" fill="#ffffff"/>
+<rect x="601.0" y="280.0" width="18.0" height="64.0" fill="#ffffff"/>
+<rect x="601.0" y="524.0" width="18.0" height="64.0" fill="#ffffff"/>
+<rect x="757.0" y="524.0" width="18.0" height="64.0" fill="#ffffff"/>
+<rect x="345.0" y="528.0" width="18.0" height="56.0" fill="#ffffff"/>
+<rect x="136.0" y="441.0" width="56.0" height="18.0" fill="#ffffff"/>
+<line x1="378.0" y1="180.0" x2="586.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<line x1="152.0" y1="180.0" x2="296.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<line x1="668.0" y1="180.0" x2="796.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<text x="224.0" y="308.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio principal</text>
+<text x="224.0" y="324.0" font-size="11" fill="#444" text-anchor="middle">10.2 m²</text>
+<text x="482.0" y="414.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">sala-comedor</text>
+<text x="482.0" y="430.0" font-size="11" fill="#444" text-anchor="middle">18.1 m²</text>
+<text x="732.0" y="308.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio 2</text>
+<text x="732.0" y="324.0" font-size="11" fill="#444" text-anchor="middle">9.6 m²</text>
+<text x="164.0" y="552.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 1</text>
+<text x="164.0" y="568.0" font-size="11" fill="#444" text-anchor="middle">4.0 m²</text>
+<text x="294.0" y="552.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 2</text>
+<text x="294.0" y="568.0" font-size="11" fill="#444" text-anchor="middle">3.4 m²</text>
+<text x="688.0" y="552.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">cocina</text>
+<text x="688.0" y="568.0" font-size="11" fill="#444" text-anchor="middle">4.5 m²</text>
+<text x="810.0" y="552.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">lavandería</text>
+<text x="810.0" y="568.0" font-size="11" fill="#444" text-anchor="middle">2.4 m²</text>
+<line x1="80.0" y1="688.0" x2="868.0" y2="688.0" stroke="#888" stroke-width="1"/>
+<text x="474.0" y="704.0" font-size="13" fill="#555" text-anchor="middle">frente 9.60 m</text>
+<line x1="880.0" y1="160.0" x2="880.0" y2="676.0" stroke="#888" stroke-width="1"/>
+<text x="898.0" y="418.0" font-size="13" fill="#555" text-anchor="middle" transform="rotate(90 898.0 418.0)">fondo 6.20 m</text>
+<text x="90" y="26" font-size="15" fill="#111" font-weight="700">2026-08-06-u02 — 54.0 m² — 2D/2B fachada única frente ancho — Lince, Lima Moderna</text>
+<text x="90" y="46" font-size="12" fill="#555">BRIEF TERRENO: lote entre medianeras (edificación continua), frente 9.60 m × fondo 6.20 m.</text>
+<text x="90" y="66" font-size="12" fill="#555">Única fachada libre: el frente (Este, hacia la calle). Los tres lados restantes (Oeste, Norte y Sur) son medianeros ciegos con lotes vecinos — no hay pozo declarado, no se necesita: la profundidad de 6.20 m cabe dentro de la crujía iluminable (5.5–6.5 m) resuelta en una sola banda.</text>
+<text x="90" y="86" font-size="12" fill="#555">Orientación: fachada al Este — sol de mañana en sala y ambos dormitorios (los tres comparten el frente). Sin retiro frontal (alineamiento a vereda, Lima Moderna); retiros laterales 0 m (medianero).</text>
+<text x="90" y="106" font-size="12" fill="#555">Segmento: 2D/2B estándar de mercado.</text>
+</svg>
