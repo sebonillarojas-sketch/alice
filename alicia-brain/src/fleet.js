@@ -52,3 +52,20 @@ export function completeJob({ jobId, workerId, rowsCount = 0, error = null }) {
   );
   return { ok: true, status };
 }
+
+// La lección del 06-ago: no confiar en que el cron disparó; medir el refresco REAL.
+// expected = { [source]: maxAgeSec }. Devuelve las fuentes viejas o nunca scrapeadas.
+export function staleSources(expected) {
+  const out = [];
+  for (const [source, maxAgeSec] of Object.entries(expected)) {
+    const { rows } = query(
+      `SELECT scraped_at, (strftime('%s','now') - strftime('%s', scraped_at)) AS age_sec
+         FROM market_snapshots WHERE source = ? ORDER BY scraped_at DESC LIMIT 1`,
+      [source]
+    );
+    if (!rows[0]) { out.push({ source, lastScrapedAt: null, ageSec: null, reason: "nunca scrapeada" }); continue; }
+    const ageSec = Number(rows[0].age_sec);
+    if (ageSec > maxAgeSec) out.push({ source, lastScrapedAt: rows[0].scraped_at, ageSec, reason: `${ageSec}s > ${maxAgeSec}s` });
+  }
+  return out;
+}

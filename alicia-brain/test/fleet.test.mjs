@@ -45,3 +45,12 @@ test("completeJob con error marca failed", () => {
   const r = fleet.completeJob({ jobId: job.id, workerId: "mac-pro", rowsCount: 0, error: "challenge" });
   assert.equal(r.status, "failed");
 });
+
+test("staleSources detecta fuente vieja y fuente ausente", () => {
+  query(`INSERT INTO market_snapshots (source, total, data, scraped_at) VALUES ('nexo', 1, '[]', datetime('now'))`);
+  const stale = fleet.staleSources({ nexo: 3600, urbania: 3600 });
+  const bySource = Object.fromEntries(stale.map(s => [s.source, s]));
+  assert.ok(!bySource.nexo, "nexo fresco NO debe salir stale");
+  assert.ok(bySource.urbania, "urbania ausente DEBE salir stale");
+  assert.equal(bySource.urbania.lastScrapedAt, null);
+});
