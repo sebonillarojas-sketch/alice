@@ -17,6 +17,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { execSync } from "node:child_process";
 import { extractDetailUrls, parseDetail } from "../src/scrapers/urbania.js";
 import { scrapeNexoLima } from "../src/scrapers/nexo.js";
 dotenv.config();
@@ -296,8 +297,20 @@ async function scrapeUrbania(page, maxDetails = 40) {
   return projects;
 }
 
+// Auto-update: en la bestia cada corrida programada pullea main antes de scrapear,
+// así los fixes llegan sin tocar la máquina a mano. Best-effort; --dry-run/--no-pull lo saltan.
+// (El pull actualiza los archivos para la PRÓXIMA corrida — el proceso actual ya está cargado.)
+function selfUpdate() {
+  if (DRY || process.argv.includes("--no-pull")) return;
+  try {
+    const out = execSync("git pull --ff-only", { cwd: path.join(__dirname, ".."), encoding: "utf8", timeout: 30000 });
+    console.log("🔄 self-update:", out.trim().split("\n").pop());
+  } catch (e) { console.log("🔄 self-update skip:", String(e.message || "").split("\n")[0].slice(0, 100)); }
+}
+
 async function main() {
   console.log(`\n🐰 White Rabbit Scraper · target: ${TARGET}\n`);
+  selfUpdate();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
