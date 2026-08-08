@@ -72,6 +72,15 @@ export function startCron() {
     await exportBrainToDropbox().catch(e => console.error("Brain export error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Puente Bammy → Taller · 1:00am Lima (tras el estudio nocturno ~00:40). La rutina
+  // cloud pushea las plantas al repo pero no alcanza el backend (egress 403); este puente
+  // las lee de GitHub y las cuelga en el Taller + avisa por WhatsApp. Requiere GITHUB_TOKEN.
+  cron.schedule("0 1 * * *", async () => {
+    console.log("🌉 Cron: puente Bammy → Taller");
+    const { ingestLatestBammyStudy } = await import("./bammy-bridge.js");
+    await ingestLatestBammyStudy({ notify: true }).catch(e => console.error("Bammy bridge error:", e.message));
+  }, { timezone: "America/Lima" });
+
   // Primer barrido a los 90s del boot: conejo + sombrerero (no esperar al próximo tick)
   setTimeout(async () => {
     const { runWhiteRabbitChecks } = await import("./whiterabbit.js");
