@@ -18,6 +18,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { extractDetailUrls, parseDetail } from "../src/scrapers/urbania.js";
+import { scrapeNexoLima } from "../src/scrapers/nexo.js";
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -308,7 +309,7 @@ async function main() {
 
   try {
     if (TARGET === "nexo" || TARGET === "all") {
-      const projects = await scrapeNexo(page);
+      const projects = await scrapeNexoLima();   // fetch directo + search_data (IP Lima); reemplaza el scraper viejo por selectores
       if (projects.length > 0) {
         if (DRY) console.log(`  [dry-run] ${projects.length} proyectos Nexo — NO se pushea`);
         else { const result = await pushToAPI("/api/market-import", { type: "projects", source: "nexo", projects }); console.log("API response:", result); }
