@@ -1,6 +1,6 @@
 // Briefing diario proactivo — corre cada mañana a las 7:00am Lima
 import Anthropic from "@anthropic-ai/sdk";
-import { erp } from "./erp-client.js";
+import * as sbTasks from "./supabase-tasks.js";
 import { googleCalendar, googleAvailable } from "./integrations/google.js";
 import { tavily, tavilyAvailable } from "./integrations/tavily.js";
 import { query } from "./db.js";
@@ -20,10 +20,10 @@ export async function runDailyBriefing() {
   const today = new Date().toLocaleDateString("es-PE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   // 1. Tareas vencidas
-  const allTasks = await erp.getTasks({ status: "todo" }).catch(() => []);
+  const allTasks = await sbTasks.getTasks({ open: true, limit: 200 }).catch(() => []);
   const todayStr = new Date().toISOString().split("T")[0];
-  const overdue = allTasks.filter(t => t.due_date && t.due_date < todayStr);
-  const dueSoon = allTasks.filter(t => t.due_date && t.due_date === todayStr);
+  const overdue = allTasks.filter(t => t.due && t.due < todayStr);
+  const dueSoon = allTasks.filter(t => t.due && t.due === todayStr);
 
   // 2. Calendario de hoy
   let calendarBlock = "";
@@ -64,10 +64,10 @@ CALENDARIO HOY:
 ${calendarBlock}
 
 TAREAS VENCIDAS (${overdue.length}):
-${overdue.map(t => `• #${t.id} ${t.title} — ${t.assignee_id || "sin asignar"} (venció ${t.due_date})`).join("\n") || "Ninguna"}
+${overdue.map(t => `• #${t.id} ${t.title} — ${t.assignee || "sin asignar"} (venció ${t.due})`).join("\n") || "Ninguna"}
 
 VENCEN HOY (${dueSoon.length}):
-${dueSoon.map(t => `• #${t.id} ${t.title} — ${t.assignee_id || "sin asignar"}`).join("\n") || "Ninguna"}
+${dueSoon.map(t => `• #${t.id} ${t.title} — ${t.assignee || "sin asignar"}`).join("\n") || "Ninguna"}
 
 NOTICIAS INMOBILIARIAS:
 ${newsBlock}
@@ -96,9 +96,9 @@ Armá el briefing: calendario, alertas, noticias relevantes, y una sugerencia pr
   // 7. Alertas a colaboradores con tareas vencidas
   const byAssignee = {};
   for (const t of overdue) {
-    if (!t.assignee_id) continue;
-    if (!byAssignee[t.assignee_id]) byAssignee[t.assignee_id] = [];
-    byAssignee[t.assignee_id].push(t);
+    if (!t.assignee) continue;
+    if (!byAssignee[t.assignee]) byAssignee[t.assignee] = [];
+    byAssignee[t.assignee].push(t);
   }
   for (const [userId, tasks] of Object.entries(byAssignee)) {
     const phone = process.env[`PHONE_${userId.toUpperCase()}`];

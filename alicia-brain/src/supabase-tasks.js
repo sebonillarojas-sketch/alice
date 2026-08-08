@@ -49,6 +49,7 @@ function mapFields(f = {}) {
   if ("assignee_id" in out) { out.assignee = out.assignee_id; delete out.assignee_id; }
   if ("space_id" in out) { out.space = out.space_id; delete out.space_id; }
   if ("due_date" in out) { out.due = out.due_date; delete out.due_date; }
+  if (out.status) out.checked = out.status === "completada";  // espejo legacy que filtra varias vistas del ERP
   delete out.updated_by;
   return out;
 }
@@ -67,12 +68,14 @@ export async function updateTask(id, fields) {
   return row;
 }
 
-export async function getTasks({ space, space_id, assignee, assignee_id, status } = {}) {
-  const qs = new URLSearchParams({ select: "*", order: "updated_at.desc", limit: "50" });
+// open=true → solo tareas vivas (ni completadas ni archivadas) — lo usan briefing y panel
+export async function getTasks({ space, space_id, assignee, assignee_id, status, open, limit } = {}) {
+  const qs = new URLSearchParams({ select: "*", order: "updated_at.desc", limit: String(limit || 50) });
   const sp = space ?? space_id, as = assignee ?? assignee_id;
   if (sp) qs.set("space", `eq.${sp}`);
   if (as) qs.set("assignee", `eq.${as}`);
   if (status) qs.set("status", `eq.${status}`);
+  if (open) { qs.set("status", "not.eq.completada"); qs.set("archived", "not.is.true"); }
   const res = await fetch(`${REST}?${qs}`, { headers: headers() });
   if (!res.ok) throw new Error(`Supabase select ${res.status}: ${await res.text()}`);
   return res.json();

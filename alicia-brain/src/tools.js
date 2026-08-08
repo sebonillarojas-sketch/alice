@@ -34,7 +34,7 @@ export const ALICIA_TOOLS = [
       type: "object",
       properties: {
         task_id:     { type: "number" },
-        status:      { type: "string", enum: ["todo","in_progress","review","done","cancelled"] },
+        status:      { type: "string", enum: ["pendiente","en_proceso","en_revision","postergada","completada"] },
         priority:    { type: "string", enum: ["urgente","alta","media","baja"] },
         assignee_id: { type: "string", description: "reasignar a UN responsable" },
         assignee_ids: { type: "array", items: { type: "string" }, description: "reasignar a VARIOS (multiasignado)" },
@@ -52,7 +52,7 @@ export const ALICIA_TOOLS = [
       properties: {
         space_id:    { type: "string" },
         assignee_id: { type: "string" },
-        status:      { type: "string", enum: ["todo","in_progress","review","done","cancelled"] },
+        status:      { type: "string", enum: ["pendiente","en_proceso","en_revision","postergada","completada"] },
       },
     },
   },
@@ -308,18 +308,18 @@ export async function executeTool(toolName, input, userId) {
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
       const task = await sbTasks.createTask(input, userId);
-      return `Tarea creada ✓ "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
+      return `Tarea creada ✓ ID #${task.id}: "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
       const { task_id, ...fields } = input;
       const task = await sbTasks.updateTask(task_id, fields);
-      return `Tarea actualizada ✓ "${task.title}": ${JSON.stringify(fields)}`;
+      return `Tarea #${task.id} actualizada ✓ "${task.title}": ${JSON.stringify(fields)}`;
     }
     case "get_tasks": {
       const tasks = await sbTasks.getTasks(input);
       if (!tasks.length) return "No hay tareas con esos filtros.";
       return tasks.map(t =>
-        `${t.title} [${t.status}] — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`
+        `#${t.id} [${t.status}] ${t.title} — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`
       ).join("\n");
     }
 

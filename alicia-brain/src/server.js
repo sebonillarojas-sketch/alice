@@ -103,7 +103,7 @@ async function panelGate(req, res, next) {
   const bodyKey = req.headers["x-body-key"];
   if (BODY_KEY && bodyKey && bodyKey.length === BODY_KEY.length
     && crypto.timingSafeEqual(Buffer.from(bodyKey), Buffer.from(BODY_KEY))) return next();
-  // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
+  // Agentes externos (Cheshire en la hackintosh de Alicia): pasan con x-agent-key;
   // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
   if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "panel_locked", detail: "PANEL_PASSWORD no configurado en Railway" });
@@ -1876,8 +1876,8 @@ app.get("/api/home", async (req, res) => {
   // Tareas del ERP
   const tasks = (async () => {
     try {
-      const { erp } = await import("./erp-client.js");
-      const r = await erp.getTasks({ limit: 6 });
+      const sbTasks = await import("./supabase-tasks.js");
+      const r = await sbTasks.getTasks({ open: true, limit: 6 });
       const list = Array.isArray(r) ? r : (r.tasks || r.data || []);
       return list.slice(0, 5).map(t => ({
         title: t.title || t.name || t.descripcion || "(tarea)",
