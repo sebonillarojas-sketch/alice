@@ -1630,6 +1630,16 @@ app.post("/api/agents/corrections/ack", requireAgentKey, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Puente Bammy → Taller (manual / test): lee la última tanda de plantas del repo (GitHub)
+// y la cuelga en el Taller. También corre solo por cron 1:00am Lima. Requiere GITHUB_TOKEN.
+app.post("/api/agents/bridge/ingest", requireAgentKey, async (req, res) => {
+  try {
+    const { ingestLatestBammyStudy } = await import("./bammy-bridge.js");
+    const r = await ingestLatestBammyStudy({ notify: req.body?.notify !== false });
+    res.json(r);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // El Lab del cockpit lee el estado real (público, solo lectura)
 app.get("/api/agents/status", (req, res) => {
   try {
