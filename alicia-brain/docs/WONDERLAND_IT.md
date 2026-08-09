@@ -67,6 +67,12 @@ Inputs adversariales contra Alicia (en el clon, no prod):
 - Números de teléfono no autorizados intentando acciones sensibles
 Reporta qué rompe el parser, qué respuestas filtran información.
 
+### 🃏 Knave — Seguridad (L0 · solo observa)
+Corre en la bestia (reloj único). Checks no-destructivos contra prod:
+headers de seguridad, CORS abierto, auth gate, rate-limit, secret/token scan,
+`npm audit` diario, y `security-review` semanal sobre el diff. NUNCA parcha ni
+ejecuta — solo reporta findings; críticos escalan a Dark Alice → WhatsApp.
+
 ### 🖤 Dark Alice — Jefa de operaciones (siempre activa)
 - Recibe escalaciones de todos los agentes
 - Ejecuta L2: rollback, restart, cuarentena, apagar un agente defectuoso
@@ -80,6 +86,9 @@ tendencias, deuda técnica acumulada, prioridades sugeridas.
 
 ## Infraestructura común
 
+- Los agentes de la bestia (scraper, Cheshire, Knave, stubs) corren bajo UN reloj
+  único (`com.hygge.wonderland`, `bestia-runner.js`, tick ~10 min) con tabla de
+  horarios versionada — no un launchd por agente.
 - Cada agente = proceso Claude Agent SDK con cron propio en la supercomputadora
 - Tablas nuevas en alicia-brain: `agent_runs` (id, agent, started_at, result, actions_taken) y `agent_findings` (id, agent, severity, category, detail, status, resolved_by)
 - Endpoints nuevos: `POST /api/agents/report` (agentes escriben), `GET /api/agents/status` (el Lab del cockpit lee — deja de simular)
