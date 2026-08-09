@@ -10,7 +10,8 @@ import { query } from "./db.js";
 
 const AGENTS = {
   "white-rabbit": "🐰 White Rabbit", "cheshire": "😺 Cheshire", "mad-hatter": "🎩 Mad Hatter",
-  "tea-table": "🫖 Tea Table", "bandersnatch": "⚔️ Bandersnatch", "jabberwocky": "⚡ Jabberwocky",
+  "tea-table": "🫖 Tea Table", "bandersnatch": "⚔️ Bandersnatch",
+  "jabberwocky": "⚡ Jabberwocky", "knave": "🃏 Knave",
 };
 
 // Propuestas que Dark Alice sugiere (texto) según la categoría del hallazgo — NO ejecuta

@@ -84,7 +84,7 @@ function initSchema(db) {
     );
     CREATE TABLE IF NOT EXISTS agent_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      agent TEXT NOT NULL CHECK (agent IN ('white-rabbit','cheshire','bandersnatch','mad-hatter','jabberwocky','dark-alice','tea-table')),
+      agent TEXT NOT NULL,
       started_at TEXT DEFAULT (datetime('now')),
       finished_at TEXT,
       result TEXT DEFAULT 'ok' CHECK (result IN ('ok','issues','error')),
@@ -140,6 +140,7 @@ function initSchema(db) {
   `);
   // Migración: DBs creadas antes de que agent_runs tuviera columna report
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
+  try { migrateDropAgentEnum(db); } catch (e) { console.error("migrateDropAgentEnum:", e.message); }
   try { db.exec("ALTER TABLE profiles ADD COLUMN email TEXT"); } catch {}
   try { db.exec("UPDATE profiles SET email = 'sebastian@hygge.pe' WHERE user_id = 'sb' AND (email IS NULL OR email = '')"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}
@@ -183,6 +184,33 @@ function initSchema(db) {
   // Higiene: un turno de assistant vacío en el historial contamina los turnos
   // siguientes (el modelo tiende a repetir el silencio). Se borran al arrancar.
   db.exec(`DELETE FROM messages WHERE role = 'assistant' AND trim(content) = ''`);
+}
+
+// Reconstruye agent_runs SIN el CHECK-enum de `agent` (deja TEXT libre, como agent_findings).
+// Idempotente: si la tabla ya no tiene el enum, no hace nada. Detecta por el SQL guardado.
+export function migrateDropAgentEnum(db) {
+  const row = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='agent_runs'"
+  ).get();
+  if (!row || !/CHECK\s*\(\s*agent\s+IN/i.test(row.sql)) return; // ya migrada o no existe
+  db.exec(`
+    CREATE TABLE agent_runs_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent TEXT NOT NULL,
+      started_at TEXT DEFAULT (datetime('now')),
+      finished_at TEXT,
+      result TEXT DEFAULT 'ok' CHECK (result IN ('ok','issues','error')),
+      summary TEXT,
+      actions_taken TEXT DEFAULT '[]',
+      report TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    INSERT INTO agent_runs_new (id, agent, started_at, finished_at, result, summary, actions_taken, report, created_at)
+      SELECT id, agent, started_at, finished_at, result, summary, actions_taken, report, created_at FROM agent_runs;
+    DROP TABLE agent_runs;
+    ALTER TABLE agent_runs_new RENAME TO agent_runs;
+    CREATE INDEX IF NOT EXISTS idx_agent_runs ON agent_runs(agent, created_at DESC);
+  `);
 }
 
 export function query(sql, params = []) {
