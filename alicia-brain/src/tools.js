@@ -16,7 +16,10 @@ export function readConversation(db, personaId, limit = 20) {
 
 export function resolvePhone(db, personaId) {
   const row = db.prepare("SELECT phone FROM profiles WHERE user_id = ?").get(personaId);
-  return row?.phone || null;
+  // Fallback al env PHONE_<id>: los números del equipo (y el de Sebastián) viven ahí,
+  // no siempre en la tabla profiles. Sin este fallback, send_document/send_whatsapp
+  // decían "no tengo tu número" a Sebastián mismo (su número está en PHONE_sb).
+  return row?.phone || process.env[`PHONE_${personaId}`] || null;
 }
 
 function mimeFromName(name = "") {
@@ -355,7 +358,10 @@ export async function executeTool(toolName, input, userId) {
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
       const task = await sbTasks.createTask(input, userId);
-      return `Tarea creada ✓ (#${task.id}) "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
+      const cab = task._dedup
+        ? `Esa tarea ya existía (#${task.id}), no la dupliqué:`
+        : `Tarea creada ✓ (#${task.id})`;
+      return `${cab} "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
       const { task_id, ...fields } = input;
