@@ -68,3 +68,10 @@ export function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3 } = {}
   ).run(status, check, status, status, id);
   return { status, decision, reason: contradicts.reason };
 }
+
+export function lessonsForScope(db, scope) {
+  const rows = db.prepare(
+    "SELECT lesson FROM lessons WHERE status = 'applied' AND (scope = ? OR scope = 'global') ORDER BY updated_at DESC"
+  ).all(scope);
+  return rows.map(r => r.lesson);
+}
