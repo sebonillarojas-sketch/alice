@@ -6,7 +6,9 @@ _Diseño · 2026-08-08 · repo `alice` / `alicia-brain`_
 
 La constelación **Wonderland IT** (`docs/WONDERLAND_IT.md`) son agentes autónomos de infra para el ecosistema Alicia.
 
-**Ya activos (cron en Railway, `cron.js`):** 🐰 White Rabbit (infra pública, c/30min), 🎩 Mad Hatter (perf/costos, c/hora), 🖤 Dark Alice (jefa de ops, 7:15am), 🫖 Tea Table (consejo semanal).
+**Ya activos (cron en Railway, `cron.js`):** 🐰 White Rabbit (infra pública, c/30min), 🎩 Mad Hatter (perf/costos, c/hora), 🖤 Dark Alice (jefa de ops, 7:15am).
+
+**🫖 Tea Table — no es un agente**, es la **instancia donde se juntan todos los agentes**: sintetiza semanalmente los hallazgos de la constelación en un informe ejecutivo. Solo hay que registrar a Knave en su mapa para que lo incluya en la síntesis.
 
 **Ya construido y reportando al Lab:** 😺 **Cheshire** (`scripts/cheshire.js`, v1) — Playwright/Chromium contra prod: ERP carga + login renderiza, error-path del login, `aliceai.bam.pe` desde browser real (TLS), responsive 375px, errores de consola. Reporta a `/api/agents/report` con `x-agent-key`. **La lógica no se toca**, pero **sí se agenda** por el reloj único (ver abajo): hoy no tiene plist que lo dispare cada 30 min.
 
