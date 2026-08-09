@@ -12717,6 +12717,56 @@ function TTSparkline({ activity, agentId, accent }) {
   );
 }
 
+// Loop 3b · lecciones de los Wondies que esperan aprobación humana. Invisible si no hay.
+function LessonsApprovalPanel() {
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null);
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`${ALICIA_BRAIN_URL}/api/agents/lessons/pending`).then(x => x.json());
+      setLessons(Array.isArray(r?.lessons) ? r.lessons : []);
+    } catch { /* silencioso */ }
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  const act = async (id, verb) => {
+    setBusy(id);
+    try {
+      await fetch(`${ALICIA_BRAIN_URL}/api/agents/lessons/${id}/${verb}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by: "tea-table-panel" }),
+      });
+      await load();
+    } catch { /* noop */ }
+    setBusy(null);
+  };
+  if (loading || !lessons.length) return null;
+  const meta = Object.fromEntries(TT_SYS_AGENTS.map(a => [a.id, a]));
+  return (
+    <div style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderLeft: `2px solid ${C.ochre}`, borderRadius: 3, padding: "14px 16px", marginBottom: 12 }}>
+      <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>🧠 Lecciones por aprobar · {lessons.length}</div>
+      <div className="mt-2 flex flex-col gap-2">
+        {lessons.map(l => {
+          const ag = (l.scope || "").replace("agent:", "");
+          const m = meta[ag];
+          return (
+            <div key={l.id} style={{ borderTop: `1px solid ${C.lineSoft}`, paddingTop: 8 }}>
+              <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
+                {m ? `${m.emoji} ` : ""}<strong style={{ fontWeight: 600 }}>{m?.name || ag || "global"}</strong> · [{l.risk_level}] {l.lesson}
+              </div>
+              {l.trigger && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{l.trigger} · evidencia {l.evidence_count}</div>}
+              <div className="flex gap-2 mt-2">
+                <button disabled={busy === l.id} onClick={() => act(l.id, "approve")} style={{ fontSize: 11, fontWeight: 600, padding: "3px 12px", borderRadius: 2, backgroundColor: C.green, color: "#fff", border: "none", cursor: "pointer", opacity: busy === l.id ? 0.5 : 1 }}>Aprobar</button>
+                <button disabled={busy === l.id} onClick={() => act(l.id, "reject")} style={{ fontSize: 11, fontWeight: 600, padding: "3px 12px", borderRadius: 2, border: `1px solid ${C.line}`, color: C.muted, backgroundColor: "transparent", cursor: "pointer", opacity: busy === l.id ? 0.5 : 1 }}>Rechazar</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TeaTableSystemPanel() {
   const [status, setStatus] = useState(null);
   const [reports, setReports] = useState([]);
@@ -12765,6 +12815,8 @@ function TeaTableSystemPanel() {
 
   return (
     <div className="flex-1 overflow-y-auto pr-1 pb-6">
+      {/* Loop 3b · lecciones de los Wondies esperando aprobación (invisible si no hay) */}
+      <LessonsApprovalPanel />
       {/* Fila de veredicto + acción */}
       <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
         <div style={card}>
