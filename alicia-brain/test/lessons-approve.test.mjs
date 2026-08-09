@@ -27,6 +27,15 @@ test("approveLesson idempotente sobre applied", () => {
   assert.equal(r.applied, false);
 });
 
+test("approveLesson NO aplica una 'proposed' (evidencia insuficiente — no saltea el gate)", () => {
+  const db = db0();
+  const id = Number(db.prepare("INSERT INTO lessons (scope,source,lesson,status,risk_level) VALUES ('global','teatable','sin evidencia','proposed','L1')").run().lastInsertRowid);
+  const r = approveLesson(db, id, { by: "sb" });
+  assert.equal(r.applied, false);
+  assert.equal(db.prepare("SELECT status FROM lessons WHERE id=?").get(id).status, "proposed");
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM knowledge").get().c, 0);
+});
+
 test("rejectLesson → rejected", () => {
   const db = db0();
   const id = Number(db.prepare("INSERT INTO lessons (scope,source,lesson,status) VALUES ('global','teatable','mala idea','validated')").run().lastInsertRowid);

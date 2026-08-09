@@ -107,7 +107,10 @@ export function approveLesson(db, id, { by = "human" } = {}) {
   const row = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id);
   if (!row) throw new Error(`lesson ${id} no existe`);
   if (row.status === "applied") return { status: "applied", applied: false };
-  if (row.status === "rejected" || row.status === "retired") return { status: row.status, applied: false };
+  // Solo se aplica lo que YA cruzó el gate (status 'validated'). Nunca un 'proposed'
+  // (evidencia insuficiente) ni rejected/retired — así el endpoint abierto no puede
+  // forzar la aplicación saltándose la capa de evidencia del gate.
+  if (row.status !== "validated") return { status: row.status, applied: false };
   db.prepare("UPDATE lessons SET status = 'applied', validated_by = ?, applied_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(by, id);
   applyLessonToBrain(db, id);
   return { status: "applied", applied: true };
