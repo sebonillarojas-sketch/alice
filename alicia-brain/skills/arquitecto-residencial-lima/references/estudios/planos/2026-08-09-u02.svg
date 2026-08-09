@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2620 1520" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="2620" height="1520" fill="#ffffff"/>
+<polygon points="135.0,215.0 655.0,215.0 655.0,855.0 135.0,855.0" fill="#eef2ea" stroke="none"/>
+<polygon points="135.0,885.0 655.0,885.0 655.0,1365.0 135.0,1365.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="685.0,215.0 1425.0,215.0 1425.0,1105.0 685.0,1105.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="685.0,1135.0 1425.0,1135.0 1425.0,1365.0 685.0,1365.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1455.0,215.0 1785.0,215.0 1785.0,855.0 1455.0,855.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="1455.0,885.0 1785.0,885.0 1785.0,1365.0 1455.0,1365.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1815.0,215.0 2405.0,215.0 2405.0,1015.0 1815.0,1015.0" fill="#eef2ea" stroke="none"/>
+<polygon points="1815.0,1045.0 2075.0,1045.0 2075.0,1365.0 1815.0,1365.0" fill="#eef2ea" stroke="none"/>
+<polygon points="2105.0,1045.0 2405.0,1045.0 2405.0,1365.0 2105.0,1365.0" fill="#e8f1fb" stroke="none"/>
+<rect x="85.0" y="165.0" width="2370.0" height="50.0" fill="#2b2b2b"/>
+<rect x="2405.0" y="165.0" width="50.0" height="1250.0" fill="#2b2b2b"/>
+<rect x="85.0" y="1365.0" width="2370.0" height="50.0" fill="#2b2b2b"/>
+<rect x="85.0" y="165.0" width="50.0" height="1250.0" fill="#2b2b2b"/>
+<rect x="655.0" y="175.0" width="30.0" height="1230.0" fill="#2b2b2b"/>
+<rect x="1425.0" y="175.0" width="30.0" height="1230.0" fill="#2b2b2b"/>
+<rect x="1785.0" y="175.0" width="30.0" height="1230.0" fill="#2b2b2b"/>
+<rect x="95.0" y="855.0" width="590.0" height="30.0" fill="#2b2b2b"/>
+<rect x="655.0" y="1105.0" width="800.0" height="30.0" fill="#2b2b2b"/>
+<rect x="1425.0" y="855.0" width="390.0" height="30.0" fill="#2b2b2b"/>
+<rect x="1785.0" y="1015.0" width="660.0" height="30.0" fill="#2b2b2b"/>
+<rect x="2075.0" y="1015.0" width="30.0" height="390.0" fill="#2b2b2b"/>
+<rect x="1530.0" y="206.0" width="180.0" height="18" fill="#ffffff"/>
+<path d="M 1530.0 215.0 A 180.0 180.0 0 0 1 1710.0 215.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="875.0" y="206.0" width="360.0" height="18" fill="#ffffff"/>
+<path d="M 875.0 215.0 A 360.0 360.0 0 0 1 1235.0 215.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="2030.0" y="206.0" width="160.0" height="18" fill="#ffffff"/>
+<path d="M 2030.0 215.0 A 160.0 160.0 0 0 1 2190.0 215.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="1550.0" y="1356.0" width="140.0" height="18" fill="#ffffff"/>
+<path d="M 1550.0 1365.0 A 140.0 140.0 0 0 1 1690.0 1365.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="975.0" y="206.0" width="160.0" height="18" fill="#ffffff"/>
+<path d="M 975.0 215.0 A 160.0 160.0 0 0 1 1135.0 215.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="935.0" y="1356.0" width="240.0" height="18" fill="#ffffff"/>
+<path d="M 935.0 1365.0 A 240.0 240.0 0 0 1 1175.0 1365.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="126.0" y="1045.0" width="18" height="160.0" fill="#ffffff"/>
+<path d="M 135.0 1045.0 A 160.0 160.0 0 0 1 135.0 1205.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="1865.0" y="1356.0" width="160.0" height="18" fill="#ffffff"/>
+<path d="M 1865.0 1365.0 A 160.0 160.0 0 0 1 2025.0 1365.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="2396.0" y="1135.0" width="18" height="140.0" fill="#ffffff"/>
+<path d="M 2405.0 1135.0 A 140.0 140.0 0 0 1 2405.0 1275.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<rect x="215.0" y="208.0" width="360.0" height="14" fill="#ffffff"/>
+<line x1="215.0" y1="212.5" x2="575.0" y2="212.5" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="215.0" y1="217.5" x2="575.0" y2="217.5" stroke="#6699cc" stroke-width="1.5"/>
+<rect x="755.0" y="208.0" width="600.0" height="14" fill="#ffffff"/>
+<line x1="755.0" y1="212.5" x2="1355.0" y2="212.5" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="755.0" y1="217.5" x2="1355.0" y2="217.5" stroke="#6699cc" stroke-width="1.5"/>
+<rect x="2398.0" y="395.0" width="14" height="440.0" fill="#ffffff"/>
+<line x1="2402.5" y1="395.0" x2="2402.5" y2="835.0" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="2407.5" y1="395.0" x2="2407.5" y2="835.0" stroke="#6699cc" stroke-width="1.5"/>
+<text x="395.0" y="531.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio 2</text>
+<text x="395.0" y="548.0" font-size="12" fill="#444" text-anchor="middle">8.32 m²</text>
+<text x="395.0" y="1121.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">lavandería</text>
+<text x="395.0" y="1138.0" font-size="12" fill="#444" text-anchor="middle">6.24 m²</text>
+<text x="1055.0" y="656.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">sala-comedor</text>
+<text x="1055.0" y="673.0" font-size="12" fill="#444" text-anchor="middle">16.47 m²</text>
+<text x="1055.0" y="1246.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">cocina</text>
+<text x="1055.0" y="1263.0" font-size="12" fill="#444" text-anchor="middle">4.26 m²</text>
+<text x="1620.0" y="531.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">terraza</text>
+<text x="1620.0" y="548.0" font-size="12" fill="#444" text-anchor="middle">5.28 m²</text>
+<text x="1620.0" y="1121.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 2</text>
+<text x="1620.0" y="1138.0" font-size="12" fill="#444" text-anchor="middle">3.96 m²</text>
+<text x="2110.0" y="611.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio principal</text>
+<text x="2110.0" y="628.0" font-size="12" fill="#444" text-anchor="middle">11.80 m²</text>
+<text x="1945.0" y="1201.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">vestidor</text>
+<text x="1945.0" y="1218.0" font-size="12" fill="#444" text-anchor="middle">2.08 m²</text>
+<text x="2255.0" y="1201.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 1</text>
+<text x="2255.0" y="1218.0" font-size="12" fill="#444" text-anchor="middle">2.40 m²</text>
+<line x1="110.0" y1="1430.0" x2="2430.0" y2="1430.0" stroke="#888" stroke-width="1"/>
+<text x="1270.0" y="1448.0" font-size="13" fill="#555" text-anchor="middle">frente 11.60 m</text>
+<line x1="2450.0" y1="190.0" x2="2450.0" y2="1390.0" stroke="#888" stroke-width="1"/>
+<text x="2468.0" y="790.0" font-size="13" fill="#555" text-anchor="middle" transform="rotate(90 2468.0 790.0)">fondo 6.00 m</text>
+<text x="90" y="26" font-size="15" fill="#111" font-weight="700">2026-08-09-u02 (D5) — 69.60 m² — 2D/2B esquina, fachada de cuatro piezas — Surquillo/Jesús María, Lima Moderna-Top</text>
+<text x="90" y="46" font-size="12" fill="#555">BRIEF TERRENO: lote esquinero, dos fachadas reales corridas (Norte y Este). Frente 11.60 m (Norte) x fondo 6.00 m (Este).</text>
+<text x="90" y="66" font-size="12" fill="#555">Corrección aplicada (Sebastián, c3): dormitorio 2 se mantiene bien ubicado; dormitorio principal se movió a la derecha, sobre la segunda fachada real. Terraza generosa junto a la sala, en la fachada.</text>
+<text x="90" y="86" font-size="12" fill="#555">Terraza actúa de distribuidor público: exterior→terraza→{sala, dormitorio principal, baño 2}. Baño 2 (sirve a dormitorio 2 y de visita) se alcanza SIN cruzar la cocina — antes ese cruce generaba flujo incorrecto y espacio residual.</text>
+<text x="90" y="106" font-size="12" fill="#555">Cocina y lavandería pegadas (siempre funciona). Dormitorio principal con vestidor + baño en suite (zona buffer).</text>
+</svg>
