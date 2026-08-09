@@ -114,7 +114,9 @@ export async function syncCorrectionsToRepo() {
      WHERE c.status = 'open' ORDER BY c.id ASC`
   );
   if (!rows.length) {
-    await ghPutFile(`${CORR}/pendientes.md`, b64("# Correcciones pendientes de Sebastián\n\n(ninguna por ahora)\n"), "bammy-bridge: sin correcciones pendientes");
+    // No hay correcciones nuevas: NO tocar pendientes.md (dejar la última tanda para que
+    // la lea el estudio de esa noche; sobreescribir a "(ninguna)" acá borraría un lote
+    // ya sincronizado antes de que Bammy lo consuma).
     return { ok: true, synced: 0 };
   }
   const lines = [
