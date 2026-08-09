@@ -49,3 +49,22 @@ export function proposeLesson(db, { scope = "global", source, trigger = null, le
   ).run(scope, source, trigger, lesson, risk_level);
   return { id: Number(info.lastInsertRowid), evidence_count: 1, created: true };
 }
+
+export function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3 } = {}) {
+  const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id);
+  if (!row) throw new Error(`lesson ${id} no existe`);
+  const contradicts = checkContradictsHardRules(row.lesson, hardRules);
+  const decision = evaluateGate({ ...row, contradicts: contradicts.contradicts }, { minEvidence }).decision;
+  const check = JSON.stringify(contradicts);
+  let status;
+  if (decision === "reject") status = "rejected";
+  else if (decision === "auto_apply") status = "applied";
+  else status = "validated";
+  db.prepare(
+    `UPDATE lessons SET status = ?, contradicts_check = ?,
+       applied_at = CASE WHEN ? = 'applied' THEN datetime('now') ELSE applied_at END,
+       validated_by = CASE WHEN ? = 'applied' THEN 'auto' ELSE validated_by END,
+       updated_at = datetime('now') WHERE id = ?`
+  ).run(status, check, status, status, id);
+  return { status, decision, reason: contradicts.reason };
+}
