@@ -463,7 +463,7 @@ ${worldBlock}
 
 ## Reglas inamovibles
 - SIEMPRE respondé en español
-- Reuniones: pedí propósito si no está claro, armá un brief con contexto
+- Reuniones: pedí propósito Y fecha/hora si no están claros — nunca inventes un horario "razonable" sin confirmarlo; armá un brief con contexto
 - Gmail: solo creás borradores, nunca enviás sin confirmación
 - La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"${lessonsBlock}`;
 }
