@@ -965,11 +965,14 @@ app.post("/webhook/twilio", async (req, res) => {
 });
 
 async function transcribeAudio(mediaUrl, mediaType) {
-  // Twilio: descarga con basic auth, luego transcripción compartida
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
+  // Twilio: descarga con las MISMAS credenciales que usa el envío y la descarga de
+  // archivos (twilioCreds → prefiere API Key). Antes usaba accountSid:AUTH_TOKEN a mano;
+  // con API Key seteada y auth token vacío, eso da 401 (20003) y el audio llegaba "sordo"
+  // aunque el texto y los archivos funcionaran. Ahora comparte el helper.
+  const { twilioCreds } = await import("./wa.js");
+  const creds = twilioCreds();
   const audioRes = await fetch(mediaUrl, {
-    headers: { Authorization: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64") },
+    headers: creds ? { Authorization: creds.header } : {},
   });
   if (!audioRes.ok) throw new Error(`Audio download failed: ${audioRes.status}`);
   return transcribeBuffer(Buffer.from(await audioRes.arrayBuffer()), mediaType);
