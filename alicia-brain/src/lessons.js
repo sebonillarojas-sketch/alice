@@ -69,6 +69,19 @@ export function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3 } = {}
   return { status, decision, reason: contradicts.reason };
 }
 
+export function runGatePass(db, { hardRules = [], minEvidence = 3 } = {}) {
+  const rows = db.prepare("SELECT id FROM lessons WHERE status = 'proposed'").all();
+  const counts = { evaluated: 0, applied: 0, rejected: 0, validated: 0 };
+  for (const { id } of rows) {
+    const { status } = runGateOnLesson(db, id, { hardRules, minEvidence });
+    counts.evaluated++;
+    if (status === "applied") counts.applied++;
+    else if (status === "rejected") counts.rejected++;
+    else if (status === "validated") counts.validated++;
+  }
+  return counts;
+}
+
 export function lessonsForScope(db, scope) {
   const rows = db.prepare(
     "SELECT lesson FROM lessons WHERE status = 'applied' AND (scope = ? OR scope = 'global') ORDER BY updated_at DESC"
