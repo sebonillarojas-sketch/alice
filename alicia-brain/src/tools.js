@@ -68,10 +68,11 @@ export const ALICIA_TOOLS = [
   },
   {
     name: "get_tasks",
-    description: "Consulta tareas del ERP. Úsala cuando pregunten qué está pendiente, qué hay en un proyecto, o el estado del trabajo.",
+    description: "Consulta tareas del ERP. Úsala cuando pregunten qué está pendiente, qué hay en un proyecto, o cuando te pidan actuar sobre una tarea que mencionan de forma aproximada (para encontrarla y confirmar cuál es). Devuelve el #id de cada tarea. Usá 'query' para buscar por palabra clave del título.",
     input_schema: {
       type: "object",
       properties: {
+        query:       { type: "string", description: "Palabra(s) clave del título para buscar tareas parecidas (ej. 'valorización', 'plano del lote'). Coincidencia parcial, no exacta." },
         space_id:    { type: "string" },
         assignee_id: { type: "string" },
         status:      { type: "string", enum: ["todo","in_progress","review","done","cancelled"] },
