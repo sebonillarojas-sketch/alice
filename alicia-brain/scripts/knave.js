@@ -33,6 +33,7 @@ async function defaultReporter(payload) {
 export async function runKnave({ fetchImpl = globalThis.fetch, reporter = defaultReporter, targets = DEFAULT_TARGETS } = {}) {
   const findings = [];
   const actions = [];
+  let hadError = false;
   const note = (ok, label, detail = "") => actions.push({ check: label, ok, detail });
 
   // 1) Headers de seguridad
@@ -41,7 +42,11 @@ export async function runKnave({ fetchImpl = globalThis.fetch, reporter = defaul
     const hf = checkSecurityHeaders(headersToObject(r.headers));
     findings.push(...hf);
     note(hf.length === 0, "Headers de seguridad", hf.length ? `faltan ${hf.length}` : "");
-  } catch (e) { note(false, "Headers de seguridad", e.message); }
+  } catch (e) {
+    hadError = true;
+    note(false, "Headers de seguridad", e.message);
+    findings.push({ severity: "critical", category: "headers-error", detail: `Fallo al chequear headers de seguridad: ${e.message}` });
+  }
 
   // 2) CORS abierto (preflight con Origin hostil)
   try {
@@ -54,7 +59,11 @@ export async function runKnave({ fetchImpl = globalThis.fetch, reporter = defaul
     const cf = checkCorsOpen(acao);
     if (cf) findings.push(cf);
     note(!cf, "CORS", cf ? "abierto" : "");
-  } catch (e) { note(false, "CORS", e.message); }
+  } catch (e) {
+    hadError = true;
+    note(false, "CORS", e.message);
+    findings.push({ severity: "critical", category: "cors-error", detail: `Fallo al chequear CORS: ${e.message}` });
+  }
 
   // 3) Auth gate: ruta protegida sin credenciales debe rechazar
   try {
@@ -62,9 +71,13 @@ export async function runKnave({ fetchImpl = globalThis.fetch, reporter = defaul
     const af = checkAuthRejected(r.status);
     if (af) findings.push(af);
     note(!af, "Auth gate", af ? `no rechaza (HTTP ${r.status})` : "");
-  } catch (e) { note(false, "Auth gate", e.message); }
+  } catch (e) {
+    hadError = true;
+    note(false, "Auth gate", e.message);
+    findings.push({ severity: "critical", category: "auth-error", detail: `Fallo al chequear auth gate: ${e.message}` });
+  }
 
-  const result = findings.length ? "issues" : "ok";
+  const result = hadError ? "error" : (findings.length ? "issues" : "ok");
   const summary = findings.length
     ? `${findings.length} hallazgo(s) de seguridad: ${[...new Set(findings.map(f => f.category))].join(", ")}`
     : "Checks de seguridad OK";

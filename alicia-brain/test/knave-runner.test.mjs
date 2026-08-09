@@ -36,3 +36,16 @@ test("runKnave detecta CORS abierto y auth flojo, y arma reporte 'issues'", asyn
   assert.equal(sent.agent, "knave");
   assert.equal(sent.result, "issues");
 });
+
+test("runKnave reporta 'error' cuando un check tira (target inalcanzable)", async () => {
+  let sent = null;
+  const throwingFetch = () => Promise.reject(new Error("getaddrinfo ENOTFOUND x"));
+  const res = await runKnave({
+    fetchImpl: throwingFetch,
+    reporter: (payload) => { sent = payload; return Promise.resolve({ ok: true }); },
+    targets: { base: "https://x", protectedPath: "/api/tasks" },
+  });
+  assert.equal(res.result, "error");
+  assert.ok(res.findings.some(f => f.category.endsWith("-error")));
+  assert.equal(sent.result, "error");
+});
