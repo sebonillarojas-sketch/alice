@@ -81,6 +81,14 @@ export function startCron() {
     await ingestLatestBammyStudy({ notify: true }).catch(e => console.error("Bammy bridge error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Vuelta del loop · 23:45 Lima (justo antes del estudio de las 00:08): escribe las
+  // correcciones del Taller al repo para que Bammy las lea sin tocar el backend.
+  cron.schedule("45 23 * * *", async () => {
+    console.log("🌉 Cron: correcciones Taller → repo");
+    const { syncCorrectionsToRepo } = await import("./bammy-bridge.js");
+    await syncCorrectionsToRepo().catch(e => console.error("Bammy corrections sync error:", e.message));
+  }, { timezone: "America/Lima" });
+
   // Primer barrido a los 90s del boot: conejo + sombrerero (no esperar al próximo tick)
   setTimeout(async () => {
     const { runWhiteRabbitChecks } = await import("./whiterabbit.js");

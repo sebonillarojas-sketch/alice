@@ -1640,6 +1640,16 @@ app.post("/api/agents/bridge/ingest", requireAgentKey, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Vuelta del loop (manual / test): escribe las correcciones abiertas del Taller al repo.
+// También corre solo por cron 23:45 Lima. Requiere GITHUB_TOKEN con Contents:write.
+app.post("/api/agents/bridge/sync-corrections", requireAgentKey, async (req, res) => {
+  try {
+    const { syncCorrectionsToRepo } = await import("./bammy-bridge.js");
+    const r = await syncCorrectionsToRepo();
+    res.json(r);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // El Lab del cockpit lee el estado real (público, solo lectura)
 app.get("/api/agents/status", (req, res) => {
   try {

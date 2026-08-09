@@ -80,3 +80,65 @@ export async function ingestLatestBammyStudy({ notify = true } = {}) {
   }
   return { ok: true, id: lastID, day: latest.day, date: latest.date, units: units.length };
 }
+
+// ── Vuelta del loop: correcciones del Taller → repo (para que Bammy las lea) ──
+const CORR = `${ESTUDIOS}/correcciones`;
+const b64 = (str) => Buffer.from(str, "utf8").toString("base64");
+
+// PUT de un archivo al repo (crea o actualiza). Requiere GITHUB_TOKEN con Contents:write.
+async function ghPutFile(path, contentB64, message) {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error("GITHUB_TOKEN no configurado");
+  let sha;
+  try { const meta = await gh(path); sha = meta && meta.sha; } catch { /* no existe aún */ }
+  const body = { message, content: contentB64, branch: BRANCH };
+  if (sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json",
+      "User-Agent": "alicia-bammy-bridge", "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`GitHub PUT ${r.status} en ${path}: ${(await r.text()).slice(0, 160)}`);
+  return r.json();
+}
+
+// Escribe las correcciones abiertas del Taller al repo (pendientes.md + imágenes) y
+// las marca aplicadas. La rutina nocturna las lee tras su `git pull` (no toca el backend).
+export async function syncCorrectionsToRepo() {
+  const { rows } = query(
+    `SELECT c.*, s.day AS study_day, s.date AS study_date
+     FROM bammy_corrections c LEFT JOIN bammy_studies s ON s.id = c.study_id
+     WHERE c.status = 'open' ORDER BY c.id ASC`
+  );
+  if (!rows.length) {
+    await ghPutFile(`${CORR}/pendientes.md`, b64("# Correcciones pendientes de Sebastián\n\n(ninguna por ahora)\n"), "bammy-bridge: sin correcciones pendientes");
+    return { ok: true, synced: 0 };
+  }
+  const lines = [
+    "# Correcciones pendientes de Sebastián",
+    "",
+    "> Leelas ANTES de diseñar hoy — son criterio DURO. Si una referencia una imagen anotada, ABRILA y MIRALA (tenés visión) para entender la marca sobre el plano.",
+    "",
+  ];
+  for (const c of rows) {
+    let imgNote = "";
+    const m = /^data:image\/png;base64,(.+)$/.exec(c.image || "");
+    if (m) {
+      try {
+        await ghPutFile(`${CORR}/img/c${c.id}.png`, m[1], `bammy-bridge: imagen correccion c${c.id}`);
+        imgNote = ` · imagen anotada: correcciones/img/c${c.id}.png (MIRALA)`;
+      } catch (e) { console.error(`🌉 corr img c${c.id}:`, e.message); }
+    }
+    lines.push(`## c${c.id} — día ${c.study_day ?? "?"} · unidad ${c.unidad || "?"} · veredicto: ${c.veredicto}`);
+    lines.push(`Notas: ${(c.notas || "(sin notas)").replace(/\n/g, " ")}${imgNote}`);
+    lines.push("");
+  }
+  await ghPutFile(`${CORR}/pendientes.md`, b64(lines.join("\n")), `bammy-bridge: ${rows.length} correccion(es) pendientes`);
+  const ids = rows.map((r) => r.id);
+  query(`UPDATE bammy_corrections SET status='applied', applied_at=datetime('now') WHERE id IN (${ids.map(() => "?").join(",")})`, ids);
+  console.log(`🌉 Bridge: ${rows.length} correccion(es) escritas al repo y marcadas aplicadas`);
+  return { ok: true, synced: rows.length, ids };
+}
