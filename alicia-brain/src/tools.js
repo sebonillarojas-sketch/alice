@@ -354,7 +354,7 @@ export async function executeTool(toolName, input, userId) {
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
       const task = await sbTasks.createTask(input, userId);
-      return `Tarea creada ✓ "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
+      return `Tarea creada ✓ (#${task.id}) "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
       const { task_id, ...fields } = input;
@@ -365,7 +365,7 @@ export async function executeTool(toolName, input, userId) {
       const tasks = await sbTasks.getTasks(input);
       if (!tasks.length) return "No hay tareas con esos filtros.";
       return tasks.map(t =>
-        `${t.title} [${t.status}] — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`
+        `#${t.id} · ${t.title} [${t.status}] — ${t.assignee || "sin asignar"} · ${t.priority}${t.due ? ` · vence ${t.due}` : ""}`
       ).join("\n");
     }
 
