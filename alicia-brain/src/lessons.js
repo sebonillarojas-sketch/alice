@@ -34,3 +34,18 @@ export function evaluateGate(lesson, { minEvidence = 3 } = {}) {
   if (lesson.risk_level === "L0") return { decision: "auto_apply", reason: "L0 de bajo riesgo con evidencia" };
   return { decision: "needs_human", reason: `riesgo ${lesson.risk_level} requiere aprobación humana` };
 }
+
+export function proposeLesson(db, { scope = "global", source, trigger = null, lesson, risk_level = "L1" }) {
+  const existing = db.prepare(
+    "SELECT id, evidence_count FROM lessons WHERE scope = ? AND lesson = ? AND status IN ('proposed','validated')"
+  ).get(scope, lesson);
+  if (existing) {
+    const n = existing.evidence_count + 1;
+    db.prepare("UPDATE lessons SET evidence_count = ?, updated_at = datetime('now') WHERE id = ?").run(n, existing.id);
+    return { id: existing.id, evidence_count: n, created: false };
+  }
+  const info = db.prepare(
+    "INSERT INTO lessons (scope, source, trigger, lesson, risk_level) VALUES (?,?,?,?,?)"
+  ).run(scope, source, trigger, lesson, risk_level);
+  return { id: Number(info.lastInsertRowid), evidence_count: 1, created: true };
+}
