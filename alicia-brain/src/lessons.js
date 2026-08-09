@@ -20,3 +20,17 @@ export function ensureLessonsSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_lessons_status ON lessons(status, risk_level);
   `);
 }
+
+export function checkContradictsHardRules(lessonText, hardRules = []) {
+  for (const rule of hardRules) {
+    try { if (rule.test(lessonText)) return { contradicts: true, reason: rule.reason || rule.id }; } catch {}
+  }
+  return { contradicts: false, reason: null };
+}
+
+export function evaluateGate(lesson, { minEvidence = 3 } = {}) {
+  if (lesson.contradicts) return { decision: "reject", reason: "contradice una regla dura" };
+  if ((lesson.evidence_count || 0) < minEvidence) return { decision: "needs_human", reason: `evidencia insuficiente (<${minEvidence})` };
+  if (lesson.risk_level === "L0") return { decision: "auto_apply", reason: "L0 de bajo riesgo con evidencia" };
+  return { decision: "needs_human", reason: `riesgo ${lesson.risk_level} requiere aprobación humana` };
+}
