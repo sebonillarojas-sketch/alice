@@ -498,6 +498,7 @@ export async function executeTool(toolName, input, userId) {
       if (!phone) return "No tengo tu WhatsApp en el perfil, no puedo enviártelo por ahí.";
       let buffer, mime, filename;
       if (input.dropbox_path) {
+        if (!/^\/Hygge(\/|$)/i.test(input.dropbox_path.trim())) return "Solo puedo enviar archivos que estén bajo /Hygge en Dropbox.";
         const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
         if (!dropboxAvailable()) return "Dropbox no está configurado.";
         try { buffer = await dropbox.getFileBuffer(input.dropbox_path); }
@@ -513,9 +514,9 @@ export async function executeTool(toolName, input, userId) {
       const { stageFile } = await import("./file-relay.js");
       const id = stageFile({ buffer, mime, filename });
       const url = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/file/${id}`;
-      const { sendWAMedia } = await import("./wa.js");
       try {
-        const ok = await sendWAMedia(phone, url);
+        const { sendWADocument } = await import("./wa.js");
+        const ok = await sendWADocument(phone, { buffer, mimetype: mime, filename, url });
         return ok ? `📎 Te mandé "${filename}" por WhatsApp.` : `Preparé "${filename}" pero no pude enviarlo por WhatsApp (canal no disponible).`;
       } catch (e) { return `No pude enviarte el archivo: ${e.message}`; }
     }

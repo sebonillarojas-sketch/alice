@@ -62,6 +62,13 @@ export async function sendWAWebAudio(to, buffer, mimetype = "audio/mp4") {
   return true;
 }
 
+// Documento saliente (buffer) — PDFs, Excel, imágenes, etc.
+export async function sendWAWebDocument(to, buffer, mimetype = "application/octet-stream", fileName = "archivo") {
+  if (!isWAWebConnected()) throw new Error("WA Web no conectado");
+  await sock.sendMessage(toJid(to), { document: buffer, mimetype, fileName });
+  return true;
+}
+
 export async function startWAWeb(onIncoming) {
   if (onIncoming) onIncomingCb = onIncoming;
   if (!ENABLED) { state.status = "off"; console.log("📵 WA Web desactivado (WA_WEB_ENABLED=0)"); return; }
