@@ -109,6 +109,13 @@ _Sincronizado: ${fmtDate()}_
 `]);
   }
 
+  // Lecciones aplicadas del loop de aprendizaje (legibles, auditables)
+  const { rows: lessons } = query("SELECT scope, lesson, source, applied_at FROM lessons WHERE status = 'applied' ORDER BY applied_at DESC");
+  files.push([`${BASE}/lecciones.md`, `# Lecciones aprendidas 🧠\n_${fmtDate()}_\n\n` +
+    (lessons.length
+      ? lessons.map(l => `- **[${l.scope}]** ${l.lesson} _(${l.source}${l.applied_at ? ", " + l.applied_at.slice(0, 10) : ""})_`).join("\n")
+      : "_Todavía no hay lecciones aplicadas._")]);
+
   // Subir todo
   let uploaded = 0;
   for (const [path, content] of files) {

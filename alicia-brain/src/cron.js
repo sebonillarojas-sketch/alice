@@ -65,6 +65,17 @@ export function startCron() {
     await runScraperAgent({ sources: ["urbania"] }).catch(e => console.error("Scraper Urbania error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Loop de aprendizaje · gate-pass diario sobre lecciones proposed
+  cron.schedule("30 6 * * *", async () => {
+    try {
+      const { runGatePass } = await import("./lessons.js");
+      const { HARD_RULES } = await import("./hard-rules.js");
+      const { getDB } = await import("./db.js");
+      const r = runGatePass(getDB(), { hardRules: HARD_RULES, minEvidence: 3 });
+      console.log(`🧠 gate-pass diario · ${JSON.stringify(r)}`);
+    } catch (e) { console.error("gate-pass diario error:", e.message); }
+  }, { timezone: "America/Lima" });
+
   // Cerebro → Dropbox · espejo nocturno 3:30am Lima
   cron.schedule("30 3 * * *", async () => {
     console.log("🧠 Cron: export cerebro a Dropbox");
@@ -100,5 +111,5 @@ export function startCron() {
     await refreshRentalListings().catch(e => console.error("Rental listings boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 7am · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 7am · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · gate-pass 6:30am · cerebro→Dropbox 3:30am");
 }

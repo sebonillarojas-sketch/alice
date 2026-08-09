@@ -5,7 +5,8 @@ import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { query, parseArr } from "./db.js";
+import { query, parseArr, getDB } from "./db.js";
+import { lessonsForScope, formatLessonsBlock } from "./lessons.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
@@ -368,6 +369,13 @@ Con ${profile?.name?.split(" ")[0] || "el equipo"} tu misión es que produzca m�
 - Límites: estrategia de la empresa, información financiera, datos de otros colaboradores y decisiones de dirección NO son tu terreno con esta persona — redirigí amablemente a Sebastián. Nada confidencial de otros usuarios.
 - Tono cercano, rápido, resolutivo. Menos análisis, más ejecución.`;
 
+  let lessonsBlock = "";
+  try {
+    const db = getDB();
+    const ls = [...lessonsForScope(db, `user:${userId}`), ...lessonsForScope(db, "agent:alicia")];
+    lessonsBlock = formatLessonsBlock([...new Set(ls)]);
+  } catch (e) { console.error("inyección de lecciones falló:", e.message); }
+
   return `Eres Alicia, la asistente ejecutiva con IA de Hygge Holding, empresa inmobiliaria premium en Lima, Perú.
 
 ## Tu personalidad
@@ -452,7 +460,7 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 - SIEMPRE respondé en español
 - Reuniones: pedí propósito si no está claro, armá un brief con contexto
 - Gmail: solo creás borradores, nunca enviás sin confirmación
-- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"`;
+- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"${lessonsBlock}`;
 }
 
 // ── Agentic loop ──────────────────────────────────────────────────────────────
@@ -1595,7 +1603,7 @@ app.get("/api/agents/studies", (req, res) => {
 });
 
 // Sebastian guarda una correccion (imagen anotada + notas) sobre una unidad.
-app.post("/api/agents/correction", (req, res) => {
+app.post("/api/agents/correction", async (req, res) => {
   try {
     const { study_id = null, unidad = "", image = "", notas = "", veredicto = "a_corregir" } = req.body || {};
     if (!image && !notas) return res.status(400).json({ error: "image o notas requerido" });
@@ -1603,6 +1611,12 @@ app.post("/api/agents/correction", (req, res) => {
       `INSERT INTO bammy_corrections (study_id, unidad, image, notas, veredicto) VALUES (?,?,?,?,?)`,
       [study_id, unidad, image, notas, veredicto]
     );
+    try {
+      const { proposeLesson } = await import("./lessons.js");
+      const { lessonFromCorrection } = await import("./lesson-capture.js");
+      const args = lessonFromCorrection({ unidad, notas, veredicto, study_id });
+      if (args) { const { getDB } = await import("./db.js"); proposeLesson(getDB(), args); }
+    } catch (e) { console.error("captura de lección (corrección) falló:", e.message); }
     res.json({ ok: true, id: lastID });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1616,6 +1630,33 @@ app.get("/api/agents/corrections", requireAgentKey, (req, res) => {
        WHERE c.status = 'open' ORDER BY c.id ASC`
     );
     res.json({ ok: true, corrections: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Loop de aprendizaje · lecciones (backbone de Tea Table / Taller / WhatsApp) ──
+app.get("/api/agents/lessons", requireAgentKey, (req, res) => {
+  try {
+    const { status = "validated", scope } = req.query;
+    const wheres = ["status = ?"]; const params = [status];
+    if (scope) { wheres.push("scope = ?"); params.push(scope); }
+    const { rows } = query(`SELECT * FROM lessons WHERE ${wheres.join(" AND ")} ORDER BY updated_at DESC LIMIT 200`, params);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/agents/lessons/:id/approve", requireAgentKey, async (req, res) => {
+  try {
+    const { by = "human" } = req.body || {};
+    const { getDB } = await import("./db.js");
+    const { approveLesson } = await import("./lessons.js");
+    res.json(approveLesson(getDB(), Number(req.params.id), { by }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/agents/lessons/:id/reject", requireAgentKey, async (req, res) => {
+  try {
+    const { by = "human" } = req.body || {};
+    const { getDB } = await import("./db.js");
+    const { rejectLesson } = await import("./lessons.js");
+    res.json(rejectLesson(getDB(), Number(req.params.id), { by }));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
