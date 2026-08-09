@@ -9,6 +9,7 @@ import { query, parseArr, getDB } from "./db.js";
 import { lessonsForScope, formatLessonsBlock } from "./lessons.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { buildWorldDigest, EMBODIMENT_BLOCK } from "./world.js";
+import { coalesceMessage } from "./coalesce.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
@@ -795,29 +796,32 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`📱 [${userId}] ${userText}`);
     const { sendWA } = await import("./wa.js");
-    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
-
-    // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
-    // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza,
-    // cae a texto. Conversión a ogg/opus pendiente para paridad total.
-    await sendWA(fromPhone, reply);
-    if (inputWasAudio) {
+    // Coalescer: junta mensajes seguidos y responde una vez con el hilo completo.
+    coalesceMessage(userId, userText, async (joined, { wasAudio }) => {
       try {
-        const audioBuf = await generateSpeech(reply);
-        const id = Math.random().toString(36).slice(2);
-        ttsCache.set(id, audioBuf);
-        setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
-        const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`;
-        const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ messaging_product: "whatsapp", to: fromPhone, type: "audio", audio: { link: audioUrl } }),
-        });
-        if (!r.ok) console.error("nota de voz Cloud rechazada (ya respondí texto):", (await r.text()).slice(0, 200));
-      } catch (ttsErr) {
-        console.error("nota de voz falló (ya respondí texto):", ttsErr.message);
-      }
-    }
+        const { text: reply } = await processAliciaMessage(userId, joined, "whatsapp");
+        await sendWA(fromPhone, reply);
+        // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
+        // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza, cae a texto.
+        if (wasAudio) {
+          try {
+            const audioBuf = await generateSpeech(reply);
+            const id = Math.random().toString(36).slice(2);
+            ttsCache.set(id, audioBuf);
+            setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
+            const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`;
+            const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ messaging_product: "whatsapp", to: fromPhone, type: "audio", audio: { link: audioUrl } }),
+            });
+            if (!r.ok) console.error("nota de voz Cloud rechazada (ya respondí texto):", (await r.text()).slice(0, 200));
+          } catch (ttsErr) {
+            console.error("nota de voz falló (ya respondí texto):", ttsErr.message);
+          }
+        }
+      } catch (e) { console.error("Webhook proceso error:", e.message); }
+    }, { wasAudio: inputWasAudio });
   } catch (e) {
     console.error("Webhook error:", e.message);
   }
@@ -861,17 +865,20 @@ async function handleWAWebIncoming({ phone, text, media }) {
 
   console.log(`📱 WA Web [${userId}] ${userText}`);
   const { sendWAWebText, sendWAWebAudio } = await import("./waweb.js");
-  const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
-
-  // Nota de voz de vuelta si la entrada fue audio (paridad con Cloud/Twilio).
-  // El TTS emite wav — va como audio normal, no como nota de voz (eso pide ogg/opus).
-  await sendWAWebText(phone, reply);
-  if (inputWasAudio) {
+  // Coalescer: junta mensajes seguidos y responde una vez con el hilo completo.
+  coalesceMessage(userId, userText, async (joined, { wasAudio }) => {
     try {
-      const audioBuf = await generateSpeech(reply);
-      await sendWAWebAudio(phone, audioBuf, "audio/wav");
-    } catch (ttsErr) { console.error("nota de voz WA Web falló (ya respondí texto):", ttsErr.message); }
-  }
+      const { text: reply } = await processAliciaMessage(userId, joined, "whatsapp");
+      // Texto SIEMPRE primero; la voz es un bonus (wav va como audio normal, no nota de voz).
+      await sendWAWebText(phone, reply);
+      if (wasAudio) {
+        try {
+          const audioBuf = await generateSpeech(reply);
+          await sendWAWebAudio(phone, audioBuf, "audio/wav");
+        } catch (ttsErr) { console.error("nota de voz WA Web falló (ya respondí texto):", ttsErr.message); }
+      }
+    } catch (e) { console.error("WA Web proceso error:", e.message); }
+  }, { wasAudio: inputWasAudio });
 }
 
 app.get("/api/waweb/status", async (_, res) => {
@@ -939,21 +946,27 @@ app.post("/webhook/twilio", async (req, res) => {
       if (!userText) return;
       console.log(`📱 Twilio [${userId}] ${userText}`);
 
-      const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
-
-      // Texto SIEMPRE primero (confiable) — antes se respondía solo la voz y si el
-      // envío del WAV "parecía" ok pero WhatsApp no lo entregaba, el return se comía
-      // la respuesta y Alicia quedaba muda ante un audio. Ahora la voz es un bonus.
-      await sendWA(phone, reply);
-      if (inputWasAudio) {
+      // Coalescer: junta este mensaje con los que sigan en los próximos segundos y
+      // responde una vez con el hilo completo (ver coalesce.js).
+      coalesceMessage(userId, userText, async (joined, { wasAudio }) => {
         try {
-          const audioBuf = await generateSpeech(reply);
-          const id = Math.random().toString(36).slice(2);
-          ttsCache.set(id, audioBuf);
-          setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
-          await sendWAMedia(phone, `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`);
-        } catch (ttsErr) { console.error("nota de voz falló (ya respondí texto):", ttsErr.message); }
-      }
+          const { text: reply } = await processAliciaMessage(userId, joined, "whatsapp");
+          // Texto SIEMPRE primero (confiable) — la voz es un bonus.
+          await sendWA(phone, reply);
+          if (wasAudio) {
+            try {
+              const audioBuf = await generateSpeech(reply);
+              const id = Math.random().toString(36).slice(2);
+              ttsCache.set(id, audioBuf);
+              setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
+              await sendWAMedia(phone, `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`);
+            } catch (ttsErr) { console.error("nota de voz falló (ya respondí texto):", ttsErr.message); }
+          }
+        } catch (e) {
+          console.error("Twilio proceso error:", e.message);
+          sendWA(phone, "Tuve un problema, probá de nuevo.").catch(() => {});
+        }
+      }, { wasAudio: inputWasAudio });
     } catch (e) {
       console.error("Twilio async error:", e.message);
       sendWA(phone, "Tuve un problema, probá de nuevo.").catch(() => {});
