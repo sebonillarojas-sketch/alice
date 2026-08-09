@@ -8,34 +8,52 @@ La constelación **Wonderland IT** (`docs/WONDERLAND_IT.md`) son agentes autóno
 
 **Ya activos (cron en Railway, `cron.js`):** 🐰 White Rabbit (infra pública, c/30min), 🎩 Mad Hatter (perf/costos, c/hora), 🖤 Dark Alice (jefa de ops, 7:15am), 🫖 Tea Table (consejo semanal).
 
-**Ya construido y reportando al Lab:** 😺 **Cheshire** (`scripts/cheshire.js`, v1) — Playwright/Chromium contra prod: ERP carga + login renderiza, error-path del login, `aliceai.bam.pe` desde browser real (TLS), responsive 375px, errores de consola. Reporta a `/api/agents/report` con `x-agent-key`. **Fuera de alcance de este build — no se toca.**
+**Ya construido y reportando al Lab:** 😺 **Cheshire** (`scripts/cheshire.js`, v1) — Playwright/Chromium contra prod: ERP carga + login renderiza, error-path del login, `aliceai.bam.pe` desde browser real (TLS), responsive 375px, errores de consola. Reporta a `/api/agents/report` con `x-agent-key`. **La lógica no se toca**, pero **sí se agenda** por el reloj único (ver abajo): hoy no tiene plist que lo dispare cada 30 min.
 
 **Falta construir → este sub-proyecto:**
+- ⏰ **Reloj único** en la bestia (`scripts/bestia-runner.js` + `bestia-bootstrap.js`) — un solo scheduler que corre todo lo de la bestia.
 - 🃏 **Knave** (seguridad) — no existe ni en el esquema ni en la doc.
 - ⚔️ **Bandersnatch** (chaos) y ⚡ **Jabberwocky** (fuzzer) — requieren un clon nocturno de DB+stack que aún no existe ("jamás contra prod con datos reales") → se crean como stubs hasta que exista el clon.
 
 **Fuera de alcance:** el loop de aprendizaje (Sub-proyecto A, posterior).
 
-## Nota sobre agendado de Cheshire (informativo, no se acciona acá)
+## Arquitectura de runner — reloj único
 
-El único launchd presente (`scripts/com.hygge.white-rabbit.plist`) corre **`scrape.js all`**, no Cheshire. Cheshire funciona al invocarse pero no tiene plist propio que lo agende en la bestia. Se documenta como observación; **no se modifica en este sub-proyecto** salvo indicación explícita. Si más adelante se quiere agendar, entra por el mismo auto-bootstrap descrito abajo.
-
-## Arquitectura de runner
-
-Knave (tooling de seguridad pesado) corre en la **mac bestia**, no en Railway:
+Todo lo que corre en la bestia (scraper, Cheshire, Knave, stubs) queda **anclado a un solo reloj**, en vez de un launchd por agente.
 
 - **La bestia** = Hackintosh `alicias-mac-pro-1`, Tailscale IPv4 `100.88.12.17`, user `eduardobonilla`, repo en `~/Desktop/ALICE`. Node vía Volta (`/Users/eduardobonilla/.volta/bin/node`).
 - **Sin SSH:** no alcanzable por shell (puerto 22 cerrado, Tailscale SSH no advertisido). **Único canal de despliegue = git.**
-- **Self-update existente:** el runner de la bestia hace `git pull --ff-only` al arrancar (commit 79939b1). Lo que se mergea a `main`, la bestia lo pullea sola en su próxima corrida.
-- **Reporte a Railway:** `POST /api/agents/report` con header `x-agent-key` (env `AGENTS_API_KEY`), usando el dominio `*.up.railway.app` (cert siempre válido, aun si el dominio custom está roto). El gate de `server.js` ya deja pasar `x-agent-key` para rutas `/agents/`.
+- **Reporte a Railway:** `POST /api/agents/report` con header `x-agent-key` (env `AGENTS_API_KEY`), usando el dominio `*.up.railway.app` (cert siempre válido aun si el dominio custom está roto). El gate de `server.js` ya deja pasar `x-agent-key` para rutas `/agents/`.
 
-### Despliegue: auto-bootstrap vía git (sin SSH)
+### El reloj: `scripts/bestia-runner.js`
 
-El self-update refresca código pero **no instala launchd nuevos**. Sin shell, la activación de Knave se hace por auto-bootstrap:
+Un **único launchd** (`com.hygge.wonderland.plist`) corre `bestia-runner.js` cada ~10 min. En cada tick:
 
-- Nuevo `scripts/bestia-bootstrap.js`: registra/actualiza el plist `com.hygge.knave.plist` con `launchctl` a nivel usuario (`eduardobonilla`, **sin sudo**). Idempotente.
-- El runner existente llama a `bestia-bootstrap` al final de cada corrida. La primera vez que la bestia pullee el código nuevo, se auto-instala el scheduler de Knave.
-- **Latencia de activación:** hasta ~6h post-merge (próximo pull de la bestia), salvo pull forzado por la sesión conectora.
+1. **`git pull --ff-only`** (self-update, en un solo lugar).
+2. Lee una **tabla de horarios en código** (versionada) y decide qué job está vencido según su "último corrió" (archivo de estado local `~/Library/Application Support/wonderland/schedule-state.json`, no depende de prod):
+
+   | Job | Cadencia |
+   |---|---|
+   | scraper (Radar) | c/6h |
+   | Cheshire | c/30min |
+   | Knave · checks pasivos | c/hora |
+   | Knave · `npm audit` | diario |
+   | Knave · `security-review` | semanal |
+   | Bandersnatch / Jabberwocky | inertes (skipped) |
+
+3. Dispara solo los vencidos, con **lock por job** (no arranca uno si el anterior sigue corriendo — relevante para Cheshire/browser y `npm audit`) y respetando `QUARANTINE=true` (solo observan).
+4. Actualiza el estado local con el timestamp de cada corrida.
+
+**Ventajas:** un solo punto de self-update; un solo plist para instalar; agregar un agente futuro = **una fila en la tabla**, no un plist nuevo; Cheshire queda agendado de verdad por el mismo reloj.
+
+### Despliegue y migración: auto-bootstrap vía git (sin SSH)
+
+El self-update refresca código pero **no instala/retira launchd**. Sin shell, la transición al reloj único se hace por auto-bootstrap, encadenado desde el punto de entrada que ya se auto-actualiza (`scrape.js`, hoy corrido por el plist viejo `com.hygge.white-rabbit.plist` c/6h con `git pull` al inicio, commit 79939b1):
+
+- Nuevo `scripts/bestia-bootstrap.js` (idempotente): (a) instala/actualiza `com.hygge.wonderland.plist` vía `launchctl` a nivel usuario (`eduardobonilla`, **sin sudo**); (b) retira el plist viejo `com.hygge.white-rabbit.plist` para no correr el scraper por duplicado.
+- `scrape.js` llama a `bestia-bootstrap` al final de su corrida. La primera vez que la bestia pullee el código nuevo, se instala el reloj único y se retira el viejo; de ahí en más **el reloj único es el corazón** y corre todo (incluido el scraper c/6h).
+- **Seguridad de la transición:** el bootstrap solo retira el plist viejo *después* de confirmar que el nuevo quedó cargado (`launchctl print`). Si algo falla, el viejo sigue vivo → no se pierde el heartbeat.
+- **Latencia de activación:** hasta ~6h post-merge (próximo pull del plist viejo), salvo pull forzado por la sesión conectora.
 
 ## Componentes
 
@@ -85,8 +103,9 @@ Cada agente exporta `run<Nombre>()`; inserta en `agent_runs` (`agent`, `finished
 
 ## Criterios de éxito
 
-1. Knave existe en el esquema, corre sus checks + `npm audit`, y caza el CORS abierto actual como finding real, visible en el Lab del cockpit.
-2. Knave nunca ejecuta acciones (L0): solo `agent_runs`/`findings`.
-3. Bandersnatch/Jabberwocky aparecen "en espera" (skipped), sin tocar prod.
-4. El auto-bootstrap instala el launchd de Knave en la bestia sin SSH ni intervención manual, solo con el merge a `main`.
-5. Cero regresión en los agentes ya activos (White Rabbit, Mad Hatter, Dark Alice, Tea Table) ni en Cheshire.
+1. Un **único launchd** (`com.hygge.wonderland.plist`) corre el reloj; el plist viejo del scraper queda retirado; scraper y Cheshire corren a su cadencia por el mismo reloj.
+2. Knave existe en el esquema, corre sus checks + `npm audit`, y caza el CORS abierto actual como finding real, visible en el Lab del cockpit.
+3. Knave nunca ejecuta acciones (L0): solo `agent_runs`/`findings`.
+4. Bandersnatch/Jabberwocky aparecen "en espera" (skipped), sin tocar prod.
+5. El auto-bootstrap instala el reloj único en la bestia sin SSH ni intervención manual, solo con el merge a `main`, y la transición no pierde el heartbeat (el plist viejo solo se retira tras confirmar el nuevo).
+6. Cero regresión en los agentes de Railway (White Rabbit, Mad Hatter, Dark Alice, Tea Table), en Cheshire ni en el scraper.
