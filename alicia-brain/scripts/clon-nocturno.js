@@ -20,6 +20,8 @@ export function buildCloneEnv(base = process.env) {
   env.SANDBOX = "1";
   env.PORT = PORT;
   env.SQLITE_PATH = CLONE_DB;
+  env.WA_WEB_ENABLED = "0";   // el clon NUNCA levanta WhatsApp Web (chocaría con prod)
+  env.GATE_DEV_OPEN = "1";    // el clon es localhost-only: abrir el panelGate para que Jabberwocky pueda fuzzear /api/chat
   return env;
 }
 

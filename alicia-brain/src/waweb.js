@@ -9,6 +9,7 @@
 
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { isSandbox } from "./sandbox.js";
 
 const ENABLED = process.env.WA_WEB_ENABLED !== "0";
 const AUTH_DIR =
@@ -46,6 +47,7 @@ function toJid(phone) {
 }
 
 export async function sendWAWebText(to, text) {
+  if (isSandbox()) { console.log("[SANDBOX] no envío WA Web"); return false; }
   if (!isWAWebConnected()) throw new Error("WA Web no conectado");
   const jid = toJid(to);
   const chunks = text.length <= 4000 ? [text] : text.match(/[\s\S]{1,4000}/g) || [text];
@@ -56,6 +58,7 @@ export async function sendWAWebText(to, text) {
 // Audio saliente (buffer). WhatsApp solo reproduce notas de voz en ogg/opus;
 // wav/mp3 van como audio normal (ptt: false) para que no salga "mensaje dañado".
 export async function sendWAWebAudio(to, buffer, mimetype = "audio/mp4") {
+  if (isSandbox()) { console.log("[SANDBOX] no envío WA Web"); return false; }
   if (!isWAWebConnected()) throw new Error("WA Web no conectado");
   const ptt = /ogg|opus/.test(mimetype);
   await sock.sendMessage(toJid(to), { audio: buffer, mimetype, ptt });
@@ -64,6 +67,7 @@ export async function sendWAWebAudio(to, buffer, mimetype = "audio/mp4") {
 
 // Documento saliente (buffer) — PDFs, Excel, imágenes, etc.
 export async function sendWAWebDocument(to, buffer, mimetype = "application/octet-stream", fileName = "archivo") {
+  if (isSandbox()) { console.log("[SANDBOX] no envío WA Web"); return false; }
   if (!isWAWebConnected()) throw new Error("WA Web no conectado");
   await sock.sendMessage(toJid(to), { document: buffer, mimetype, fileName });
   return true;

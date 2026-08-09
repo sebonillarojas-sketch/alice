@@ -71,6 +71,7 @@ export async function updateTask(id, fields) {
 }
 
 export async function getTasks({ space, space_id, assignee, assignee_id, status, query } = {}) {
+  if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return []; }
   const qs = new URLSearchParams({ select: "*", order: "updated_at.desc", limit: "50" });
   const sp = space ?? space_id, as = assignee ?? assignee_id;
   if (sp) qs.set("space", `eq.${sp}`);
@@ -85,6 +86,7 @@ export async function getTasks({ space, space_id, assignee, assignee_id, status,
 }
 
 export async function deleteTask(id) {
+  if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return true; }
   const res = await fetch(`${REST}?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: headers() });
   if (!res.ok) throw new Error(`Supabase delete ${res.status}: ${await res.text()}`);
   return true;

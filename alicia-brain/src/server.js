@@ -2353,9 +2353,15 @@ app.listen(PORT, async () => {
   refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
 
   // WhatsApp Web: el teléfono de Alicia, conectado 24/7 (QR en el panel si falta vincular)
-  import("./waweb.js")
-    .then(({ startWAWeb }) => startWAWeb(handleWAWebIncoming))
-    .catch(e => console.warn("WA Web no disponible:", e.message));
+  // CRÍTICO: NUNCA en sandbox — una 2ª sesión de Baileys chocaría con la de prod y le
+  // tumbaría el WhatsApp a Alicia (y podría responderle a un usuario real). El clon nocturno
+  // corre con SANDBOX=1 y NO debe tocar WhatsApp Web.
+  if (!isSandbox()) {
+    import("./waweb.js")
+      .then(({ startWAWeb }) => startWAWeb(handleWAWebIncoming))
+      .catch(e => console.warn("WA Web no disponible:", e.message));
+  }
 
-  startCron();
+  // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
+  if (!isSandbox()) startCron();
 });
