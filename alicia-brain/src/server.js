@@ -8,6 +8,7 @@ import { dirname, join } from "path";
 import { query, parseArr, getDB } from "./db.js";
 import { lessonsForScope, formatLessonsBlock } from "./lessons.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
+import { buildWorldDigest, EMBODIMENT_BLOCK } from "./world.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
@@ -375,6 +376,8 @@ Con ${profile?.name?.split(" ")[0] || "el equipo"} tu misión es que produzca m�
     const ls = [...lessonsForScope(db, `user:${userId}`), ...lessonsForScope(db, "agent:alicia")];
     lessonsBlock = formatLessonsBlock([...new Set(ls)]);
   } catch (e) { console.error("inyección de lecciones falló:", e.message); }
+  let worldBlock = "";
+  try { worldBlock = EMBODIMENT_BLOCK + buildWorldDigest(getDB(), { isCEO }); } catch (e) { console.error("digest falló:", e.message); }
 
   return `Eres Alicia, la asistente ejecutiva con IA de Hygge Holding, empresa inmobiliaria premium en Lima, Perú.
 
@@ -455,6 +458,7 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 - Antes de agendar una reunión que involucre a OTRA persona, chequeá su disponibilidad con check_availability.
 - Si el horario pedido está ocupado: avisá ("X está ocupado a esa hora"), sugerí 1-2 alternativas libres concretas, y aclarás que confirmás el horario con esa persona antes de fijarlo.
 - Los emails del equipo salen de sus perfiles. Gmail y detalle de calendario: cada uno solo ve LO SUYO — de otros solo libre/ocupado.
+${worldBlock}
 
 ## Reglas inamovibles
 - SIEMPRE respondé en español

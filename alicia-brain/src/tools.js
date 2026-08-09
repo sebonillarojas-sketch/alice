@@ -5,6 +5,20 @@ import { dropbox, dropboxAvailable } from "./integrations/dropbox.js";
 import { tavily, tavilyAvailable } from "./integrations/tavily.js";
 import { query } from "./db.js";
 
+// ── Helpers testeables (toman `db` explícito para poder testear con :memory:) ─
+
+export function readConversation(db, personaId, limit = 20) {
+  const rows = db.prepare(
+    "SELECT role, content, created_at FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT ?"
+  ).all(personaId, limit);
+  return rows.reverse();
+}
+
+export function resolvePhone(db, personaId) {
+  const row = db.prepare("SELECT phone FROM profiles WHERE user_id = ?").get(personaId);
+  return row?.phone || null;
+}
+
 // ── Definición de herramientas para Claude tool use ───────────────────────────
 
 export const ALICIA_TOOLS = [
@@ -288,6 +302,22 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "read_conversation",
+    description: "Lee los últimos mensajes de la conversación de OTRA persona del equipo con vos (Alicia). Usala cuando Sebastián pregunta '¿de qué habla X?' o quiere contexto de otro. Solo Sebastián puede usarla.",
+    input_schema: { type: "object", properties: {
+      persona: { type: "string", description: "ID: sb·vd·jt·jm·aa·ac·jmg" },
+      limit: { type: "number", description: "cuántos mensajes (default 20)" }
+    }, required: ["persona"] }
+  },
+  {
+    name: "send_whatsapp",
+    description: "Manda un WhatsApp a OTRA persona del equipo de parte de Sebastián. Usala cuando él te pide 'decile a X que…' o 'mandale a X…'. Solo Sebastián puede usarla.",
+    input_schema: { type: "object", properties: {
+      persona: { type: "string", description: "ID destino: vd·jt·jm·aa·ac·jmg" },
+      mensaje: { type: "string", description: "el texto a enviar" }
+    }, required: ["persona", "mensaje"] }
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -500,6 +530,24 @@ export async function executeTool(toolName, input, userId) {
       if (!arquitectoDisponible()) return "Feyd-Rautha no está disponible: la skill arquitecto-residencial-lima no está en este deploy (seteá ARQUITECTO_SKILL_DIR).";
       const layout = await disenarPlano(input);
       return JSON.stringify(layout);
+    }
+
+    case "read_conversation": {
+      if (userId !== "sb") return "Solo Sebastián puede leer conversaciones de otras personas.";
+      const { getDB } = await import("./db.js");
+      const rows = readConversation(getDB(), input.persona, input.limit || 20);
+      if (!rows.length) return `No hay conversación registrada con ${input.persona}.`;
+      return rows.map(m => `${m.role === "user" ? input.persona : "Alicia"}: ${m.content}`).join("\n");
+    }
+
+    case "send_whatsapp": {
+      if (userId !== "sb") return "Solo Sebastián puede mandar mensajes en tu nombre a terceros.";
+      const { getDB } = await import("./db.js");
+      const phone = resolvePhone(getDB(), input.persona);
+      if (!phone) return `No tengo el WhatsApp de ${input.persona} en su perfil.`;
+      const { sendWA } = await import("./wa.js");
+      const ok = await sendWA(phone, input.mensaje);
+      return ok ? `Listo, le mandé a ${input.persona}: "${input.mensaje}"` : `No pude enviar el WhatsApp a ${input.persona}.`;
     }
 
     case "use_skill": {
