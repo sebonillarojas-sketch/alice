@@ -75,3 +75,16 @@ export function lessonsForScope(db, scope) {
   ).all(scope);
   return rows.map(r => r.lesson);
 }
+
+export function applyLessonToBrain(db, id) {
+  const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id);
+  if (!row) throw new Error(`lesson ${id} no existe`);
+  const topic = `leccion #${id}`;
+  const existing = db.prepare("SELECT id FROM knowledge WHERE topic = ?").get(topic);
+  if (existing) {
+    db.prepare("UPDATE knowledge SET content = ?, category = 'lecciones', updated_at = datetime('now') WHERE id = ?").run(row.lesson, existing.id);
+  } else {
+    db.prepare("INSERT INTO knowledge (topic, category, content) VALUES (?, 'lecciones', ?)").run(topic, row.lesson);
+  }
+  return { wrote: "knowledge" };
+}
