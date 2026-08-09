@@ -2107,7 +2107,13 @@ const SMART_CAPTURE_PLACEHOLDERS = [
   'Escritura PU01 · citar a Galup lunes',
 ];
 
-function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmartView, currentSpaceContext }) {
+function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmartView, currentSpaceContext, users = [], currentUserId }) {
+  const togglePreviewAssignee = (id) => setPreview(p => {
+    if (!p) return p;
+    const cur = (Array.isArray(p.assignees) && p.assignees.length) ? p.assignees : (p.assignee ? [p.assignee] : []);
+    const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+    return { ...p, assignees: next, assignee: next[0] || null };
+  });
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -2167,8 +2173,21 @@ function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmart
                 {preview.due && <Chip label={preview.due} color={C.ochre} />}
                 {preview.project && <Chip label={preview.project} color={C.navy} />}
                 {preview.space && <Chip label={`#${preview.space}`} color={C.inkSoft} />}
-                {preview.assignee && <Chip label={`@${preview.assignee}`} color={C.muted} />}
                 {preview.priority && <Chip label={`prio: ${preview.priority}`} color={C.muted} />}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                <span className="text-[9px] tracking-[0.12em] uppercase self-center mr-1" style={{ color: C.muted, fontWeight: 600 }}>Asignar</span>
+                {(users || []).map(u => {
+                  const cur = idsOf(preview);
+                  const on = cur.includes(u.id);
+                  return (
+                    <button key={u.id} type="button" onClick={() => togglePreviewAssignee(u.id)}
+                      className="flex items-center gap-1 px-1.5 py-0.5 text-[11px]"
+                      style={{ backgroundColor: on ? C.ink : C.bg, color: on ? C.bg : C.ink, border: `1px solid ${on ? C.ink : C.lineSoft}`, borderRadius: 2, fontWeight: on ? 600 : 500 }}>
+                      <Avatar personId={u.id} size={14} /> {u.firstName}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -6378,7 +6397,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
   const [description, setDescription] = useState("");
   const [spaceId, setSpaceId] = useState(currentSpace || "hq");
   const [subSpaceId, setSubSpaceId] = useState("");
-  const [assignee, setAssignee] = useState(meId);
+  const [assignees, setAssignees] = useState([meId]);
   const [priority, setPriority] = useState("media");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -6399,7 +6418,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
       setTitle(""); setDescription("");
       setSpaceId(initialParentId);
       setSubSpaceId(initialSubId);
-      setAssignee(meId);
+      setAssignees([meId]);
       setPriority("media");
       const today = new Date().toISOString().slice(0, 10);
       setStartDate(today);
@@ -6412,7 +6431,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
 
   const selectedSpace = allSpaces.find(s => s.id === spaceId);
   const subSpaceOptions = selectedSpace?.children || [];
-  const activeAssignee = users?.find(u => u.id === assignee);
+  const toggleAssignee = (id) => setAssignees(prev => prev.includes(id) ? (prev.length > 1 ? prev.filter(x => x !== id) : prev) : [...prev, id]);
 
   const submit = () => {
     if (!title.trim()) { blob.onError(); return; }
@@ -6425,7 +6444,8 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
         project: projectCode,
         priority,
         space: finalSpace,
-        assignee,
+        assignees,
+        assignee: assignees[0] || meId,
         due: endDate || startDate || "",
         startDate, endDate,
         checked: false, parentId: null,
@@ -6493,18 +6513,19 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Eyebrow>Asignado</Eyebrow>
-              <div className="mt-2 relative">
-                <select value={assignee} onChange={e => setAssignee(e.target.value)}
-                  className="w-full px-2.5 py-2 outline-none text-[13px] appearance-none pl-8"
-                  style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }}>
-                  {(users || []).map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-                </select>
-                {activeAssignee && (
-                  <div className="absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Avatar personId={activeAssignee.id} size={20} />
-                  </div>
-                )}
+              <Eyebrow>Asignados</Eyebrow>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {(users || []).map(u => {
+                  const on = assignees.includes(u.id);
+                  return (
+                    <button key={u.id} type="button" onClick={() => toggleAssignee(u.id)}
+                      className="flex items-center gap-1.5 px-2 py-1 text-[12px]"
+                      style={{ backgroundColor: on ? C.ink : C.surface, color: on ? C.bg : C.ink, border: `1px solid ${on ? C.ink : C.lineSoft}`, borderRadius: 2, fontWeight: on ? 600 : 500 }}>
+                      <Avatar personId={u.id} size={16} /> {u.firstName}
+                      {on && <Check size={11} />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -15437,7 +15458,9 @@ export default function HyggeOS({ authUser } = {}) {
       // Fallback a "sb" hardcodeado = bug: cualquier captura sin assignee
       // explícito quedaba asignada a Sebastián sin importar quién la creó
       // (21 jul 2026: "las tareas creadas por otros aparecen con mi nombre").
-      checked: false, assignee: parsed.assignee || currentUser?.id || "sb",
+      checked: false,
+      assignees: (Array.isArray(parsed.assignees) && parsed.assignees.length) ? parsed.assignees : [parsed.assignee || currentUser?.id || "sb"],
+      assignee: (Array.isArray(parsed.assignees) && parsed.assignees[0]) || parsed.assignee || currentUser?.id || "sb",
       tags: parsed.type ? [parsed.type] : [], type: parsed.type || null,
       amount: parsed.amount || null, person: parsed.person || null,
       source: "smartcapture", capturedAt: Date.now(),
@@ -15664,7 +15687,8 @@ export default function HyggeOS({ authUser } = {}) {
         due: orig.due,
         space: orig.space,
         checked: false,
-        assignee: orig.assignee,
+        assignees: idsOf(orig),
+        assignee: idsOf(orig)[0] || null,
         description: orig.description || "",
         parentId: orig.parentId || null,
         activity: [{ when: nowHHMM(), text: "Duplicada de original" }],
@@ -15749,7 +15773,7 @@ export default function HyggeOS({ authUser } = {}) {
     setTasks(prev => {
       const next = safeAddTaskPure(prev, {
         parentId, title, project: parent.project, priority: "media", due: "—",
-        space: parent.space, checked: false, assignee: parent.assignee,
+        space: parent.space, checked: false, assignees: idsOf(parent), assignee: idsOf(parent)[0] || null,
         activity: [{ when: nowHHMM(), text: "Subtarea creada" }],
       });
       db.upsertTask(next[next.length - 1]).catch(console.error); // persistir la subtarea nueva
@@ -16235,7 +16259,7 @@ REGLAS:
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount}
             onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} />
-          <SmartCapture onCreate={createFromSmartCapture} detectedPatterns={detectedPatterns} savedSmartViews={smartViews} onSaveSmartView={saveSmartView} currentSpaceContext={currentSpace} />
+          <SmartCapture onCreate={createFromSmartCapture} detectedPatterns={detectedPatterns} savedSmartViews={smartViews} onSaveSmartView={saveSmartView} currentSpaceContext={currentSpace} users={users} currentUserId={currentUser?.id} />
           {activeSmartView && (
             <div className="px-4 lg:px-7 py-2 flex items-center gap-2 flex-wrap" style={{ backgroundColor: C.paper, borderBottom: `1px solid ${C.lineSoft}` }}>
               <Sparkles size={11} style={{ color: C.cobalt }} />
