@@ -21,6 +21,15 @@ async function isLoaded(label) {
 }
 
 export async function ensureWonderlandClock() {
+  // Si el reloj nuevo YA está cargado, no tocar nada: un bootout aquí mataría
+  // el árbol de procesos actual (bestia-runner + este scrape.js) a mitad del
+  // await, y el bootstrap de reemplazo nunca llegaría a correr (sin SSH para
+  // recuperarlo). Ver FINDING C1.
+  if (await isLoaded(NEW_LABEL)) {
+    console.log("🕰️ reloj ya activo — nada que hacer");
+    return { installed: true, alreadyActive: true };
+  }
+
   mkdirSync(LA_DIR, { recursive: true });
   const dst = join(LA_DIR, `${NEW_LABEL}.plist`);
   copyFileSync(join(HERE, `${NEW_LABEL}.plist`), dst);
