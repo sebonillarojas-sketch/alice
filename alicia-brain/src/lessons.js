@@ -102,3 +102,18 @@ export function applyLessonToBrain(db, id) {
   }
   return { wrote: "knowledge" };
 }
+
+export function approveLesson(db, id, { by = "human" } = {}) {
+  const row = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id);
+  if (!row) throw new Error(`lesson ${id} no existe`);
+  if (row.status === "applied") return { status: "applied", applied: false };
+  if (row.status === "rejected" || row.status === "retired") return { status: row.status, applied: false };
+  db.prepare("UPDATE lessons SET status = 'applied', validated_by = ?, applied_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(by, id);
+  applyLessonToBrain(db, id);
+  return { status: "applied", applied: true };
+}
+
+export function rejectLesson(db, id, { by = "human" } = {}) {
+  db.prepare("UPDATE lessons SET status = 'rejected', validated_by = ?, updated_at = datetime('now') WHERE id = ?").run(by, id);
+  return { status: "rejected" };
+}
