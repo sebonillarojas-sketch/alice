@@ -122,3 +122,32 @@ export function formatLessonsBlock(lessons = []) {
   if (!Array.isArray(lessons) || !lessons.length) return "";
   return `\n## 🧠 Lecciones aprendidas (aplicá esto — se validaron y aprobaron)\n${lessons.map(l => `- ${l}`).join("\n")}`;
 }
+
+// ── Superficies de aprobación (Fase 3b) ──────────────────────────────────────
+// Lecciones que cruzaron el gate y esperan OK humano (status 'validated').
+
+// Para Sebastián por WhatsApp: su scope + las de Alicia + globales.
+export function pendingLessonsForCEO(db) {
+  return db.prepare(
+    `SELECT id, scope, lesson, trigger, evidence_count, risk_level, source
+       FROM lessons WHERE status = 'validated' AND scope IN ('agent:alicia','user:sb','global')
+      ORDER BY updated_at DESC`
+  ).all();
+}
+
+// Para el panel Tea Table: las de los Wondies (scope agent:*, EXCEPTO agent:alicia).
+export function pendingLessonsForWondies(db) {
+  return db.prepare(
+    `SELECT id, scope, lesson, trigger, evidence_count, risk_level, source, created_at
+       FROM lessons WHERE status = 'validated' AND scope LIKE 'agent:%' AND scope != 'agent:alicia'
+      ORDER BY updated_at DESC`
+  ).all();
+}
+
+// Bloque para el system prompt de Alicia (CEO): la lista de pendientes + la instrucción
+// de traerlas UNA vez al día en batch. Vacío si no hay pendientes.
+export function formatPendingBlock(rows = []) {
+  if (!Array.isArray(rows) || !rows.length) return "";
+  const items = rows.map(r => `- #${r.id} [${r.risk_level}] ${r.lesson}${r.trigger ? ` (${r.trigger})` : ""}`).join("\n");
+  return `\n## 🧠 Pendientes de aprobar (lecciones que esperan tu OK)\n${items}\n(Si hay pendientes, traelas UNA sola vez al día, en un mismo mensaje, y ofrecé aplicarlas — usá approve_lesson/reject_lesson cuando Sebastián decida. NO las repitas en cada respuesta.)`;
+}

@@ -16,6 +16,31 @@ export function startCron() {
     await refreshMarketData().catch(e => console.error("Market refresh error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Notificador de lecciones pendientes (Loop 3b): 1×/día a las 9am Lima, si hay
+  // lecciones esperando el OK de Sebastián, se las manda en batch por WhatsApp.
+  // Idempotente por fecha (app_settings.lessons_notified_date) y silencioso si no hay.
+  cron.schedule("0 9 * * *", async () => {
+    try {
+      const { isSandbox } = await import("./sandbox.js");
+      if (isSandbox() || !process.env.PHONE_sb) return;
+      const { getDB, query } = await import("./db.js");
+      const { pendingLessonsForCEO } = await import("./lessons.js");
+      const rows = pendingLessonsForCEO(getDB());
+      if (!rows.length) return;
+      const today = new Date().toISOString().slice(0, 10);
+      const last = query("SELECT value FROM app_settings WHERE key='lessons_notified_date'").rows[0]?.value;
+      if (last === today) return; // ya avisé hoy
+      const { sendWA } = await import("./wa.js");
+      const body = `🧠 Aprendí ${rows.length} cosa(s) que esperan tu OK:\n${rows.map(r => `#${r.id} [${r.risk_level}] ${r.lesson}`).join("\n")}\n\nRespondeme cuáles aplico (ej. "aplicá la 1 y la 3").`;
+      const ok = await sendWA(process.env.PHONE_sb, body);
+      if (ok !== false) {
+        query(`INSERT INTO app_settings (key,value,updated_at) VALUES ('lessons_notified_date',?,datetime('now'))
+               ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`, [today]);
+        console.log(`🧠 Notifiqué ${rows.length} lección(es) pendiente(s) a Sebastián`);
+      }
+    } catch (e) { console.error("Notificador lecciones error:", e.message); }
+  }, { timezone: "America/Lima" });
+
   // Rental listings (Wynwood House, Lima) cada 6h — cadencia baja a propósito,
   // los precios de corta estadía no cambian tan seguido como para justificar
   // pegarle a su sitio cada hora.

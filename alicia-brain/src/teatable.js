@@ -1,6 +1,7 @@
 // Tea Table 🫖 — síntesis ejecutiva del estado del sistema (ver docs/WONDERLAND_IT.md)
 import Anthropic from "@anthropic-ai/sdk";
-import { query, parseArr } from "./db.js";
+import { query, parseArr, getDB } from "./db.js";
+import { lessonsForScope, formatLessonsBlock } from "./lessons.js";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -124,12 +125,17 @@ Recibís el estado crudo del sistema y escribís un reporte ejecutivo EN ESPAÑO
 
 Tono: directo, cálido, cero relleno. Máximo ~350 palabras.`;
 
+  // Inyección universal (Loop 3b #2): la mesa lee sus lecciones aplicadas (+ globales).
+  let sysConLecciones = sys;
+  try { sysConLecciones += formatLessonsBlock(lessonsForScope(getDB(), "agent:tea-table")); }
+  catch (e) { console.error("inyección lecciones Tea Table falló:", e.message); }
+
   let report;
   try {
     const resp = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1200,
-      system: sys,
+      system: sysConLecciones,
       messages: [{ role: "user", content: `Estado crudo del sistema:\n${JSON.stringify(context, null, 2)}` }],
     });
     report = resp.content.find(b => b.type === "text")?.text || "Sin síntesis";

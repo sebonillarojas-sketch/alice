@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { query, parseArr, getDB } from "./db.js";
-import { lessonsForScope, formatLessonsBlock } from "./lessons.js";
+import { lessonsForScope, formatLessonsBlock, pendingLessonsForCEO, formatPendingBlock } from "./lessons.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { buildWorldDigest, EMBODIMENT_BLOCK } from "./world.js";
 import { coalesceMessage } from "./coalesce.js";
@@ -374,10 +374,13 @@ Con ${profile?.name?.split(" ")[0] || "el equipo"} tu misión es que produzca m�
 - Tono cercano, rápido, resolutivo. Menos análisis, más ejecución.`;
 
   let lessonsBlock = "";
+  let pendingBlock = "";
   try {
     const db = getDB();
     const ls = [...lessonsForScope(db, `user:${userId}`), ...lessonsForScope(db, "agent:alicia")];
     lessonsBlock = formatLessonsBlock([...new Set(ls)]);
+    // Solo a Sebastián: las lecciones que esperan su OK (las trae en batch 1×/día).
+    if (isCEO) pendingBlock = formatPendingBlock(pendingLessonsForCEO(db));
   } catch (e) { console.error("inyección de lecciones falló:", e.message); }
   let worldBlock = "";
   try { worldBlock = EMBODIMENT_BLOCK + buildWorldDigest(getDB(), { isCEO }); } catch (e) { console.error("digest falló:", e.message); }
@@ -467,7 +470,7 @@ ${worldBlock}
 - SIEMPRE respondé en español
 - Reuniones: pedí propósito Y fecha/hora si no están claros — nunca inventes un horario "razonable" sin confirmarlo; armá un brief con contexto
 - Gmail: solo creás borradores, nunca enviás sin confirmación
-- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"${lessonsBlock}`;
+- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"${lessonsBlock}${pendingBlock}`;
 }
 
 // ── Agentic loop ──────────────────────────────────────────────────────────────
@@ -1688,17 +1691,27 @@ app.get("/api/agents/lessons", requireAgentKey, (req, res) => {
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post("/api/agents/lessons/:id/approve", requireAgentKey, async (req, res) => {
+// Pendientes de aprobar de los Wondies (para el panel Tea Table del ERP).
+// Sin requireAgentKey — mismo patrón que /api/agents/status y /tea-table/run (los usa el panel).
+app.get("/api/agents/lessons/pending", async (_req, res) => {
   try {
-    const { by = "human" } = req.body || {};
+    const { getDB } = await import("./db.js");
+    const { pendingLessonsForWondies } = await import("./lessons.js");
+    res.json({ lessons: pendingLessonsForWondies(getDB()) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// approve/reject sin requireAgentKey (el panel los llama como a tea-table/run).
+app.post("/api/agents/lessons/:id/approve", async (req, res) => {
+  try {
+    const { by = "tea-table-panel" } = req.body || {};
     const { getDB } = await import("./db.js");
     const { approveLesson } = await import("./lessons.js");
     res.json(approveLesson(getDB(), Number(req.params.id), { by }));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post("/api/agents/lessons/:id/reject", requireAgentKey, async (req, res) => {
+app.post("/api/agents/lessons/:id/reject", async (req, res) => {
   try {
-    const { by = "human" } = req.body || {};
+    const { by = "tea-table-panel" } = req.body || {};
     const { getDB } = await import("./db.js");
     const { rejectLesson } = await import("./lessons.js");
     res.json(rejectLesson(getDB(), Number(req.params.id), { by }));

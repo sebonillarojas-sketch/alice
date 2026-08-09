@@ -80,6 +80,14 @@ function textoDe(resp) { return resp.content.find(b => b.type === "text")?.text 
 export async function disenarPlano(brief, { autocritica = true } = {}) {
   // El skill entero va como bloque cacheado: iteraciones y pedidos seguidos pagan solo el delta.
   const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill("full")}`, cache_control: { type: "ephemeral" } }];
+  // Inyección universal (Loop 3b #2): lecciones de diseño aplicadas para Bammy, en un bloque
+  // aparte (NO cacheado) para no romper el cache del skill grande. Silencioso si no hay.
+  try {
+    const { getDB } = await import("./db.js");
+    const { lessonsForScope, formatLessonsBlock } = await import("./lessons.js");
+    const block = formatLessonsBlock(lessonsForScope(getDB(), "agent:bammy"));
+    if (block) system.push({ type: "text", text: block });
+  } catch (e) { console.error("inyección lecciones Bammy falló:", e.message); }
   const messages = [{
     role: "user",
     content: `Diseñá una planta con este brief (completá lo no especificado con la estadística de mercado del skill):\n${JSON.stringify(brief ?? {}, null, 1)}\n\nRespondé ÚNICAMENTE con el JSON estricto del layout — sin markdown, sin comentarios.${SOLO_JSON}`,

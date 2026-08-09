@@ -383,6 +383,21 @@ export const ALICIA_TOOLS = [
     }, required: ["persona", "mensaje"] }
   },
   {
+    name: "review_lessons",
+    description: "Lista las lecciones que aprendiste y esperan el OK de Sebastián (estado validated). Devuelve cada una con su #id. Usala cuando Sebastián pregunte qué aprendiste, qué tenés para aprobar, o al traerle las pendientes del día. Solo Sebastián.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "approve_lesson",
+    description: "Aplicá una lección pendiente: pasa a 'applied' y se incorpora a tu conocimiento. Usala SOLO con el OK explícito de Sebastián ('aplicá la #3', 'dale a esa'). Solo Sebastián.",
+    input_schema: { type: "object", properties: { id: { type: "integer", description: "El #id de la lección" } }, required: ["id"] },
+  },
+  {
+    name: "reject_lesson",
+    description: "Descartá una lección pendiente (queda rejected, no se aplica). Usala cuando Sebastián diga que no. Solo Sebastián.",
+    input_schema: { type: "object", properties: { id: { type: "integer", description: "El #id de la lección" } }, required: ["id"] },
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -722,6 +737,31 @@ export async function executeTool(toolName, input, userId) {
       const { sendWA } = await import("./wa.js");
       const ok = await sendWA(phone, input.mensaje);
       return ok ? `Listo, le mandé a ${input.persona}: "${input.mensaje}"` : `No pude enviar el WhatsApp a ${input.persona}.`;
+    }
+
+    case "review_lessons": {
+      if (userId !== "sb") return "Las lecciones las aprueba directo Sebastián.";
+      const { getDB } = await import("./db.js");
+      const { pendingLessonsForCEO } = await import("./lessons.js");
+      const rows = pendingLessonsForCEO(getDB());
+      if (!rows.length) return "No tenés lecciones pendientes de aprobar por ahora.";
+      return "Estas esperan tu OK:\n" + rows.map(r => `#${r.id} [${r.risk_level}] ${r.lesson}${r.trigger ? ` — ${r.trigger}` : ""}`).join("\n");
+    }
+
+    case "approve_lesson": {
+      if (userId !== "sb") return "Solo Sebastián puede aprobar lecciones.";
+      const { getDB } = await import("./db.js");
+      const { approveLesson } = await import("./lessons.js");
+      const r = approveLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
+      return r.applied ? `Listo, apliqué la lección #${input.id} ✓` : `La #${input.id} ya estaba ${r.status} — no la volví a tocar.`;
+    }
+
+    case "reject_lesson": {
+      if (userId !== "sb") return "Solo Sebastián puede descartar lecciones.";
+      const { getDB } = await import("./db.js");
+      const { rejectLesson } = await import("./lessons.js");
+      rejectLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
+      return `Descarté la lección #${input.id}.`;
     }
 
     case "use_skill": {
