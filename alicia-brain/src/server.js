@@ -2219,6 +2219,16 @@ app.post("/api/arquitecto/corregir", async (req, res) => {
   }
 });
 
+// Chat con Bammy (conversacional, desde el Taller). Persona calida — NO es Feyd.
+app.post("/api/bammy/chat", async (req, res) => {
+  try {
+    const { chatBammy } = await import("./bammy-chat.js");
+    const { messages = [], planContext = "" } = req.body || {};
+    const reply = await chatBammy(messages, { planContext });
+    res.json({ ok: true, reply });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Reboot manual desde el panel — Railway tiene restartPolicyType ON_FAILURE,
 // así que un exit no-cero dispara el restart automático del proceso.
 app.post("/api/system/reboot", (_, res) => {
