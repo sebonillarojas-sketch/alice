@@ -67,12 +67,15 @@ export async function updateTask(id, fields) {
   return row;
 }
 
-export async function getTasks({ space, space_id, assignee, assignee_id, status } = {}) {
+export async function getTasks({ space, space_id, assignee, assignee_id, status, query } = {}) {
   const qs = new URLSearchParams({ select: "*", order: "updated_at.desc", limit: "50" });
   const sp = space ?? space_id, as = assignee ?? assignee_id;
   if (sp) qs.set("space", `eq.${sp}`);
   if (as) qs.set("assignee", `eq.${as}`);
   if (status) qs.set("status", `eq.${status}`);
+  // Búsqueda por título parcial (case-insensitive) para que Alicia encuentre la tarea
+  // aunque le den el nombre aproximado. PostgREST: title=ilike.*palabra*
+  if (query && String(query).trim()) qs.set("title", `ilike.*${String(query).trim()}*`);
   const res = await fetch(`${REST}?${qs}`, { headers: headers() });
   if (!res.ok) throw new Error(`Supabase select ${res.status}: ${await res.text()}`);
   return res.json();
