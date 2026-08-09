@@ -481,6 +481,7 @@ const COLLAB_TOOLS = new Set([
   "dropbox_search", "dropbox_read", "dropbox_upload", "send_document",
   "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
+  "radar_query", "radar_refresh",
 ]);
 
 // ── Rol ADMIN (Vanessa) ── entre CEO y colaborador ──────────────────────────────
