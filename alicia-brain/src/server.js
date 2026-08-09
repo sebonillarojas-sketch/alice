@@ -1625,6 +1625,33 @@ app.get("/api/agents/corrections", requireAgentKey, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Loop de aprendizaje · lecciones (backbone de Tea Table / Taller / WhatsApp) ──
+app.get("/api/agents/lessons", requireAgentKey, (req, res) => {
+  try {
+    const { status = "validated", scope } = req.query;
+    const wheres = ["status = ?"]; const params = [status];
+    if (scope) { wheres.push("scope = ?"); params.push(scope); }
+    const { rows } = query(`SELECT * FROM lessons WHERE ${wheres.join(" AND ")} ORDER BY updated_at DESC LIMIT 200`, params);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/agents/lessons/:id/approve", requireAgentKey, async (req, res) => {
+  try {
+    const { by = "human" } = req.body || {};
+    const { getDB } = await import("./db.js");
+    const { approveLesson } = await import("./lessons.js");
+    res.json(approveLesson(getDB(), Number(req.params.id), { by }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/agents/lessons/:id/reject", requireAgentKey, async (req, res) => {
+  try {
+    const { by = "human" } = req.body || {};
+    const { getDB } = await import("./db.js");
+    const { rejectLesson } = await import("./lessons.js");
+    res.json(rejectLesson(getDB(), Number(req.params.id), { by }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Bammy marca correcciones como aplicadas (ya aprendidas) — body { ids:[..] }.
 app.post("/api/agents/corrections/ack", requireAgentKey, (req, res) => {
   try {
