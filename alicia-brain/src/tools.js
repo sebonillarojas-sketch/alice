@@ -19,6 +19,14 @@ export function resolvePhone(db, personaId) {
   return row?.phone || null;
 }
 
+function mimeFromName(name = "") {
+  const ext = name.toLowerCase().split(".").pop();
+  return ({ pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    csv: "text/csv", txt: "text/plain" }[ext]) || "application/octet-stream";
+}
+
 // ── Definición de herramientas para Claude tool use ───────────────────────────
 
 export const ALICIA_TOOLS = [
@@ -225,6 +233,14 @@ export const ALICIA_TOOLS = [
       },
       required: ["folder_path"],
     },
+  },
+  {
+    name: "send_document",
+    description: "Envía un archivo (PDF, imagen, Excel, etc.) por WhatsApp a la persona que te está hablando. Usala cuando te piden 'mandame/enviame/pasame el archivo X' o 'abrime el PDF'. Podés mandar un archivo de Dropbox (dando su ruta) o reenviar el último que te mandaron. SÍ podés enviar archivos por WhatsApp.",
+    input_schema: { type: "object", properties: {
+      dropbox_path: { type: "string", description: "Ruta del archivo en Dropbox bajo /Hygge (si es de Dropbox). Buscala antes con dropbox_search si no la sabés." },
+      filename: { type: "string", description: "nombre a mostrar (opcional)" }
+    } }
   },
 
   // ── Web Search ─────────────────────────────────────────────────────────────
@@ -474,6 +490,32 @@ export async function executeTool(toolName, input, userId) {
       const result = await dropbox.uploadFile(`${folder}/${name}`, f.buffer, { mode: "add", autorename: true });
       clearLastFile(userId);
       return `📎 Subido: ${result.path_display || `${folder}/${name}`} (${Math.round(f.buffer.length / 1024)} KB). Ya se espeja en la tab Archivos del ERP.`;
+    }
+
+    case "send_document": {
+      const { getDB } = await import("./db.js");
+      const phone = resolvePhone(getDB(), userId);
+      if (!phone) return "No tengo tu WhatsApp en el perfil, no puedo enviártelo por ahí.";
+      let buffer, mime, filename;
+      if (input.dropbox_path) {
+        const { dropbox, dropboxAvailable } = await import("./integrations/dropbox.js");
+        if (!dropboxAvailable()) return "Dropbox no está configurado.";
+        try { buffer = await dropbox.getFileBuffer(input.dropbox_path); }
+        catch (e) { return `No encontré ese archivo en Dropbox (${e.message}).`; }
+        filename = input.filename || input.dropbox_path.split("/").pop();
+        mime = mimeFromName(filename);
+      } else {
+        const { getLastFile } = await import("./inbox-files.js");
+        const f = getLastFile(userId);
+        if (!f) return "No tengo ningún archivo tuyo reciente ni una ruta de Dropbox. Decime la ruta o mandame el archivo.";
+        buffer = f.buffer; mime = f.mediaType; filename = input.filename || f.filename;
+      }
+      const { stageFile } = await import("./file-relay.js");
+      const id = stageFile({ buffer, mime, filename });
+      const url = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/file/${id}`;
+      const { sendWAMedia } = await import("./wa.js");
+      try { await sendWAMedia(phone, url); return `📎 Te mandé "${filename}" por WhatsApp.`; }
+      catch (e) { return `No pude enviarte el archivo: ${e.message}`; }
     }
 
     // ── Web Search ────────────────────────────────────────────────────────────

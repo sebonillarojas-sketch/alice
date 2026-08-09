@@ -476,7 +476,7 @@ const COLLAB_TOOLS = new Set([
   "create_task", "update_task", "get_tasks",
   "calendar_list", "calendar_create", "check_availability",
   "gmail_search", "gmail_draft",
-  "dropbox_search", "dropbox_read", "dropbox_upload",
+  "dropbox_search", "dropbox_read", "dropbox_upload", "send_document",
   "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
 ]);
