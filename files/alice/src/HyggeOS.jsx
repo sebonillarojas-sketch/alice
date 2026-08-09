@@ -58,6 +58,7 @@ import {
   Menu, PanelRightOpen, Inbox as InboxIcon,
   PieChart as PieChartIcon, BarChart3, LineChart as LineChartIcon, Globe, ExternalLink,
   Coffee, Shield, FlaskConical, Gamepad2, Bot, RefreshCw, Calculator,
+  Lock,
 } from "lucide-react";
 
 // ═══ BRAND TOKENS ═══════════════════════════════════════════════════════
@@ -315,6 +316,7 @@ const LAB_TOOLS = [
   { id: "lab-mad-hatter", label: "Mad Hatter", icon: BarChart3, dot: "#3D52D5", emoji: "🎩" },
   { id: "lab-white-rabbit", label: "White Rabbit", icon: Activity, dot: "#5F8A6A", emoji: "🐰" },
   { id: "lab-dark-alice", label: "Dark Alice", icon: Shield, dot: "#0A0B0F", emoji: "🖤" },
+  { id: "lab-knave", label: "Knave", icon: Lock, dot: "#7A6A9B", emoji: "🃏" },
 ];
 
 const TOOLS = [
@@ -8740,6 +8742,7 @@ function LabView({ labId, ...allProps }) {
       case "lab-mad-hatter": return <MadHatterPanel {...allProps} />;
       case "lab-white-rabbit": return <WhiteRabbitPanel {...allProps} />;
       case "lab-dark-alice": return <DarkAlicePanel {...allProps} />;
+      case "lab-knave": return <KnavePanel {...allProps} />;
       case "lab-jabberwocky":
         return (
           <div className="px-6 py-8 max-w-[840px] mx-auto">
@@ -10651,6 +10654,7 @@ function AdminTab({ subTab, setSubTab, users, createUser, updateUser, deleteUser
     { id: "mad-hatter", label: "Mad Hatter", icon: Sparkles },
     { id: "white-rabbit", label: "White Rabbit", icon: Clock },
     { id: "dark-alice", label: "Dark Alice", icon: Zap },
+    { id: "knave", label: "🃏 Knave", icon: Lock },
   ];
   return (
     <div>
@@ -10676,6 +10680,7 @@ function AdminTab({ subTab, setSubTab, users, createUser, updateUser, deleteUser
       {subTab === "white-rabbit" && <WhiteRabbitPanel customViews={customViews} setCustomViews={setCustomViews} allSpaces={allSpaces} tasks={tasks} terrenos={terrenos} smartViews={smartViews} recordAgentRun={recordAgentRun} />}
       {subTab === "dark-alice" && <DarkAlicePanel agentStatus={agentStatus} recordAgentRun={recordAgentRun} tasks={tasks} customViews={customViews} terrenos={terrenos} customSpaces={customSpaces} users={users} whiteboards={whiteboards} smartViews={smartViews} setAdminSubTab={setSubTab} quarantineMode={quarantineMode} setQuarantineMode={setQuarantineMode} />}
       {subTab === "tea-table" && <TeaTableView agentStatus={agentStatus} setSubTab={setSubTab} tasks={tasks} terrenos={terrenos} allSpaces={allSpaces} users={users} customViews={customViews} customSpaces={customSpaces} whiteboards={whiteboards} smartViews={smartViews} />}
+      {subTab === "knave" && <KnavePanel />}
     </div>
   );
 }
@@ -12096,12 +12101,116 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
 }
 
 // ─── DARK ALICE · presidenta de la mesa · orquesta, testea, y "no quieren saber porque se llama así" ───
+// Knave 🃏 · agente de seguridad · L0 (solo observa, nunca parcha).
+// Panel READ-ONLY: lee /api/agents/status del brain y muestra su última corrida
+// + hallazgos abiertos. No tiene botón de "correr": Knave se dispara desde la bestia.
+function KnavePanel() {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const s = await fetch(`${ALICIA_BRAIN_URL}/api/agents/status`).then(x => x.json());
+      setStatus(s); setError(null);
+    } catch (e) { setError(e.message); }
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const run = (status?.agents || []).find(a => a.agent === "knave");
+  const findings = (status?.findings || []).filter(f => f.agent === "knave");
+  const res = run ? (TT_RESULT[run.result] || TT_RESULT.ok) : null;
+
+  return (
+    <div className="px-6 py-8 max-w-[840px] mx-auto">
+      {/* Header */}
+      <div className="flex items-start gap-4 pb-5" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+        <div style={{ fontSize: 34, lineHeight: 1 }}>🃏</div>
+        <div className="flex-1">
+          <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Seguridad · L0 · solo observa</div>
+          <h1 className="text-[24px] mt-1" style={{ color: C.ink, fontWeight: 600, letterSpacing: "-0.02em" }}>Knave</h1>
+          <p className="text-[12px] mt-2" style={{ color: C.muted, lineHeight: 1.6 }}>
+            Vigila los gaps de seguridad contra producción (headers, CORS, auth gate, dependencias) de forma no-destructiva.
+            <strong> Nunca repara ni ejecuta</strong> — solo reporta; los críticos escalan a Dark Alice. Corre desde la bestia.
+          </p>
+        </div>
+        <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 text-[11px]" style={{ color: C.muted, border: `1px solid ${C.line}`, borderRadius: 2, fontWeight: 500, backgroundColor: "white" }}>
+          <RefreshCw size={11} /> Refrescar
+        </button>
+      </div>
+
+      {loading && <div className="text-[12px] mt-6" style={{ color: C.muted }}>Cargando estado…</div>}
+      {error && <div className="text-[12px] mt-6" style={{ color: C.brick }}>No pude leer el estado del brain: {error}</div>}
+
+      {!loading && !error && !run && (
+        <div className="mt-6 p-5" style={{ backgroundColor: C.paper, border: `1px dashed ${C.line}`, borderRadius: 4 }}>
+          <div className="text-[13px]" style={{ color: C.inkSoft, fontWeight: 600 }}>Knave todavía no reportó</div>
+          <div className="text-[12px] mt-1.5" style={{ color: C.muted, lineHeight: 1.6 }}>
+            Se activa cuando la bestia lo corra (reloj único, ~cada hora). Su primera corrida aparecerá acá.
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && run && (
+        <>
+          {/* Última corrida */}
+          <div className="mt-6 p-4 flex items-center gap-4" style={{ backgroundColor: C.paper, border: `2px solid ${res.color}40`, borderRadius: 4 }}>
+            <div className="w-3 h-3 flex-shrink-0" style={{ backgroundColor: res.color, borderRadius: 999 }} />
+            <div className="flex-1">
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Última corrida · {ttRelTime(run.created_at)}</div>
+              <div style={{ fontSize: 14, color: res.color, fontWeight: 600 }}>{res.label}{run.summary ? ` · ${run.summary}` : ""}</div>
+            </div>
+          </div>
+
+          {/* Hallazgos abiertos */}
+          <div className="mt-6">
+            <div style={{ fontSize: 10, color: C.inkSoft, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
+              Hallazgos abiertos ({findings.length})
+            </div>
+            {findings.length === 0 && <div className="text-[12px]" style={{ color: C.green }}>Sin hallazgos abiertos · superficie de seguridad OK</div>}
+            {findings.map(f => {
+              const sev = TT_SEV[f.severity] || TT_SEV.minor;
+              return (
+                <div key={f.id} className="py-3 flex items-start gap-3" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                  <span style={{ color: sev.color, fontWeight: 700, fontSize: 12 }}>{sev.icon}</span>
+                  <div className="flex-1">
+                    <div style={{ fontSize: 12, color: C.ink, fontWeight: 600 }}>
+                      <span style={{ color: sev.color }}>{sev.label}</span> · {f.category}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginTop: 2 }}>{f.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Checklist de la corrida */}
+          {Array.isArray(run.actions_taken) && run.actions_taken.length > 0 && (
+            <div className="mt-6">
+              <div style={{ fontSize: 10, color: C.inkSoft, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Checks corridos</div>
+              {run.actions_taken.map((a, i) => (
+                <div key={i} className="py-1.5 flex items-center gap-2" style={{ fontSize: 12, color: C.inkSoft }}>
+                  <span style={{ color: a.ok ? C.green : C.brick }}>{a.ok ? "✓" : "✗"}</span>
+                  {a.check}{a.detail ? <span style={{ color: C.muted }}> · {a.detail}</span> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 const AGENT_DIRECTORY = [
   { id: "bandersnatch", name: "Bandersnatch", role: "Chaos tester · integridad de datos" },
   { id: "cheshire", name: "Cheshire", role: "UX detector + capability catalog" },
   { id: "mad-hatter", name: "Mad Hatter", role: "Performance · carga del equipo" },
   { id: "white-rabbit", name: "White Rabbit", role: "Links externos + system diagnostic" },
   { id: "jabberwocky", name: "Jabberwocky", role: "Síntesis · veredict ejecutivo" },
+  { id: "knave", name: "Knave", role: "Seguridad · vigila gaps (L0 solo observa)" },
 ];
 
 function DarkAliceIcon({ size = 64, color = C.ink }) {
@@ -12489,6 +12598,7 @@ const TT_SYS_AGENTS = [
   { id: "mad-hatter", name: "Mad Hatter", emoji: "🎩", accent: "#3D52D5", role: "Performance · costos" },
   { id: "jabberwocky", name: "Jabberwocky", emoji: "⚡", accent: "#C2A45A", role: "Fuzzer · inputs adversariales" },
   { id: "dark-alice", name: "Dark Alice", emoji: "🖤", accent: "#0A0B0F", role: "Jefa de operaciones" },
+  { id: "knave", name: "Knave", emoji: "🃏", accent: "#7A6A9B", role: "Seguridad · gaps (L0 solo observa)" },
 ];
 const TT_SEV = {
   critical: { label: "Crítico", color: "#A85B5B", icon: "▲" },
