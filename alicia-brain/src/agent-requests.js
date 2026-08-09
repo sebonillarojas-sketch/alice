@@ -25,6 +25,8 @@ export function enqueueRequest(db, agent, requestedBy = null) {
 
 // Claim-on-read: devuelve los pendientes y los marca 'running' en la misma pasada,
 // para que el siguiente tick del reloj no los vuelva a disparar.
+// ⚠️ NO metas un `await` acá dentro: node:sqlite es síncrono y esta función corre
+// atómica en el event loop; un await abriría una ventana para doble-claim entre ticks.
 export function claimPending(db) {
   const rows = db.prepare(
     "SELECT id, agent FROM agent_run_requests WHERE status = 'pending' ORDER BY created_at LIMIT 20"
