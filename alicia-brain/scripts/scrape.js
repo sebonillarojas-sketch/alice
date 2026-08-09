@@ -352,10 +352,15 @@ async function main() {
 
   // Auto-instala el reloj único de Wonderland (idempotente). Best-effort: si falla,
   // el scraper sigue corriendo por su plist viejo y se reintenta en la próxima corrida.
-  try {
-    const { ensureWonderlandClock } = await import("./bestia-bootstrap.js");
-    await ensureWonderlandClock();
-  } catch (e) { console.error("🕰️ no pude instalar el reloj (reintento próxima corrida):", e.message); }
+  // Se salta en --dry-run: DRY = "prueba segura, no toca prod" y no debe tocar launchd.
+  if (!DRY) {
+    try {
+      const { ensureWonderlandClock } = await import("./bestia-bootstrap.js");
+      await ensureWonderlandClock();
+    } catch (e) { console.error("🕰️ no pude instalar el reloj (reintento próxima corrida):", e.message); }
+  } else {
+    console.log("🕰️ --dry-run: salto la instalación del reloj (bestia-bootstrap)");
+  }
 }
 
 main().catch(e => {

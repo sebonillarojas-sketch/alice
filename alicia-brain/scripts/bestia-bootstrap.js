@@ -1,7 +1,7 @@
 // Auto-bootstrap del reloj único (sin SSH) · lo llama scrape.js al final de su corrida.
 // Copia el plist a ~/Library/LaunchAgents, lo carga, y SOLO si quedó activo retira el
 // plist viejo del scraper (com.hygge.white-rabbit) para no duplicar el scraper.
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
@@ -33,7 +33,6 @@ export async function ensureWonderlandClock() {
     return { installed: false };
   }
   // el nuevo está vivo → retirar el viejo para no duplicar el scraper
-  const oldPlist = join(LA_DIR, `${OLD_LABEL}.plist`);
   try { await execFileP("launchctl", ["bootout", `gui/${uid}/${OLD_LABEL}`]); } catch {}
   console.log(`🕰️ bootstrap OK · ${NEW_LABEL} activo · ${OLD_LABEL} retirado`);
   return { installed: true };
