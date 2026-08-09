@@ -323,6 +323,18 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "ask_agent",
+    description: "Conversá en criollo con un agente Wonderland y te responde en 1ª persona con SU data real: white-rabbit 🐰 (infra), cheshire 😺 (tester E2E), knave 🃏 (seguridad), mad-hatter 🎩 (perf/costos), tea-table 🫖 (síntesis), dark-alice 🖤 (operaciones), bandersnatch ⚔️ (carga), jabberwocky ⚡ (fuzzing). Usala cuando pidan 'preguntale al conejo / a Cheshire', o la mirada de un agente sobre infra/seguridad/performance. Distinto de agents_status (que da el estado crudo de todos).",
+    input_schema: {
+      type: "object",
+      properties: {
+        agent:    { type: "string", enum: ["white-rabbit","cheshire","knave","mad-hatter","tea-table","dark-alice","bandersnatch","jabberwocky"], description: "A qué agente le preguntás." },
+        question: { type: "string", description: "La pregunta en lenguaje natural." },
+      },
+      required: ["agent", "question"],
+    },
+  },
+  {
     name: "agents_status",
     description: "Estado de TUS agentes Wonderland (tu equipo de IT autónomo): White Rabbit 🐰 (guardia de infraestructura), Cheshire 😺 (tester E2E), Tea Table 🫖 (síntesis semanal). Devuelve la última corrida de cada uno y los hallazgos abiertos. Usala cuando pregunten por el conejo, el gato, los agentes, el monitoreo, bugs del sistema o el estado de la infraestructura.",
     input_schema: { type: "object", properties: {} },
@@ -630,6 +642,12 @@ export async function executeTool(toolName, input, userId) {
       } catch (e) {
         return `Intenté refrescar Radar (${src}) y falló: ${e.message}. La data anterior sigue disponible.`;
       }
+    }
+
+    case "ask_agent": {
+      const { askAgent } = await import("./agent-voices.js");
+      const { getDB } = await import("./db.js");
+      return await askAgent(getDB(), input.agent, input.question);
     }
 
     case "agents_status": {
