@@ -514,8 +514,10 @@ export async function executeTool(toolName, input, userId) {
       const id = stageFile({ buffer, mime, filename });
       const url = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/file/${id}`;
       const { sendWAMedia } = await import("./wa.js");
-      try { await sendWAMedia(phone, url); return `📎 Te mandé "${filename}" por WhatsApp.`; }
-      catch (e) { return `No pude enviarte el archivo: ${e.message}`; }
+      try {
+        const ok = await sendWAMedia(phone, url);
+        return ok ? `📎 Te mandé "${filename}" por WhatsApp.` : `Preparé "${filename}" pero no pude enviarlo por WhatsApp (canal no disponible).`;
+      } catch (e) { return `No pude enviarte el archivo: ${e.message}`; }
     }
 
     // ── Web Search ────────────────────────────────────────────────────────────
