@@ -1133,7 +1133,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
   }, [tasks]);
   // conteo de tareas pendientes asignadas al usuario actual (badge de "Mis tareas")
   const myTaskCount = useMemo(
-    () => (tasks || []).filter(t => !t.checked && t.assignee === currentUser?.id).length,
+    () => (tasks || []).filter(t => !t.checked && idsOf(t).includes(currentUser?.id)).length,
     [tasks, currentUser]
   );
   const sidebarTools = tools || TOOLS;
@@ -7379,7 +7379,7 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
     }
     if (a.relatedTaskId && tasks) {
       const t = tasks.find(t => t.id === a.relatedTaskId);
-      if (t && t.assignee === authUser.id) return true;
+      if (t && idsOf(t).includes(authUser.id)) return true;
       if (t && allowedSpaces && allowedSpaces.includes(t.space)) return true;
       if (t && !allowedSpaces) return true;
     }
@@ -11887,7 +11887,7 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
 
     // Per-collaborator metrics
     const collabMetrics = users.filter(u => u.id !== "system").map(u => {
-      const assigned = tasks.filter(t => t.assignee === u.id);
+      const assigned = tasks.filter(t => idsOf(t).includes(u.id));
       const done = assigned.filter(t => t.checked).length;
       const open = assigned.filter(t => !t.checked);
       const overdue = open.filter(t => {
@@ -15415,7 +15415,7 @@ export default function HyggeOS({ authUser } = {}) {
   const performUserDelete = useCallback(({ mode, targetUserId }) => {
     const id = deleteUserTarget?.id;
     if (!id) return;
-    const taskCount = (stateRef.current?.tasks || []).filter(t => t.assignee === id).length;
+    const taskCount = (stateRef.current?.tasks || []).filter(t => idsOf(t).includes(id)).length;
     const label = taskCount === 0
       ? `Eliminó usuario ${deleteUserTarget.firstName} ${deleteUserTarget.lastName}`
       : mode === "reassign"
@@ -15424,8 +15424,10 @@ export default function HyggeOS({ authUser } = {}) {
     recordUndo(label);
     // Reassign or unassign tasks (persistiendo cada tarea tocada, no solo en memoria)
     setTasks(prev => prev.map(t => {
-      if (t.assignee !== id) return t;
-      const updated = { ...t, assignee: mode === "reassign" ? targetUserId : null };
+      if (!idsOf(t).includes(id)) return t;
+      const remaining = idsOf(t).filter(x => x !== id);
+      const nextAssignees = mode === "reassign" ? [...new Set([...remaining, targetUserId])] : remaining;
+      const updated = { ...t, assignees: nextAssignees, assignee: nextAssignees[0] || null };
       db.upsertTask(updated).catch(console.error);
       return updated;
     }));
@@ -15513,7 +15515,7 @@ export default function HyggeOS({ authUser } = {}) {
 
     // Step 2: user filters
     if (filters.priorities.length) filtered = filtered.filter(t => filters.priorities.includes(t.priority) || (t.parentId && filtered.find(p => p.id === t.parentId)));
-    if (filters.assignees.length) filtered = filtered.filter(t => filters.assignees.includes(t.assignee) || (t.parentId && filtered.find(p => p.id === t.parentId)));
+    if (filters.assignees.length) filtered = filtered.filter(t => filters.assignees.some(a => idsOf(t).includes(a)) || (t.parentId && filtered.find(p => p.id === t.parentId)));
     if (filters.statuses.length) {
       filtered = filtered.filter(t => {
         const status = t.checked ? "done" : "open";
@@ -16150,7 +16152,7 @@ REGLAS:
       // Tareas asignadas al usuario actual, across TODOS los spaces (no space-scoped).
       // Incluye el padre de cada match para que el árbol renderice completo.
       const mineIds = new Set();
-      tasks.forEach(t => { if (t.assignee === currentUserId) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
+      tasks.forEach(t => { if (idsOf(t).includes(currentUserId)) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
       const misTareas = tasks.filter(t => mineIds.has(t.id));
       return <ListView tasks={misTareas} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace="mistareas" allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
     }
@@ -16343,7 +16345,7 @@ REGLAS:
         open={!!deleteUserTarget}
         onClose={() => setDeleteUserTarget(null)}
         user={deleteUserTarget}
-        affectedTasks={deleteUserTarget ? tasks.filter(t => t.assignee === deleteUserTarget.id) : []}
+        affectedTasks={deleteUserTarget ? tasks.filter(t => idsOf(t).includes(deleteUserTarget.id)) : []}
         users={users}
         onConfirm={performUserDelete}
       />
