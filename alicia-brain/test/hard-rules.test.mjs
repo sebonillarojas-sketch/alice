@@ -11,6 +11,9 @@ test("HARD_RULES caza autoridad, seguridad y RNE", () => {
 test("una lección benigna no contradice", () => {
   assert.equal(checkContradictsHardRules("responder más corto y en español", HARD_RULES).contradicts, false);
 });
+test("frase benigna de precio por m2 no contradice (falso positivo corregido)", () => {
+  assert.equal(checkContradictsHardRules("reducir el precio por m2", HARD_RULES).contradicts, false);
+});
 test("cada regla tiene id, test y reason", () => {
   for (const r of HARD_RULES) { assert.ok(r.id && typeof r.test === "function" && r.reason); }
 });

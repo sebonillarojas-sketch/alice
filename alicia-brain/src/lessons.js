@@ -30,7 +30,7 @@ export function checkContradictsHardRules(lessonText, hardRules = []) {
 
 export function evaluateGate(lesson, { minEvidence = 3 } = {}) {
   if (lesson.contradicts) return { decision: "reject", reason: "contradice una regla dura" };
-  if ((lesson.evidence_count || 0) < minEvidence) return { decision: "needs_human", reason: `evidencia insuficiente (<${minEvidence})` };
+  if ((lesson.evidence_count || 0) < minEvidence) return { decision: "hold", reason: `evidencia insuficiente (<${minEvidence})` };
   if (lesson.risk_level === "L0") return { decision: "auto_apply", reason: "L0 de bajo riesgo con evidencia" };
   return { decision: "needs_human", reason: `riesgo ${lesson.risk_level} requiere aprobación humana` };
 }
@@ -59,7 +59,8 @@ export function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3 } = {}
   let status;
   if (decision === "reject") status = "rejected";
   else if (decision === "auto_apply") status = "applied";
-  else status = "validated";
+  else if (decision === "needs_human") status = "validated";
+  else status = "proposed"; // hold: evidencia insuficiente, se mantiene propuesta
   db.prepare(
     `UPDATE lessons SET status = ?, contradicts_check = ?,
        applied_at = CASE WHEN ? = 'applied' THEN datetime('now') ELSE applied_at END,

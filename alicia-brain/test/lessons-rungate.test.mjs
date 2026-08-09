@@ -27,3 +27,13 @@ test("L2 → validated (espera humano)", () => {
   const r = runGateOnLesson(db, id, { hardRules: RULES, minEvidence: 3 });
   assert.equal(r.status, "validated");
 });
+test("evidencia insuficiente → se mantiene proposed (hold)", () => {
+  const db = db0();
+  const { id } = proposeLesson(db, { source: "reflection", lesson: "usar tono más formal", risk_level: "L0" });
+  // evidence_count queda en 1 (default), por debajo de minEvidence
+  const r = runGateOnLesson(db, id, { hardRules: RULES, minEvidence: 3 });
+  assert.equal(r.decision, "hold");
+  assert.equal(r.status, "proposed");
+  const row = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id);
+  assert.equal(row.status, "proposed");
+});

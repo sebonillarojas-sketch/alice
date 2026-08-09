@@ -8,6 +8,6 @@ export const HARD_RULES = [
     test: t => /(desactivar|apagar|saltear|bypass).*(auth|autenticaci[oó]n|gate|seguridad)/i.test(t) || /abrir cors|cors.*(\*|para todos)/i.test(t),
     reason: "viola políticas de seguridad" },
   { id: "rne-minimos",
-    test: t => /(bajar|reducir|menos de|por debajo).*(m2|m²|área mínima|area minima|dormitorio.*[0-4]\s?m)/i.test(t),
+    test: t => /(bajar|reducir|achicar|recortar|menos de|por debajo|m[aá]s chico).{0,60}(dormitorio|ba[ñn]o|cocina|sala|comedor|ambiente|dpto|departamento|unidad|[aá]rea m[ií]nima|area minima)/i.test(t),
     reason: "viola mínimos de área RNE" },
 ];

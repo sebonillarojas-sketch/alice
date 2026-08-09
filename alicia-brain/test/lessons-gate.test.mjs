@@ -18,8 +18,8 @@ test("gate: contradice → reject", () => {
 test("gate: L0 con evidencia → auto_apply", () => {
   assert.equal(evaluateGate({ contradicts: false, evidence_count: 3, risk_level: "L0" }, { minEvidence: 3 }).decision, "auto_apply");
 });
-test("gate: poca evidencia → needs_human", () => {
-  assert.equal(evaluateGate({ contradicts: false, evidence_count: 1, risk_level: "L0" }, { minEvidence: 3 }).decision, "needs_human");
+test("gate: poca evidencia → hold", () => {
+  assert.equal(evaluateGate({ contradicts: false, evidence_count: 1, risk_level: "L0" }, { minEvidence: 3 }).decision, "hold");
 });
 test("gate: L2 con evidencia → needs_human", () => {
   assert.equal(evaluateGate({ contradicts: false, evidence_count: 5, risk_level: "L2" }, { minEvidence: 3 }).decision, "needs_human");
