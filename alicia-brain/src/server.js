@@ -13,6 +13,7 @@ import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
 import crypto from "crypto";
+import { getStagedFile } from "./file-relay.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -475,7 +476,7 @@ const COLLAB_TOOLS = new Set([
   "create_task", "update_task", "get_tasks",
   "calendar_list", "calendar_create", "check_availability",
   "gmail_search", "gmail_draft",
-  "dropbox_search", "dropbox_read", "dropbox_upload",
+  "dropbox_search", "dropbox_read", "dropbox_upload", "send_document",
   "web_search", "zoom_list_recordings",
   "search_knowledge", "use_skill",
 ]);
@@ -1123,6 +1124,15 @@ app.get("/tts/:id.wav", (req, res) => {
   const buf = ttsCache.get(req.params.id);
   if (!buf) return res.status(404).send("Not found");
   res.set("Content-Type", "audio/wav").send(buf);
+});
+
+// Serve staged files for WhatsApp media send (needs public URL) — relay efímero, TTL 5 min
+app.get("/file/:id", (req, res) => {
+  const f = getStagedFile(req.params.id);
+  if (!f) return res.status(404).send("expirado");
+  res.setHeader("Content-Type", f.mime);
+  res.setHeader("Content-Disposition", `inline; filename="${f.filename.replace(/[^\w.\-]/g, "_")}"`);
+  res.send(f.buffer);
 });
 
 function escapeXml(str) {

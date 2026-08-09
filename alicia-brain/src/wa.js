@@ -99,3 +99,48 @@ export async function sendWAMedia(to, mediaUrl) {
   }
   return false;
 }
+
+// Envío de documento (PDF, imagen, Excel, etc.) — prefiere WA Web (buffer directo,
+// sin depender de una URL pública), luego Twilio y por último Cloud API (ambos
+// necesitan `url`, que viene del file-relay como fallback).
+export async function sendWADocument(to, { buffer, mimetype, filename, url } = {}) {
+  if (!to) return false;
+  let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
+  if (!phone.startsWith("+")) phone = "+" + phone;
+
+  if (process.env.WA_PREFER_CLOUD !== "1") {
+    try {
+      const { isWAWebConnected, sendWAWebDocument } = await import("./waweb.js");
+      if (isWAWebConnected() && buffer) {
+        await sendWAWebDocument(to, buffer, mimetype, filename);
+        return true;
+      }
+    } catch (e) {
+      console.warn("sendWADocument: WA Web falló, probando Twilio/Cloud:", e.message);
+    }
+  }
+
+  const creds = twilioCreds();
+  const from = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
+  if (creds && url) {
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${creds.accountSid}/Messages.json`, {
+      method: "POST",
+      headers: { Authorization: creds.header, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ From: from, To: `whatsapp:${phone}`, MediaUrl: url }),
+    });
+    if (!r.ok) throw new Error(`Twilio document failed: ${(await r.text()).slice(0, 200)}`);
+    return true;
+  }
+
+  if (process.env.WA_PHONE_NUMBER_ID && process.env.WA_ACCESS_TOKEN && url) {
+    const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to: phone.replace("+", ""), type: "document", document: { link: url, filename } }),
+    });
+    if (!r.ok) throw new Error(`WA Cloud document failed: ${(await r.text()).slice(0, 200)}`);
+    return true;
+  }
+
+  return false;
+}
