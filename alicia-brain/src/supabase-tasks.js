@@ -56,10 +56,23 @@ function mapFields(f = {}) {
 
 export async function createTask(input, userId) {
   if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return { id: 0, ...(input || {}), _sandbox: true }; }
-  const res = await fetch(REST, { method: "POST", headers: headers({ Prefer: "return=representation" }), body: JSON.stringify(toRow(input, userId)) });
+  const row = toRow(input, userId);
+  // Dedup: Alicia reintentaba create al confirmar/fallar y apilaba tareas idénticas
+  // (#3..#16 en un mismo pedido). Si ya existe una con el mismo título+space creada
+  // hace poco, devolvemos esa en vez de duplicar. Defensivo: si la consulta falla, se crea igual.
+  try {
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const qs = new URLSearchParams({ select: "*", title: `ilike.${row.title}`, space: `eq.${row.space}`, updated_at: `gte.${since}`, order: "updated_at.desc", limit: "1" });
+    const dupRes = await fetch(`${REST}?${qs}`, { headers: headers() });
+    if (dupRes.ok) {
+      const [dup] = await dupRes.json();
+      if (dup) { console.log(`↩️ createTask dedup: "${row.title}" en ${row.space} ya existe (#${dup.id}), no duplico`); return dup; }
+    }
+  } catch (e) { console.warn("dedup check falló, creo igual:", e.message); }
+  const res = await fetch(REST, { method: "POST", headers: headers({ Prefer: "return=representation" }), body: JSON.stringify(row) });
   if (!res.ok) throw new Error(`Supabase insert ${res.status}: ${await res.text()}`);
-  const [row] = await res.json();
-  return row;
+  const [created] = await res.json();
+  return created;
 }
 
 export async function updateTask(id, fields) {
