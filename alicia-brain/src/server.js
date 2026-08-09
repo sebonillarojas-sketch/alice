@@ -795,6 +795,7 @@ app.post("/webhook", async (req, res) => {
     // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
     // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza,
     // cae a texto. Conversión a ogg/opus pendiente para paridad total.
+    await sendWA(fromPhone, reply);
     if (inputWasAudio) {
       try {
         const audioBuf = await generateSpeech(reply);
@@ -807,14 +808,11 @@ app.post("/webhook", async (req, res) => {
           headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
           body: JSON.stringify({ messaging_product: "whatsapp", to: fromPhone, type: "audio", audio: { link: audioUrl } }),
         });
-        if (r.ok) return;
-        console.error("WA Cloud nota de voz rechazada, respondiendo texto:", (await r.text()).slice(0, 200));
+        if (!r.ok) console.error("nota de voz Cloud rechazada (ya respondí texto):", (await r.text()).slice(0, 200));
       } catch (ttsErr) {
-        console.error("TTS falló, respondiendo texto:", ttsErr.message);
+        console.error("nota de voz falló (ya respondí texto):", ttsErr.message);
       }
     }
-
-    await sendWA(fromPhone, reply);
   } catch (e) {
     console.error("Webhook error:", e.message);
   }
@@ -864,14 +862,13 @@ async function handleWAWebIncoming({ phone, text, media }) {
 
   // Nota de voz de vuelta si la entrada fue audio (paridad con Cloud/Twilio).
   // El TTS emite wav — va como audio normal, no como nota de voz (eso pide ogg/opus).
+  await sendWAWebText(phone, reply);
   if (inputWasAudio) {
     try {
       const audioBuf = await generateSpeech(reply);
       await sendWAWebAudio(phone, audioBuf, "audio/wav");
-      return;
-    } catch (ttsErr) { console.error("WA Web TTS falló, respondiendo texto:", ttsErr.message); }
+    } catch (ttsErr) { console.error("nota de voz WA Web falló (ya respondí texto):", ttsErr.message); }
   }
-  await sendWAWebText(phone, reply);
 }
 
 app.get("/api/waweb/status", async (_, res) => {
@@ -947,6 +944,10 @@ app.post("/webhook/twilio", async (req, res) => {
         onThinking: () => sendWA(phone, pickAck()).catch(() => {}),
       });
 
+      // Texto SIEMPRE primero (confiable) — antes se respondía solo la voz y si el
+      // envío del WAV "parecía" ok pero WhatsApp no lo entregaba, el return se comía
+      // la respuesta y Alicia quedaba muda ante un audio. Ahora la voz es un bonus.
+      await sendWA(phone, reply);
       if (inputWasAudio) {
         try {
           const audioBuf = await generateSpeech(reply);
@@ -954,10 +955,8 @@ app.post("/webhook/twilio", async (req, res) => {
           ttsCache.set(id, audioBuf);
           setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
           await sendWAMedia(phone, `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`);
-          return;
-        } catch (ttsErr) { console.error("TTS async falló, respondiendo texto:", ttsErr.message); }
+        } catch (ttsErr) { console.error("nota de voz falló (ya respondí texto):", ttsErr.message); }
       }
-      await sendWA(phone, reply);
     } catch (e) {
       console.error("Twilio async error:", e.message);
       sendWA(phone, "Tuve un problema, probá de nuevo.").catch(() => {});
