@@ -2,6 +2,7 @@
 //   1. WA Web (waweb.js) — el teléfono propio de Alicia, sin límites de ventana/plantillas
 //   2. WA Cloud API (Meta directo)
 //   3. Twilio — solo fallback de transición; Sebastián decidió salir de Twilio (13 jul 2026).
+import { isSandbox } from "./sandbox.js";
 // Credenciales de Twilio. Con API Key (TWILIO_API_KEY_SID/SECRET) autentica con
 // esa; el Account SID se sigue necesitando aparte porque va en la ruta de la URL.
 // Sin API Key cae a Account SID + Auth Token, como antes.
@@ -20,6 +21,7 @@ export function twilioCreds() {
 }
 
 export async function sendWA(to, text) {
+  if (isSandbox()) { console.log("[SANDBOX] no envío WhatsApp"); return false; }
   if (!to || !text) return false;
   let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
   if (!phone.startsWith("+")) phone = "+" + phone;
@@ -72,6 +74,7 @@ export async function sendWA(to, text) {
 
 // Envío de nota de voz (audio) por URL pública — para respuestas async
 export async function sendWAMedia(to, mediaUrl) {
+  if (isSandbox()) { console.log("[SANDBOX] no envío WhatsApp"); return false; }
   if (!to || !mediaUrl) return false;
   let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
   if (!phone.startsWith("+")) phone = "+" + phone;
@@ -104,6 +107,7 @@ export async function sendWAMedia(to, mediaUrl) {
 // sin depender de una URL pública), luego Twilio y por último Cloud API (ambos
 // necesitan `url`, que viene del file-relay como fallback).
 export async function sendWADocument(to, { buffer, mimetype, filename, url } = {}) {
+  if (isSandbox()) { console.log("[SANDBOX] no envío WhatsApp"); return false; }
   if (!to) return false;
   let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
   if (!phone.startsWith("+")) phone = "+" + phone;
