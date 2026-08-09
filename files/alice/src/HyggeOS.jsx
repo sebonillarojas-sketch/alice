@@ -727,6 +727,31 @@ const KpiBar = ({ items }) => (
   </div>
 );
 
+// Multi-asignación: ids de asignados de una tarea (fallback al single `assignee`).
+const idsOf = (t) => (t && Array.isArray(t.assignees) && t.assignees.length) ? t.assignees : (t && t.assignee ? [t.assignee] : []);
+
+// Avatares apilados (máx `max`, luego chip "+N"). Vacío → null (el caller decide el fallback).
+function AvatarStack({ ids = [], size = 18, max = 3 }) {
+  const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
+  if (!list.length) return null;
+  const shown = list.slice(0, max);
+  const extra = list.length - shown.length;
+  return (
+    <span className="inline-flex items-center" style={{ verticalAlign: "middle" }}>
+      {shown.map((id, i) => (
+        <span key={id} style={{ marginLeft: i ? -size * 0.3 : 0, zIndex: shown.length - i, position: "relative" }}>
+          <Avatar personId={id} size={size} />
+        </span>
+      ))}
+      {extra > 0 && (
+        <span style={{ marginLeft: -size * 0.3, width: size, height: size, borderRadius: 999, background: C.surface, color: C.muted, fontSize: Math.round(size * 0.42), fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 0 }}>
+          +{extra}
+        </span>
+      )}
+    </span>
+  );
+}
+
 const Avatar = ({ personId, size = 24 }) => {
   const users = React.useContext(UsersContext);
   const u = lookupUser(personId, users);
@@ -970,7 +995,7 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
                     {c.checked ? <CheckCircle2 size={14} style={{ color: C.green }} /> : <Circle size={14} style={{ color: C.muted }} />}
                   </button>
                   <div className="flex-1 text-[12px]" style={{ color: c.checked ? C.muted : C.ink, fontWeight: 500, textDecoration: c.checked ? "line-through" : "none" }}>{c.title}</div>
-                  {c.assignee && <Avatar personId={c.assignee} size={18} />}
+                  {idsOf(c).length > 0 && <AvatarStack ids={idsOf(c)} size={18} />}
                   <button onClick={() => onUpdate(c.id, { parentId: null })} className="p-1 hover:opacity-70" title="Promover a tarea principal">
                     <CornerUpLeft size={11} style={{ color: C.muted }} />
                   </button>
@@ -2248,7 +2273,7 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
             <TimerButton task={task} {...timerProps} />
           </span>
         )}
-        {task.assignee && <Avatar personId={task.assignee} size={20} />}
+        {idsOf(task).length > 0 && <AvatarStack ids={idsOf(task)} size={20} />}
         <span className="text-[10px] tracking-[0.08em] uppercase px-1.5 py-0.5" style={{ color: C.inkSoft, backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>{task.project}</span>
         <span className="text-[10px] tracking-[0.08em] uppercase" style={{ color: task.priority === "alta" ? C.brick : task.priority === "media" ? C.ochre : C.muted, fontWeight: 600, minWidth: 42, textAlign: "right" }}>{task.priority}</span>
         <span className="text-[10px] min-w-[55px] text-right" style={{ color: C.muted }}>{task.due}</span>
@@ -2333,7 +2358,7 @@ function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px]" style={{ color: C.muted }}>{t.due}</span>
-                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                      {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                     </div>
                   </div>
                   {setTaskStatus && (
@@ -2442,7 +2467,7 @@ function GanttView({ tasks, currentSpace, allSpaces, openDetail }) {
                     <div className="text-[11px] truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</div>
                     {taskSpace && <div className="text-[8px] tracking-[0.1em] uppercase mt-0.5" style={{ color: C.muted, fontWeight: 600 }}>{taskSpace.code || taskSpace.name}</div>}
                   </div>
-                  {t.assignee && <Avatar personId={t.assignee} size={16} />}
+                  {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={16} />}
                 </button>
                 <div className="relative h-10">
                   <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${totalDays}, ${colWidth}px)` }}>
@@ -2631,7 +2656,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate, us
                   style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
                   {t.checked ? <CheckCircle2 size={12} style={{ color: C.green }} /> : <Circle size={12} style={{ color: C.muted }} />}
                   <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                  {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                  {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                 </button>
               ))}
             </div>
@@ -2668,7 +2693,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate, us
                       style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
                       {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
                       <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                      {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                     </button>
                   ))}
                 </div>
@@ -2697,7 +2722,7 @@ function TableView({ tasks, currentSpace, openDetail, allSpaces }) {
             {filtered.map((t, i) => (
               <tr key={t.id} onClick={() => openDetail(t.id)} className="cursor-pointer hover:opacity-80" style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
                 <td className="py-3.5 px-3 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{t.title}</td>
-                <td className="py-3.5 px-3">{t.assignee ? <Avatar personId={t.assignee} size={22} /> : <span className="text-[11px]" style={{ color: C.muted }}>—</span>}</td>
+                <td className="py-3.5 px-3">{idsOf(t).length ? <AvatarStack ids={idsOf(t)} size={22} /> : <span className="text-[11px]" style={{ color: C.muted }}>—</span>}</td>
                 <td className="py-3.5 px-3 text-[12px]" style={{ color: C.inkSoft }}>{t.project}</td>
                 <td className="py-3.5 px-3"><span className="text-[10px] tracking-[0.1em] uppercase" style={{ color: t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted, fontWeight: 600 }}>{t.priority}</span></td>
                 <td className="py-3.5 px-3 text-[12px]" style={{ color: C.muted }}>{t.due}</td>
@@ -6331,7 +6356,7 @@ function GenericSpaceDashboard({ space, tasks, openDetail, onToggle }) {
               </button>
               <div className="flex-1 text-[13px] truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none", opacity: t.checked ? 0.55 : 1 }}>{t.title}</div>
               {t.priority && <span className="text-[9px] uppercase px-1.5 py-0.5 flex-shrink-0" style={{ color: C.muted, letterSpacing: "0.08em" }}>{t.priority}</span>}
-              {t.assignee && <Avatar personId={t.assignee} size={18} />}
+              {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
             </div>
           ))}
           {spaceTasks.length > shown.length && (
@@ -10086,7 +10111,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = 
                   style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
                   {t.checked ? <CheckCircle2 size={12} style={{ color: C.green }} /> : <Circle size={12} style={{ color: C.muted }} />}
                   <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                  {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                  {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                 </button>
               ))}
             </div>
@@ -10134,7 +10159,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = 
                       style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
                       {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
                       <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                      {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                     </button>
                   ))}
                 </div>
