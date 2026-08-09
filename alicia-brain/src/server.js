@@ -489,7 +489,7 @@ const COLLAB_TOOLS = new Set([
 // archivos ajenos) pasa por la aprobación del CEO antes de ejecutarse.
 const ADMIN_IDS = new Set(["vd"]);
 const isAdmin = (uid) => ADMIN_IDS.has(uid);
-const ADMIN_TOOLS = new Set([...COLLAB_TOOLS, "gmail_send", "dropbox_move", "ask_agent"]);
+const ADMIN_TOOLS = new Set([...COLLAB_TOOLS, "gmail_send", "dropbox_move", "ask_agent", "run_agent"]);
 // Acciones de un admin que NO se ejecutan solas: requieren OK del CEO.
 const SENSITIVE_ADMIN = new Set(["gmail_send", "dropbox_move"]);
 
@@ -1547,6 +1547,24 @@ function requireAgentKey(req, res, next) {
 }
 
 // Los agentes reportan una corrida completa (run + findings en una llamada)
+// Cola de corridas on-demand: el reloj de la bestia la drena en su tick.
+// GET hace claim-on-read (pending→running) para que no se dispare dos veces.
+app.get("/api/agents/run-requests", requireAgentKey, async (req, res) => {
+  try {
+    const { getDB } = await import("./db.js");
+    const { claimPending } = await import("./agent-requests.js");
+    res.json({ requests: claimPending(getDB()) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/agents/run-requests/:id/done", requireAgentKey, async (req, res) => {
+  try {
+    const { getDB } = await import("./db.js");
+    const { markRequest } = await import("./agent-requests.js");
+    const status = req.body?.status === "error" ? "error" : "done";
+    res.json(markRequest(getDB(), Number(req.params.id), status, req.body?.note || null));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/agents/report", requireAgentKey, async (req, res) => {
   try {
     const { agent, result = "ok", summary = "", actions_taken = [], findings = [] } = req.body || {};

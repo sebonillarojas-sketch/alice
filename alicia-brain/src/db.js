@@ -109,6 +109,16 @@ function initSchema(db) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_agent_findings ON agent_findings(status, severity, created_at DESC);
+    CREATE TABLE IF NOT EXISTS agent_run_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent TEXT NOT NULL,
+      requested_by TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','done','error')),
+      note TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_run_requests ON agent_run_requests(status, created_at);
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT,
