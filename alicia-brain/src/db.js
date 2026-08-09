@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import dotenv from "dotenv";
+import { ensureLessonsSchema } from "./lessons.js";
 dotenv.config();
 
 const MODE = process.env.DB_MODE || "sqlite";
@@ -184,6 +185,8 @@ function initSchema(db) {
   // Higiene: un turno de assistant vacío en el historial contamina los turnos
   // siguientes (el modelo tiende a repetir el silencio). Se borran al arrancar.
   db.exec(`DELETE FROM messages WHERE role = 'assistant' AND trim(content) = ''`);
+  // Loop de aprendizaje · tabla de lecciones
+  ensureLessonsSchema(db);
 }
 
 // Reconstruye agent_runs SIN el CHECK-enum de `agent` (deja TEXT libre, como agent_findings).
