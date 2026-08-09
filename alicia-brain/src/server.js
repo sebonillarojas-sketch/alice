@@ -704,9 +704,6 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     const toolUseBlocks = resp.content.filter(b => b.type === "tool_use");
     if (!toolUseBlocks.length || resp.stop_reason === "end_turn") break;
 
-    // Primera vez que va a usar herramientas → avisar "dame un segundo" (para no dejar esperando)
-    if (iterations === 1 && opts.onThinking) { try { opts.onThinking(); } catch {} }
-
     const toolResultContents = [];
     for (const block of toolUseBlocks) {
       let result;
@@ -798,9 +795,7 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`📱 [${userId}] ${userText}`);
     const { sendWA } = await import("./wa.js");
-    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
-      onThinking: () => sendWA(fromPhone, pickAck()).catch(() => {}),
-    });
+    const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
 
     // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
     // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza,
@@ -866,9 +861,7 @@ async function handleWAWebIncoming({ phone, text, media }) {
 
   console.log(`📱 WA Web [${userId}] ${userText}`);
   const { sendWAWebText, sendWAWebAudio } = await import("./waweb.js");
-  const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
-    onThinking: () => sendWAWebText(phone, pickAck()).catch(() => {}),
-  });
+  const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
 
   // Nota de voz de vuelta si la entrada fue audio (paridad con Cloud/Twilio).
   // El TTS emite wav — va como audio normal, no como nota de voz (eso pide ogg/opus).
@@ -905,10 +898,6 @@ app.post("/api/waweb/logout", async (_, res) => {
 });
 
 // ── Twilio webhook ────────────────────────────────────────────────────────────
-
-// Acks naturales cuando Alicia sale a buscar/hacer algo (no dejar al usuario esperando)
-const ALICIA_ACKS = ["Dale, dejame revisar 👀", "Ya, un toque que reviso y te digo.", "Ahí lo miro, un segundo.", "Dame un segundo que junto la info.", "Ok, reviso y te confirmo enseguida."];
-const pickAck = () => ALICIA_ACKS[Math.floor(Math.random() * ALICIA_ACKS.length)];
 
 app.post("/webhook/twilio", async (req, res) => {
   const from = req.body.From || "";
@@ -950,9 +939,7 @@ app.post("/webhook/twilio", async (req, res) => {
       if (!userText) return;
       console.log(`📱 Twilio [${userId}] ${userText}`);
 
-      const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp", {
-        onThinking: () => sendWA(phone, pickAck()).catch(() => {}),
-      });
+      const { text: reply } = await processAliciaMessage(userId, userText, "whatsapp");
 
       // Texto SIEMPRE primero (confiable) — antes se respondía solo la voz y si el
       // envío del WAV "parecía" ok pero WhatsApp no lo entregaba, el return se comía
