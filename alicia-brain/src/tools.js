@@ -335,6 +335,17 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "run_agent",
+    description: "Disparás una corrida NUEVA de un agente. Inmediatos (resultado al toque): white-rabbit 🐰 (infra), tea-table 🫖 (síntesis), dark-alice 🖤 (estado de ops). En la bestia (los encolo y el resultado llega en ~10 min): cheshire 😺 (test E2E del ERP), knave 🃏 (chequeo de seguridad). Usala cuando pidan 'corré/ejecutá X ahora', 'testeá el ERP', 'revisá seguridad ya'. Distinto de ask_agent (que solo conversa con la data vieja).",
+    input_schema: {
+      type: "object",
+      properties: {
+        agent: { type: "string", enum: ["white-rabbit","tea-table","dark-alice","cheshire","knave"], description: "Qué agente correr." },
+      },
+      required: ["agent"],
+    },
+  },
+  {
     name: "agents_status",
     description: "Estado de TUS agentes Wonderland (tu equipo de IT autónomo): White Rabbit 🐰 (guardia de infraestructura), Cheshire 😺 (tester E2E), Tea Table 🫖 (síntesis semanal). Devuelve la última corrida de cada uno y los hallazgos abiertos. Usala cuando pregunten por el conejo, el gato, los agentes, el monitoreo, bugs del sistema o el estado de la infraestructura.",
     input_schema: { type: "object", properties: {} },
@@ -648,6 +659,35 @@ export async function executeTool(toolName, input, userId) {
       const { askAgent } = await import("./agent-voices.js");
       const { getDB } = await import("./db.js");
       return await askAgent(getDB(), input.agent, input.question);
+    }
+
+    case "run_agent": {
+      const { classifyAgentRun, enqueueRequest } = await import("./agent-requests.js");
+      const plan = classifyAgentRun(input.agent);
+      if (!plan) return `No puedo correr "${input.agent}". Puedo: white-rabbit, tea-table, dark-alice (al toque) · cheshire, knave (en la bestia, ~10 min).`;
+      if (plan.mode === "queue") {
+        const { getDB } = await import("./db.js");
+        enqueueRequest(getDB(), input.agent, userId);
+        const nombre = input.agent === "cheshire" ? "Cheshire 😺" : "Knave 🃏";
+        return `Le pedí a ${nombre} que corra en la bestia. Tarda unos minutos — preguntame de nuevo o mirá con agents_status y te muestro el resultado.`;
+      }
+      try {
+        if (plan.run === "white-rabbit") {
+          const { runWhiteRabbitChecks } = await import("./whiterabbit.js");
+          const r = await runWhiteRabbitChecks();
+          return `🐰 White Rabbit corrió recién · ${r.result} · ${r.summary}`;
+        }
+        if (plan.run === "tea-table") {
+          const { runTeaTableReport } = await import("./teatable.js");
+          const r = await runTeaTableReport({ notify: false });
+          return `🫖 Tea Table corrió recién · ${r.result} · ${r.summary}`;
+        }
+        const { runDarkAlice } = await import("./darkalice.js");
+        const r = await runDarkAlice({ notify: false });
+        return `🖤 Dark Alice actualizó el estado de ops · ${r.result} · ${r.summary}`;
+      } catch (e) {
+        return `Intenté correr ${input.agent} y falló: ${e.message}.`;
+      }
     }
 
     case "agents_status": {
