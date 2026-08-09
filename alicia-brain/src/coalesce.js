@@ -5,10 +5,12 @@
 // Acá juntamos los mensajes de un mismo usuario que llegan dentro de una ventana
 // de silencio y procesamos UNA sola vez, con el texto completo.
 //
-// Tradeoff aceptado (pedido por Sebastián): un mensaje suelto espera hasta
-// MSG_COALESCE_MS antes de responderse. Tuneable por env.
+// Tradeoff: un mensaje suelto espera hasta MSG_COALESCE_MS antes de responderse.
+// La ventana es CORTA a propósito (Twilio no da señal de "está escribiendo", así que
+// esperamos lo mínimo para atrapar un follow-up rápido sin que Alicia se sienta lenta).
+// Un complemento típico llega en 1-3s; 3s es el balance. Tuneable por env.
 
-const WINDOW_MS = Number(process.env.MSG_COALESCE_MS || 7000);
+const WINDOW_MS = Number(process.env.MSG_COALESCE_MS || 3000);
 const buffers = new Map(); // userId -> { parts, wasAudio, handler, timer }
 
 // Agrega `text` al buffer de `userId` y (re)agenda el flush. `handler(joined, {wasAudio})`
