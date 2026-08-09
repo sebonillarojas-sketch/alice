@@ -30,6 +30,7 @@ db.exec(`
     status      TEXT DEFAULT 'todo' CHECK (status IN ('todo','in_progress','review','done','cancelled')),
     priority    TEXT DEFAULT 'media' CHECK (priority IN ('urgente','alta','media','baja')),
     assignee_id TEXT,
+    assignees   TEXT DEFAULT '[]',
     due_date    TEXT,
     tags        TEXT DEFAULT '[]',
     position    INTEGER DEFAULT 0,
@@ -105,6 +106,9 @@ const spaces = [
 
 for (const s of spaces) insertSpace.run(...s);
 console.log("✅ Spaces cargados (13 espacios)");
+
+// Migración idempotente: multi-asignación (assignees[]) en DBs ya existentes.
+try { db.exec("ALTER TABLE tasks ADD COLUMN assignees TEXT DEFAULT '[]'"); } catch {}
 
 db.close();
 console.log(`\n🟢 ALICE ERP DB lista → ${path}\n`);

@@ -5,7 +5,18 @@ const router = Router();
 
 function parseTask(t) {
   t.tags = parseArr(t.tags);
+  // multi-asignación: assignees[] (fallback al single assignee_id)
+  const arr = parseArr(t.assignees);
+  t.assignees = (Array.isArray(arr) && arr.length) ? arr : (t.assignee_id ? [t.assignee_id] : []);
   return t;
+}
+
+// Normaliza assignees de entrada: array explícito manda; si no, cae al single.
+function resolveAssignees(body) {
+  const arr = Array.isArray(body.assignees) && body.assignees.length
+    ? [...new Set(body.assignees)]
+    : (body.assignee_id ? [body.assignee_id] : []);
+  return { assignees: arr, assignee_id: arr[0] || null };
 }
 
 // GET /api/tasks — listar con filtros opcionales
@@ -40,15 +51,16 @@ router.get("/:id", (req, res) => {
 
 // POST /api/tasks — crear tarea
 router.post("/", (req, res) => {
-  const { title, description, space_id, parent_id, status, priority, assignee_id, due_date, tags, created_by } = req.body;
+  const { title, description, space_id, parent_id, status, priority, due_date, tags, created_by } = req.body;
   if (!title || !space_id) return res.status(400).json({ error: "title y space_id son obligatorios" });
+  const { assignees, assignee_id } = resolveAssignees(req.body); // assignee_id = assignees[0]
 
   const { lastID } = query(
-    `INSERT INTO tasks (title, description, space_id, parent_id, status, priority, assignee_id, due_date, tags, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (title, description, space_id, parent_id, status, priority, assignee_id, assignees, due_date, tags, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [title.trim(), description || null, space_id, parent_id || null,
-     status || "todo", priority || "media", assignee_id || null,
-     due_date || null, JSON.stringify(tags || []), created_by || null]
+     status || "todo", priority || "media", assignee_id,
+     JSON.stringify(assignees), due_date || null, JSON.stringify(tags || []), created_by || null]
   );
 
   logActivity(lastID, created_by, "created", null, title.trim());
@@ -64,15 +76,22 @@ router.patch("/:id", (req, res) => {
   if (!existing[0]) return res.status(404).json({ error: "No encontrado" });
 
   const task = existing[0];
-  const allowed = ["title", "description", "status", "priority", "assignee_id", "due_date", "tags", "parent_id", "space_id", "position"];
+  const allowed = ["title", "description", "status", "priority", "assignee_id", "assignees", "due_date", "tags", "parent_id", "space_id", "position"];
   const updates = [];
   const params = [];
   const { updated_by, ...body } = req.body;
 
+  // multi-asignación: si viene assignees[], mantener assignee_id = assignees[0] en sync.
+  if ("assignees" in body) {
+    const r = resolveAssignees(body);
+    body.assignees = r.assignees;
+    body.assignee_id = r.assignee_id;
+  }
+
   for (const key of allowed) {
     if (key in body) {
       updates.push(`${key} = ?`);
-      params.push(key === "tags" ? JSON.stringify(body[key]) : body[key]);
+      params.push(["tags", "assignees"].includes(key) ? JSON.stringify(body[key]) : body[key]);
 
       // Registrar cambios relevantes en activity
       if (["status", "priority", "assignee_id"].includes(key) && task[key] !== body[key]) {

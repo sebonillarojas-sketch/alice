@@ -727,6 +727,31 @@ const KpiBar = ({ items }) => (
   </div>
 );
 
+// Multi-asignación: ids de asignados de una tarea (fallback al single `assignee`).
+const idsOf = (t) => (t && Array.isArray(t.assignees) && t.assignees.length) ? t.assignees : (t && t.assignee ? [t.assignee] : []);
+
+// Avatares apilados (máx `max`, luego chip "+N"). Vacío → null (el caller decide el fallback).
+function AvatarStack({ ids = [], size = 18, max = 3 }) {
+  const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
+  if (!list.length) return null;
+  const shown = list.slice(0, max);
+  const extra = list.length - shown.length;
+  return (
+    <span className="inline-flex items-center" style={{ verticalAlign: "middle" }}>
+      {shown.map((id, i) => (
+        <span key={id} style={{ marginLeft: i ? -size * 0.3 : 0, zIndex: shown.length - i, position: "relative" }}>
+          <Avatar personId={id} size={size} />
+        </span>
+      ))}
+      {extra > 0 && (
+        <span style={{ marginLeft: -size * 0.3, width: size, height: size, borderRadius: 999, background: C.surface, color: C.muted, fontSize: Math.round(size * 0.42), fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 0 }}>
+          +{extra}
+        </span>
+      )}
+    </span>
+  );
+}
+
 const Avatar = ({ personId, size = 24 }) => {
   const users = React.useContext(UsersContext);
   const u = lookupUser(personId, users);
@@ -970,7 +995,7 @@ function TaskDetailPanel({ task, allTasks, allSpaces = [], onClose, onUpdate, on
                     {c.checked ? <CheckCircle2 size={14} style={{ color: C.green }} /> : <Circle size={14} style={{ color: C.muted }} />}
                   </button>
                   <div className="flex-1 text-[12px]" style={{ color: c.checked ? C.muted : C.ink, fontWeight: 500, textDecoration: c.checked ? "line-through" : "none" }}>{c.title}</div>
-                  {c.assignee && <Avatar personId={c.assignee} size={18} />}
+                  {idsOf(c).length > 0 && <AvatarStack ids={idsOf(c)} size={18} />}
                   <button onClick={() => onUpdate(c.id, { parentId: null })} className="p-1 hover:opacity-70" title="Promover a tarea principal">
                     <CornerUpLeft size={11} style={{ color: C.muted }} />
                   </button>
@@ -1108,7 +1133,7 @@ function Sidebar({ allSpaces, tools, currentSpace, setSpace, expandedSpaces, tog
   }, [tasks]);
   // conteo de tareas pendientes asignadas al usuario actual (badge de "Mis tareas")
   const myTaskCount = useMemo(
-    () => (tasks || []).filter(t => !t.checked && t.assignee === currentUser?.id).length,
+    () => (tasks || []).filter(t => !t.checked && idsOf(t).includes(currentUser?.id)).length,
     [tasks, currentUser]
   );
   const sidebarTools = tools || TOOLS;
@@ -2082,7 +2107,13 @@ const SMART_CAPTURE_PLACEHOLDERS = [
   'Escritura PU01 · citar a Galup lunes',
 ];
 
-function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmartView, currentSpaceContext }) {
+function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmartView, currentSpaceContext, users = [], currentUserId }) {
+  const togglePreviewAssignee = (id) => setPreview(p => {
+    if (!p) return p;
+    const cur = (Array.isArray(p.assignees) && p.assignees.length) ? p.assignees : (p.assignee ? [p.assignee] : []);
+    const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+    return { ...p, assignees: next, assignee: next[0] || null };
+  });
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -2142,8 +2173,21 @@ function SmartCapture({ onCreate, detectedPatterns, savedSmartViews, onSaveSmart
                 {preview.due && <Chip label={preview.due} color={C.ochre} />}
                 {preview.project && <Chip label={preview.project} color={C.navy} />}
                 {preview.space && <Chip label={`#${preview.space}`} color={C.inkSoft} />}
-                {preview.assignee && <Chip label={`@${preview.assignee}`} color={C.muted} />}
                 {preview.priority && <Chip label={`prio: ${preview.priority}`} color={C.muted} />}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                <span className="text-[9px] tracking-[0.12em] uppercase self-center mr-1" style={{ color: C.muted, fontWeight: 600 }}>Asignar</span>
+                {(users || []).map(u => {
+                  const cur = idsOf(preview);
+                  const on = cur.includes(u.id);
+                  return (
+                    <button key={u.id} type="button" onClick={() => togglePreviewAssignee(u.id)}
+                      className="flex items-center gap-1 px-1.5 py-0.5 text-[11px]"
+                      style={{ backgroundColor: on ? C.ink : C.bg, color: on ? C.bg : C.ink, border: `1px solid ${on ? C.ink : C.lineSoft}`, borderRadius: 2, fontWeight: on ? 600 : 500 }}>
+                      <Avatar personId={u.id} size={14} /> {u.firstName}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -2248,7 +2292,7 @@ function TaskRow({ task, children, depth, toggleTask, toggleExpand, openDetail, 
             <TimerButton task={task} {...timerProps} />
           </span>
         )}
-        {task.assignee && <Avatar personId={task.assignee} size={20} />}
+        {idsOf(task).length > 0 && <AvatarStack ids={idsOf(task)} size={20} />}
         <span className="text-[10px] tracking-[0.08em] uppercase px-1.5 py-0.5" style={{ color: C.inkSoft, backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, fontWeight: 500 }}>{task.project}</span>
         <span className="text-[10px] tracking-[0.08em] uppercase" style={{ color: task.priority === "alta" ? C.brick : task.priority === "media" ? C.ochre : C.muted, fontWeight: 600, minWidth: 42, textAlign: "right" }}>{task.priority}</span>
         <span className="text-[10px] min-w-[55px] text-right" style={{ color: C.muted }}>{task.due}</span>
@@ -2333,7 +2377,7 @@ function BoardView({ tasks, currentSpace, openDetail, allSpaces, setTaskStatus }
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px]" style={{ color: C.muted }}>{t.due}</span>
-                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                      {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                     </div>
                   </div>
                   {setTaskStatus && (
@@ -2442,7 +2486,7 @@ function GanttView({ tasks, currentSpace, allSpaces, openDetail }) {
                     <div className="text-[11px] truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</div>
                     {taskSpace && <div className="text-[8px] tracking-[0.1em] uppercase mt-0.5" style={{ color: C.muted, fontWeight: 600 }}>{taskSpace.code || taskSpace.name}</div>}
                   </div>
-                  {t.assignee && <Avatar personId={t.assignee} size={16} />}
+                  {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={16} />}
                 </button>
                 <div className="relative h-10">
                   <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${totalDays}, ${colWidth}px)` }}>
@@ -2631,7 +2675,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate, us
                   style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
                   {t.checked ? <CheckCircle2 size={12} style={{ color: C.green }} /> : <Circle size={12} style={{ color: C.muted }} />}
                   <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                  {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                  {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                 </button>
               ))}
             </div>
@@ -2668,7 +2712,7 @@ function CalendarView({ tasks, currentSpace, allSpaces, openDetail, onCreate, us
                       style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
                       {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
                       <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                      {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                     </button>
                   ))}
                 </div>
@@ -2697,7 +2741,7 @@ function TableView({ tasks, currentSpace, openDetail, allSpaces }) {
             {filtered.map((t, i) => (
               <tr key={t.id} onClick={() => openDetail(t.id)} className="cursor-pointer hover:opacity-80" style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
                 <td className="py-3.5 px-3 text-[13px]" style={{ color: C.ink, fontWeight: 500 }}>{t.title}</td>
-                <td className="py-3.5 px-3">{t.assignee ? <Avatar personId={t.assignee} size={22} /> : <span className="text-[11px]" style={{ color: C.muted }}>—</span>}</td>
+                <td className="py-3.5 px-3">{idsOf(t).length ? <AvatarStack ids={idsOf(t)} size={22} /> : <span className="text-[11px]" style={{ color: C.muted }}>—</span>}</td>
                 <td className="py-3.5 px-3 text-[12px]" style={{ color: C.inkSoft }}>{t.project}</td>
                 <td className="py-3.5 px-3"><span className="text-[10px] tracking-[0.1em] uppercase" style={{ color: t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted, fontWeight: 600 }}>{t.priority}</span></td>
                 <td className="py-3.5 px-3 text-[12px]" style={{ color: C.muted }}>{t.due}</td>
@@ -6331,7 +6375,7 @@ function GenericSpaceDashboard({ space, tasks, openDetail, onToggle }) {
               </button>
               <div className="flex-1 text-[13px] truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none", opacity: t.checked ? 0.55 : 1 }}>{t.title}</div>
               {t.priority && <span className="text-[9px] uppercase px-1.5 py-0.5 flex-shrink-0" style={{ color: C.muted, letterSpacing: "0.08em" }}>{t.priority}</span>}
-              {t.assignee && <Avatar personId={t.assignee} size={18} />}
+              {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
             </div>
           ))}
           {spaceTasks.length > shown.length && (
@@ -6353,7 +6397,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
   const [description, setDescription] = useState("");
   const [spaceId, setSpaceId] = useState(currentSpace || "hq");
   const [subSpaceId, setSubSpaceId] = useState("");
-  const [assignee, setAssignee] = useState(meId);
+  const [assignees, setAssignees] = useState([meId]);
   const [priority, setPriority] = useState("media");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -6374,7 +6418,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
       setTitle(""); setDescription("");
       setSpaceId(initialParentId);
       setSubSpaceId(initialSubId);
-      setAssignee(meId);
+      setAssignees([meId]);
       setPriority("media");
       const today = new Date().toISOString().slice(0, 10);
       setStartDate(today);
@@ -6387,7 +6431,7 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
 
   const selectedSpace = allSpaces.find(s => s.id === spaceId);
   const subSpaceOptions = selectedSpace?.children || [];
-  const activeAssignee = users?.find(u => u.id === assignee);
+  const toggleAssignee = (id) => setAssignees(prev => prev.includes(id) ? (prev.length > 1 ? prev.filter(x => x !== id) : prev) : [...prev, id]);
 
   const submit = () => {
     if (!title.trim()) { blob.onError(); return; }
@@ -6400,7 +6444,8 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
         project: projectCode,
         priority,
         space: finalSpace,
-        assignee,
+        assignees,
+        assignee: assignees[0] || meId,
         due: endDate || startDate || "",
         startDate, endDate,
         checked: false, parentId: null,
@@ -6468,18 +6513,19 @@ function QuickAdd({ open, onClose, onCreate, allSpaces, users, currentSpace, onS
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Eyebrow>Asignado</Eyebrow>
-              <div className="mt-2 relative">
-                <select value={assignee} onChange={e => setAssignee(e.target.value)}
-                  className="w-full px-2.5 py-2 outline-none text-[13px] appearance-none pl-8"
-                  style={{ backgroundColor: C.surface, border: `1px solid ${C.lineSoft}`, borderRadius: 2, color: C.ink }}>
-                  {(users || []).map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-                </select>
-                {activeAssignee && (
-                  <div className="absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Avatar personId={activeAssignee.id} size={20} />
-                  </div>
-                )}
+              <Eyebrow>Asignados</Eyebrow>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {(users || []).map(u => {
+                  const on = assignees.includes(u.id);
+                  return (
+                    <button key={u.id} type="button" onClick={() => toggleAssignee(u.id)}
+                      className="flex items-center gap-1.5 px-2 py-1 text-[12px]"
+                      style={{ backgroundColor: on ? C.ink : C.surface, color: on ? C.bg : C.ink, border: `1px solid ${on ? C.ink : C.lineSoft}`, borderRadius: 2, fontWeight: on ? 600 : 500 }}>
+                      <Avatar personId={u.id} size={16} /> {u.firstName}
+                      {on && <Check size={11} />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -7333,7 +7379,7 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
     }
     if (a.relatedTaskId && tasks) {
       const t = tasks.find(t => t.id === a.relatedTaskId);
-      if (t && t.assignee === authUser.id) return true;
+      if (t && idsOf(t).includes(authUser.id)) return true;
       if (t && allowedSpaces && allowedSpaces.includes(t.space)) return true;
       if (t && !allowedSpaces) return true;
     }
@@ -10086,7 +10132,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = 
                   style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2 }}>
                   {t.checked ? <CheckCircle2 size={12} style={{ color: C.green }} /> : <Circle size={12} style={{ color: C.muted }} />}
                   <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                  {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                  {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                 </button>
               ))}
             </div>
@@ -10134,7 +10180,7 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = 
                       style={{ backgroundColor: C.bg, border: `1px solid ${C.lineSoft}`, borderRadius: 2, borderLeft: `3px solid ${t.checked ? C.green : t.priority === "alta" ? C.brick : t.priority === "media" ? C.ochre : C.muted}` }}>
                       {t.checked ? <CheckCircle2 size={13} style={{ color: C.green }} /> : <Circle size={13} style={{ color: C.muted }} />}
                       <span className="text-[12px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500, textDecoration: t.checked ? "line-through" : "none" }}>{t.title}</span>
-                      {t.assignee && <Avatar personId={t.assignee} size={18} />}
+                      {idsOf(t).length > 0 && <AvatarStack ids={idsOf(t)} size={18} />}
                     </button>
                   ))}
                 </div>
@@ -11841,7 +11887,7 @@ function MadHatterPanel({ tasks, users, allSpaces, terrenos, customSpaces, recor
 
     // Per-collaborator metrics
     const collabMetrics = users.filter(u => u.id !== "system").map(u => {
-      const assigned = tasks.filter(t => t.assignee === u.id);
+      const assigned = tasks.filter(t => idsOf(t).includes(u.id));
       const done = assigned.filter(t => t.checked).length;
       const open = assigned.filter(t => !t.checked);
       const overdue = open.filter(t => {
@@ -15369,7 +15415,7 @@ export default function HyggeOS({ authUser } = {}) {
   const performUserDelete = useCallback(({ mode, targetUserId }) => {
     const id = deleteUserTarget?.id;
     if (!id) return;
-    const taskCount = (stateRef.current?.tasks || []).filter(t => t.assignee === id).length;
+    const taskCount = (stateRef.current?.tasks || []).filter(t => idsOf(t).includes(id)).length;
     const label = taskCount === 0
       ? `Eliminó usuario ${deleteUserTarget.firstName} ${deleteUserTarget.lastName}`
       : mode === "reassign"
@@ -15378,8 +15424,10 @@ export default function HyggeOS({ authUser } = {}) {
     recordUndo(label);
     // Reassign or unassign tasks (persistiendo cada tarea tocada, no solo en memoria)
     setTasks(prev => prev.map(t => {
-      if (t.assignee !== id) return t;
-      const updated = { ...t, assignee: mode === "reassign" ? targetUserId : null };
+      if (!idsOf(t).includes(id)) return t;
+      const remaining = idsOf(t).filter(x => x !== id);
+      const nextAssignees = mode === "reassign" ? [...new Set([...remaining, targetUserId])] : remaining;
+      const updated = { ...t, assignees: nextAssignees, assignee: nextAssignees[0] || null };
       db.upsertTask(updated).catch(console.error);
       return updated;
     }));
@@ -15412,7 +15460,9 @@ export default function HyggeOS({ authUser } = {}) {
       // Fallback a "sb" hardcodeado = bug: cualquier captura sin assignee
       // explícito quedaba asignada a Sebastián sin importar quién la creó
       // (21 jul 2026: "las tareas creadas por otros aparecen con mi nombre").
-      checked: false, assignee: parsed.assignee || currentUser?.id || "sb",
+      checked: false,
+      assignees: (Array.isArray(parsed.assignees) && parsed.assignees.length) ? parsed.assignees : [parsed.assignee || currentUser?.id || "sb"],
+      assignee: (Array.isArray(parsed.assignees) && parsed.assignees[0]) || parsed.assignee || currentUser?.id || "sb",
       tags: parsed.type ? [parsed.type] : [], type: parsed.type || null,
       amount: parsed.amount || null, person: parsed.person || null,
       source: "smartcapture", capturedAt: Date.now(),
@@ -15465,7 +15515,7 @@ export default function HyggeOS({ authUser } = {}) {
 
     // Step 2: user filters
     if (filters.priorities.length) filtered = filtered.filter(t => filters.priorities.includes(t.priority) || (t.parentId && filtered.find(p => p.id === t.parentId)));
-    if (filters.assignees.length) filtered = filtered.filter(t => filters.assignees.includes(t.assignee) || (t.parentId && filtered.find(p => p.id === t.parentId)));
+    if (filters.assignees.length) filtered = filtered.filter(t => filters.assignees.some(a => idsOf(t).includes(a)) || (t.parentId && filtered.find(p => p.id === t.parentId)));
     if (filters.statuses.length) {
       filtered = filtered.filter(t => {
         const status = t.checked ? "done" : "open";
@@ -15639,7 +15689,8 @@ export default function HyggeOS({ authUser } = {}) {
         due: orig.due,
         space: orig.space,
         checked: false,
-        assignee: orig.assignee,
+        assignees: idsOf(orig),
+        assignee: idsOf(orig)[0] || null,
         description: orig.description || "",
         parentId: orig.parentId || null,
         activity: [{ when: nowHHMM(), text: "Duplicada de original" }],
@@ -15724,7 +15775,7 @@ export default function HyggeOS({ authUser } = {}) {
     setTasks(prev => {
       const next = safeAddTaskPure(prev, {
         parentId, title, project: parent.project, priority: "media", due: "—",
-        space: parent.space, checked: false, assignee: parent.assignee,
+        space: parent.space, checked: false, assignees: idsOf(parent), assignee: idsOf(parent)[0] || null,
         activity: [{ when: nowHHMM(), text: "Subtarea creada" }],
       });
       db.upsertTask(next[next.length - 1]).catch(console.error); // persistir la subtarea nueva
@@ -16101,7 +16152,7 @@ REGLAS:
       // Tareas asignadas al usuario actual, across TODOS los spaces (no space-scoped).
       // Incluye el padre de cada match para que el árbol renderice completo.
       const mineIds = new Set();
-      tasks.forEach(t => { if (t.assignee === currentUserId) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
+      tasks.forEach(t => { if (idsOf(t).includes(currentUserId)) { mineIds.add(t.id); if (t.parentId) mineIds.add(t.parentId); } });
       const misTareas = tasks.filter(t => mineIds.has(t.id));
       return <ListView tasks={misTareas} toggleTask={toggleTask} toggleExpand={toggleExpand} openDetail={openDetail} currentSpace="mistareas" allSpaces={allSpaces} timerProps={{ isRunning: isTimerRunning, liveSeconds: timerLive, getTaskTotal, onStart: startTimer, onStop: stopTimerSession }} setTaskStatus={setTaskStatus} />;
     }
@@ -16210,7 +16261,7 @@ REGLAS:
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount}
             onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} />
-          <SmartCapture onCreate={createFromSmartCapture} detectedPatterns={detectedPatterns} savedSmartViews={smartViews} onSaveSmartView={saveSmartView} currentSpaceContext={currentSpace} />
+          <SmartCapture onCreate={createFromSmartCapture} detectedPatterns={detectedPatterns} savedSmartViews={smartViews} onSaveSmartView={saveSmartView} currentSpaceContext={currentSpace} users={users} currentUserId={currentUser?.id} />
           {activeSmartView && (
             <div className="px-4 lg:px-7 py-2 flex items-center gap-2 flex-wrap" style={{ backgroundColor: C.paper, borderBottom: `1px solid ${C.lineSoft}` }}>
               <Sparkles size={11} style={{ color: C.cobalt }} />
@@ -16294,7 +16345,7 @@ REGLAS:
         open={!!deleteUserTarget}
         onClose={() => setDeleteUserTarget(null)}
         user={deleteUserTarget}
-        affectedTasks={deleteUserTarget ? tasks.filter(t => t.assignee === deleteUserTarget.id) : []}
+        affectedTasks={deleteUserTarget ? tasks.filter(t => idsOf(t).includes(deleteUserTarget.id)) : []}
         users={users}
         onConfirm={performUserDelete}
       />
