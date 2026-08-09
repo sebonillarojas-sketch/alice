@@ -16,7 +16,10 @@ export function readConversation(db, personaId, limit = 20) {
 
 export function resolvePhone(db, personaId) {
   const row = db.prepare("SELECT phone FROM profiles WHERE user_id = ?").get(personaId);
-  return row?.phone || null;
+  // Fallback al env PHONE_<id>: los números del equipo (y el de Sebastián) viven ahí,
+  // no siempre en la tabla profiles. Sin este fallback, send_document/send_whatsapp
+  // decían "no tengo tu número" a Sebastián mismo (su número está en PHONE_sb).
+  return row?.phone || process.env[`PHONE_${personaId}`] || null;
 }
 
 function mimeFromName(name = "") {
