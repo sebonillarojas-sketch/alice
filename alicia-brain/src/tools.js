@@ -14,6 +14,11 @@ export function readConversation(db, personaId, limit = 20) {
   return rows.reverse();
 }
 
+export function resolvePhone(db, personaId) {
+  const row = db.prepare("SELECT phone FROM profiles WHERE user_id = ?").get(personaId);
+  return row?.phone || null;
+}
+
 // ── Definición de herramientas para Claude tool use ───────────────────────────
 
 export const ALICIA_TOOLS = [
@@ -305,6 +310,14 @@ export const ALICIA_TOOLS = [
     }, required: ["persona"] }
   },
   {
+    name: "send_whatsapp",
+    description: "Manda un WhatsApp a OTRA persona del equipo de parte de Sebastián. Usala cuando él te pide 'decile a X que…' o 'mandale a X…'. Solo Sebastián puede usarla.",
+    input_schema: { type: "object", properties: {
+      persona: { type: "string", description: "ID destino: vd·jt·jm·aa·ac·jmg" },
+      mensaje: { type: "string", description: "el texto a enviar" }
+    }, required: ["persona", "mensaje"] }
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -525,6 +538,16 @@ export async function executeTool(toolName, input, userId) {
       const rows = readConversation(getDB(), input.persona, input.limit || 20);
       if (!rows.length) return `No hay conversación registrada con ${input.persona}.`;
       return rows.map(m => `${m.role === "user" ? input.persona : "Alicia"}: ${m.content}`).join("\n");
+    }
+
+    case "send_whatsapp": {
+      if (userId !== "sb") return "Solo Sebastián puede mandar mensajes en tu nombre a terceros.";
+      const { getDB } = await import("./db.js");
+      const phone = resolvePhone(getDB(), input.persona);
+      if (!phone) return `No tengo el WhatsApp de ${input.persona} en su perfil.`;
+      const { sendWA } = await import("./wa.js");
+      const ok = await sendWA(phone, input.mensaje);
+      return ok ? `Listo, le mandé a ${input.persona}: "${input.mensaje}"` : `No pude enviar el WhatsApp a ${input.persona}.`;
     }
 
     case "use_skill": {
