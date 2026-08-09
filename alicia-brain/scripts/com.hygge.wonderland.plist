@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.hygge.wonderland</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/eduardobonilla/.volta/bin/node</string>
+    <string>/Users/eduardobonilla/Desktop/ALICE/alicia-brain/scripts/bestia-runner.js</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>600</integer>
+  <key>WorkingDirectory</key>
+  <string>/Users/eduardobonilla/Desktop/ALICE/alicia-brain</string>
+  <key>StandardOutPath</key>
+  <string>/Users/eduardobonilla/Library/Logs/wonderland.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/eduardobonilla/Library/Logs/wonderland.err.log</string>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
