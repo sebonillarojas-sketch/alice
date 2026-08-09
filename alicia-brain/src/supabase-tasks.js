@@ -66,7 +66,7 @@ export async function createTask(input, userId) {
     const dupRes = await fetch(`${REST}?${qs}`, { headers: headers() });
     if (dupRes.ok) {
       const [dup] = await dupRes.json();
-      if (dup) { console.log(`↩️ createTask dedup: "${row.title}" en ${row.space} ya existe (#${dup.id}), no duplico`); return dup; }
+      if (dup) { console.log(`↩️ createTask dedup: "${row.title}" en ${row.space} ya existe (#${dup.id}), no duplico`); return { ...dup, _dedup: true }; }
     }
   } catch (e) { console.warn("dedup check falló, creo igual:", e.message); }
   const res = await fetch(REST, { method: "POST", headers: headers({ Prefer: "return=representation" }), body: JSON.stringify(row) });

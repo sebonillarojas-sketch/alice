@@ -358,7 +358,10 @@ export async function executeTool(toolName, input, userId) {
     // ── ERP ──────────────────────────────────────────────────────────────────
     case "create_task": {
       const task = await sbTasks.createTask(input, userId);
-      return `Tarea creada ✓ (#${task.id}) "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
+      const cab = task._dedup
+        ? `Esa tarea ya existía (#${task.id}), no la dupliqué:`
+        : `Tarea creada ✓ (#${task.id})`;
+      return `${cab} "${task.title}" · space ${task.space} · ${task.assignee} · ${task.priority} · ${task.status}`;
     }
     case "update_task": {
       const { task_id, ...fields } = input;
