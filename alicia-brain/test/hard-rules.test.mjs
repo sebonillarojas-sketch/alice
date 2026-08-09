@@ -14,6 +14,12 @@ test("una lección benigna no contradice", () => {
 test("frase benigna de precio por m2 no contradice (falso positivo corregido)", () => {
   assert.equal(checkContradictsHardRules("reducir el precio por m2", HARD_RULES).contradicts, false);
 });
+test("precio de dpto no contradice (sin área m2)", () => {
+  assert.equal(checkContradictsHardRules("bajar el precio del dpto", HARD_RULES).contradicts, false);
+});
+test("precio por unidad no contradice (sin área m2)", () => {
+  assert.equal(checkContradictsHardRules("reducir el precio por unidad", HARD_RULES).contradicts, false);
+});
 test("cada regla tiene id, test y reason", () => {
   for (const r of HARD_RULES) { assert.ok(r.id && typeof r.test === "function" && r.reason); }
 });
