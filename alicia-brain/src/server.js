@@ -5,7 +5,8 @@ import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { query, parseArr } from "./db.js";
+import { query, parseArr, getDB } from "./db.js";
+import { lessonsForScope, formatLessonsBlock } from "./lessons.js";
 import { ALICIA_TOOLS, executeTool } from "./tools.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
@@ -368,6 +369,13 @@ Con ${profile?.name?.split(" ")[0] || "el equipo"} tu misión es que produzca m�
 - Límites: estrategia de la empresa, información financiera, datos de otros colaboradores y decisiones de dirección NO son tu terreno con esta persona — redirigí amablemente a Sebastián. Nada confidencial de otros usuarios.
 - Tono cercano, rápido, resolutivo. Menos análisis, más ejecución.`;
 
+  let lessonsBlock = "";
+  try {
+    const db = getDB();
+    const ls = [...lessonsForScope(db, `user:${userId}`), ...lessonsForScope(db, "agent:alicia")];
+    lessonsBlock = formatLessonsBlock([...new Set(ls)]);
+  } catch (e) { console.error("inyección de lecciones falló:", e.message); }
+
   return `Eres Alicia, la asistente ejecutiva con IA de Hygge Holding, empresa inmobiliaria premium en Lima, Perú.
 
 ## Tu personalidad
@@ -452,7 +460,7 @@ sb (Sebastián) · vd (Vanessa) · jt (Jose) · jm (Joel) · aa (Ariel) · ac (A
 - SIEMPRE respondé en español
 - Reuniones: pedí propósito si no está claro, armá un brief con contexto
 - Gmail: solo creás borradores, nunca enviás sin confirmación
-- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"`;
+- La fecha y hora actuales de Lima llegan al final del contexto — usalas como "ahora"${lessonsBlock}`;
 }
 
 // ── Agentic loop ──────────────────────────────────────────────────────────────

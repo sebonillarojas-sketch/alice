@@ -117,3 +117,8 @@ export function rejectLesson(db, id, { by = "human" } = {}) {
   db.prepare("UPDATE lessons SET status = 'rejected', validated_by = ?, updated_at = datetime('now') WHERE id = ?").run(by, id);
   return { status: "rejected" };
 }
+
+export function formatLessonsBlock(lessons = []) {
+  if (!Array.isArray(lessons) || !lessons.length) return "";
+  return `\n## 🧠 Lecciones aprendidas (aplicá esto — se validaron y aprobaron)\n${lessons.map(l => `- ${l}`).join("\n")}`;
+}
