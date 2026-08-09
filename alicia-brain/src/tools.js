@@ -301,6 +301,28 @@ export const ALICIA_TOOLS = [
     },
   },
   {
+    name: "radar_query",
+    description: "Consultá Radar/Nexo — la data real de mercado inmobiliario de Lima (proyectos, precios por m² en USD, tasas hipotecarias, tipo de cambio). Usala cuando pregunten por precios, oferta, proyectos o el mercado de un distrito (Miraflores, San Isidro, etc.) o una tipología. NO inventes cifras: si no hay data, decilo y ofrecé refrescar.",
+    input_schema: {
+      type: "object",
+      properties: {
+        district: { type: "string", description: "Distrito a filtrar (ej. 'San Isidro', 'Miraflores'). Opcional; sin él, resumen general." },
+        dorms:    { type: "integer", description: "Tipología por N° de dormitorios (ej. 2). Opcional." },
+        incluir_macro: { type: "boolean", description: "Incluir tasa hipotecaria y tipo de cambio (default true)." },
+      },
+    },
+  },
+  {
+    name: "radar_refresh",
+    description: "Refrescá Radar disparando el scrape de mercado. Usala cuando pidan traer data nueva/actualizada de mercado. Si la data ya es reciente (<15 min) no re-scrapea y te avisa. Reportá honesto lo que pasó (puede que Nexo caiga a caché).",
+    input_schema: {
+      type: "object",
+      properties: {
+        source: { type: "string", enum: ["nexo", "urbania", "sbs", "todo"], description: "Fuente a refrescar (default nexo)." },
+      },
+    },
+  },
+  {
     name: "agents_status",
     description: "Estado de TUS agentes Wonderland (tu equipo de IT autónomo): White Rabbit 🐰 (guardia de infraestructura), Cheshire 😺 (tester E2E), Tea Table 🫖 (síntesis semanal). Devuelve la última corrida de cada uno y los hallazgos abiertos. Usala cuando pregunten por el conejo, el gato, los agentes, el monitoreo, bugs del sistema o el estado de la infraestructura.",
     input_schema: { type: "object", properties: {} },
@@ -566,6 +588,48 @@ export async function executeTool(toolName, input, userId) {
       const { rows } = query(sql + ` LIMIT 10`, params);
       if (!rows.length) return `No encontré recursos para "${input.query}".`;
       return rows.map(r => `[${r.type}] ${r.name}\n${r.content}${r.notes ? `\nNota: ${r.notes}` : ""}`).join("\n\n");
+    }
+
+    case "radar_query": {
+      const { getLatestSnapshot, getMacroData, getBankRates } = await import("./market.js");
+      const { summarizeMarket, formatMarketSummary } = await import("./radar.js");
+      const incMacro = input.incluir_macro !== false;
+      const summary = summarizeMarket(getLatestSnapshot(), {
+        district: input.district,
+        dorms: input.dorms,
+        macro: incMacro ? getMacroData() : null,
+        bankRates: incMacro ? getBankRates() : null,
+      });
+      return formatMarketSummary(summary);
+    }
+
+    case "radar_refresh": {
+      const src = String(input.source || "nexo").toLowerCase();
+      const { getLatestSnapshotBySource, refreshMarketData } = await import("./market.js");
+      const { isFresh } = await import("./radar.js");
+      // Guard anti-spam: si esa fuente se scrapeó hace <15 min, no re-scrapear.
+      const bySource = src === "todo" ? null : getLatestSnapshotBySource(src);
+      if (bySource && isFresh(bySource.scraped_at)) {
+        return `Radar (${src}) ya está fresco — se actualizó ${bySource.scraped_at} con ${bySource.total} proyecto(s). No hace falta refrescar de nuevo por ahora.`;
+      }
+      try {
+        const partes = [];
+        if (src === "nexo" || src === "todo") {
+          const r = await refreshMarketData();
+          partes.push(r.projects?.ok
+            ? `Nexo: ${r.projects.total} proyectos nuevos.`
+            : `Nexo cayó a caché (${r.projects?.reason || "scrape falló"}); última data: ${r.projects?.last_update || "?"}.`);
+        }
+        if (src === "urbania" || src === "sbs" || src === "todo") {
+          const { runScraperAgent } = await import("./scrapers/index.js");
+          const sources = src === "todo" ? ["urbania", "sbs"] : [src];
+          const rr = await runScraperAgent({ sources });
+          partes.push((rr.results || []).map(x => `${x.source}: ${x.ok ? x.count : "0"}`).join(" · ") || "scrape hecho");
+        }
+        return partes.length ? `Listo, refresqué Radar. ${partes.join(" ")}` : "No reconocí esa fuente (probá nexo, urbania, sbs o todo).";
+      } catch (e) {
+        return `Intenté refrescar Radar (${src}) y falló: ${e.message}. La data anterior sigue disponible.`;
+      }
     }
 
     case "agents_status": {
