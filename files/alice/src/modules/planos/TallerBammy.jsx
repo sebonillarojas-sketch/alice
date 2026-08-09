@@ -2,7 +2,7 @@
 // encima (calcar) + notas + chat con Bammy. Look Diagramatic: islas flotantes, barra
 // compacta y cerrable, zoom. La corrección se guarda y Bammy aprende.
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Pencil, Minus, ArrowUpRight, Square, Circle, Eraser, Undo2, Trash2, ZoomIn, ZoomOut, MessageSquare, Send, X, ChevronLeft, StickyNote } from "lucide-react";
+import { Pencil, Minus, ArrowUpRight, Square, Circle, Eraser, Undo2, Trash2, ZoomIn, ZoomOut, MessageSquare, Send, X, ChevronLeft, StickyNote } from "lucide-react";
 import { ALICIA_URL } from "../../lib/brain.js";
 
 const C = {
@@ -186,7 +186,7 @@ export default function TallerBammy() {
       {/* header */}
       <div className="flex items-center justify-between px-4 lg:px-6 py-3 flex-wrap gap-2" style={{ borderBottom: `1px solid ${C.lineSoft}`, background: C.paper }}>
         <div className="flex items-center gap-3 min-w-0">
-          <div style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: C.bammy + "20", border: `1px solid ${C.bammy}40`, borderRadius: 2 }}><Bot size={15} style={{ color: C.bammy }} /></div>
+          <img src="/bammys/master-planner.gif" alt="Bammy" width={28} height={28} style={{ borderRadius: "50%", flexShrink: 0 }} />
           <div className="flex items-center gap-2 flex-wrap">
             <span style={{ fontSize: 13, fontWeight: 600 }}>Taller de Bammy</span>
             <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 10, background: C.lineSoft, color: C.muted, fontWeight: 700, fontFamily: "ui-monospace,monospace" }}>v2</span>
@@ -212,7 +212,7 @@ export default function TallerBammy() {
           {loading ? <div style={{ color: C.muted, marginTop: 60, fontSize: 12.5 }}>Cargando el taller…</div>
             : !unit ? (
               <div style={{ color: C.muted, marginTop: 70, textAlign: "center", maxWidth: 420 }}>
-                <div style={{ width: 54, height: 54, margin: "0 auto 12px", background: C.bammy + "22", border: `1px solid ${C.bammy}55`, display: "flex", alignItems: "center", justifyContent: "center", animation: "taller-morph 8s ease-in-out infinite" }}><Bot size={22} style={{ color: C.bammy }} /></div>
+                <img src="/bammys/master-planner.gif" alt="Bammy" width={56} height={56} style={{ borderRadius: "50%", margin: "0 auto 12px", display: "block" }} />
                 <div style={{ fontWeight: 600, color: C.ink, fontSize: 13.5 }}>Todavía no colgué distribuciones.</div>
                 <div style={{ fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>Cuando termine mi estudio nocturno, cuelgo acá mis 3 tipologías para que las corrijas.</div>
                 {err && <div style={{ color: C.brick, fontSize: 11.5, marginTop: 10 }}>{err}</div>}
@@ -269,7 +269,7 @@ export default function TallerBammy() {
 
         {/* Bammy chiquito animado (abajo-izq) */}
         <button onClick={() => setChatOpen(true)} title="Chatear con Bammy" style={{ position: "absolute", bottom: 16, left: 16, zIndex: 20, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px 6px 6px", cursor: "pointer", ...ISLAND }}>
-          <span style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: `radial-gradient(circle at 35% 30%, ${C.bammy}55, ${C.bammy}22)`, border: `1px solid ${C.bammy}66`, animation: "taller-morph 7s ease-in-out infinite, taller-float 4.5s ease-in-out infinite" }}><Bot size={15} style={{ color: C.bammy }} /></span>
+          <img src="/bammys/master-planner.gif" alt="Bammy" width={30} height={30} style={{ borderRadius: "50%", flexShrink: 0, animation: "taller-float 4.5s ease-in-out infinite" }} />
           <span style={{ textAlign: "left", lineHeight: 1.15 }}>
             <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.ink }}>Bammy</span>
             <span style={{ display: "block", fontSize: 9.5, color: C.muted }}>{chatBusy ? "pensando…" : "hablá conmigo"}</span>
@@ -298,7 +298,7 @@ export default function TallerBammy() {
         {chatOpen && (
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 30, width: 320, maxWidth: "88%", background: C.paper, borderLeft: `1px solid ${C.line}`, display: "flex", flexDirection: "column", boxShadow: "-6px 0 20px rgba(0,0,0,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: `1px solid ${C.lineSoft}` }}>
-              <span style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", background: C.bammy + "22", border: `1px solid ${C.bammy}55`, animation: "taller-morph 7s ease-in-out infinite" }}><Bot size={13} style={{ color: C.bammy }} /></span>
+              <img src="/bammys/master-planner.gif" alt="Bammy" width={24} height={24} style={{ borderRadius: "50%", flexShrink: 0 }} />
               <span style={{ fontSize: 12.5, fontWeight: 700, flex: 1 }}>Bammy</span>
               <button onClick={() => setChatOpen(false)} style={{ ...iconBtn(false), width: 24, height: 24, color: C.muted }}><X size={15} /></button>
             </div>
