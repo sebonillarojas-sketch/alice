@@ -1595,7 +1595,7 @@ app.get("/api/agents/studies", (req, res) => {
 });
 
 // Sebastian guarda una correccion (imagen anotada + notas) sobre una unidad.
-app.post("/api/agents/correction", (req, res) => {
+app.post("/api/agents/correction", async (req, res) => {
   try {
     const { study_id = null, unidad = "", image = "", notas = "", veredicto = "a_corregir" } = req.body || {};
     if (!image && !notas) return res.status(400).json({ error: "image o notas requerido" });
@@ -1603,6 +1603,12 @@ app.post("/api/agents/correction", (req, res) => {
       `INSERT INTO bammy_corrections (study_id, unidad, image, notas, veredicto) VALUES (?,?,?,?,?)`,
       [study_id, unidad, image, notas, veredicto]
     );
+    try {
+      const { proposeLesson } = await import("./lessons.js");
+      const { lessonFromCorrection } = await import("./lesson-capture.js");
+      const args = lessonFromCorrection({ unidad, notas, veredicto, study_id });
+      if (args) { const { getDB } = await import("./db.js"); proposeLesson(getDB(), args); }
+    } catch (e) { console.error("captura de lección (corrección) falló:", e.message); }
     res.json({ ok: true, id: lastID });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

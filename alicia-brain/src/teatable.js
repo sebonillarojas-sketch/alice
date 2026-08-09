@@ -119,6 +119,9 @@ Recibís el estado crudo del sistema y escribís un reporte ejecutivo EN ESPAÑO
 ## Recomendación de la mesa
 [1-3 acciones concretas para Sebastián, en orden de prioridad.]
 
+## Lecciones
+[0-5 bullets con lecciones accionables para la constelación de agentes, en base a lo observado esta semana (patrones, errores repetidos, correcciones). Si no hay ninguna, decilo o dejá la sección vacía — no inventes.]
+
 Tono: directo, cálido, cero relleno. Máximo ~350 palabras.`;
 
   let report;
@@ -133,6 +136,13 @@ Tono: directo, cálido, cero relleno. Máximo ~350 palabras.`;
   } catch (e) {
     report = `# Estado del sistema\n\n(Claude no disponible: ${e.message})\n\nChecks fallando: ${failedChecks.map(c => c.label).join(", ") || "ninguno"}\nFindings abiertos: ${openFindings.length}`;
   }
+
+  try {
+    const { proposeLesson } = await import("./lessons.js");
+    const { lessonsFromTeaTable } = await import("./lesson-capture.js");
+    const { getDB } = await import("./db.js");
+    for (const args of lessonsFromTeaTable(report)) proposeLesson(getDB(), args);
+  } catch (e) { console.error("captura de lecciones (tea-table) falló:", e.message); }
 
   const result = failedChecks.length > 0 || openFindings.some(f => f.severity === "critical") ? "issues" : "ok";
   const summary = `${failedChecks.length} check(s) fallando · ${openFindings.length} finding(s) abiertos`;

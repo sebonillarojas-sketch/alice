@@ -8,7 +8,7 @@ const path = process.env.SQLITE_PATH || "./alicia.db";
 
 let _db = null;
 
-function getDB() {
+export function getDB() {
   if (_db) return _db;
   _db = new DatabaseSync(path);
   _db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
