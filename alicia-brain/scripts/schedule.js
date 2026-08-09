@@ -9,8 +9,7 @@ export const SCHEDULE = [
   { id: "knave", script: "knave.js", args: [], everyMs: 1 * HOUR },
   { id: "knave-audit", script: "knave.js", args: ["audit"], everyMs: 1 * DAY },
   { id: "knave-review", script: "knave.js", args: ["review"], everyMs: 1 * WEEK },
-  { id: "bandersnatch", script: "bandersnatch.js", args: [], everyMs: 1 * DAY },
-  { id: "jabberwocky", script: "jabberwocky.js", args: [], everyMs: 1 * DAY },
+  { id: "clon-nocturno", script: "clon-nocturno.js", args: [], everyMs: 1 * DAY },
 ];
 
 export function dueJobs(schedule, state = {}, nowMs) {

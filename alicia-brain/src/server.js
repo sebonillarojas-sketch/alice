@@ -14,6 +14,7 @@ import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMark
 import { readFile } from "fs/promises";
 import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
+import { isSandbox } from "./sandbox.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -638,7 +639,16 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   let iterations = 0;
   const MAX_ITERATIONS = 8;
 
-  while (iterations < MAX_ITERATIONS) {
+  // Clon nocturno (SANDBOX=1): cortocircuito ANTES de tocar el LLM real — no gasta
+  // tokens/plata. El chaos/fuzz del clon igual ejercita todo el pipeline hasta acá
+  // (perfil, historial, memorias, tools disponibles); solo el modelo queda simulado.
+  // La condición extra en el `while` hace que el loop de tool-use ni arranque.
+  if (isSandbox()) {
+    console.log("[SANDBOX] no llamo al LLM, respuesta simulada");
+    finalText = "[SANDBOX] respuesta simulada";
+  }
+
+  while (!isSandbox() && iterations < MAX_ITERATIONS) {
     iterations++;
     let resp;
     try {
@@ -2343,9 +2353,15 @@ app.listen(PORT, async () => {
   refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
 
   // WhatsApp Web: el teléfono de Alicia, conectado 24/7 (QR en el panel si falta vincular)
-  import("./waweb.js")
-    .then(({ startWAWeb }) => startWAWeb(handleWAWebIncoming))
-    .catch(e => console.warn("WA Web no disponible:", e.message));
+  // CRÍTICO: NUNCA en sandbox — una 2ª sesión de Baileys chocaría con la de prod y le
+  // tumbaría el WhatsApp a Alicia (y podría responderle a un usuario real). El clon nocturno
+  // corre con SANDBOX=1 y NO debe tocar WhatsApp Web.
+  if (!isSandbox()) {
+    import("./waweb.js")
+      .then(({ startWAWeb }) => startWAWeb(handleWAWebIncoming))
+      .catch(e => console.warn("WA Web no disponible:", e.message));
+  }
 
-  startCron();
+  // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
+  if (!isSandbox()) startCron();
 });

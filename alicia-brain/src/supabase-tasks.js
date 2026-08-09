@@ -5,6 +5,7 @@
 //
 // Env: SUPABASE_URL + SUPABASE_SECRET_KEY (seteá la secret en Railway; no la hardcodees).
 import dotenv from "dotenv";
+import { isSandbox } from "./sandbox.js";
 dotenv.config();
 
 const URL = process.env.SUPABASE_URL || "https://apnzitklhxrcszectbxx.supabase.co";
@@ -54,6 +55,7 @@ function mapFields(f = {}) {
 }
 
 export async function createTask(input, userId) {
+  if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return { id: 0, ...(input || {}), _sandbox: true }; }
   const res = await fetch(REST, { method: "POST", headers: headers({ Prefer: "return=representation" }), body: JSON.stringify(toRow(input, userId)) });
   if (!res.ok) throw new Error(`Supabase insert ${res.status}: ${await res.text()}`);
   const [row] = await res.json();
@@ -61,6 +63,7 @@ export async function createTask(input, userId) {
 }
 
 export async function updateTask(id, fields) {
+  if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return { id: 0, ...(fields || {}), _sandbox: true }; }
   const res = await fetch(`${REST}?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: headers({ Prefer: "return=representation" }), body: JSON.stringify(mapFields(fields)) });
   if (!res.ok) throw new Error(`Supabase patch ${res.status}: ${await res.text()}`);
   const [row] = await res.json();
@@ -68,6 +71,7 @@ export async function updateTask(id, fields) {
 }
 
 export async function getTasks({ space, space_id, assignee, assignee_id, status, query } = {}) {
+  if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return []; }
   const qs = new URLSearchParams({ select: "*", order: "updated_at.desc", limit: "50" });
   const sp = space ?? space_id, as = assignee ?? assignee_id;
   if (sp) qs.set("space", `eq.${sp}`);
@@ -82,6 +86,7 @@ export async function getTasks({ space, space_id, assignee, assignee_id, status,
 }
 
 export async function deleteTask(id) {
+  if (isSandbox()) { console.log("[SANDBOX] no toco Supabase"); return true; }
   const res = await fetch(`${REST}?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: headers() });
   if (!res.ok) throw new Error(`Supabase delete ${res.status}: ${await res.text()}`);
   return true;

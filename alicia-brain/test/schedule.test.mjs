@@ -6,14 +6,13 @@ const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR, WEEK = 7 * DAY;
 
 test("SCHEDULE incluye scraper, cheshire y knave con cadencias correctas", () => {
   const byId = Object.fromEntries(SCHEDULE.map(j => [j.id, j]));
-  assert.equal(SCHEDULE.length, 7);
+  assert.equal(SCHEDULE.length, 6);
   assert.equal(byId["scraper"].everyMs, 6 * HOUR);
   assert.equal(byId["cheshire"].everyMs, 30 * MIN);
   assert.equal(byId["knave"].everyMs, 1 * HOUR);
   assert.equal(byId["knave-audit"].everyMs, 1 * DAY);
   assert.equal(byId["knave-review"].everyMs, 1 * WEEK);
-  assert.equal(byId["bandersnatch"].everyMs, 1 * DAY);
-  assert.equal(byId["jabberwocky"].everyMs, 1 * DAY);
+  assert.equal(byId["clon-nocturno"].everyMs, 1 * DAY);
 });
 
 test("dueJobs: un job que nunca corrió está vencido", () => {
