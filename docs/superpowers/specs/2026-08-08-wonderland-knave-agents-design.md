@@ -79,7 +79,7 @@ El self-update refresca código pero **no instala/retira launchd**. Sin shell, l
 ### ⚔️⚡ Bandersnatch + Jabberwocky — stubs (`scripts/bandersnatch.js`, `scripts/jabberwocky.js`)
 
 - Estructura completa (export `run*`, reporte a `agent_runs`), cuerpo **no-opea**: cada corrida escribe `agent_run` con `result:'skipped'`, `summary:"esperando clon nocturno — no corre contra prod"`.
-- Sin cron activo (no se registran en el bootstrap). El cockpit los muestra "en espera" en vez de simulados. Cuando exista el clon: rellenar cuerpo + activar, sin re-cablear.
+- Sí se programan y disparan a diario (igual que los demás agentes), y cada corrida reporta un `agent_run` "en espera" a Railway vía `buildSkippedReport()`, así el cockpit los lista en vez de no aparecer. El cuerpo permanece no-opeante hasta que exista el clon: rellenarlo + activarlo entonces, sin re-cablear el cron ni el reporte.
 
 ## Contrato común (patrón `whiterabbit.js` / `cheshire.js`)
 
