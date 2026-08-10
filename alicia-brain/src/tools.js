@@ -781,7 +781,9 @@ export async function executeTool(toolName, input, userId) {
       if (!lesson) return "¿Qué querés que aprenda exactamente? Decime la regla en una frase.";
       const { getDB } = await import("./db.js");
       const { proposeLesson } = await import("./lessons.js");
-      const scope = /^(agent:alicia|user:[a-z]+)$/.test(input.scope || "") ? input.scope : "agent:alicia";
+      // Solo scopes que después TIENEN superficie de aprobación (agent:alicia + user:sb);
+      // cualquier otro cae al default para no crear lecciones huérfanas que nadie ve.
+      const scope = /^(agent:alicia|user:sb)$/.test(input.scope || "") ? input.scope : "agent:alicia";
       proposeLesson(getDB(), { scope, source: "correction", trigger: `corrección de ${userId}`, lesson, risk_level: "L1" });
       return "Anotado 🧠 — lo dejé como propuesta. Cuando lo apruebes lo incorporo (no lo aplico solo).";
     }
