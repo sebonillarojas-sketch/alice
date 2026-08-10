@@ -398,6 +398,18 @@ export const ALICIA_TOOLS = [
     input_schema: { type: "object", properties: { id: { type: "integer", description: "El #id de la lección" } }, required: ["id"] },
   },
   {
+    name: "capture_lesson",
+    description: "Guardá como lección algo que te ENSEÑARON o CORRIGIERON sobre tu comportamiento ('la próxima hacé X', 'no era así, acordate de Y', 'siempre confirmá antes de…'). Queda como PROPUESTA (no se aplica sola: pasa por revisión y aprobación). Usala cuando te corrijan o te pidan recordar una regla de conducta — NO para datos puntuales (para eso está save_knowledge). Solo Sebastián y admins.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lesson: { type: "string", description: "La regla/lección en 1 oración, accionable." },
+        scope:  { type: "string", description: "Opcional. 'agent:alicia' (default, regla general de tu conducta) o 'user:sb' si es específica de cómo tratar a Sebastián." },
+      },
+      required: ["lesson"],
+    },
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -762,6 +774,16 @@ export async function executeTool(toolName, input, userId) {
       const { rejectLesson } = await import("./lessons.js");
       rejectLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
       return `Descarté la lección #${input.id}.`;
+    }
+
+    case "capture_lesson": {
+      const lesson = String(input.lesson || "").trim();
+      if (!lesson) return "¿Qué querés que aprenda exactamente? Decime la regla en una frase.";
+      const { getDB } = await import("./db.js");
+      const { proposeLesson } = await import("./lessons.js");
+      const scope = /^(agent:alicia|user:[a-z]+)$/.test(input.scope || "") ? input.scope : "agent:alicia";
+      proposeLesson(getDB(), { scope, source: "correction", trigger: `corrección de ${userId}`, lesson, risk_level: "L1" });
+      return "Anotado 🧠 — lo dejé como propuesta. Cuando lo apruebes lo incorporo (no lo aplico solo).";
     }
 
     case "use_skill": {
