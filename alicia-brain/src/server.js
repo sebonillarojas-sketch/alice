@@ -492,7 +492,7 @@ const COLLAB_TOOLS = new Set([
 // archivos ajenos) pasa por la aprobación del CEO antes de ejecutarse.
 const ADMIN_IDS = new Set(["vd"]);
 const isAdmin = (uid) => ADMIN_IDS.has(uid);
-const ADMIN_TOOLS = new Set([...COLLAB_TOOLS, "gmail_send", "dropbox_move", "ask_agent", "run_agent"]);
+const ADMIN_TOOLS = new Set([...COLLAB_TOOLS, "gmail_send", "dropbox_move", "ask_agent", "run_agent", "capture_lesson"]);
 // Acciones de un admin que NO se ejecutan solas: requieren OK del CEO.
 const SENSITIVE_ADMIN = new Set(["gmail_send", "dropbox_move"]);
 

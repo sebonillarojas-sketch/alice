@@ -398,6 +398,18 @@ export const ALICIA_TOOLS = [
     input_schema: { type: "object", properties: { id: { type: "integer", description: "El #id de la lección" } }, required: ["id"] },
   },
   {
+    name: "capture_lesson",
+    description: "Guardá como lección algo que te ENSEÑARON o CORRIGIERON sobre tu comportamiento ('la próxima hacé X', 'no era así, acordate de Y', 'siempre confirmá antes de…'). Queda como PROPUESTA (no se aplica sola: pasa por revisión y aprobación). Usala cuando te corrijan o te pidan recordar una regla de conducta — NO para datos puntuales (para eso está save_knowledge). Solo Sebastián y admins.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lesson: { type: "string", description: "La regla/lección en 1 oración, accionable." },
+        scope:  { type: "string", description: "Opcional. 'agent:alicia' (default, regla general de tu conducta) o 'user:sb' si es específica de cómo tratar a Sebastián." },
+      },
+      required: ["lesson"],
+    },
+  },
+  {
     name: "use_skill",
     description: "Carga el playbook completo de una skill enseñada por el equipo. Tu system prompt lista las skills disponibles — cuando la tarea coincida con una, cargala ANTES de responder y seguí sus instrucciones al pie de la letra.",
     input_schema: {
@@ -762,6 +774,25 @@ export async function executeTool(toolName, input, userId) {
       const { rejectLesson } = await import("./lessons.js");
       rejectLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
       return `Descarté la lección #${input.id}.`;
+    }
+
+    case "capture_lesson": {
+      const lesson = String(input.lesson || "").trim();
+      if (!lesson) return "¿Qué querés que aprenda exactamente? Decime la regla en una frase.";
+      const { getDB } = await import("./db.js");
+      const { proposeLesson, runGateOnLesson } = await import("./lessons.js");
+      const { HARD_RULES } = await import("./hard-rules.js");
+      // Solo scopes que después TIENEN superficie de aprobación (agent:alicia + user:sb);
+      // cualquier otro cae al default para no crear lecciones huérfanas que nadie ve.
+      const scope = /^(agent:alicia|user:sb)$/.test(input.scope || "") ? input.scope : "agent:alicia";
+      const { id } = proposeLesson(getDB(), { scope, source: "correction", trigger: `corrección de ${userId}`, lesson, risk_level: "L1" });
+      // Una corrección humana DIRECTA es evidencia suficiente: se corre el gate con minEvidence=1
+      // (mantiene el chequeo de reglas duras y el nivel de riesgo) para que aparezca YA para aprobar,
+      // sin esperar 3 repeticiones. Aprobar/aplicar sigue siendo un paso humano.
+      const res = runGateOnLesson(getDB(), id, { hardRules: HARD_RULES, minEvidence: 1 });
+      if (res.status === "rejected") return `No la puedo tomar: choca con una regla dura (${res.reason || "seguridad/autoridad/RNE"}).`;
+      if (res.status === "applied") return "Anotado y aplicado 🧠 (era de bajo riesgo).";
+      return "Anotado 🧠 — te la dejé lista para aprobar. Decime 'aplicá esa' (o miralas con review_lessons) y la incorporo.";
     }
 
     case "use_skill": {

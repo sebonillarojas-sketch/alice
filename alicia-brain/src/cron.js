@@ -101,6 +101,20 @@ export function startCron() {
     } catch (e) { console.error("gate-pass diario error:", e.message); }
   }, { timezone: "America/Lima" });
 
+  // Loop de aprendizaje · auto-reflexión semanal (lunes 7:00 Lima, antes del Tea Table).
+  // Cada agente mira su actividad reciente y propone a lo sumo una lección (source reflection).
+  // El gate-pass diario las recoge; nada se auto-aplica. Guard sandbox.
+  cron.schedule("0 7 * * 1", async () => {
+    try {
+      const { isSandbox } = await import("./sandbox.js");
+      if (isSandbox()) return;
+      const { getDB } = await import("./db.js");
+      const { runReflectionPass } = await import("./reflection.js");
+      const r = await runReflectionPass(getDB());
+      console.log(`🧠 auto-reflexión semanal · ${JSON.stringify(r)}`);
+    } catch (e) { console.error("auto-reflexión error:", e.message); }
+  }, { timezone: "America/Lima" });
+
   // Cerebro → Dropbox · espejo nocturno 3:30am Lima
   cron.schedule("30 3 * * *", async () => {
     console.log("🧠 Cron: export cerebro a Dropbox");
