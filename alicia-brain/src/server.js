@@ -1625,6 +1625,21 @@ app.post("/api/agents/notify", requireAgentKey, async (req, res) => {
   }
 });
 
+// Disparo manual del briefing matutino del equipo (el cron lo corre solo, 9:00am Lima).
+// `userId` opcional acota el envío a una sola persona: sirve para probarlo en producción
+// con datos reales sin escribirle a todo el equipo.
+app.post("/api/agents/team-briefing/run", requireAgentKey, async (req, res) => {
+  try {
+    const { userId = null } = req.body || {};
+    const { runTeamBriefing } = await import("./team-briefing.js");
+    const r = await runTeamBriefing({ db: getDB(), only: userId });
+    console.log(`📋 /api/agents/team-briefing/run${userId ? ` (solo ${userId})` : ""} · ${JSON.stringify(r)}`);
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Taller de Bammy ──────────────────────────────────────────────────────────
 // Bammy CUELGA sus distribuciones del dia (una fila por dia, con sus unidades).
 // units = [{ unidad:"1D"|"2D"|"3D", brief:string, svg:string }].

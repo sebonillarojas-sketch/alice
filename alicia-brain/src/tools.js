@@ -14,12 +14,13 @@ export function readConversation(db, personaId, limit = 20) {
   return rows.reverse();
 }
 
-export function resolvePhone(db, personaId) {
+// `env` es inyectable sólo para poder testear el fallback sin tocar process.env.
+export function resolvePhone(db, personaId, env = process.env) {
   const row = db.prepare("SELECT phone FROM profiles WHERE user_id = ?").get(personaId);
   // Fallback al env PHONE_<id>: los números del equipo (y el de Sebastián) viven ahí,
   // no siempre en la tabla profiles. Sin este fallback, send_document/send_whatsapp
   // decían "no tengo tu número" a Sebastián mismo (su número está en PHONE_sb).
-  return row?.phone || process.env[`PHONE_${personaId}`] || null;
+  return row?.phone || env[`PHONE_${personaId}`] || null;
 }
 
 function mimeFromName(name = "") {

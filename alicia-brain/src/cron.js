@@ -4,10 +4,31 @@ import { runDailyBriefing } from "./briefing.js";
 import { refreshMarketData, refreshRentalListings } from "./market.js";
 
 export function startCron() {
-  // Briefing diario a las 7:00am hora Lima (UTC-5 → 12:00 UTC)
-  cron.schedule("0 12 * * *", async () => {
+  // Briefing diario a las 9:00am hora Lima. La expresión va en hora LOCAL: node-cron
+  // ya hace la conversión con el `timezone`. Antes decía "0 12" (pre-convertido a UTC
+  // a mano) y encima pasaba America/Lima, así que se disparaba al mediodía de Lima.
+  //
+  // Mismo horario, dos mensajes con propósito distinto: el ejecutivo para Sebastián
+  // (mercado + sugerencia de Alicia) y el matutino de cada miembro del equipo con sus
+  // tareas, reuniones y correos. Van en serie para no pegarle al ERP en paralelo.
+  cron.schedule("0 9 * * *", async () => {
     console.log("⏰ Cron: briefing diario");
     await runDailyBriefing().catch(e => console.error("Briefing error:", e.message));
+
+    try {
+      const { isSandbox } = await import("./sandbox.js");
+      if (isSandbox()) return;
+      const { getDB, query } = await import("./db.js");
+      const today = new Date().toISOString().slice(0, 10);
+      const last = query("SELECT value FROM app_settings WHERE key='team_briefing_date'").rows[0]?.value;
+      if (last === today) return; // ya salió hoy
+      const { runTeamBriefing } = await import("./team-briefing.js");
+      const r = await runTeamBriefing({ db: getDB() });
+      if (r.sent > 0) {
+        query(`INSERT INTO app_settings (key,value,updated_at) VALUES ('team_briefing_date',?,datetime('now'))
+               ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`, [today]);
+      }
+    } catch (e) { console.error("Briefing equipo error:", e.message); }
   }, { timezone: "America/Lima" });
 
   // Market data refresh cada hora (White Rabbit)
@@ -150,5 +171,5 @@ export function startCron() {
     await refreshRentalListings().catch(e => console.error("Rental listings boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 7am · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · gate-pass 6:30am · cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 9am (ejecutivo + equipo) · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · gate-pass 6:30am · cerebro→Dropbox 3:30am");
 }

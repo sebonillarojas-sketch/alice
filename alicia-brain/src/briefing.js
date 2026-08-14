@@ -3,7 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { erp } from "./erp-client.js";
 import { googleCalendar, googleAvailable } from "./integrations/google.js";
 import { tavily, tavilyAvailable } from "./integrations/tavily.js";
-import { query } from "./db.js";
+import { query, getDB } from "./db.js";
+import { resolvePhone } from "./tools.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -87,28 +88,20 @@ Armá el briefing: calendario, alertas, noticias relevantes, y una sugerencia pr
   console.log("📋 Briefing generado:\n", briefing);
 
   // 6. Enviar a Sebastián por WhatsApp
-  const sbPhone = process.env.PHONE_SB;
+  // Con resolvePhone, no armando "PHONE_" + id a mano: en producción las variables
+  // son minúsculas (PHONE_sb), así que el viejo process.env.PHONE_SB daba undefined
+  // y el briefing se generaba todos los días para no enviarse nunca.
+  const sbPhone = resolvePhone(getDB(), "sb");
   if (sbPhone) {
     await sendWhatsApp(sbPhone, briefing);
     console.log("✅ Briefing enviado a Sebastián por WhatsApp");
+  } else {
+    console.error("⚠️ Briefing NO enviado: no hay teléfono para sb (PHONE_sb / profiles.phone)");
   }
 
-  // 7. Alertas a colaboradores con tareas vencidas
-  const byAssignee = {};
-  for (const t of overdue) {
-    if (!t.assignee_id) continue;
-    if (!byAssignee[t.assignee_id]) byAssignee[t.assignee_id] = [];
-    byAssignee[t.assignee_id].push(t);
-  }
-  for (const [userId, tasks] of Object.entries(byAssignee)) {
-    const phone = process.env[`PHONE_${userId.toUpperCase()}`];
-    if (!phone) continue;
-    const { rows: [profile] } = query("SELECT name FROM profiles WHERE user_id = ?", [userId]);
-    const nombre = profile?.name?.split(" ")[0] || userId;
-    const msg = `Hola ${nombre} 👋 Tenés ${tasks.length} tarea${tasks.length > 1 ? "s" : ""} vencida${tasks.length > 1 ? "s" : ""}:\n${tasks.map(t => `• ${t.title}`).join("\n")}\n\n¿Cómo va? ¿Necesitás algo?`;
-    await sendWhatsApp(phone, msg);
-    console.log(`✅ Alerta enviada a ${nombre}`);
-  }
+  // Las tareas vencidas del equipo ya no se avisan acá: van dentro del briefing
+  // matutino de cada persona (team-briefing.js), que corre a la misma hora. Mandarlas
+  // en los dos lados le llegaría dos veces a la misma gente.
 
   return briefing;
 }
