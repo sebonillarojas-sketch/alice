@@ -1,0 +1,40 @@
+{
+  "id": "2026-08-16-u01",
+  "nombre": "1D/1B amplio, fachada única frente ancho — dormitorio y sala-comedor comparten frente, terraza-porche + baño de doble acceso (suite/visita), banda húmeda posterior corrida",
+  "area_techada": 53.04,
+  "frente_m": 7.80,
+  "fondo_m": 6.80,
+  "ambientes": [
+    { "nombre": "dormitorio principal", "poligono": [[0.25,0.25],[3.25,0.25],[3.25,3.80],[0.25,3.80]], "zona": "intima", "luz": true },
+    { "nombre": "vestidor", "poligono": [[0.25,3.95],[3.25,3.95],[3.25,5.10],[0.25,5.10]], "zona": "intima", "luz": false },
+    { "nombre": "baño 1", "poligono": [[0.25,5.25],[3.25,5.25],[3.25,6.55],[0.25,6.55]], "zona": "servicio", "luz": false },
+    { "nombre": "sala-comedor", "poligono": [[3.40,0.25],[6.20,0.25],[6.20,6.55],[3.40,6.55]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[6.35,0.25],[7.55,0.25],[7.55,3.80],[6.35,3.80]], "zona": "social", "luz": false },
+    { "nombre": "lavandería", "poligono": [[6.35,3.95],[7.55,3.95],[7.55,6.55],[6.35,6.55]], "zona": "servicio", "luz": false }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [7.80,0], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,6.80], "espesor": 0.25, "portante": true},
+    {"a": [7.80,0], "b": [7.80,6.80], "espesor": 0.25, "portante": true},
+    {"a": [0,6.80], "b": [7.80,6.80], "espesor": 0.25, "portante": true},
+    {"a": [3.325,0], "b": [3.325,6.80], "espesor": 0.15, "portante": false},
+    {"a": [6.275,0], "b": [6.275,6.80], "espesor": 0.15, "portante": false},
+    {"a": [0.25,3.875], "b": [3.25,3.875], "espesor": 0.15, "portante": false},
+    {"a": [6.35,3.875], "b": [7.55,3.875], "espesor": 0.15, "portante": false},
+    {"a": [0.25,5.175], "b": [3.25,5.175], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "dormitorio principal", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "baño 1", "ancho": 0.70},
+    {"de": "sala-comedor", "a": "baño 1", "ancho": 0.70},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "lavandería", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 1.60, "alto": 2.10, "alfeizar": 0.00}
+  ],
+  "muro_humedo": {"a": [0,6.80], "b": [7.80,6.80]}
+}
