@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 844 516" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="844" height="516" fill="#ffffff"/>
+<path d="M 77.5,77.5 L 299.5,77.5 L 299.5,269.5 L 77.5,269.5 Z" fill="#eaf1fb" stroke="none"/>
+<text x="188.5" y="167.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">dormitorio principal</text>
+<text x="188.5" y="183.5" font-size="11" text-anchor="middle" fill="#555">11.8 m²</text>
+<path d="M 308.5,77.5 L 506.5,77.5 L 506.5,269.5 L 410.5,269.5 L 410.5,398.5 L 212.5,398.5 L 212.5,278.5 L 308.5,278.5 Z" fill="#fdf3e7" stroke="none"/>
+<text x="359.5" y="232.0" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">sala-comedor</text>
+<text x="359.5" y="248.0" font-size="11" text-anchor="middle" fill="#555">17.4 m²</text>
+<path d="M 77.5,278.5 L 203.5,278.5 L 203.5,398.5 L 77.5,398.5 Z" fill="#eef3ea" stroke="none"/>
+<text x="140.5" y="332.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">baño 1</text>
+<text x="140.5" y="348.5" font-size="11" text-anchor="middle" fill="#555">4.2 m²</text>
+<path d="M 419.5,278.5 L 506.5,278.5 L 506.5,398.5 L 419.5,398.5 Z" fill="#eef3ea" stroke="none"/>
+<text x="463.0" y="332.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">lavandería</text>
+<text x="463.0" y="348.5" font-size="11" text-anchor="middle" fill="#555">2.9 m²</text>
+<line x1="70.0" y1="70.0" x2="514.0" y2="70.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="70.0" x2="70.0" y2="406.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="514.0" y1="70.0" x2="514.0" y2="406.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="406.0" x2="514.0" y2="406.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="304.0" y1="77.5" x2="304.0" y2="269.5" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="70.0" y1="274.0" x2="299.5" y2="274.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="410.5" y1="274.0" x2="514.0" y2="274.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="208.0" y1="278.5" x2="208.0" y2="398.5" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="415.0" y1="278.5" x2="415.0" y2="398.5" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="293.5" y1="70.0" x2="425.5" y2="70.0" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="317.5" y1="406.0" x2="401.5" y2="406.0" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="134.5" y1="70.0" x2="242.5" y2="70.0" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="332.5" y1="70.0" x2="386.5" y2="70.0" stroke="#ffffff" stroke-width="7"/>
+<path d="M 332.5,70.0 L 386.5,70.0" stroke="#8a6d3b" stroke-width="2" fill="none"/>
+<line x1="299.5" y1="149.5" x2="299.5" y2="197.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 299.5,149.5 L 347.5,149.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 299.5,149.5 A 48.0,48.0 0 0 1 347.5,149.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="299.5" y1="149.5" x2="347.5" y2="149.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="203.5" y1="317.5" x2="203.5" y2="359.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 203.5,317.5 L 245.5,317.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 203.5,317.5 A 42.0,42.0 0 0 1 245.5,317.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="203.5" y1="317.5" x2="245.5" y2="317.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="119.5" y1="278.5" x2="161.5" y2="278.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 119.5,278.5 L 119.5,320.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 119.5,278.5 A 42.0,42.0 0 0 1 119.5,236.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="119.5" y1="278.5" x2="119.5" y2="236.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="439.0" y1="278.5" x2="487.0" y2="278.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 439.0,278.5 L 439.0,326.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 439.0,278.5 A 48.0,48.0 0 0 1 439.0,230.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="439.0" y1="278.5" x2="439.0" y2="230.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="70.0" y1="48.0" x2="514.0" y2="48.0" stroke="#888" stroke-width="1"/>
+<text x="292.0" y="42.0" font-size="12" text-anchor="middle" fill="#666">frente 7.40 m</text>
+<line x1="48.0" y1="70.0" x2="48.0" y2="406.0" stroke="#888" stroke-width="1"/>
+<text x="40.0" y="238.0" font-size="12" text-anchor="middle" fill="#666" transform="rotate(-90 40.0 238.0)">fondo 5.60 m</text>
+<text x="534.0" y="30" font-size="13" font-weight="700" fill="#111">2026-08-24-u01</text>
+<text x="534.0" y="50" font-size="10.5" fill="#333">1D/1B VIS multifamiliar en el piso </text>
+<text x="534.0" y="64" font-size="10.5" fill="#333">regulatorio del DS </text>
+<text x="534.0" y="78" font-size="10.5" fill="#333">005-2025-VIVIENDA (≥40 m² sin </text>
+<text x="534.0" y="92" font-size="10.5" fill="#333">ampliación), fachada única, </text>
+<text x="534.0" y="106" font-size="10.5" fill="#333">sala-comedor con cocina americana </text>
+<text x="534.0" y="120" font-size="10.5" fill="#333">rotulada, baño de doble acceso </text>
+<text x="534.0" y="134" font-size="10.5" fill="#333">suite/visita, banda húmeda </text>
+<text x="534.0" y="148" font-size="10.5" fill="#333">posterior corrida hacia pozo </text>
+<text x="534.0" y="162" font-size="10.5" fill="#333">compartido, Comas/Lima Norte </text>
+<text x="534.0" y="182" font-size="11" fill="#111">área techada: 41.4 m²</text>
+</svg>
