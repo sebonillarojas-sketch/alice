@@ -1,0 +1,398 @@
+{
+  "id": "2026-08-29-u01",
+  "nombre": "1D/1B amplio, fachada viva contra el patio de recibo de un lote de pasaje tipo quinta (sin frente directo a la calle) — San Miguel, Lima Moderna",
+  "area_techada": 52.92,
+  "frente_m": 8.4,
+  "fondo_m": 6.3,
+  "ambientes": [
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [
+        [
+          0.25,
+          0.25
+        ],
+        [
+          3.25,
+          0.25
+        ],
+        [
+          3.25,
+          3.55
+        ],
+        [
+          0.25,
+          3.55
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "sala-comedor",
+      "poligono": [
+        [
+          3.4,
+          0.25
+        ],
+        [
+          6.8,
+          0.25
+        ],
+        [
+          6.8,
+          3.55
+        ],
+        [
+          3.4,
+          3.55
+        ]
+      ],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "terraza",
+      "poligono": [
+        [
+          6.95,
+          0.25
+        ],
+        [
+          8.15,
+          0.25
+        ],
+        [
+          8.15,
+          3.55
+        ],
+        [
+          6.95,
+          3.55
+        ]
+      ],
+      "zona": "social",
+      "luz": false
+    },
+    {
+      "nombre": "vestidor",
+      "poligono": [
+        [
+          0.25,
+          3.7
+        ],
+        [
+          2.05,
+          3.7
+        ],
+        [
+          2.05,
+          6.05
+        ],
+        [
+          0.25,
+          6.05
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [
+        [
+          2.2,
+          3.7
+        ],
+        [
+          3.4,
+          3.7
+        ],
+        [
+          3.4,
+          6.05
+        ],
+        [
+          2.2,
+          6.05
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "hall",
+      "poligono": [
+        [
+          3.55,
+          3.7
+        ],
+        [
+          4.75,
+          3.7
+        ],
+        [
+          4.75,
+          6.05
+        ],
+        [
+          3.55,
+          6.05
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "depósito",
+      "poligono": [
+        [
+          4.9,
+          3.7
+        ],
+        [
+          8.15,
+          3.7
+        ],
+        [
+          8.15,
+          4.8
+        ],
+        [
+          4.9,
+          4.8
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavandería",
+      "poligono": [
+        [
+          4.9,
+          4.95
+        ],
+        [
+          8.15,
+          4.95
+        ],
+        [
+          8.15,
+          6.05
+        ],
+        [
+          4.9,
+          6.05
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    }
+  ],
+  "muros": [
+    {
+      "a": [
+        0,
+        0
+      ],
+      "b": [
+        8.4,
+        0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0,
+        6.3
+      ],
+      "b": [
+        8.4,
+        6.3
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0,
+        0
+      ],
+      "b": [
+        0,
+        6.3
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        8.4,
+        0
+      ],
+      "b": [
+        8.4,
+        6.3
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        3.325,
+        0.0
+      ],
+      "b": [
+        3.325,
+        3.625
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.875,
+        0.0
+      ],
+      "b": [
+        6.875,
+        3.625
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.125,
+        3.625
+      ],
+      "b": [
+        2.125,
+        6.3
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.475,
+        3.625
+      ],
+      "b": [
+        3.475,
+        6.3
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.825,
+        3.625
+      ],
+      "b": [
+        4.825,
+        6.3
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        3.625
+      ],
+      "b": [
+        8.4,
+        3.625
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.825,
+        4.875
+      ],
+      "b": [
+        8.4,
+        4.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    }
+  ],
+  "puertas": [
+    {
+      "de": "exterior",
+      "a": "sala-comedor",
+      "ancho": 0.9
+    },
+    {
+      "de": "sala-comedor",
+      "a": "dormitorio principal",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "terraza",
+      "ancho": 1.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "hall",
+      "ancho": 0.8
+    },
+    {
+      "de": "dormitorio principal",
+      "a": "vestidor",
+      "ancho": 0.8
+    },
+    {
+      "de": "vestidor",
+      "a": "baño 1",
+      "ancho": 0.7
+    },
+    {
+      "de": "hall",
+      "a": "baño 1",
+      "ancho": 0.7
+    },
+    {
+      "de": "hall",
+      "a": "depósito",
+      "ancho": 0.8
+    },
+    {
+      "de": "hall",
+      "a": "lavandería",
+      "ancho": 0.8
+    }
+  ],
+  "ventanas": [
+    {
+      "ambiente": "dormitorio principal",
+      "ancho": 1.8,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 2.2,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    }
+  ],
+  "muro_humedo": {
+    "a": [
+      0,
+      6.3
+    ],
+    "b": [
+      8.4,
+      6.3
+    ]
+  }
+}
