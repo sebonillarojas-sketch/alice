@@ -1184,10 +1184,13 @@ Esperado: al menos una identidad `Developer ID Application: ... (TEAMID)`.
 
 ```bash
 mkdir -p desktop/build
+# En dos pasos a propósito: encadenar --padToHeightWidth con --resampleHeightWidth
+# en una sola invocación NO funciona — sips aplica el pad y devuelve 2000x2000,
+# ignorando el resample. Verificado el 30 ago 2026.
 sips -s format png files/alice/public/bam-logo.png \
      --padToHeightWidth 2000 2000 --padColor FAF9F7 \
-     --resampleHeightWidth 1024 1024 \
      --out desktop/build/icon.png
+sips --resampleHeightWidth 1024 1024 desktop/build/icon.png --out desktop/build/icon.png
 file desktop/build/icon.png
 ```
 

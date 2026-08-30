@@ -234,12 +234,22 @@ Se sigue la convención del repo (`node --test`; la suite del brain está 121/12
 da error: simplemente no llegan eventos. Mitigación: es lo primerísimo que se construye y verifica,
 antes de escribir una línea de Electron.
 
-**R2 · La notificación llega en vivo pero la tarea no.** `useERPSync` hidrata **una sola vez al
-cargar** (`useERPSync.js`, *"Solo corre una vez"*) y no hay Realtime ni polling sobre `tasks`. Una
-app abierta desde la mañana recibiría el banner, el usuario haría clic, `#/task/123` dispararía
-`setDetailTaskId(123)` — y esa tarea no está en su estado local. Panel vacío: la notificación
-funcionando perfecto y la app pareciendo rota. Mitigación en Fase 1: refetch de esa tarea antes de
-abrir el panel (C3).
+**R2 · ~~La notificación llega en vivo pero la tarea no.~~ CORREGIDO el 30 ago 2026 —
+este riesgo era falso.** El spec original afirmaba que no había sincronización en vivo de
+tareas, deduciéndolo de `useERPSync` (*"Solo corre una vez"*). Eso es cierto de
+`useERPSync`, pero ese es el camino viejo hacia `erp-backend`, **no** el de Supabase. La
+sincronización en vivo **ya existía antes de este proyecto**: `db.subscribeTasks`
+(`lib/supabase.js:50`) se suscribe a `postgres_changes` sobre `tasks` con `event: "*"`, y
+`HyggeOS.jsx` la monta (línea ~15079). Las tareas de otras personas aparecen solas.
+
+El refetch puntual de C3 se mantiene igual: es redundante en el caso normal, pero
+defensivo si el canal de `tasks` estuviera silenciado, y cuesta una consulta por
+notificación.
+
+Ese mismo archivo destapó un riesgo **real** que el spec no había previsto: `subscribeTasks`
+documenta que hay que llamar a `supabase.realtime.setAuth(token)` **antes** de `.subscribe()`,
+porque con policies `to authenticated` un canal conectado como anon queda silenciado por RLS
+sin dar error. El canal de `notifications` debe hacer lo mismo.
 
 **R3 · Fatiga.** Si la Fase 1 sale ruidosa, el equipo apaga las notificaciones y las fases 2 y 3
 nacen muertas. Empezar con solo dos tipos de evento es la forma de calibrar el volumen con algo que
@@ -250,12 +260,10 @@ en la tabla y el banner es solo un aviso: nada depende de que se haya mostrado.
 
 ## Fases siguientes
 
-**Fase 2 · Sincronización en vivo del tablero — comprometida, no opcional.** Decisión del CEO
-(30 ago 2026): *"sin esto no está completo el app ni ALICE"*. R2 se mitiga en Fase 1 con un refetch
-puntual, pero eso es un parche: mientras el tablero no se actualice solo, dos personas trabajando a
-la vez siguen viendo estados distintos. Es proyecto propio porque hoy el estado vive en React con
-espejo en `localStorage` (`HyggeOS.jsx:15378`) y hacerlo bien exige resolver merges y conflictos
-entre clientes. **Arranca al terminar la Fase 1.**
+**Fase 2 · ~~Sincronización en vivo del tablero.~~ YA ESTABA CONSTRUIDA.** El CEO la marcó
+como imprescindible el 30 ago 2026 (*"sin esto no está completo el app ni ALICE"*) sobre la
+base del R2 de este spec, que resultó falso — ver arriba. `db.subscribeTasks` ya la
+implementa y `HyggeOS` ya la monta. No hay trabajo pendiente acá.
 
 **Fase 2b · Mensajes y menciones al servidor.**
 
