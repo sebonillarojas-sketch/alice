@@ -1,7 +1,10 @@
-// Envío saliente de WhatsApp — orden de canales:
-//   1. WA Web (waweb.js) — el teléfono propio de Alicia, sin límites de ventana/plantillas
-//   2. WA Cloud API (Meta directo)
-//   3. Twilio — solo fallback de transición; Sebastián decidió salir de Twilio (13 jul 2026).
+// Envío saliente de WhatsApp — único canal: Twilio.
+// Hubo dos intentos previos que ya no existen en este archivo: WA Web (Baileys,
+// el teléfono propio de Alicia) fue el canal original, y después se probó WA
+// Cloud API (Meta directo). Baileys se dejó de usar y Meta nunca se terminó de
+// configurar (Railway no tiene WA_PHONE_NUMBER_ID ni WA_ACCESS_TOKEN — cero
+// tráfico en logs). Twilio es el que factura y el que de hecho manda y recibe
+// los WhatsApp de producción, así que quedó como el único camino.
 import { isSandbox } from "./sandbox.js";
 // Credenciales de Twilio. Con API Key (TWILIO_API_KEY_SID/SECRET) autentica con
 // esa; el Account SID se sigue necesitando aparte porque va en la ruta de la URL.
@@ -26,29 +29,6 @@ export async function sendWA(to, text) {
   let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
   if (!phone.startsWith("+")) phone = "+" + phone;
 
-  if (process.env.WA_PREFER_CLOUD !== "1") {
-    try {
-      const { isWAWebConnected, sendWAWebText } = await import("./waweb.js");
-      if (isWAWebConnected()) { await sendWAWebText(phone, text); return true; }
-    } catch (e) {
-      console.warn("sendWA: WA Web falló, probando Cloud/Twilio:", e.message);
-    }
-  }
-
-  if (process.env.WA_PHONE_NUMBER_ID && process.env.WA_ACCESS_TOKEN) {
-    // Límite de texto de Cloud API: 4096 chars — cortamos en 4000
-    const chunks = text.length <= 4000 ? [text] : text.match(/[\s\S]{1,4000}/g) || [text];
-    for (const body of chunks) {
-      const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ messaging_product: "whatsapp", to: phone.replace("+", ""), type: "text", text: { body } }),
-      });
-      if (!r.ok) throw new Error(`WA Cloud send failed: ${(await r.text()).slice(0, 200)}`);
-    }
-    return true;
-  }
-
   const creds = twilioCreds();
   const from = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
 
@@ -68,7 +48,7 @@ export async function sendWA(to, text) {
     return true;
   }
 
-  console.warn("sendWA: sin canal configurado (ni WA Cloud ni Twilio)");
+  console.warn("sendWA: sin canal configurado (Twilio)");
   return false;
 }
 
@@ -78,16 +58,6 @@ export async function sendWAMedia(to, mediaUrl) {
   if (!to || !mediaUrl) return false;
   let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
   if (!phone.startsWith("+")) phone = "+" + phone;
-
-  if (process.env.WA_PHONE_NUMBER_ID && process.env.WA_ACCESS_TOKEN) {
-    const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to: phone.replace("+", ""), type: "audio", audio: { link: mediaUrl } }),
-    });
-    if (!r.ok) throw new Error(`WA Cloud media failed: ${(await r.text()).slice(0, 200)}`);
-    return true;
-  }
 
   const creds = twilioCreds();
   const from = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
@@ -103,26 +73,15 @@ export async function sendWAMedia(to, mediaUrl) {
   return false;
 }
 
-// Envío de documento (PDF, imagen, Excel, etc.) — prefiere WA Web (buffer directo,
-// sin depender de una URL pública), luego Twilio y por último Cloud API (ambos
-// necesitan `url`, que viene del file-relay como fallback).
-export async function sendWADocument(to, { buffer, mimetype, filename, url } = {}) {
+// Envío de documento (PDF, imagen, Excel, etc.) por Twilio — necesita `url`
+// (viene del file-relay: stageFile + /file/:id). buffer/mimetype/filename
+// llegan en el objeto de opciones pero hoy no los usa este envío; el caller
+// (tools.js) los sigue mandando porque también los usa para el file-relay.
+export async function sendWADocument(to, { url } = {}) {
   if (isSandbox()) { console.log("[SANDBOX] no envío WhatsApp"); return false; }
   if (!to) return false;
   let phone = String(to).replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
   if (!phone.startsWith("+")) phone = "+" + phone;
-
-  if (process.env.WA_PREFER_CLOUD !== "1") {
-    try {
-      const { isWAWebConnected, sendWAWebDocument } = await import("./waweb.js");
-      if (isWAWebConnected() && buffer) {
-        await sendWAWebDocument(to, buffer, mimetype, filename);
-        return true;
-      }
-    } catch (e) {
-      console.warn("sendWADocument: WA Web falló, probando Twilio/Cloud:", e.message);
-    }
-  }
 
   const creds = twilioCreds();
   const from = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
@@ -133,16 +92,6 @@ export async function sendWADocument(to, { buffer, mimetype, filename, url } = {
       body: new URLSearchParams({ From: from, To: `whatsapp:${phone}`, MediaUrl: url }),
     });
     if (!r.ok) throw new Error(`Twilio document failed: ${(await r.text()).slice(0, 200)}`);
-    return true;
-  }
-
-  if (process.env.WA_PHONE_NUMBER_ID && process.env.WA_ACCESS_TOKEN && url) {
-    const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to: phone.replace("+", ""), type: "document", document: { link: url, filename } }),
-    });
-    if (!r.ok) throw new Error(`WA Cloud document failed: ${(await r.text()).slice(0, 200)}`);
     return true;
   }
 

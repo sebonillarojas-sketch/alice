@@ -19,11 +19,9 @@ import { isSandbox } from "./sandbox.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
-// Baileys dispara rechazos async fuera de todo try/catch nuestro (p.ej. el retry
-// interno sendRetryRequest → Boom 428 "Connection Closed" cuando la sesión WA se
-// cae). Sin esto Node mata el proceso entero y se lleva ERP, agentes Wonderland
-// y panel. Una sesión de WhatsApp caída NUNCA debe tumbar el backend: se loguea
-// y el watchdog de waweb.js se encarga de reconectar.
+// Cualquier rechazo o excepción async que se nos escape de un try/catch no debe
+// tumbar el proceso entero (se llevaría ERP, agentes Wonderland y panel): se
+// loguea y el proceso sigue vivo.
 process.on("unhandledRejection", (err) => {
   console.error("⛑️ unhandledRejection (el proceso sigue vivo):", err?.stack || err);
 });
@@ -753,160 +751,6 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
 
   return { text: finalText, actions: toolResults };
 }
-
-// ── WhatsApp webhook ──────────────────────────────────────────────────────────
-
-app.get("/webhook", (req, res) => {
-  const { "hub.mode": mode, "hub.verify_token": token, "hub.challenge": challenge } = req.query;
-  if (mode === "subscribe" && token === process.env.WA_VERIFY_TOKEN) {
-    console.log("✅ WhatsApp webhook verificado");
-    return res.status(200).send(challenge);
-  }
-  res.sendStatus(403);
-});
-
-app.post("/webhook", async (req, res) => {
-  res.sendStatus(200);
-  try {
-    const message = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    if (!message || !["text", "audio", "document", "image"].includes(message.type)) return;
-    const fromPhone = message.from;
-    const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, ""));
-    if (!allowed.includes(fromPhone.replace(/\D/g, ""))) return;
-    const userId = phoneToUserId(fromPhone);
-    if (!userId) return;
-
-    // Audio entrante → descargar de Graph API y transcribir (paridad con el path de Twilio)
-    let userText, inputWasAudio = false;
-    if (message.type === "audio") {
-      console.log(`🎤 WA Cloud audio [${userId}]`);
-      const { buffer, mediaType } = await downloadWACloudMedia(message.audio.id);
-      userText = await transcribeBuffer(buffer, mediaType) || "[audio no entendido]";
-      inputWasAudio = true;
-      console.log(`📝 Transcripción: ${userText}`);
-    } else if (message.type === "document" || message.type === "image") {
-      // Documento/imagen → al buzón; Alicia lo sube a Dropbox con dropbox_upload
-      const media = message.document || message.image;
-      const { buffer, mediaType } = await downloadWACloudMedia(media.id);
-      const { setLastFile, extForMime } = await import("./inbox-files.js");
-      const filename = media.filename || `whatsapp-${Date.now()}.${extForMime(mediaType)}`;
-      setLastFile(userId, { buffer, mediaType, filename });
-      const caption = media.caption || message.caption || "";
-      userText = `[Adjunté un archivo: ${filename} · ${mediaType} · ${Math.round(buffer.length / 1024)} KB]${caption ? ` ${caption}` : " ¿Qué hacés con esto?"}`;
-      console.log(`📎 WA Cloud archivo [${userId}]: ${filename} (${Math.round(buffer.length / 1024)} KB)`);
-    } else {
-      userText = message.text.body;
-    }
-
-    console.log(`📱 [${userId}] ${userText}`);
-    const { sendWA } = await import("./wa.js");
-    // Coalescer: junta mensajes seguidos y responde una vez con el hilo completo.
-    coalesceMessage(userId, userText, async (joined, { wasAudio }) => {
-      try {
-        const { text: reply } = await processAliciaMessage(userId, joined, "whatsapp");
-        await sendWA(fromPhone, reply);
-        // Nota de voz de vuelta si la entrada fue audio (mismo criterio que Twilio).
-        // OJO: Cloud API no acepta WAV (Groq TTS solo emite wav) — si Meta lo rechaza, cae a texto.
-        if (wasAudio) {
-          try {
-            const audioBuf = await generateSpeech(reply);
-            const id = Math.random().toString(36).slice(2);
-            ttsCache.set(id, audioBuf);
-            setTimeout(() => ttsCache.delete(id), 5 * 60 * 1000);
-            const audioUrl = `${process.env.BASE_URL || "https://aliceai.bam.pe"}/tts/${id}.wav`;
-            const r = await fetch(`https://graph.facebook.com/v19.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ messaging_product: "whatsapp", to: fromPhone, type: "audio", audio: { link: audioUrl } }),
-            });
-            if (!r.ok) console.error("nota de voz Cloud rechazada (ya respondí texto):", (await r.text()).slice(0, 200));
-          } catch (ttsErr) {
-            console.error("nota de voz falló (ya respondí texto):", ttsErr.message);
-          }
-        }
-      } catch (e) { console.error("Webhook proceso error:", e.message); }
-    }, { wasAudio: inputWasAudio });
-  } catch (e) {
-    console.error("Webhook error:", e.message);
-  }
-});
-
-// Descarga media de WA Cloud API: media_id → URL firmada → buffer
-async function downloadWACloudMedia(mediaId) {
-  const auth = { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}` };
-  const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, { headers: auth });
-  if (!metaRes.ok) throw new Error(`WA media meta failed: ${metaRes.status}`);
-  const meta = await metaRes.json();
-  const fileRes = await fetch(meta.url, { headers: auth });
-  if (!fileRes.ok) throw new Error(`WA media download failed: ${fileRes.status}`);
-  return { buffer: Buffer.from(await fileRes.arrayBuffer()), mediaType: meta.mime_type || "audio/ogg" };
-}
-
-// ── WhatsApp Web (el teléfono propio de Alicia, siempre conectado) ────────────
-// Mismo pipeline que los webhooks: allowlist → transcribir audio / archivo al
-// buzón → processAliciaMessage → respuesta por el mismo canal.
-
-async function handleWAWebIncoming({ phone, text, media }) {
-  const allowed = (process.env.ALLOWED_USER_PHONES || "").split(",").map(p => p.trim().replace(/\D/g, "")).filter(Boolean);
-  if (!allowed.includes(phone.replace(/\D/g, ""))) { console.log(`🚫 WA de ${phone} no autorizado`); return; }
-  const userId = phoneToUserId(phone);
-  if (!userId) return;
-
-  let userText = text, inputWasAudio = false;
-  if (media?.kind === "audio") {
-    console.log(`🎤 WA Web audio [${userId}]`);
-    userText = await transcribeBuffer(media.buffer, media.mediaType) || "[audio no entendido]";
-    inputWasAudio = true;
-    console.log(`📝 Transcripción: ${userText}`);
-  } else if (media?.kind === "file") {
-    const { setLastFile, extForMime } = await import("./inbox-files.js");
-    const filename = media.filename || `whatsapp-${Date.now()}.${extForMime(media.mediaType)}`;
-    setLastFile(userId, { buffer: media.buffer, mediaType: media.mediaType, filename });
-    userText = `[Adjunté un archivo: ${filename} · ${media.mediaType} · ${Math.round(media.buffer.length / 1024)} KB]${text ? ` ${text}` : " ¿Qué hacés con esto?"}`;
-    console.log(`📎 WA Web archivo [${userId}]: ${filename} (${Math.round(media.buffer.length / 1024)} KB)`);
-  }
-  if (!userText) return;
-
-  console.log(`📱 WA Web [${userId}] ${userText}`);
-  const { sendWAWebText, sendWAWebAudio } = await import("./waweb.js");
-  // Coalescer: junta mensajes seguidos y responde una vez con el hilo completo.
-  coalesceMessage(userId, userText, async (joined, { wasAudio }) => {
-    try {
-      const { text: reply } = await processAliciaMessage(userId, joined, "whatsapp");
-      // Texto SIEMPRE primero; la voz es un bonus (wav va como audio normal, no nota de voz).
-      await sendWAWebText(phone, reply);
-      if (wasAudio) {
-        try {
-          const audioBuf = await generateSpeech(reply);
-          await sendWAWebAudio(phone, audioBuf, "audio/wav");
-        } catch (ttsErr) { console.error("nota de voz WA Web falló (ya respondí texto):", ttsErr.message); }
-      }
-    } catch (e) { console.error("WA Web proceso error:", e.message); }
-  }, { wasAudio: inputWasAudio });
-}
-
-app.get("/api/waweb/status", async (_, res) => {
-  try {
-    const { getWAWebStatus } = await import("./waweb.js");
-    res.json(getWAWebStatus());
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post("/api/waweb/restart", async (_, res) => {
-  try {
-    const { restartWAWeb } = await import("./waweb.js");
-    await restartWAWeb();
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post("/api/waweb/logout", async (_, res) => {
-  try {
-    const { logoutWAWeb } = await import("./waweb.js");
-    await logoutWAWeb();
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 // ── Twilio webhook ────────────────────────────────────────────────────────────
 
@@ -2354,8 +2198,6 @@ app.post("/api/system/reboot", (_, res) => {
 app.get("/health", async (_, res) => {
   let dropbox = false;
   try { ({ dropboxAvailable: dropbox } = await import("./integrations/dropbox.js")); dropbox = dropbox(); } catch { dropbox = false; }
-  let waweb = { status: "off" };
-  try { const { getWAWebStatus } = await import("./waweb.js"); waweb = getWAWebStatus(); } catch {}
   res.json({
     ok: true, service: "alicia-brain",
     erp: process.env.ERP_URL || "http://localhost:3002",
@@ -2366,9 +2208,6 @@ app.get("/health", async (_, res) => {
       tavily:  !!(process.env.TAVILY_API_KEY),
       openai:  !!(process.env.OPENAI_API_KEY),  // voz TTS/Whisper primaria
       groq:    !!(process.env.GROQ_API_KEY),    // fallback de voz
-      // chequeo real de socket, no presencia de env vars (lección Dropbox)
-      whatsappWeb: waweb.status === "connected",
-      whatsappWebStatus: waweb.status,
     }
   });
 });
@@ -2398,16 +2237,6 @@ app.listen(PORT, async () => {
 
   // Fetch real macro data from BCRP on startup (non-blocking)
   refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
-
-  // WhatsApp Web: el teléfono de Alicia, conectado 24/7 (QR en el panel si falta vincular)
-  // CRÍTICO: NUNCA en sandbox — una 2ª sesión de Baileys chocaría con la de prod y le
-  // tumbaría el WhatsApp a Alicia (y podría responderle a un usuario real). El clon nocturno
-  // corre con SANDBOX=1 y NO debe tocar WhatsApp Web.
-  if (!isSandbox()) {
-    import("./waweb.js")
-      .then(({ startWAWeb }) => startWAWeb(handleWAWebIncoming))
-      .catch(e => console.warn("WA Web no disponible:", e.message));
-  }
 
   // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
   if (!isSandbox()) startCron();
