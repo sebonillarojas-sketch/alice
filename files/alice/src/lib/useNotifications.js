@@ -100,12 +100,24 @@ export function useNotifications({ enabled, setTasks, loaded }) {
       // todavía en null).
       if (!vivo) return;
 
+      // Mismo precedente que db.subscribeTasks (lib/supabase.js): el realtime
+      // aplica RLS con el JWT de la conexión, y notifications tiene policies
+      // `to authenticated`. Si no seteamos el token ANTES de .subscribe(), el
+      // canal conecta como anon y RLS silencia los eventos — sin error visible.
+      // No alcanza con que subscribeTasks ya llame setAuth() sobre el cliente
+      // compartido: es una carrera, y si ese hook cambia o se desmonta primero,
+      // las notificaciones se apagan en silencio.
+      try { if (session?.access_token) supabase.realtime.setAuth(session.access_token); } catch { /* noop */ }
+
       canal = supabase
         .channel(`notif:${uid}`)
         .on("postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `recipient=eq.${uid}` },
           payload => { if (vivo) entregar([payload.new]); })
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") console.log("🟢 realtime notifications · suscrito");
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") console.warn("⚠️ realtime notifications:", status, "— revisá publicación supabase_realtime + Realtime ON en el proyecto");
+        });
 
       // El shell avisa cuando la Mac despierta: el WebSocket se murió en silencio.
       quitarResume = window.alice?.onResume?.(() => recuperar(uid));
