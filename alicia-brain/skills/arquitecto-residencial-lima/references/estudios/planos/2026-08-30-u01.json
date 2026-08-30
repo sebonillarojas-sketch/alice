@@ -1,0 +1,43 @@
+{
+  "id": "2026-08-30-u01",
+  "nombre": "1D/1B amplio, fachada única frente ancho, cocina abierta con lavandería integrada en vez de depósito de relleno (corrección de Sebastián) — San Miguel, Lima Moderna",
+  "area_techada": 55.04,
+  "frente_m": 8.60,
+  "fondo_m": 6.40,
+  "ambientes": [
+    { "nombre": "dormitorio principal", "poligono": [[0.25,0.25],[3.55,0.25],[3.55,3.475],[0.25,3.475]], "zona": "intima", "luz": true },
+    { "nombre": "sala-comedor", "poligono": [[3.70,0.25],[7.00,0.25],[7.00,3.475],[3.70,3.475]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[7.15,0.25],[8.35,0.25],[8.35,3.475],[7.15,3.475]], "zona": "social", "luz": false },
+    { "nombre": "vestidor", "poligono": [[0.25,3.625],[1.95,3.625],[1.95,6.15],[0.25,6.15]], "zona": "servicio", "luz": false },
+    { "nombre": "baño 1", "poligono": [[2.10,3.625],[3.60,3.625],[3.60,6.15],[2.10,6.15]], "zona": "servicio", "luz": false },
+    { "nombre": "hall", "poligono": [[3.75,3.625],[4.85,3.625],[4.85,6.15],[3.75,6.15]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[5.00,3.625],[8.35,3.625],[8.35,6.15],[5.00,6.15]], "zona": "servicio", "luz": false }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [8.60,0], "espesor": 0.25, "portante": true},
+    {"a": [0,6.40], "b": [8.60,6.40], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,6.40], "espesor": 0.25, "portante": true},
+    {"a": [8.60,0], "b": [8.60,6.40], "espesor": 0.25, "portante": true},
+    {"a": [3.625,0], "b": [3.625,3.55], "espesor": 0.15, "portante": false},
+    {"a": [7.075,0], "b": [7.075,3.55], "espesor": 0.15, "portante": false},
+    {"a": [0,3.55], "b": [8.60,3.55], "espesor": 0.15, "portante": false},
+    {"a": [2.025,3.55], "b": [2.025,6.40], "espesor": 0.15, "portante": false},
+    {"a": [3.675,3.55], "b": [3.675,6.40], "espesor": 0.15, "portante": false},
+    {"a": [4.925,3.55], "b": [4.925,6.40], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 1.80},
+    {"de": "dormitorio principal", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "baño 1", "ancho": 0.70},
+    {"de": "hall", "a": "baño 1", "ancho": 0.70},
+    {"de": "sala-comedor", "a": "hall", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "cocina", "ancho": 1.20}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0,6.40], "b": [8.60,6.40]}
+}
