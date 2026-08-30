@@ -3,6 +3,7 @@ const {
   app, BrowserWindow, Tray, Menu, Notification,
   ipcMain, powerMonitor, shell, nativeImage,
 } = require("electron");
+const { autoUpdater } = require("electron-updater");
 
 const APP_URL = "https://alice.bam.pe";
 const APP_HOST = "alice.bam.pe";
@@ -147,6 +148,11 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     app.on("activate", mostrarVentana);
+
+    // Chequea al arrancar y cada 6 horas. La app vive días en la barra de menú,
+    // así que un solo chequeo al inicio dejaría versiones viejas corriendo semanas.
+    autoUpdater.checkForUpdatesAndNotify();
+    setInterval(() => autoUpdater.checkForUpdatesAndNotify(), 6 * 60 * 60 * 1000);
   });
 }
 

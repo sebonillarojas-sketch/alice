@@ -1,0 +1,30 @@
+appId: pe.hygge.alice.desktop
+productName: ALICE
+copyright: Hygge Holding
+
+directories:
+  buildResources: build
+  output: dist
+
+files:
+  - main.js
+  - preload.js
+  - offline.html
+  - package.json
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch: [universal]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: true
+
+publish:
+  provider: github
+  owner: sebonillarojas-sketch
+  repo: alice
