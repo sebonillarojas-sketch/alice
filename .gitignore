@@ -17,3 +17,7 @@ handoff-memory/
 /f-task-*.md
 /sd-*.md
 /c-task-*
+
+# Shell de escritorio
+desktop/node_modules/
+desktop/dist/
