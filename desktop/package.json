@@ -12,10 +12,11 @@
     "electron-updater": "^6.3.0"
   },
   "devDependencies": {
-    "electron": "^32.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "^39.8.10",
+    "electron-builder": "^26.0.0"
   },
   "allowScripts": {
-    "electron@32.3.3": true
+    "electron@39.8.10": true,
+    "electron-winstaller@5.4.0": true
   }
 }

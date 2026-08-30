@@ -115,7 +115,21 @@ export function useNotifications({ enabled, setTasks, loaded }) {
           { event: "INSERT", schema: "public", table: "notifications", filter: `recipient=eq.${uid}` },
           payload => { if (vivo) entregar([payload.new]); })
         .subscribe((status) => {
-          if (status === "SUBSCRIBED") console.log("🟢 realtime notifications · suscrito");
+          if (status === "SUBSCRIBED") {
+            console.log("🟢 realtime notifications · suscrito");
+            // Si el socket se cae por un corte breve de red (sin `suspend` del
+            // sistema, que es lo que dispara onResume), Realtime reconecta solo
+            // pero lo insertado durante el corte no llega por el canal: hay que
+            // recuperarlo acá. En navegador normal (sin window.alice.onResume)
+            // esta es la ÚNICA recuperación que existe tras una reconexión.
+            // Es idempotente — selectPending filtra por delivered_at y por
+            // `mostradas` — así que no duplica nada. Y no muestra nada dos
+            // veces en la suscripción inicial: el recuperar(uid) de más arriba
+            // ya se esperó (await) ANTES de suscribirse, y ya marcó
+            // delivered_at en lo que entregó, así que este SUBSCRIBED inicial
+            // vuelve a consultar y no encuentra esas filas.
+            recuperar(uid);
+          }
           else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") console.warn("⚠️ realtime notifications:", status, "— revisá publicación supabase_realtime + Realtime ON en el proyecto");
         });
 

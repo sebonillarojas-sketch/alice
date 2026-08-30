@@ -34,7 +34,13 @@ export function coalesce(pending) {
   return [{
     title: `${lista.length} novedades`,
     body: lista.slice(0, COALESCE_THRESHOLD).map(n => n.title).join(" · "),
-    deepLink: "#/space/notifications",
+    // #/space/notifications renderiza NotificationsToolView, que se alimenta de
+    // `activity` (el feed local de localStorage) y no sabe nada de esta tabla:
+    // el clic caería en una lista vacía y, como entregar() ya marcó delivered_at,
+    // esas notificaciones se perderían. #/space/mistareas sí existe y muestra
+    // justo las tareas asignadas al usuario — de lo único que hablan los dos
+    // tipos de notificación de esta fase.
+    deepLink: "#/space/mistareas",
     ids: lista.map(n => n.id),
   }];
 }

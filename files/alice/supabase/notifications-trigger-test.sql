@@ -33,8 +33,13 @@ begin
   if c <> 1 then raise exception 'FALLA (a): se generaron % notificaciones, se esperaba 1', c; end if;
 
   -- (b) Editar OTRO campo no vuelve a notificar (db.upsertTask reescribe la fila
-  --     completa en cada cambio, así que sin el diff OLD/NEW esto renotificaría)
-  update public.tasks set title = 'Tarea de prueba editada' where id = tid;
+  --     completa en cada cambio, así que sin el diff OLD/NEW esto renotificaría).
+  --     El update toca `assignees` (reescribiéndolo con el mismo valor) para que
+  --     el trigger `update of assignees` sí dispare — si solo tocáramos `title`,
+  --     Postgres ni siquiera llamaría a la función, y la aserción de abajo
+  --     pasaría por las reglas de disparo del trigger, no por el diff OLD/NEW
+  --     que este caso dice estar probando.
+  update public.tasks set title = 'Tarea de prueba editada', assignees = assignees where id = tid;
 
   select count(*) into c from public.notifications where deep_link = '#/task/' || tid;
   if c <> 1 then raise exception 'FALLA (b): editar el título renotificó (% filas)', c; end if;

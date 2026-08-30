@@ -24,6 +24,18 @@ create table if not exists public.notifications (
 create index if not exists idx_notifications_recipient
   on public.notifications (recipient, created_at desc);
 
+-- El trigger de asignación (notifications-trigger.sql) hace
+-- `select id into uid from public.user_profiles where alice_id = aid` — un
+-- `select into` con múltiples matches agarra una fila arbitraria EN SILENCIO,
+-- sin error. Si alice_id no fuera único, eso puede mandarle la notificación de
+-- una tarea a la persona equivocada, sin que nada lo avise. Esta unicidad no es
+-- opcional para la corrección del trigger, así que la garantizamos acá.
+-- Si la tabla ya tuviera duplicados, este índice va a fallar al crearse — eso
+-- es intencional y deseable: preferimos que la instalación falle ahora a que
+-- el sistema notifique en producción a la persona equivocada.
+create unique index if not exists idx_user_profiles_alice_id
+  on public.user_profiles (alice_id);
+
 -- Índice parcial para la consulta de recuperación tras suspensión.
 create index if not exists idx_notifications_undelivered
   on public.notifications (recipient)

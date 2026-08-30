@@ -17,13 +17,18 @@ let saliendo = false;
 // sistema operativo. Si dejáramos pasar cualquier protocolo, una página (o un
 // origin ajeno que haya quedado cargado por error) podría hacer que el SO abra
 // un esquema custom registrado en la Mac, o incluso `file:`, con los privilegios
-// del proceso que lo invoca. Restringimos a http/https, que es lo único que
-// tiene sentido "abrir en el navegador". Una sola función, usada en los dos
+// del proceso que lo invoca. Restringimos a http/https/mailto/tel: los primeros
+// dos son "abrir en el navegador", y los otros dos los maneja el sistema de
+// forma segura (Mail.app, FaceTime/teléfono) y la web los usa de verdad — el
+// botón de enviar reporte por email hace `window.location.href = "mailto:…"`, y
+// sin esto la acción se traga en silencio dentro del shell. Todo lo demás
+// (file:, esquemas custom) sigue bloqueado. Una sola función, usada en los dos
 // lugares donde decidimos si algo es seguro para el navegador del sistema.
 function esUrlExternaSegura(url) {
   try {
     const u = new URL(url);
-    return u.protocol === "http:" || u.protocol === "https:";
+    return u.protocol === "http:" || u.protocol === "https:"
+      || u.protocol === "mailto:" || u.protocol === "tel:";
   } catch {
     return false;
   }
@@ -59,6 +64,12 @@ function crearVentana() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      // Explícito aunque hoy coincida con el default de Electron: esta ventana
+      // carga contenido remoto (alice.bam.pe), y el sandbox del renderer es la
+      // barrera más importante que tenemos contra ese contenido. Los demás
+      // flags de seguridad ya están afirmados acá; que este dependiera de un
+      // default que puede cambiar entre versiones era la excepción, no la regla.
+      sandbox: true,
       // Electron lo trae en true por defecto y estrangula los timers de las
       // ventanas ocultas. Sin esto, "notifica con la ventana cerrada" se degrada
       // de formas raras y difíciles de diagnosticar.
@@ -73,6 +84,12 @@ function crearVentana() {
   // parece rota. La pantalla de fallback dice cuál de las dos fallas está pasando.
   win.webContents.on("did-fail-load", (_e, code, desc, _url, esPrincipal) => {
     if (!esPrincipal) return;
+    // ERR_ABORTED (-3) no es una falla de red: Chromium lo emite ante abortos
+    // normales, como el "Recargar" del tray disparado mientras había una carga
+    // en curso, o cualquier navegación cancelada. Tratarlo como offline le
+    // muestra "sin conexión" a alguien con la red perfecta y le tira el estado
+    // del renderer a la basura.
+    if (code === -3) return;
     win.loadFile(OFFLINE_FILE, {
       query: { code: String(code), desc: desc || "" },
     });

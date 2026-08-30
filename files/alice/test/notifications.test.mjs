@@ -47,7 +47,9 @@ test("coalesce sobre el umbral devuelve un solo banner resumen", () => {
   assert.equal(out.length, 1);
   assert.equal(out[0].title, "4 novedades");
   assert.deepEqual(out[0].ids, ["1", "2", "3", "4"]);
-  assert.equal(out[0].deepLink, "#/space/notifications");
+  // #/space/mistareas, no #/space/notifications: esa ruta lee del feed local de
+  // localStorage y no de la tabla `notifications` (ver notifications.js).
+  assert.equal(out[0].deepLink, "#/space/mistareas");
 });
 
 test("el umbral es 3", () => {
