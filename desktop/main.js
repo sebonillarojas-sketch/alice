@@ -151,8 +151,25 @@ if (!app.requestSingleInstanceLock()) {
 
     // Chequea al arrancar y cada 6 horas. La app vive días en la barra de menú,
     // así que un solo chequeo al inicio dejaría versiones viejas corriendo semanas.
-    autoUpdater.checkForUpdatesAndNotify();
-    setInterval(() => autoUpdater.checkForUpdatesAndNotify(), 6 * 60 * 60 * 1000);
+    //
+    // El .catch() no es opcional: ante cualquier falla (sin red, DNS, o un 404
+    // porque todavía no existe ningún release publicado en GitHub) electron-updater
+    // relanza el error y la promesa queda rechazada. Como la app arranca al login,
+    // esto puede dispararse en cada arranque — y mientras no haya un release
+    // publicado (bloqueado hasta tener cuenta de Apple Developer y notarización),
+    // se va a disparar siempre. Es esperable y benigno: no lo interpreten como un
+    // bug ni lo saquen.
+    const avisarFalloDeUpdate = (err) => {
+      console.warn(
+        "[autoUpdater] chequeo de actualización falló (esperable sin red o " +
+        "mientras no haya un release publicado en GitHub Releases):",
+        err?.message || err,
+      );
+    };
+    autoUpdater.checkForUpdatesAndNotify().catch(avisarFalloDeUpdate);
+    setInterval(() => {
+      autoUpdater.checkForUpdatesAndNotify().catch(avisarFalloDeUpdate);
+    }, 6 * 60 * 60 * 1000);
   });
 }
 
