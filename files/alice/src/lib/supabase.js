@@ -35,6 +35,15 @@ export const db = {
     return data.map(fromRow);
   },
 
+  // Refresca UNA tarea. La usa el hook de notificaciones: useERPSync solo hidrata
+  // al cargar, así que una tarea creada después de que abrió la app no está en el
+  // estado local y el deep link abriría un panel vacío.
+  async getTask(id) {
+    const { data, error } = await supabase.from("tasks").select("*").eq("id", id).single();
+    if (error) throw error;
+    return fromRow(data);
+  },
+
   async upsertTask(task) {
     const { error } = await supabase.from("tasks").upsert(toRow(task), { onConflict: "id" });
     if (error) throw error;
