@@ -5,10 +5,46 @@ const {
 } = require("electron");
 
 const APP_URL = "https://alice.bam.pe";
+const APP_HOST = "alice.bam.pe";
+const OFFLINE_FILE = path.join(__dirname, "offline.html");
 
 let win = null;
 let tray = null;
 let saliendo = false;
+
+// `shell.openExternal` entrega la URL tal cual al manejador de esquemas del
+// sistema operativo. Si dejáramos pasar cualquier protocolo, una página (o un
+// origin ajeno que haya quedado cargado por error) podría hacer que el SO abra
+// un esquema custom registrado en la Mac, o incluso `file:`, con los privilegios
+// del proceso que lo invoca. Restringimos a http/https, que es lo único que
+// tiene sentido "abrir en el navegador". Una sola función, usada en los dos
+// lugares donde decidimos si algo es seguro para el navegador del sistema.
+function esUrlExternaSegura(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+// El preload expone `window.alice` (notify/onResume/onOpen) a lo que sea que
+// esté cargado en el frame principal. Si ese frame navegara a un origin ajeno
+// (un link mal armado, un redirect, lo que sea), ese origin quedaría con el
+// puente del shell activo — la superficie de notificaciones expuesta a
+// contenido no confiable. Por eso solo consideramos "propio" a alice.bam.pe y a
+// nuestra propia pantalla offline; cualquier otra cosa no es una navegación
+// legítima del frame principal.
+function esOrigenPermitido(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol === "https:" && u.hostname === APP_HOST) return true;
+    if (u.protocol === "file:" && decodeURIComponent(u.pathname) === OFFLINE_FILE) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 function crearVentana() {
   win = new BrowserWindow({
@@ -36,7 +72,7 @@ function crearVentana() {
   // parece rota. La pantalla de fallback dice cuál de las dos fallas está pasando.
   win.webContents.on("did-fail-load", (_e, code, desc, _url, esPrincipal) => {
     if (!esPrincipal) return;
-    win.loadFile(path.join(__dirname, "offline.html"), {
+    win.loadFile(OFFLINE_FILE, {
       query: { code: String(code), desc: desc || "" },
     });
   });
@@ -49,9 +85,23 @@ function crearVentana() {
     win.hide();
   });
 
+  // `setWindowOpenHandler` solo cubre ventanas nuevas (target=_blank, window.open):
+  // no alcanza para bloquear una navegación normal del frame principal a otro
+  // dominio. Por eso interceptamos también `will-navigate`. Ni uno ni otro
+  // aplican a `win.loadURL`/`win.loadFile` llamados desde este mismo proceso
+  // (la carga inicial de alice.bam.pe y el fallback a offline.html): Electron
+  // solo emite estos eventos para navegación iniciada por el contenido de la
+  // página, no por el proceso principal, así que la carga legítima no se ve
+  // afectada.
+  win.webContents.on("will-navigate", (e, url) => {
+    if (esOrigenPermitido(url)) return; // alice.bam.pe u offline.html: legítimo
+    e.preventDefault();
+    if (esUrlExternaSegura(url)) shell.openExternal(url);
+  });
+
   // Los enlaces externos van al navegador del sistema, no abren ventanas de Electron.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (esUrlExternaSegura(url)) shell.openExternal(url);
     return { action: "deny" };
   });
 }
