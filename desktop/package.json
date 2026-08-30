@@ -1,0 +1,22 @@
+{
+  "name": "alice-desktop",
+  "version": "0.1.0",
+  "description": "ALICE · Hygge Holding · shell de escritorio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --mac --publish never",
+    "release": "electron-builder --mac --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10",
+    "electron-builder": "^26.0.0"
+  },
+  "allowScripts": {
+    "electron@39.8.10": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

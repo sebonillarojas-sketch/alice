@@ -17,6 +17,7 @@ import { TimerView } from "./modules/timer/TimerView";
 import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 import { db } from "./lib/supabase";
+import { useNotifications } from "./lib/useNotifications.js";
 import { useAuth } from "./auth/AuthContext.jsx";
 import { ALICIA_URL } from "./lib/brain.js";
 
@@ -15070,6 +15071,11 @@ export default function HyggeOS({ authUser } = {}) {
   const [loaded, setLoaded] = useState(false);
   // ERP sync — loaded debe estar declarado antes de este hook
   const { pushNewTask, pushTaskUpdate, pushNewEvent } = useERPSync({ tasks, setTasks, currentUser, loaded });
+
+  // Notificaciones de escritorio · respeta el toggle de Ajustes, que hasta ahora
+  // existía en la UI (prefs.notifyDesktop) y no estaba conectado a nada.
+  const notifyDesktop = (users.find(u => u.id === authUser?.id)?.preferences || DEFAULT_PREFS).notifyDesktop !== false;
+  useNotifications({ enabled: notifyDesktop, setTasks, loaded });
 
   // Realtime cross-usuario: cuando otro miembro crea/edita/borra una tarea en
   // Supabase, se refleja en vivo sin recargar (respeta RLS; requiere las policies

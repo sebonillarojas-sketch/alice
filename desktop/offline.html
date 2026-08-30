@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ALICE · sin conexión</title>
+<style>
+  body { margin: 0; height: 100vh; display: grid; place-items: center;
+         font: 14px -apple-system, system-ui, sans-serif; color: #0A0B0F; background: #FAF9F7; }
+  .caja { max-width: 380px; text-align: center; }
+  h1 { font-size: 18px; font-weight: 500; margin: 0 0 8px; }
+  p { color: #6B6863; line-height: 1.5; margin: 0 0 20px; }
+  button { font: inherit; padding: 8px 18px; border: 1px solid #0A0B0F;
+           background: transparent; border-radius: 2px; cursor: pointer; }
+</style>
+<div class="caja">
+  <h1 id="titulo">Sin conexión</h1>
+  <p id="detalle">Reintentando…</p>
+  <button onclick="location.href='https://alice.bam.pe'">Reintentar</button>
+</div>
+<script>
+  // Distinguir las dos fallas importa: si se cayó Netlify, la UI muere pero los
+  // datos están bien; si se cayó Supabase, no hay nada que hacer desde acá. Un
+  // "sin conexión" genérico no le sirve a nadie.
+  const SUPABASE = "https://apnzitklhxrcszectbxx.supabase.co";
+  const vivo = (url) =>
+    fetch(url, { mode: "no-cors", cache: "no-store" }).then(() => true).catch(() => false);
+
+  (async () => {
+    const [web, datos] = await Promise.all([vivo("https://alice.bam.pe"), vivo(SUPABASE)]);
+    const t = document.getElementById("titulo");
+    const d = document.getElementById("detalle");
+    if (!web && !datos) {
+      t.textContent = "Sin internet";
+      d.textContent = "Esta Mac no tiene conexión. Las notificaciones se recuperan solas al volver.";
+    } else if (!web && datos) {
+      t.textContent = "El ERP no responde";
+      d.textContent = "Los datos están bien (Supabase responde), pero alice.bam.pe no carga. Suele ser un deploy en curso: reintenta en un minuto.";
+    } else {
+      t.textContent = "Falla de datos";
+      d.textContent = "La web carga pero Supabase no responde. Nada que hacer desde acá — avisa al equipo.";
+    }
+  })();
+</script>
