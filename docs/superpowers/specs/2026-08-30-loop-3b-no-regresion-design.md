@@ -222,9 +222,16 @@ Archivo nuevo `test/lessons-regression.test.mjs`, más ajustes a los existentes.
   `reflection.test.mjs:18`).
 - `LESSON_REGRESSION=off` → `skipped` y cero llamadas.
 
-**No-regresión de lo existente:** los cuatro archivos de test que tocan el gate
-(`lessons-approve`, `lessons-apply`, `lessons-rungate`, `lessons-gatepass`) pasan a
-`await` y siguen verdes, junto con el resto de la suite.
+**No-regresión de lo existente:** los cinco archivos de test que llaman al gate
+(`lessons-approve`, `lessons-rungate`, `lessons-gatepass`, `lessons-pending`,
+`capture-lesson`) pasan a `await` y siguen verdes, junto con el resto de la suite.
+
+Para que ese cambio sea solo `await` y nada más, `collectCases` tiene que ser
+**defensiva**: esas suites arman una db en memoria que tiene `lessons` y nada más, así
+que consultar `messages` o `agent_runs` ahí tira "no such table". Cada consulta va en su
+`try/catch` y devuelve `[]` — que además es la semántica correcta ("no hay material"), no
+un parche. Con eso las lecciones `global` de esas suites caen en `skipped` sin tocar la
+red.
 
 ## Criterios de éxito
 
