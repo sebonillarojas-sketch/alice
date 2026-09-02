@@ -21,12 +21,13 @@ export function renderErpContext(snapshot, cap = ERP_CONTEXT_CAP) {
     if (active.entity?.id) lines.push(`Entidad abierta: ${active.entity.type || "item"} ${active.entity.id}`);
     if (active.state) lines.push(`Parámetros en pantalla: ${JSON.stringify(active.state)}`);
     if (active.derived) lines.push(`Ya calculado por el módulo (NO recalcules): ${JSON.stringify(active.derived)}`);
-    if (active.actions?.length) lines.push(`Acciones disponibles acá: ${active.actions.join(", ")}`);
+    if (Array.isArray(active.actions) && active.actions.length) lines.push(`Acciones disponibles acá: ${active.actions.join(", ")}`);
   }
 
   if (Array.isArray(others) && others.length) {
     lines.push(`\n## Otros módulos abiertos (pedí su detalle si lo necesitás)`);
-    for (const o of others) lines.push(`- ${o.title || o.module}`);
+    // `o` puede venir null/undefined desde un body armado a mano: se saltea en vez de explotar.
+    for (const o of others) if (o) lines.push(`- ${o.title || o.module}`);
   }
 
   const text = lines.join("\n");

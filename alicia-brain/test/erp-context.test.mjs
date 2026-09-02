@@ -57,3 +57,11 @@ test("el servidor impone su propio tope y no confía en el cliente", () => {
 test("el tope del servidor deja margen sobre el del cliente (2000)", () => {
   assert.equal(ERP_CONTEXT_CAP, 2400);
 });
+
+test("basura anidada en 'others' (null en el array) no explota", () => {
+  assert.doesNotThrow(() => renderErpContext({ active: null, others: [null], dropped: 0 }));
+});
+
+test("basura anidada en 'active.actions' (string en vez de array) no explota", () => {
+  assert.doesNotThrow(() => renderErpContext({ active: { module: "x", title: "T", actions: "abrir" }, others: [], dropped: 0 }));
+});
