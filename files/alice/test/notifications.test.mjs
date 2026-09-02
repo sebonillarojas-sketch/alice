@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { selectPending, coalesce, taskIdFromDeepLink, COALESCE_THRESHOLD } from "../src/lib/notifications.js";
+import { selectPending, coalesce, taskIdFromDeepLink, COALESCE_THRESHOLD, mergeNotifications, countUnread } from "../src/lib/notifications.js";
 
 const fila = (id, over = {}) => ({
   id, kind: "task_assigned", title: `T${id}`, body: "",
@@ -61,4 +61,30 @@ test("taskIdFromDeepLink extrae el id o devuelve null", () => {
   assert.equal(taskIdFromDeepLink("#/space/notifications"), null);
   assert.equal(taskIdFromDeepLink(""), null);
   assert.equal(taskIdFromDeepLink(undefined), null);
+});
+
+test("mergeNotifications ordena de más nueva a más vieja", () => {
+  const out = mergeNotifications([], [fila("1"), fila("3"), fila("2")]);
+  assert.deepEqual(out.map(r => r.id), ["3", "2", "1"]);
+});
+
+test("mergeNotifications no duplica por id entre recuperación y Realtime", () => {
+  const out = mergeNotifications([fila("1")], [fila("1"), fila("2")]);
+  assert.deepEqual(out.map(r => r.id).sort(), ["1", "2"]);
+});
+
+test("mergeNotifications no pisa una fila existente (preserva read_at optimista)", () => {
+  const yaLeida = fila("1", { read_at: "2026-08-30T11:00:00Z" });
+  const out = mergeNotifications([yaLeida], [fila("1", { read_at: null })]);
+  assert.equal(out[0].read_at, "2026-08-30T11:00:00Z");
+});
+
+test("countUnread cuenta por read_at, no por el `read` de activity", () => {
+  const rows = [fila("1"), fila("2", { read_at: "2026-08-30T11:00:00Z" }), fila("3")];
+  assert.equal(countUnread(rows), 2);
+});
+
+test("countUnread con lista vacía o nula es 0", () => {
+  assert.equal(countUnread([]), 0);
+  assert.equal(countUnread(undefined), 0);
 });

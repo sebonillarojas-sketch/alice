@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase, db } from "./supabase";
-import { selectPending, coalesce, taskIdFromDeepLink } from "./notifications.js";
+import { selectPending, coalesce, taskIdFromDeepLink, mergeNotifications } from "./notifications.js";
 
 // Muestra un banner. Detección de capacidad, no negociable: alice.bam.pe también
 // se abre en navegador normal, y el shell de escritorio se actualiza más lento que
@@ -28,8 +28,50 @@ export function useNotifications({ enabled, setTasks, loaded }) {
   const setTasksRef = useRef(setTasks);
   setTasksRef.current = setTasks;
 
+  // `enabled` (= el toggle "Notificaciones en navegador/desktop" de Ajustes)
+  // gatea SOLO el banner nativo del sistema — es el único elemento intrusivo.
+  // El panel, el badge y el marcado de leídas corren siempre: si alguien apaga
+  // el banner, el panel pasa a ser su único canal, así que apagarlo también
+  // sería exactamente el bug que esta función vino a arreglar. Va en un ref
+  // (no gatea el efecto) para que un cambio de preferencia en caliente no
+  // tenga que tirar abajo el canal de Realtime ya conectado.
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+
+  // Lista visible del panel de Notificaciones y estado del canal de Realtime.
+  // Antes el hook solo disparaba un banner efímero y no guardaba nada: si el
+  // banner se perdía (permiso denegado, Focus, pantalla apagada) no quedaba
+  // rastro en ningún lado. `notifs` es ese rastro.
+  const [notifs, setNotifs] = useState([]);
+  const [channelStatus, setChannelStatus] = useState("connecting");
+  const notifsRef = useRef(notifs);
+  notifsRef.current = notifs;
+
+  // Marca de leída optimista + persistida. Vive fuera del efecto de abajo
+  // porque no depende del canal (el clic en el panel debe funcionar aunque
+  // `enabled` esté en false, o mientras el canal está reconectando).
+  const markRead = useCallback(async (id) => {
+    const ahora = new Date().toISOString();
+    setNotifs(prev => prev.map(n => (n.id === id && !n.read_at) ? { ...n, read_at: ahora } : n));
+    try {
+      await supabase.from("notifications").update({ read_at: ahora }).eq("id", id).is("read_at", null);
+    } catch { /* la marca local ya se aplicó; un fallo de red no debe romper el clic */ }
+  }, []);
+
+  const markAllRead = useCallback(async () => {
+    const ids = notifsRef.current.filter(n => !n.read_at).map(n => n.id);
+    if (!ids.length) return;
+    const ahora = new Date().toISOString();
+    setNotifs(prev => prev.map(n => (ids.includes(n.id) ? { ...n, read_at: ahora } : n)));
+    try {
+      await supabase.from("notifications").update({ read_at: ahora }).in("id", ids);
+    } catch { /* ídem markRead */ }
+  }, []);
+
   useEffect(() => {
-    if (!loaded || !enabled) return;
+    // Ya NO depende de `enabled`: el panel/badge/Realtime tienen que funcionar
+    // aunque el usuario haya apagado el banner de escritorio. Ver enabledRef.
+    if (!loaded) return;
 
     let vivo = true;
     let canal = null;
@@ -53,6 +95,14 @@ export function useNotifications({ enabled, setTasks, loaded }) {
     };
 
     const entregar = async (filas) => {
+      // El panel de Notificaciones también recibe lo que llega por acá (además
+      // de lo que carga cargarLista() al montar) — así una fila que llegó
+      // mientras la Mac dormía, o por Realtime recién ahora, aparece arriba
+      // sin esperar a un refresh. mergeNotifications no duplica por id. Va
+      // antes del early return de abajo: una tanda sin pendientes (ya
+      // entregadas, o digest) igual tiene que reflejarse en el panel.
+      if (vivo) setNotifs(prev => mergeNotifications(prev, filas));
+
       const pendientes = selectPending(filas, mostradas.current);
       if (!pendientes.length) return;
 
@@ -65,7 +115,11 @@ export function useNotifications({ enabled, setTasks, loaded }) {
       if (!banners) return;
 
       for (const b of banners) {
-        mostrar(b, irA);
+        // El banner nativo respeta la preferencia del usuario; `mostradas` y
+        // `delivered_at` NO — esas dos son contabilidad interna de "ya se
+        // procesó esta fila para banner", independiente de si se llegó a
+        // pintar en pantalla.
+        if (enabledRef.current) mostrar(b, irA);
         b.ids.forEach(id => mostradas.current.add(id));
       }
 
@@ -76,8 +130,12 @@ export function useNotifications({ enabled, setTasks, loaded }) {
         .in("id", ids);
     };
 
-    // Consulta de recuperación: lo que se perdió mientras la Mac dormía o la app
-    // estuvo cerrada. Sin esto, todo evento ocurrido con el socket caído se pierde.
+    // Consulta de recuperación: decide qué banner disparar (lo que se perdió
+    // mientras la Mac dormía o la app estuvo cerrada). Filtra por
+    // delivered_at IS NULL a propósito — NO es la fuente del panel: si lo
+    // fuera, una notificación ya entregada (banner ya mostrado, o nunca
+    // mostrado por preferencia apagada) desaparecería de la lista en el
+    // siguiente refresh, que es justo el bug que este hook vino a arreglar.
     const recuperar = async (uid) => {
       const { data } = await supabase
         .from("notifications")
@@ -88,10 +146,27 @@ export function useNotifications({ enabled, setTasks, loaded }) {
       if (vivo && data?.length) await entregar(data);
     };
 
+    // Consulta del panel: últimas ~50 notificaciones del usuario, SIN filtrar
+    // por delivered_at — es historial para mostrar, no una cola de banners
+    // pendientes. Corre una sola vez al montar; lo que llega después (Realtime,
+    // o una recuperación tras reconectar) se agrega encima vía entregar().
+    const cargarLista = async (uid) => {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("recipient", uid)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (vivo && data?.length) setNotifs(prev => mergeNotifications(prev, data));
+    };
+
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const uid = session?.user?.id;           // uid de Supabase, NO authUser.id
       if (!uid || !vivo) return;
+
+      await cargarLista(uid);
+      if (!vivo) return;
 
       await recuperar(uid);
       // Si el componente se desmontó durante el await de arriba, `vivo` ya es
@@ -115,6 +190,11 @@ export function useNotifications({ enabled, setTasks, loaded }) {
           { event: "INSERT", schema: "public", table: "notifications", filter: `recipient=eq.${uid}` },
           payload => { if (vivo) entregar([payload.new]); })
         .subscribe((status) => {
+          // Mismo status que ya se logueaba (SUBSCRIBED/CHANNEL_ERROR/TIMED_OUT):
+          // antes solo iba a la consola. Expuesto acá es la línea "conectado /
+          // sin conexión" del panel — sin ella, un canal caído se ve idéntico
+          // a "no hay novedades", que es justo lo que dejó a ciegas al equipo.
+          if (vivo) setChannelStatus(status);
           if (status === "SUBSCRIBED") {
             console.log("🟢 realtime notifications · suscrito");
             // Si el socket se cae por un corte breve de red (sin `suspend` del
@@ -146,5 +226,7 @@ export function useNotifications({ enabled, setTasks, loaded }) {
       if (quitarResume) quitarResume();
       if (quitarOpen) quitarOpen();
     };
-  }, [enabled, loaded]);
+  }, [loaded]);
+
+  return { notifs, status: channelStatus, markRead, markAllRead };
 }
