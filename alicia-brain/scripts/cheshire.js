@@ -1,5 +1,9 @@
 // Cheshire 😺 · tester E2E de usabilidad v2 (ver docs/WONDERLAND_IT.md)
-// Corre en la Mac Studio (launchd cada 30 min) con Chromium REAL contra producción:
+// Corre en la máquina de Alicia — la que en Tailscale aparece como `alicias-mac-pro-1`
+// / `Alicia's Mac Pro` (100.88.12.17), dos registros del MISMO equipo. El hostname dice
+// "Mac Pro" por una migración vieja; el hardware es una Mac Studio. Nombrarla por su
+// modelo confundió a más de uno: usá el nombre de Tailscale, que es el que sirve para
+// llegar. launchd cada 30 min, con Chromium REAL contra producción:
 // lo que Cheshire ve es lo que ve un usuario (TLS estricto, JS real, viewport real).
 // Reporta a /api/agents/report → Lab del ERP + WhatsApp automático si hay críticos.
 //
