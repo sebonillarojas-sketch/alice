@@ -7518,7 +7518,12 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
               </span>
             </div>
           </div>
-          <MessageSquare size={12} style={{ color: C.muted }} />
+          {/* Antes era un ícono suelto sin onClick — parecía clicable (los mensajes de
+              abajo sí navegan via handleMessageClick) y no hacía nada. */}
+          <button onClick={() => { navigate("messages"); if (onMobileClose) onMobileClose(); }}
+            className="hover:opacity-60" title="Ir a Mensajes" aria-label="Ir a Mensajes">
+            <MessageSquare size={12} style={{ color: C.muted }} />
+          </button>
         </div>
         <div className="space-y-4">
           {messages.slice(0, 3).map((m) => (
