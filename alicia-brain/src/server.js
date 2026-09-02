@@ -131,7 +131,15 @@ async function panelGate(req, res, next) {
   }
   const su = await fetchSupabaseUser(tok);             // sesión del ERP (equipo logueado)
   if (su) {
-    const uid = emailToUserId(getDB(), su.email);
+    let uid;
+    try {
+      uid = emailToUserId(getDB(), su.email);
+    } catch (e) {
+      // Falla cerrada: si la DB no responde acá, mejor un 503 explícito que
+      // colgar el request (Express 4 no reenvía rechazos de middleware async).
+      console.error("panelGate emailToUserId:", e.message);
+      return res.status(503).json({ error: "identidad_no_disponible" });
+    }
     // Logueado en Supabase pero sin perfil en el cerebro: entra al ERP, no a Alicia.
     if (!uid) return res.status(403).json({ error: "usuario_sin_perfil", detail: su.email });
     req.aliceUser = { id: uid, email: su.email, via: "erp" };
