@@ -205,6 +205,7 @@ const SYNCED_KEYS = new Set([
   "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:ceoBlocks", "hygge:hqWidgets",
   "hygge:hqSummaries", "hygge:finanzas:source", "hygge:finanzas:approved", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
   "hygge:ceoOverrides", "hygge:finanzas:tipo", "hygge:finanzas:project", "hygge:dropbox:proj_ignored",
+  "hygge:dropbox:proj_created",
 ]);
 
 async function loadStored(key, fallback) {
@@ -15361,6 +15362,12 @@ export default function HyggeOS({ authUser } = {}) {
     (async () => {
       try {
         const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:proj_ignored") || "[]");
+        // projectFolderName() slugifica ("San Antonio 01" → "san_antonio_01") y a veces
+        // difiere del nombre real incluso con código (DC01_hygge_del_castillo vs.
+        // DC01_del_castillo real) — el nombre es una conjetura, no una identidad. Por eso
+        // además excluimos por `path` exacto: cada carpeta desde la que ya se creó un
+        // proyecto queda acá (ver onCreateSpace del modal de proyectos, más abajo).
+        const created = JSON.parse(localStorage.getItem("hygge:dropbox:proj_created") || "[]");
         const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(PROYECTOS_ROOT)}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -15374,7 +15381,8 @@ export default function HyggeOS({ authUser } = {}) {
         const newFolders = folders.filter(f =>
           !f.name.startsWith("_") &&
           !known.has(f.name.toLowerCase()) &&
-          !ignored.includes(f.path)
+          !ignored.includes(f.path) &&
+          !created.includes(f.path)
         );
         if (newFolders.length > 0) setDropboxProjectSyncItems(newFolders.map(f => ({ name: f.name, path: f.path })));
       } catch (_) { /* silent */ }
@@ -16538,6 +16546,14 @@ REGLAS:
               color: palette[prev.length % palette.length],
             }];
           });
+          // Guardamos el path exacto (no el nombre): comparar por nombre falla acá porque
+          // projectFolderName() slugifica ("San Antonio 01" → "san_antonio_01") y a veces
+          // ni el código coincide (DC01_hygge_del_castillo vs. la carpeta real
+          // DC01_del_castillo). El path es identidad real, así el popup no vuelve a
+          // proponer esta carpeta en la próxima sesión.
+          const created = JSON.parse(localStorage.getItem("hygge:dropbox:proj_created") || "[]");
+          created.push(item.path);
+          saveStored("hygge:dropbox:proj_created", created);
           setDropboxProjectSyncItems(prev => prev.filter(i => i.path !== item.path));
         }}
         onIgnore={(item) => {
