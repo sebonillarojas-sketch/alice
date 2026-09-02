@@ -2,7 +2,7 @@
 // Vive acá y no en HyggeOS.jsx a propósito: ese archivo tiene 16.553 líneas y
 // no queremos que esto crezca adentro. Lo único que entra allá son llamadas
 // puntuales a useERPContext.
-import { createContext, useCallback, useContext, useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { buildSnapshot } from "./snapshot.js";
 
 const Ctx = createContext(null);
@@ -15,7 +15,13 @@ export function ERPContextProvider({ children }) {
 
   const register = useCallback((moduleId, describeFn) => {
     registry.current.set(moduleId, describeFn);
-    return () => registry.current.delete(moduleId);
+    return () => {
+      registry.current.delete(moduleId);
+      // Si el que se desmonta era el activo, hay que soltarlo: si no, queda
+      // apuntando a un módulo que ya no existe y ningún otro lo va a corregir
+      // (el efecto de otro módulo no se re-dispara solo porque esto cambió).
+      if (activeId.current === moduleId) activeId.current = null;
+    };
   }, []);
 
   const setActive = useCallback((moduleId) => { activeId.current = moduleId; }, []);
@@ -34,7 +40,12 @@ export function ERPContextProvider({ children }) {
     return buildSnapshot(entries, activeId.current);
   }, []);
 
-  return <Ctx.Provider value={{ register, setActive, snapshot }}>{children}</Ctx.Provider>;
+  // Memoizado: si no, cada render de ERPContextProvider crea un objeto nuevo y
+  // eso re-dispara el efecto de CADA módulo registrado (ctx está en sus deps),
+  // aunque register/setActive/snapshot sean estables.
+  const value = useMemo(() => ({ register, setActive, snapshot }), [register, setActive, snapshot]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 // Registra un módulo y lo marca como activo mientras esté montado.
