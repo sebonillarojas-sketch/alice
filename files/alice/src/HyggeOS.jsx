@@ -205,6 +205,7 @@ const SYNCED_KEYS = new Set([
   "hygge:spaceViewports", "hygge:ceoProjects", "hygge:ceoNps", "hygge:ceoBlocks", "hygge:hqWidgets",
   "hygge:hqSummaries", "hygge:finanzas:source", "hygge:finanzas:approved", "hygge:dropbox:custom_paths", "hygge:dropbox:ignored",
   "hygge:ceoOverrides", "hygge:finanzas:tipo", "hygge:finanzas:project", "hygge:dropbox:proj_ignored",
+  "hygge:dropbox:proj_created",
 ]);
 
 async function loadStored(key, fallback) {
@@ -1939,7 +1940,7 @@ function CustomViewConfigModal({ initial, onClose, onSave }) {
   );
 }
 
-function ViewTabs({ active, setActive, onAdd, onFilterClick, activeFilterCount, customViews, onAddCustom, onDeleteCustom, features = { whiteboards: false, customViews: false, viewport: false, pencil: false }, setFeatures }) {
+function ViewTabs({ active, setActive, onAdd, customViews, onAddCustom, onDeleteCustom, features = { whiteboards: false, customViews: false, viewport: false, pencil: false }, setFeatures }) {
   const [addOpen, setAddOpen] = useState(false);
   const [popoverPos, setPopoverPos] = useState(null);
   const addRef = useRef(null);
@@ -2033,10 +2034,9 @@ function ViewTabs({ active, setActive, onAdd, onFilterClick, activeFilterCount, 
         </button>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <button onClick={onFilterClick} className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90 relative" style={{ color: activeFilterCount > 0 ? C.cobalt : C.inkSoft, border: `1px solid ${activeFilterCount > 0 ? C.cobalt : C.lineSoft}`, borderRadius: 2, fontWeight: activeFilterCount > 0 ? 600 : 500 }}>
-          <Filter size={11} /> Filtros
-          {activeFilterCount > 0 && <span className="w-4 h-4 flex items-center justify-center text-[9px]" style={{ backgroundColor: C.cobalt, color: C.bg, borderRadius: 999, fontWeight: 700 }}>{activeFilterCount}</span>}
-        </button>
+        {/* Filtros ahora viven en TaskFiltersBar, la fila siempre visible debajo de
+            este tab bar — este botón abría un popover escondido (y era `hidden sm:flex`,
+            invisible en mobile) que duplicaba ese mismo control. */}
         <button onClick={onAdd} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90" style={{ color: C.bg, backgroundColor: C.ink, borderRadius: 2, fontWeight: 500 }}>
           <Plus size={11} /> <span className="hidden sm:inline">Nueva</span>
         </button>
@@ -7518,7 +7518,12 @@ function RightPanel({ timer, toggleTimer, stopTimer, messages, activity, markRea
               </span>
             </div>
           </div>
-          <MessageSquare size={12} style={{ color: C.muted }} />
+          {/* Antes era un ícono suelto sin onClick — parecía clicable (los mensajes de
+              abajo sí navegan via handleMessageClick) y no hacía nada. */}
+          <button onClick={() => { navigate("messages"); if (onMobileClose) onMobileClose(); }}
+            className="hover:opacity-60" title="Ir a Mensajes" aria-label="Ir a Mensajes">
+            <MessageSquare size={12} style={{ color: C.muted }} />
+          </button>
         </div>
         <div className="space-y-4">
           {messages.slice(0, 3).map((m) => (
@@ -9872,9 +9877,40 @@ function InboxCard({ task, flatSpaces, selected, onToggleSelect, onAssignSpace, 
   );
 }
 
-// ═══ FILTER POPOVER ══════════════════════════════════════════════════════
-function FilterPopover({ open, onClose, filters, setFilters, users, allSpaces, currentSpace }) {
-  if (!open) return null;
+// ═══ TASK FILTERS BAR ════════════════════════════════════════════════════
+// Fila de filtros siempre visible, entre las pestañas de vista (Lista/Tablero/
+// Tabla/…) y las tareas. Antes esto era un FilterPopover escondido detrás de
+// un botón "Filtros" que además era `hidden sm:flex` (invisible en mobile) —
+// el CEO no lo encontró y pidió filtros creyendo que no existían. Los cuatro
+// controles (Estado, Asignado, Prioridad, Incluir sub-espacios) reusan el
+// mismo estado `filters`/`setFilters` de siempre: solo cambia dónde se
+// controla, no la lógica de filtrado (ver visibleTasks).
+function FilterChip({ label, count, active, align = "left", children }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onOutside = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
+  return (
+    <div ref={wrapRef} className="relative flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90 whitespace-nowrap"
+        style={{ color: active ? C.cobalt : C.inkSoft, border: `1px solid ${active ? C.cobalt : C.lineSoft}`, borderRadius: 2, fontWeight: active ? 600 : 500, backgroundColor: open ? C.surface : "transparent" }}>
+        {label}
+        {count > 0 && <span className="w-4 h-4 flex items-center justify-center text-[9px]" style={{ backgroundColor: C.cobalt, color: C.bg, borderRadius: 999, fontWeight: 700 }}>{count}</span>}
+        <ChevronDown size={11} />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 z-20 py-2" style={{ [align]: 0, minWidth: 190, maxWidth: 240, backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+function TaskFiltersBar({ filters, setFilters, users, allSpaces, currentSpace }) {
   const currentSpaceObj = allSpaces.find(s => s.id === currentSpace);
   const hasChildren = currentSpaceObj?.children?.length > 0;
   const toggle = (field, value) => {
@@ -9884,57 +9920,55 @@ function FilterPopover({ open, onClose, filters, setFilters, users, allSpaces, c
     });
   };
   const clearAll = () => setFilters({ priorities: [], assignees: [], statuses: [], includeSubspaces: true });
+  const activeCount = filters.priorities.length + filters.assignees.length + filters.statuses.length + (hasChildren && !filters.includeSubspaces ? 1 : 0);
+
   return (
-    <div className="fixed inset-0 z-40" onClick={onClose}>
-      <div className="absolute" style={{ top: 152, right: 16 }} onClick={e => e.stopPropagation()}>
-        <div className="w-[300px] max-w-[calc(100vw-32px)] py-3" style={{ backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}>
-          <div className="px-4 pb-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-            <Eyebrow>Filtros</Eyebrow>
-            <button onClick={clearAll} className="text-[10px] hover:opacity-70" style={{ color: C.muted, fontWeight: 500 }}>Limpiar</button>
-          </div>
+    <div className="flex items-center gap-2 px-4 lg:px-7 py-2 overflow-x-auto" style={{ borderBottom: `1px solid ${C.lineSoft}`, backgroundColor: C.bg, scrollbarWidth: "none" }}>
+      <Filter size={11} style={{ color: C.muted, flexShrink: 0 }} />
 
-          <div className="px-4 py-3 space-y-1">
-            <div className="text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: C.muted, fontWeight: 600 }}>Prioridad</div>
-            {[{v:"alta",c:C.brick},{v:"media",c:C.ochre},{v:"baja",c:C.muted}].map(p => (
-              <label key={p.v} className="flex items-center gap-2 cursor-pointer py-1">
-                <input type="checkbox" checked={filters.priorities.includes(p.v)} onChange={() => toggle("priorities", p.v)} />
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.c }} />
-                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500 }}>{p.v}</span>
-              </label>
-            ))}
-          </div>
+      <FilterChip label="Estado" count={filters.statuses.length} active={filters.statuses.length > 0}>
+        {TASK_STATUSES.map(s => (
+          <label key={s.id} className="flex items-center gap-2 cursor-pointer py-1 px-3 hover:opacity-80">
+            <input type="checkbox" checked={filters.statuses.includes(s.id)} onChange={() => toggle("statuses", s.id)} />
+            <span className="text-[11px]" style={{ color: s.color }}>{s.icon}</span>
+            <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500 }}>{s.label}</span>
+          </label>
+        ))}
+      </FilterChip>
 
-          <div className="px-4 py-3 space-y-1" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-            <div className="text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: C.muted, fontWeight: 600 }}>Estado</div>
-            {[{v:"open",l:"Pendientes"},{v:"done",l:"Completadas"}].map(s => (
-              <label key={s.v} className="flex items-center gap-2 cursor-pointer py-1">
-                <input type="checkbox" checked={filters.statuses.includes(s.v)} onChange={() => toggle("statuses", s.v)} />
-                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500 }}>{s.l}</span>
-              </label>
-            ))}
-          </div>
-
-          <div className="px-4 py-3 space-y-1 max-h-[200px] overflow-y-auto" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-            <div className="text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: C.muted, fontWeight: 600 }}>Asignado</div>
-            {(users || []).map(u => (
-              <label key={u.id} className="flex items-center gap-2 cursor-pointer py-1">
-                <input type="checkbox" checked={filters.assignees.includes(u.id)} onChange={() => toggle("assignees", u.id)} />
-                <Avatar personId={u.id} size={16} />
-                <span className="text-[11px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500 }}>{u.firstName} {u.lastName}</span>
-              </label>
-            ))}
-          </div>
-
-          {hasChildren && (
-            <div className="px-4 py-3" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={filters.includeSubspaces} onChange={e => setFilters(p => ({ ...p, includeSubspaces: e.target.checked }))} />
-                <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500 }}>Incluir sub-spaces</span>
-              </label>
-            </div>
-          )}
+      <FilterChip label="Asignado" count={filters.assignees.length} active={filters.assignees.length > 0}>
+        <div className="max-h-[220px] overflow-y-auto">
+          {(users || []).map(u => (
+            <label key={u.id} className="flex items-center gap-2 cursor-pointer py-1 px-3 hover:opacity-80">
+              <input type="checkbox" checked={filters.assignees.includes(u.id)} onChange={() => toggle("assignees", u.id)} />
+              <Avatar personId={u.id} size={16} />
+              <span className="text-[11px] flex-1 truncate" style={{ color: C.ink, fontWeight: 500 }}>{u.firstName} {u.lastName}</span>
+            </label>
+          ))}
         </div>
-      </div>
+      </FilterChip>
+
+      <FilterChip label="Prioridad" count={filters.priorities.length} active={filters.priorities.length > 0}>
+        {[{ v: "alta", c: C.brick }, { v: "media", c: C.ochre }, { v: "baja", c: C.muted }].map(p => (
+          <label key={p.v} className="flex items-center gap-2 cursor-pointer py-1 px-3 hover:opacity-80">
+            <input type="checkbox" checked={filters.priorities.includes(p.v)} onChange={() => toggle("priorities", p.v)} />
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.c }} />
+            <span className="text-[11px]" style={{ color: C.ink, fontWeight: 500 }}>{p.v}</span>
+          </label>
+        ))}
+      </FilterChip>
+
+      {hasChildren && (
+        <button onClick={() => setFilters(p => ({ ...p, includeSubspaces: !p.includeSubspaces }))}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90 flex-shrink-0 whitespace-nowrap"
+          style={{ color: filters.includeSubspaces ? C.inkSoft : C.cobalt, border: `1px solid ${filters.includeSubspaces ? C.lineSoft : C.cobalt}`, borderRadius: 2, fontWeight: filters.includeSubspaces ? 500 : 600 }}>
+          Incluir sub-espacios
+        </button>
+      )}
+
+      {activeCount > 0 && (
+        <button onClick={clearAll} className="text-[10px] hover:opacity-70 flex-shrink-0 ml-1" style={{ color: C.muted, fontWeight: 500 }}>Limpiar</button>
+      )}
     </div>
   );
 }
@@ -15115,7 +15149,6 @@ export default function HyggeOS({ authUser } = {}) {
   const [spaceViewports, setSpaceViewports] = useState({}); // { spaceId: { url, label } }
   const [knowledgeLinks, setKnowledgeLinks] = useState([]);
   const [filters, setFilters] = useState({ priorities: [], assignees: [], statuses: [], includeSubspaces: true });
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [terrenos, setTerrenos] = useState(INITIAL_TERRENOS);
   const [selectedTerrenoId, setSelectedTerrenoId] = useState(null);
   const [customViews, setCustomViews] = useState(INITIAL_CUSTOM_VIEWS);
@@ -15356,6 +15389,12 @@ export default function HyggeOS({ authUser } = {}) {
     (async () => {
       try {
         const ignored = JSON.parse(localStorage.getItem("hygge:dropbox:proj_ignored") || "[]");
+        // projectFolderName() slugifica ("San Antonio 01" → "san_antonio_01") y a veces
+        // difiere del nombre real incluso con código (DC01_hygge_del_castillo vs.
+        // DC01_del_castillo real) — el nombre es una conjetura, no una identidad. Por eso
+        // además excluimos por `path` exacto: cada carpeta desde la que ya se creó un
+        // proyecto queda acá (ver onCreateSpace del modal de proyectos, más abajo).
+        const created = JSON.parse(localStorage.getItem("hygge:dropbox:proj_created") || "[]");
         const res = await fetch(`${ALICIA_BRAIN_URL}/api/dropbox/browse?path=${encodeURIComponent(PROYECTOS_ROOT)}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -15369,7 +15408,8 @@ export default function HyggeOS({ authUser } = {}) {
         const newFolders = folders.filter(f =>
           !f.name.startsWith("_") &&
           !known.has(f.name.toLowerCase()) &&
-          !ignored.includes(f.path)
+          !ignored.includes(f.path) &&
+          !created.includes(f.path)
         );
         if (newFolders.length > 0) setDropboxProjectSyncItems(newFolders.map(f => ({ name: f.name, path: f.path })));
       } catch (_) { /* silent */ }
@@ -15584,7 +15624,7 @@ export default function HyggeOS({ authUser } = {}) {
   // Auto-close mobile drawers when user navigates
   useEffect(() => { setMobileSidebarOpen(false); }, [currentSpace, view]);
   // Reset filters when switching spaces
-  useEffect(() => { setFilters({ priorities: [], assignees: [], statuses: [], includeSubspaces: true }); setFilterPopoverOpen(false); }, [currentSpace]);
+  useEffect(() => { setFilters({ priorities: [], assignees: [], statuses: [], includeSubspaces: true }); }, [currentSpace]);
 
   // ─── Smart Capture · Pattern Detector ───
   const detectedPatterns = useMemo(() => detectPatterns(tasks), [tasks]);
@@ -15659,8 +15699,10 @@ export default function HyggeOS({ authUser } = {}) {
     if (filters.priorities.length) filtered = filtered.filter(t => filters.priorities.includes(t.priority) || (t.parentId && filtered.find(p => p.id === t.parentId)));
     if (filters.assignees.length) filtered = filtered.filter(t => filters.assignees.some(a => idsOf(t).includes(a)) || (t.parentId && filtered.find(p => p.id === t.parentId)));
     if (filters.statuses.length) {
+      // Compara contra el status real de 5 valores (getTaskStatus), no el binario
+      // open/done de antes — el chip de Estado ahora expone los 5 de TASK_STATUSES.
       filtered = filtered.filter(t => {
-        const status = t.checked ? "done" : "open";
+        const status = getTaskStatus(t);
         return filters.statuses.includes(status) || (t.parentId && filtered.find(p => p.id === t.parentId));
       });
     }
@@ -15678,7 +15720,6 @@ export default function HyggeOS({ authUser } = {}) {
     return filtered;
   }, [tasks, currentSpace, allSpaces, filters, activeSmartView]);
 
-  const activeFilterCount = filters.priorities.length + filters.assignees.length + filters.statuses.length + (filters.includeSubspaces ? 0 : 1);
   const inboxCount = tasks.filter(t => (t.source === "smartcapture" || t.space === "inbox") && !t.checked).length;
   // Antes salía de `activity` (acciones locales del propio usuario) — el badge
   // no reflejaba nada de lo que llegaba por Realtime. Ahora cuenta no leídas
@@ -16424,8 +16465,8 @@ REGLAS:
               </button>
             </div>
           )}
-          {!isToolId(currentSpace) && !isAppId(currentSpace) && <ViewTabs active={view} setActive={setView} onAdd={() => setAddOpen(true)} onFilterClick={() => setFilterPopoverOpen(o => !o)} activeFilterCount={activeFilterCount} customViews={currentCustomViews} onAddCustom={() => { setCustomViewEditInitial(null); setCustomViewEditOpen(true); }} onDeleteCustom={(id) => deleteCustomView(currentSpace, id)} features={features} setFeatures={setFeatures} />}
-          <FilterPopover open={filterPopoverOpen} onClose={() => setFilterPopoverOpen(false)} filters={filters} setFilters={setFilters} users={users} allSpaces={allSpaces} currentSpace={currentSpace} />
+          {!isToolId(currentSpace) && !isAppId(currentSpace) && <ViewTabs active={view} setActive={setView} onAdd={() => setAddOpen(true)} customViews={currentCustomViews} onAddCustom={() => { setCustomViewEditInitial(null); setCustomViewEditOpen(true); }} onDeleteCustom={(id) => deleteCustomView(currentSpace, id)} features={features} setFeatures={setFeatures} />}
+          {!isToolId(currentSpace) && !isAppId(currentSpace) && <TaskFiltersBar filters={filters} setFilters={setFilters} users={users} allSpaces={allSpaces} currentSpace={currentSpace} />}
           <div className="flex-1" style={{ backgroundColor: C.bg, overflow: isAppId(currentSpace) ? "hidden" : "auto" }}>{content}</div>
         </div>
         <RightPanel timer={timer} toggleTimer={toggleTimer} stopTimer={stopTimer} messages={messages} activity={activity} markRead={markRead} openTask={openDetail} navigate={navigate} openAskHygge={() => setChatOpen(true)}
@@ -16533,6 +16574,14 @@ REGLAS:
               color: palette[prev.length % palette.length],
             }];
           });
+          // Guardamos el path exacto (no el nombre): comparar por nombre falla acá porque
+          // projectFolderName() slugifica ("San Antonio 01" → "san_antonio_01") y a veces
+          // ni el código coincide (DC01_hygge_del_castillo vs. la carpeta real
+          // DC01_del_castillo). El path es identidad real, así el popup no vuelve a
+          // proponer esta carpeta en la próxima sesión.
+          const created = JSON.parse(localStorage.getItem("hygge:dropbox:proj_created") || "[]");
+          created.push(item.path);
+          saveStored("hygge:dropbox:proj_created", created);
           setDropboxProjectSyncItems(prev => prev.filter(i => i.path !== item.path));
         }}
         onIgnore={(item) => {
