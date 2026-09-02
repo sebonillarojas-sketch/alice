@@ -767,7 +767,7 @@ export async function executeTool(toolName, input, userId) {
       const { approveLesson } = await import("./lessons.js");
       const r = await approveLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
       if (r.applied) return `Listo, apliqué la lección #${input.id} ✓`;
-      if (r.blocked) return `No la apliqué: al contrastarla contra lo que venías haciendo, degrada. ${r.regression.reason}\nSi igual la querés, decímelo y la fuerzo.`;
+      if (r.blocked) return `No la apliqué: al contrastarla contra lo que venías haciendo, degrada. ${r.regression.reason}\nSi querés, pedímela de nuevo más tarde y la vuelvo a evaluar contra casos nuevos.`;
       return `La #${input.id} ya estaba ${r.status} — no la volví a tocar.`;
     }
 
