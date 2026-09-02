@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Comp
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, MessageCircle, Box, Sword, StickyNote,
+  Upload, Crosshair, RefreshCw, MessageCircle, Box, GitBranch, StickyNote,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
@@ -244,7 +244,12 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { corregirConFeyd, reanclarItems, disenarConFeyd } from "./feyd.js";
+import { reanclarItems, disenarConFeyd, roomsALayout, layoutARooms } from "./feyd.js";
+import {
+  applyPlanVersion, createPlanVersion, critiqueWithTweedledee,
+  designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
+} from "./architecture.js";
+import ArchitectureReviewPanel from "./ArchitectureReviewPanel.jsx";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
 import { useProyectos } from "../cabida/proyectos.js";
 import { clasificarBordes } from "../cabida/loteReal.js";
@@ -904,6 +909,13 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   });
   const [ficha, setFicha] = useState(P.ficha ? { ...FICHA_DEF, ...P.ficha } : FICHA_DEF);
   const [showFicha, setShowFicha] = useState(false);
+  const [showArchitecture, setShowArchitecture] = useState(false);
+  const [architectureVersions, setArchitectureVersions] = useState(P.architectureVersions || []);
+  const [architectureRuns, setArchitectureRuns] = useState(P.architectureRuns || []);
+  const [activeArchitectureVersionId, setActiveArchitectureVersionId] = useState(P.activeArchitectureVersionId || null);
+  const [architectureBusy, setArchitectureBusy] = useState(null);
+  const [architectureError, setArchitectureError] = useState("");
+  const [architectureResult, setArchitectureResult] = useState(null);
 
   const [draft, setDraft] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -961,10 +973,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
   // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
   useEffect(() => {
-    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos };
+    const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos,
+      architectureVersions, architectureRuns, activeArchitectureVersionId };
     if (onSavePlano) onSavePlano(snap);
     else { try { localStorage.setItem(STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
-  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos]);
+  }, [onSavePlano, rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos,
+    architectureVersions, architectureRuns, activeArchitectureVersionId]);
 
   // ── historial ─────────────────────────────────────────────
   const snapshot = useCallback(() => ({ rooms, items }), [rooms, items]);
@@ -1565,22 +1579,96 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const aberturas = items.filter((t) => porId[t.ref]?.cat === "abertura");
   const muebles = items.filter((t) => porId[t.ref]?.cat !== "abertura");
 
-  // Feyd-Rautha 🗡️ · null | "cargando" | { veredicto, problemas, rooms }
-  const [feyd, setFeyd] = useState(null);
-  const consultarFeyd = async () => {
-    if (!rooms.length || feyd === "cargando") return;
-    setFeyd("cargando");
-    try {
-      setFeyd(await corregirConFeyd(rooms, brief));
-    } catch (e) {
-      setFeyd({ veredicto: `no se pudo consultar: ${e.message}`, problemas: [], rooms: null });
-    }
+  const snapshotLive = () => ({ rooms: structuredClone(rooms), items: structuredClone(items) });
+  const ensureSourceVersion = () => {
+    const active = architectureVersions.find((version) => version.id === activeArchitectureVersionId);
+    const live = snapshotLive();
+    if (active && JSON.stringify(active.snapshot) === JSON.stringify(live)) return { source: active, history: architectureVersions };
+    const next = createPlanVersion(architectureVersions, {
+      projectId: proyecto.id,
+      parentVersionId: active?.id || null,
+      createdBy: "human",
+      snapshot: live,
+    });
+    setArchitectureVersions(next.history);
+    setActiveArchitectureVersionId(next.version.id);
+    return { source: next.version, history: next.history };
   };
-  const aplicarFeyd = () => {
-    // los muebles viajan con su ambiente corregido (F1) — antes quedaban en
-    // coordenadas viejas y terminaban flotando fuera de los muros de Feyd.
-    if (feyd?.rooms?.length) commit(feyd.rooms, reanclarItems(items, rooms, feyd.rooms));
-    setFeyd(null);
+  const contextFor = (sourcePlanVersionId) => ({
+    project: { id: proyecto.id, name: proyecto.nombre || "Proyecto BAM" },
+    brief,
+    site: { lotType: tipoLote, boundary: lote?.pts || null, frontEdgeIndex: frontIdx },
+    constraints: { setbacks: { front: retiro, side: retiroLat, rear: retiroPost }, wallThickness: muro, clearHeight: altura },
+    lockedElements: rooms.filter((room) => room.tipo === "core").map((room) => ({ type: "room", id: room.id })),
+    assumptions: [],
+    sourcePlanVersionId,
+    verifiedEvidence: [],
+  });
+  const recordArchitectureRun = (run) => setArchitectureRuns((prev) => [...prev.slice(-49), { id: `ar_${Date.now().toString(36)}`, createdAt: new Date().toISOString(), ...run }]);
+  const mappedCritique = (critique, targetRooms, targetItems) => ({
+    ...critique,
+    findings: (critique.findings || []).map((finding) => ({ ...finding, mappedLocation: mapFindingLocation(finding, targetRooms, targetItems) })),
+  });
+  const snapshotFromLayout = (layout, baseRooms, baseItems) => {
+    const nextRooms = layoutARooms(layout);
+    return { rooms: nextRooms, items: reanclarItems(baseItems, baseRooms, nextRooms) };
+  };
+  const runDesign = async () => {
+    if (!rooms.length || architectureBusy) return;
+    setArchitectureBusy("Tweedledum"); setArchitectureError("");
+    try {
+      const { source, history } = ensureSourceVersion();
+      const output = await designWithTweedledum({ context: contextFor(source.id), brief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, designObjective: "balanced residential architecture" });
+      const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromLayout(output.layout, source.snapshot.rooms, source.snapshot.items) });
+      setArchitectureVersions(proposal.history);
+      recordArchitectureRun({ mode: "design", sourceVersionId: source.id, resultVersionId: proposal.version.id, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }] });
+      setArchitectureResult({ mode: "design", design: output, applyVersionId: proposal.version.id });
+    } catch (e) { setArchitectureError(e.message || "No se pudo diseñar"); }
+    finally { setArchitectureBusy(null); }
+  };
+  const runCritique = async () => {
+    if (!rooms.length || architectureBusy) return;
+    setArchitectureBusy("Tweedledee"); setArchitectureError("");
+    try {
+      const { source } = ensureSourceVersion();
+      const outputRaw = await critiqueWithTweedledee({ context: contextFor(source.id), planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, deterministicValidation: serializeValidation(val), designObjective: "balanced residential architecture" });
+      const output = mappedCritique(outputRaw, source.snapshot.rooms, source.snapshot.items);
+      recordArchitectureRun({ mode: "critique", sourceVersionId: source.id, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }], findings: output.findings });
+      setArchitectureResult({ mode: "critique", output, critique: output });
+    } catch (e) { setArchitectureError(e.message || "No se pudo criticar"); }
+    finally { setArchitectureBusy(null); }
+  };
+  const runReviewCycle = async () => {
+    if (!rooms.length || architectureBusy) return;
+    setArchitectureBusy("review cycle"); setArchitectureError("");
+    try {
+      const { source, history } = ensureSourceVersion();
+      const design = await designWithTweedledum({ context: contextFor(source.id), brief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, designObjective: "balanced residential architecture" });
+      const proposalSnapshot = snapshotFromLayout(design.layout, source.snapshot.rooms, source.snapshot.items);
+      const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: proposalSnapshot });
+      setArchitectureVersions(proposal.history); // si la crítica falla, el diseño igual queda recuperable
+      const proposalValidation = validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null });
+      const critiqueRaw = await critiqueWithTweedledee({ context: contextFor(proposal.version.id), planVersion: { id: proposal.version.id, layout: roomsALayout(proposalSnapshot.rooms, brief) }, deterministicValidation: serializeValidation(proposalValidation), designObjective: "balanced residential architecture" });
+      const critique = mappedCritique(critiqueRaw, proposalSnapshot.rooms, proposalSnapshot.items);
+      const acceptedFindings = critique.findings.filter((finding) => ["critical", "major"].includes(finding.severity));
+      let revision = null, revisionVersion = null, finalHistory = proposal.history;
+      if (acceptedFindings.length) {
+        revision = await reviseWithTweedledum({ context: contextFor(proposal.version.id), brief, planVersion: { id: proposal.version.id, layout: design.layout }, acceptedFindings, designObjective: "resolve accepted critique findings" });
+        const revisedSnapshot = snapshotFromLayout(revision.layout, proposalSnapshot.rooms, proposalSnapshot.items);
+        const next = createPlanVersion(finalHistory, { projectId: proyecto.id, parentVersionId: proposal.version.id, createdBy: "tweedledum", snapshot: revisedSnapshot });
+        revisionVersion = next.version; finalHistory = next.history;
+      }
+      setArchitectureVersions(finalHistory);
+      recordArchitectureRun({ mode: "cycle", sourceVersionId: source.id, proposalVersionId: proposal.version.id, resultVersionId: revisionVersion?.id || proposal.version.id,
+        agents: [{ key: design.agent.key, promptVersion: design.promptVersion }, { key: critique.agent.key, promptVersion: critique.promptVersion }, ...(revision ? [{ key: revision.agent.key, promptVersion: revision.promptVersion }] : [])], findings: critique.findings });
+      setArchitectureResult({ mode: "cycle", design, critique, revision, proposalVersionId: proposal.version.id, revisionVersionId: revisionVersion?.id || null });
+    } catch (e) { setArchitectureError(e.message || "No se pudo completar el ciclo"); }
+    finally { setArchitectureBusy(null); }
+  };
+  const applyArchitectureVersion = (versionId) => {
+    const applied = applyPlanVersion(architectureVersions, versionId);
+    commit(applied.snapshot.rooms, applied.snapshot.items);
+    setActiveArchitectureVersionId(versionId);
   };
 
   return (
@@ -1647,9 +1735,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn onClick={exportSVG} disabled={!rooms.length} title="Exportar lámina BAM (.svg)"><Download size={13} /> lámina</Btn>
         <Btn onClick={exportarAMesa} disabled={!rooms.length || !navigate} title="Enviar a la Mesa de Trabajo (pestaña Planos)"><StickyNote size={13} /> → mesa</Btn>
-        <Btn onClick={consultarFeyd} disabled={!rooms.length || feyd === "cargando"}
-          title="Feyd-Rautha 🗡️ audita la planta contra RNE + Neufert + checklist BAM y propone la corrección">
-          <Sword size={13} /> {feyd === "cargando" ? "auditando…" : "feyd"}
+        <Btn active={showArchitecture} onClick={() => setShowArchitecture((value) => !value)} disabled={!rooms.length}
+          title="Tweedledum diseña · Tweedledee critica · las reglas determinísticas validan">
+          <GitBranch size={13} /> architecture
         </Btn>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
@@ -1671,49 +1759,18 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         </div>
       </div>
 
-      {/* Feyd auditando · el análisis tarda ~30s, hay que mostrar que está trabajando */}
-      {feyd === "cargando" && (
-        <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
-          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
-          padding: "14px 16px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 10 }}>
-          <style>{"@keyframes feydspin{to{transform:rotate(360deg)}}"}</style>
-          <Sword size={14} color="#A85B5B" style={{ animation: "feydspin 1.4s linear infinite", flexShrink: 0 }} />
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: C.ink }}>Feyd está destrozando tu planta…</div>
-            <div style={{ fontFamily: mono, fontSize: 10, color: C.soft, marginTop: 2 }}>audita contra RNE + checklist BAM · ~30s</div>
-          </div>
-        </div>
-      )}
-
-      {/* veredicto de Feyd-Rautha 🗡️ */}
-      {feyd && feyd !== "cargando" && (
-        <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 55, width: 380, maxWidth: "calc(100% - 32px)",
-          background: C.card, border: `1px solid ${C.line}`, borderLeft: "3px solid #A85B5B", borderRadius: 3,
-          padding: "12px 14px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <Sword size={12} color="#A85B5B" />
-            <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>feyd-rautha</span>
-            <button onClick={() => setFeyd(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}><X size={13} color={C.soft} /></button>
-          </div>
-          <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, lineHeight: 1.55, marginBottom: feyd.problemas.length ? 8 : 0, whiteSpace: "pre-wrap" }}>
-            {feyd.veredicto}
-          </div>
-          {feyd.problemas.slice(0, 8).map((p, i) => (
-            <div key={i} style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, lineHeight: 1.6 }}>· {p}</div>
-          ))}
-          {feyd.problemas.length > 8 && (
-            <div style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>… y {feyd.problemas.length - 8} más</div>
-          )}
-          {feyd.rooms?.length > 0 && (
-            <button onClick={aplicarFeyd}
-              style={{ width: "100%", marginTop: 10, fontFamily: mono, fontSize: 11.5, color: C.card,
-                background: "#A85B5B", border: "none", borderRadius: 2, padding: "8px 0", cursor: "pointer" }}
-              title="Reemplaza los ambientes por la corrección de Feyd (⌘Z deshace)">
-              aplicar corrección de feyd →
-            </button>
-          )}
-        </div>
-      )}
+      {showArchitecture && <ArchitectureReviewPanel
+        busy={architectureBusy}
+        error={architectureError}
+        result={architectureResult}
+        versions={architectureVersions}
+        currentVersion={architectureVersions.find((version) => version.id === activeArchitectureVersionId)}
+        onDesign={runDesign}
+        onCritique={runCritique}
+        onCycle={runReviewCycle}
+        onApplyVersion={applyArchitectureVersion}
+        onClose={() => setShowArchitecture(false)}
+      />}
 
       {/* paso 1 · barra de lote: tipo de lote → retiros normativos → calcar */}
       {loteBar && (() => {
