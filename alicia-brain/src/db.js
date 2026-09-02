@@ -153,7 +153,7 @@ function initSchema(db) {
   try { db.exec("ALTER TABLE agent_runs ADD COLUMN report TEXT"); } catch {}
   try { migrateDropAgentEnum(db); } catch (e) { console.error("migrateDropAgentEnum:", e.message); }
   try { db.exec("ALTER TABLE profiles ADD COLUMN email TEXT"); } catch {}
-  try { db.exec("UPDATE profiles SET email = 'sebastian@hygge.pe' WHERE user_id = 'sb' AND (email IS NULL OR email = '')"); } catch {}
+  try { seedTeamEmails(db); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN manual_instructions TEXT"); } catch {}
   try { db.exec("ALTER TABLE user_personas ADD COLUMN sarcasm INTEGER DEFAULT 0"); } catch {}
   for (const col of ["humor INTEGER DEFAULT 5", "formality INTEGER DEFAULT 5", "proactivity INTEGER DEFAULT 7", "length INTEGER DEFAULT 5", "emojis INTEGER DEFAULT 3"]) {
@@ -197,6 +197,29 @@ function initSchema(db) {
   db.exec(`DELETE FROM messages WHERE role = 'assistant' AND trim(content) = ''`);
   // Loop de aprendizaje · tabla de lecciones
   ensureLessonsSchema(db);
+}
+
+// El roster espeja files/alice/src/auth/users.js, que es la fuente de verdad de
+// la UI. Se duplica a propósito: el cerebro no puede importar del bundle del ERP,
+// y sin email en profiles nadie salvo sb resuelve su identidad desde el JWT.
+// Si cambia un email allá, cambiarlo acá.
+const TEAM_EMAILS = {
+  sb:  "sebastian@hygge.pe",
+  vd:  "vane@hygge.pe",
+  jt:  "jose@hygge.pe",
+  jm:  "joel@hygge.pe",
+  aa:  "ariel@bam.pe",
+  ac:  "andre@hygge.pe",
+  jmg: "galup@hygge.pe",
+};
+
+// Solo rellena huecos: si alguien cargó un email a mano con
+// PATCH /api/profile/:id/email, ese gana. Idempotente.
+export function seedTeamEmails(db) {
+  const stmt = db.prepare(
+    "UPDATE profiles SET email = ? WHERE user_id = ? AND (email IS NULL OR email = '')"
+  );
+  for (const [userId, email] of Object.entries(TEAM_EMAILS)) stmt.run(email, userId);
 }
 
 // Reconstruye agent_runs SIN el CHECK-enum de `agent` (deja TEXT libre, como agent_findings).
