@@ -16,6 +16,7 @@ import { readFile } from "fs/promises";
 import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
+import { createArchitectureRouter } from "./architecture/routes.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -117,6 +118,7 @@ async function panelGate(req, res, next) {
   return res.status(401).json({ error: "no_auth" });
 }
 app.use("/api", panelGate);
+app.use("/api/architecture", createArchitectureRouter());
 
 app.post("/api/login", (req, res) => {
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "PANEL_PASSWORD no configurado" });
