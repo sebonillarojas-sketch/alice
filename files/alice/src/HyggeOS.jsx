@@ -15156,9 +15156,9 @@ export default function HyggeOS({ authUser } = {}) {
   const notifyDesktop = (users.find(u => u.id === authUser?.id)?.preferences || DEFAULT_PREFS).notifyDesktop !== false;
   // dbNotifs/dbNotifStatus alimentan el panel de Notificaciones y el badge del
   // sidebar — antes esta data se generaba y se tiraba (solo disparaba un
-  // banner). `enabled` sigue atado al toggle de banners de escritorio: si se
-  // apaga, este hook no corre y el panel/badge tampoco se actualizan. Es una
-  // acoplamiento preexistente que no tocamos acá (ver reporte).
+  // banner). `notifyDesktop` acá gatea ÚNICAMENTE el banner nativo dentro del
+  // hook (ver enabledRef en useNotifications.js): panel, badge y marcado de
+  // leídas corren siempre, apagado el banner o no.
   const { notifs: dbNotifs, status: dbNotifStatus, markRead: markDbNotifRead, markAllRead: markAllDbNotifsRead } = useNotifications({ enabled: notifyDesktop, setTasks, loaded });
 
   // Realtime cross-usuario: cuando otro miembro crea/edita/borra una tarea en
