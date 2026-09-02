@@ -18,6 +18,7 @@ import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
 import { CEO_ID, emailToUserId, resolveActingUser } from "./identity.js";
 import { renderErpContext } from "./erp-context.js";
+import { readThread } from "./history.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -1047,6 +1048,16 @@ app.post("/api/chat", async (req, res) => {
     console.error("Chat error:", e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// El hilo real que el space del ERP tiene que mostrar. Hasta ahora AliciaView
+// pintaba su propia copia de localStorage, desincronizada de lo que Alicia sí
+// recordaba en `messages` — de ahí la sensación de que "no se acuerda".
+app.get("/api/copilot/history", (req, res) => {
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.query.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
+  const limit = Math.min(Math.max(Number(req.query.limit) || 60, 1), 200);
+  res.json({ userId: act.userId, messages: readThread(getDB(), act.userId, limit) });
 });
 
 // ── Cuerpo (el teléfono de Alicia) ────────────────────────────────────────────
