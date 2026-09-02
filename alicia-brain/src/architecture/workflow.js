@@ -1,3 +1,5 @@
+import { validateArchitectureLayout } from "./validation.js";
+
 const actionable = (findings = []) => findings.filter((finding) => ["critical", "major"].includes(finding.severity));
 
 export async function runArchitectureReviewCycle(input = {}, { service } = {}) {
@@ -9,10 +11,18 @@ export async function runArchitectureReviewCycle(input = {}, { service } = {}) {
   });
   const proposalId = input.proposalVersionId || `plan_${input.context?.project?.id || "project"}_cycle_proposal`;
   const critiqueContext = { ...input.context, sourcePlanVersionId: proposalId };
+  const contractValidation = validateArchitectureLayout(design.layout, { planVersionId: proposalId });
+  const suppliedValidation = input.deterministicValidation?.planVersionId === proposalId ? input.deterministicValidation : null;
+  const deterministicValidation = suppliedValidation ? {
+    ...contractValidation,
+    ok: contractValidation.ok && suppliedValidation.ok === true,
+    findings: [...contractValidation.findings, ...(Array.isArray(suppliedValidation.findings) ? suppliedValidation.findings : [])],
+    clientValidation: suppliedValidation,
+  } : contractValidation;
   const critique = await service.critique({
     context: critiqueContext,
     planVersion: { id: proposalId, layout: design.layout },
-    deterministicValidation: input.deterministicValidation || { ok: null, findings: [] },
+    deterministicValidation,
     designObjective: input.designRequest?.designObjective,
   });
   const acceptedFindings = actionable(critique.findings);
@@ -33,7 +43,7 @@ export async function runArchitectureReviewCycle(input = {}, { service } = {}) {
   return {
     design,
     proposalVersionId: proposalId,
-    deterministicValidation: input.deterministicValidation || { ok: null, findings: [] },
+    deterministicValidation,
     critique,
     revision,
     revisionPerformed: Boolean(revision),

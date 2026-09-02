@@ -53,3 +53,21 @@ test("revision failure retains successful design and critique artifacts", async 
   assert.equal(result.revision, null);
   assert.equal(result.errors[0].stage, "revision");
 });
+
+test("review cycle validates the proposal instead of reusing stale parent validation", async () => {
+  const service = {
+    design: async () => ({ layout: { ambientes: [{ ref_id: "r1", nombre: "sala", poligono: [[0, 0], [2, 0], [2, 2]] }] } }),
+    critique: async (request) => {
+      assert.equal(request.deterministicValidation.planVersionId, "plan_p1_cycle_proposal");
+      assert.equal(request.deterministicValidation.findings.some((finding) => finding.code === "stale_parent"), false);
+      assert.equal(request.deterministicValidation.ok, true);
+      return { verdict: "pass", score: 90, findings: [] };
+    },
+    revise: async () => { throw new Error("must not revise"); },
+  };
+  await runArchitectureReviewCycle({
+    context: baseContext,
+    designRequest: { brief: {} },
+    deterministicValidation: { planVersionId: "v1", ok: false, findings: [{ code: "stale_parent" }] },
+  }, { service });
+});
