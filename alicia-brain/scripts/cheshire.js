@@ -295,9 +295,20 @@ async function runChecksInner(browser, stamp) {
             } else {
               await app.keyboard.type(titulo);
               await app.keyboard.press("Enter");
+              // Se asume que la tarea existe desde que se apretó Enter, NO desde
+              // que se la detectó en la lista: si la detección de abajo falla por
+              // timeout (red lenta, render tardío, un re-render que la sacó del
+              // viewport un instante) pero la tarea SÍ se creó, `creada` tiene que
+              // seguir apuntando a ella para que el finally intente limpiarla. Con
+              // `creada = aparece ? titulo : null` (como estaba antes) ese mismo
+              // timeout dejaba la tarea huérfana en producción para siempre — el
+              // finally directamente no se enteraba de que había algo que borrar.
+              // NO volver a esa forma: es la "simplificación" que reintroduce el
+              // hueco. La limpieza (más abajo) es la que decide si hay algo que
+              // borrar, no esta detección.
+              creada = titulo;
               await app.waitForTimeout(2500);
               const aparece = await app.getByText(titulo, { exact: false }).first().isVisible({ timeout: 8000 }).catch(() => false);
-              creada = aparece ? titulo : null;
               note(aparece, "La tarea creada aparece en la lista");
               if (!aparece) findings.push({ severity: "major", category: "flujo-crear-tarea", detail: `Creé la tarea "${titulo}" y no apareció en la lista del space ${CHESHIRE_SPACE}.` });
             }
@@ -311,35 +322,48 @@ async function runChecksInner(browser, stamp) {
       // Limpieza: lo que Cheshire crea, Cheshire lo borra. Si esto falla, avisa —
       // basura acumulándose en silencio es peor que un test que no corrió.
       if (creada) {
-        let clickErr = "";
-        try {
-          // Clic 1: abre el detalle y clickea "Eliminar" del header. OJO — ESE
-          // BOTÓN NO BORRA: onDelete acá es deleteTaskCascade, que solo hace
-          // setDeleteTaskTarget(...) y abre DeleteTaskModal (HyggeOS.jsx:16128-
-          // 16133), un segundo diálogo con su propio botón de confirmación
-          // (HyggeOS.jsx:7030-7079). Confiar en que este primer clic ya
-          // resolvía el borrado era el bug: la tarea de prueba quedaba viva
-          // para siempre y el reporte encima mentía "se borró ✅".
-          await app.getByText(creada, { exact: false }).first().click({ timeout: 8000 });
-          await app.waitForTimeout(1200);
-          await app.getByRole("button", { name: /eliminar|borrar/i }).first().click({ timeout: 5000 });
-          // Clic 2: confirmar en DeleteTaskModal. Una tarea de prueba recién
-          // creada no tiene subtareas, así que el modal abre en modo "delete-
-          // all" (default) y su botón de confirmación dice "Eliminar" también
-          // (HyggeOS.jsx:7066-7068) — el mismo selector sirve para los dos.
-          await app.waitForTimeout(1000);
-          await app.getByRole("button", { name: /eliminar|borrar/i }).first().click({ timeout: 5000 });
-          await app.waitForTimeout(1500);
-        } catch (e) {
-          clickErr = e.message;
+        // `creada` ya no implica "la detección la vio en la lista" (ver el
+        // comentario donde se setea, más arriba): puede ser un título que se
+        // tipeó y se envió con Enter, pero que la detección de "aparece" no
+        // llegó a confirmar. Por eso el primer paso acá es preguntar si existe
+        // de verdad — si no existe, no es un fallo de limpieza, es que no hay
+        // nada que limpiar (o la creación falló de verdad, y eso ya lo cubrió
+        // el finding de "flujo-crear-tarea" de más arriba).
+        const existe = await app.getByText(creada, { exact: false }).first().isVisible({ timeout: 5000 }).catch(() => false);
+        if (!existe) {
+          note(true, "Limpieza: nada que borrar (la tarea no llegó a existir)");
+        } else {
+          let clickErr = "";
+          try {
+            // Clic 1: abre el detalle y clickea "Eliminar" del header. OJO — ESE
+            // BOTÓN NO BORRA: onDelete acá es deleteTaskCascade, que solo hace
+            // setDeleteTaskTarget(...) y abre DeleteTaskModal (HyggeOS.jsx:16128-
+            // 16133), un segundo diálogo con su propio botón de confirmación
+            // (HyggeOS.jsx:7030-7079). Confiar en que este primer clic ya
+            // resolvía el borrado era el bug: la tarea de prueba quedaba viva
+            // para siempre y el reporte encima mentía "se borró ✅".
+            await app.getByText(creada, { exact: false }).first().click({ timeout: 8000 });
+            await app.waitForTimeout(1200);
+            await app.getByRole("button", { name: /eliminar|borrar/i }).first().click({ timeout: 5000 });
+            // Clic 2: confirmar en DeleteTaskModal. Una tarea de prueba recién
+            // creada no tiene subtareas, así que el modal abre en modo "delete-
+            // all" (default) y su botón de confirmación dice "Eliminar" también
+            // (HyggeOS.jsx:7066-7068) — el mismo selector sirve para los dos.
+            await app.waitForTimeout(1000);
+            await app.getByRole("button", { name: /eliminar|borrar/i }).first().click({ timeout: 5000 });
+            await app.waitForTimeout(1500);
+          } catch (e) {
+            clickErr = e.message;
+          }
+          // No alcanza con que los clics no hayan tirado error: la única prueba
+          // real de que se borró es que la tarea haya desaparecido de la lista.
+          // Si sigue viva —la encontramos arriba, así que sabemos que existía—
+          // esto sí es basura de verdad y el finding tiene que salir.
+          const sigueViva = await app.getByText(creada, { exact: false }).first().isVisible({ timeout: 3000 }).catch(() => false);
+          const borrado = !sigueViva;
+          note(borrado, "Limpieza: la tarea de prueba se borró", clickErr);
+          if (!borrado) findings.push({ severity: "minor", category: "cheshire-basura", detail: `No pude borrar mi tarea de prueba "${creada}" en el space ${CHESHIRE_SPACE}${clickErr ? ` (${clickErr})` : ""}. Hay que limpiarla a mano.` });
         }
-        // No alcanza con que los clics no hayan tirado error: la única prueba
-        // real de que se borró es que la tarea haya desaparecido de la lista.
-        // Si sigue viva, el finding de basura tiene que salir igual.
-        const sigueViva = await app.getByText(creada, { exact: false }).first().isVisible({ timeout: 3000 }).catch(() => false);
-        const borrado = !sigueViva;
-        note(borrado, "Limpieza: la tarea de prueba se borró", clickErr);
-        if (!borrado) findings.push({ severity: "minor", category: "cheshire-basura", detail: `No pude borrar mi tarea de prueba "${creada}" en el space ${CHESHIRE_SPACE}${clickErr ? ` (${clickErr})` : ""}. Hay que limpiarla a mano.` });
       }
       await app.close().catch(() => {});
     }
