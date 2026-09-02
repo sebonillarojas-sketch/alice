@@ -111,3 +111,96 @@ Decisiones de producto del ERP que NO están en el código-comentario y hay que 
 - `ALICE-handoff-erp.tar.gz` — cockpit ERP completo (sin node_modules/.git/dist)
 - ⚠️ Los `.env` van INCLUIDOS (contienen las llaves reales) — no subir estos archives a ningún lado público.
 - De todas formas el código canónico está en git (`sebonillarojas-sketch/alice`) y en las carpetas locales — los archives son solo backup.
+
+## 10. ARCHITECTURE AGENTS · TWEEDLEDUM + TWEEDLEDEE (2 sep 2026)
+
+ALICE now has two separate, server-side architecture roles:
+
+- **Tweedledum** designs and revises structured layouts. Prompt `1.0.0`.
+- **Tweedledee** critiques one exact plan version. Prompt `1.0.0`.
+
+The old `/api/arquitecto/disenar` and `/api/arquitecto/corregir` routes remain as compatibility aliases for existing Editor calls. New code should use:
+
+```text
+GET  /api/architecture/agents
+POST /api/architecture/tweedledum/design
+POST /api/architecture/tweedledum/revise
+POST /api/architecture/tweedledee/critique
+POST /api/architecture/review-cycle
+```
+
+All routes pass through the existing `/api` panel/Supabase JWT gate. They use the existing `ANTHROPIC_API_KEY`; there is no new required environment variable.
+
+### Independent design
+
+```json
+POST /api/architecture/tweedledum/design
+{
+  "context": {
+    "project": { "id": "p_123", "name": "DC01" },
+    "brief": {},
+    "site": {},
+    "constraints": {},
+    "lockedElements": [],
+    "assumptions": [],
+    "sourcePlanVersionId": "plan_p_123_v1",
+    "verifiedEvidence": []
+  },
+  "brief": { "dormitorios": 2 },
+  "planVersion": { "id": "plan_p_123_v1", "layout": { "ambientes": [] } },
+  "designObjective": "balanced residential architecture"
+}
+```
+
+### Independent critique
+
+```json
+POST /api/architecture/tweedledee/critique
+{
+  "context": {
+    "project": { "id": "p_123", "name": "DC01" },
+    "sourcePlanVersionId": "plan_p_123_v2",
+    "verifiedEvidence": []
+  },
+  "planVersion": { "id": "plan_p_123_v2", "layout": { "ambientes": [] } },
+  "deterministicValidation": { "planVersionId": "plan_p_123_v2", "ok": true, "findings": [] },
+  "designObjective": "livability"
+}
+```
+
+Tweedledee never receives Tweedledum's rationale. Findings can reference `roomId`, `itemId`, or a point when those references exist. A regulatory finding is downgraded to `verification_required` unless every cited evidence ID exists in `verifiedEvidence` with `verified: true`.
+
+### Combined backend cycle
+
+```json
+POST /api/architecture/review-cycle
+{
+  "context": { "project": { "id": "p_123", "name": "DC01" }, "sourcePlanVersionId": "plan_p_123_v1" },
+  "designRequest": {
+    "brief": { "dormitorios": 2 },
+    "planVersion": { "id": "plan_p_123_v1", "layout": { "ambientes": [] } },
+    "designObjective": "balanced residential architecture"
+  },
+  "proposalVersionId": "plan_p_123_v2"
+}
+```
+
+The backend validates the generated proposal before sending it to Tweedledee. Caller-supplied deterministic findings are merged only when their `planVersionId` exactly matches `proposalVersionId`, preventing stale findings from a parent plan being attributed to the proposal.
+
+### Editor invocation
+
+Open **Apps → Editor de Planos**, choose a project, and click **architecture** in the toolbar:
+
+- **Tweedledum** creates a recoverable child version.
+- **Tweedledee** critiques the current version after the Editor's existing deterministic checks run.
+- **Review cycle** runs Tweedledum → deterministic plan checks → Tweedledee → at most one Tweedledum revision.
+
+Versions and run metadata are stored inside the existing project `plano` object as `architectureVersions`, `architectureRuns`, and `activeArchitectureVersionId`, so the existing local-first/Supabase project sync carries them without a new database.
+
+### Deliberate limits
+
+- The backend contract validator proves only layout shape, finite polygon coordinates, and unique room references.
+- The Editor validator currently checks boundary containment, furniture-with-room, and basic room reachability.
+- Neither validator proves RNE, municipal, accessibility, fire, structural, MEP, daylight, or market compliance.
+- Architecture outputs require human architect review and approval.
+- The combined backend route runs at most one revision; additional passes require a new explicit request.
