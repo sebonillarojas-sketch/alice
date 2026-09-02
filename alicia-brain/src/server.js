@@ -17,6 +17,7 @@ import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
 import { CEO_ID, emailToUserId, resolveActingUser } from "./identity.js";
+import { renderErpContext } from "./erp-context.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -645,7 +646,13 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   // Fecha+hora SIEMPRE acá (no en el bloque cacheado: la hora rompería el cache cada minuto,
   // y sin timeZone el server UTC hacía que Alicia viviera en el día siguiente desde las 7pm).
   const nowLima = new Date().toLocaleString("es-PE", { timeZone: "America/Lima", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
-  systemBlocks.push({ type: "text", text: `Ahora en Lima: ${nowLima}.${liveContext ? `\n\n${liveContext}` : ""}` });
+  // El contexto del ERP viaja en el mismo bloque NO cacheado que la hora y el
+  // contexto vivo: es lo que cambia a cada rato. Ver comentario en erp-context.js.
+  const erpBlock = renderErpContext(opts.erpContext);
+  systemBlocks.push({ type: "text", text:
+    `Ahora en Lima: ${nowLima}.`
+    + (liveContext ? `\n\n${liveContext}` : "")
+    + (erpBlock ? `\n\n${erpBlock}` : "") });
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
@@ -1034,7 +1041,7 @@ app.post("/api/chat", async (req, res) => {
   const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
   if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
   try {
-    const result = await processAliciaMessage(act.userId, message, "app");
+    const result = await processAliciaMessage(act.userId, message, "app", { erpContext: req.body.erpContext });
     res.json(result);
   } catch (e) {
     console.error("Chat error:", e.message);
