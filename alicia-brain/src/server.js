@@ -1721,7 +1721,7 @@ app.post("/api/agents/lessons/:id/approve", async (req, res) => {
     const { by = "tea-table-panel" } = req.body || {};
     const { getDB } = await import("./db.js");
     const { approveLesson } = await import("./lessons.js");
-    res.json(approveLesson(getDB(), Number(req.params.id), { by }));
+    res.json(await approveLesson(getDB(), Number(req.params.id), { by }));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post("/api/agents/lessons/:id/reject", async (req, res) => {

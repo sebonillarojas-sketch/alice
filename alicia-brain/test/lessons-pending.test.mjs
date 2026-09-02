@@ -5,38 +5,38 @@ import { ensureLessonsSchema, proposeLesson, runGateOnLesson, pendingLessonsForC
 
 // Siembra lecciones en varios scopes, todas con evidencia suficiente y riesgo L1
 // (→ el gate las deja 'validated', esperando humano).
-function seededDb() {
+async function seededDb() {
   const db = new DatabaseSync(":memory:");
   ensureLessonsSchema(db);
-  const mk = (scope, lesson) => {
+  const mk = async (scope, lesson) => {
     let id;
     for (let i = 0; i < 3; i++) id = proposeLesson(db, { scope, source: "correction", lesson, risk_level: "L1" }).id;
-    runGateOnLesson(db, id, { hardRules: [], minEvidence: 3 }); // → validated (L1 con evidencia)
+    await runGateOnLesson(db, id, { hardRules: [], minEvidence: 3 }); // → validated (L1 con evidencia)
     return id;
   };
-  mk("agent:alicia", "Saludá por el nombre");
-  mk("user:sb", "A Sebastián dale el número directo");
-  mk("global", "No prometas fechas sin confirmar");
-  mk("agent:cheshire", "Revisá el login sin feedback");
-  mk("agent:knave", "Chequeá headers CSP");
+  await mk("agent:alicia", "Saludá por el nombre");
+  await mk("user:sb", "A Sebastián dale el número directo");
+  await mk("global", "No prometas fechas sin confirmar");
+  await mk("agent:cheshire", "Revisá el login sin feedback");
+  await mk("agent:knave", "Chequeá headers CSP");
   return db;
 }
 
-test("pendingLessonsForCEO: incluye alicia/user:sb/global, NO los agentes wondie", () => {
-  const rows = pendingLessonsForCEO(seededDb());
+test("pendingLessonsForCEO: incluye alicia/user:sb/global, NO los agentes wondie", async () => {
+  const rows = pendingLessonsForCEO(await seededDb());
   const scopes = rows.map(r => r.scope).sort();
   assert.deepEqual(scopes, ["agent:alicia", "global", "user:sb"]);
 });
 
-test("pendingLessonsForWondies: incluye agent:* MENOS alicia", () => {
-  const rows = pendingLessonsForWondies(seededDb());
+test("pendingLessonsForWondies: incluye agent:* MENOS alicia", async () => {
+  const rows = pendingLessonsForWondies(await seededDb());
   const scopes = rows.map(r => r.scope).sort();
   assert.deepEqual(scopes, ["agent:cheshire", "agent:knave"]);
   assert.ok(!scopes.includes("agent:alicia"));
 });
 
-test("pendingLessonsForCEO: solo 'validated' (una applied no aparece)", () => {
-  const db = seededDb();
+test("pendingLessonsForCEO: solo 'validated' (una applied no aparece)", async () => {
+  const db = await seededDb();
   const before = pendingLessonsForCEO(db).length;
   const id = pendingLessonsForCEO(db)[0].id;
   db.prepare("UPDATE lessons SET status='applied' WHERE id=?").run(id);
