@@ -5,6 +5,7 @@
 // que responde este módulo es: ¿ese texto habría empeorado algo que el agente ya venía
 // haciendo bien? Se contrasta contra la ventana reciente de comportamiento real.
 import { loadAgentContext } from "./agent-voices.js";
+import Anthropic from "@anthropic-ai/sdk";
 
 // Los scopes conversacionales miran los mensajes de Alicia; los agent:<x> miran sus
 // corridas. `global` no tiene un comportamiento concreto que contrastar y por eso no
@@ -77,4 +78,50 @@ CASOS RECIENTES QUE SALIERON BIEN:
 ${cases.map((c, i) => `[${i}] Entrada: ${c.input}\n    Salida: ${c.output}`).join("\n\n")}`;
 
   return { system, user };
+}
+
+const _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+export const JUDGE_MODEL = "claude-opus-5";
+
+// El juez decide si una lección entra al cerebro: es el peor lugar para ahorrar modelo.
+// effort low porque la salida es un JSON de tres campos, no un ensayo.
+export async function judgeRegression(lesson, cases, { client = _client } = {}) {
+  const { system, user } = buildJudgePrompt(lesson, cases);
+  const resp = await client.messages.create({
+    model: JUDGE_MODEL,
+    max_tokens: 400,
+    output_config: { effort: "low" },
+    system,
+    messages: [{ role: "user", content: user }],
+  });
+  const text = resp?.content?.find(b => b.type === "text")?.text?.trim() || "";
+  // A veces vuelve envuelto en ```json — se extrae el primer objeto del texto.
+  const raw = /\{[\s\S]*\}/.exec(text)?.[0];
+  if (!raw) throw new Error("el juez no devolvió JSON");
+  const parsed = JSON.parse(raw);
+  if (parsed.verdict !== "pass" && parsed.verdict !== "degrades") {
+    throw new Error(`veredicto desconocido: ${parsed.verdict}`);
+  }
+  return {
+    verdict: parsed.verdict,
+    offending: Array.isArray(parsed.offending) ? parsed.offending : [],
+    reason: String(parsed.reason || "").slice(0, 300),
+  };
+}
+
+const now = () => new Date().toISOString().slice(0, 19).replace("T", " ");
+const verdict = (status, reason, cases_seen = 0) => ({ status, reason, cases_seen, model: JUDGE_MODEL, at: now() });
+
+// La interfaz que consume el gate. Nunca lanza: un problema acá no puede trabar el loop.
+export async function checkRegression(db, row, { client, limit = 8 } = {}) {
+  if (process.env.LESSON_REGRESSION === "off") return verdict("skipped", "capa desactivada por entorno");
+  const cases = collectCases(db, row.scope, { limit });
+  if (!cases.length) return verdict("skipped", `sin material reciente para el scope ${row.scope}`);
+  try {
+    const r = await judgeRegression(row.lesson, cases, { client });
+    return verdict(r.verdict, r.reason || (r.verdict === "pass" ? "el juez no vio degradación" : "el juez vio degradación"), cases.length);
+  } catch (e) {
+    return verdict("error", e.message, cases.length);
+  }
 }
