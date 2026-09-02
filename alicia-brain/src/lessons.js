@@ -1,4 +1,6 @@
 // Loop de aprendizaje · motor de lecciones. Ver docs/superpowers/specs/2026-08-09-loop-aprendizaje-design.md
+import { resolveRiskLevel } from "./risk-levels.js";
+
 export function ensureLessonsSchema(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS lessons (
@@ -47,9 +49,13 @@ export function proposeLesson(db, { scope = "global", source, trigger = null, le
     db.prepare("UPDATE lessons SET evidence_count = ?, updated_at = datetime('now') WHERE id = ?").run(n, existing.id);
     return { id: existing.id, evidence_count: n, created: false };
   }
+  // El nivel que pide la fuente es una solicitud, no una decisión: acá es el único
+  // embudo por el que pasan las cinco señales, así que el guard vive acá y las cubre
+  // a todas. Ver risk-levels.js para el porqué.
+  const level = resolveRiskLevel(risk_level, lesson);
   const info = db.prepare(
     "INSERT INTO lessons (scope, source, trigger, lesson, risk_level) VALUES (?,?,?,?,?)"
-  ).run(scope, source, trigger, lesson, risk_level);
+  ).run(scope, source, trigger, lesson, level);
   return { id: Number(info.lastInsertRowid), evidence_count: 1, created: true };
 }
 

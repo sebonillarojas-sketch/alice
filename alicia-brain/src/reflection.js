@@ -33,15 +33,23 @@ export async function reflectAgent(db, agent, { client = _client } = {}) {
   if (!profile) return { agent, proposed: false, lesson: null };
   const ctx = contextText(db, agent);
   if (!ctx) return { agent, proposed: false, lesson: null }; // sin actividad → nada que reflexionar
-  const system = `Sos ${profile.emoji} ${profile.name}, ${profile.role}. ${profile.voice}. Mirá tu actividad reciente y proponé A LO SUMO UNA lección concreta y accionable para hacerlo mejor la próxima vez. Reglas: máximo 1 oración; accionable (nada de obviedades ni relleno); si no hay nada claro para mejorar, respondé EXACTAMENTE "NONE". Sin markdown, sin explicación — solo la lección o NONE.`;
+  const system = `Sos ${profile.emoji} ${profile.name}, ${profile.role}. ${profile.voice}. Mirá tu actividad reciente y proponé A LO SUMO UNA lección concreta y accionable para hacerlo mejor la próxima vez. Reglas: máximo 1 oración; accionable (nada de obviedades ni relleno); si no hay nada claro para mejorar, respondé EXACTAMENTE "NONE". Si la lección es SOLO de forma —tono, saludo, largo, emojis, formato— y no cambia nada de lo que hacés ni decidís, prefijala con "[cosmético] ". Ante la duda, no la prefijes. Sin markdown, sin explicación — solo la lección o NONE.`;
   let text;
   try {
     const resp = await client.messages.create({ model: "claude-sonnet-4-6", max_tokens: 120, system, messages: [{ role: "user", content: ctx }] });
     text = resp?.content?.find(b => b.type === "text")?.text?.trim() || "";
   } catch (e) { console.error(`reflexión ${agent} falló:`, e.message); return { agent, proposed: false, lesson: null }; }
   if (!text || /^NONE\b/i.test(text)) return { agent, proposed: false, lesson: null };
-  const lesson = text.replace(/^["'\-\s]+/, "").slice(0, 300);
-  proposeLesson(db, { scope: agent === "alicia" ? "agent:alicia" : `agent:${agent}`, source: "reflection", trigger: "auto-reflexión", lesson, risk_level: "L1" });
+  // El agente puede DECLARAR que su lección es de pura forma. Es una solicitud: el
+  // guard de proposeLesson (risk-levels.js) la concede solo si el texto le da la razón.
+  const cleaned = text.replace(/^["'\-\s]+/, "");
+  const declaredCosmetic = /^\[cosm[eé]tico\]/i.test(cleaned);
+  const lesson = cleaned.replace(/^\[cosm[eé]tico\]\s*/i, "").slice(0, 300);
+  proposeLesson(db, {
+    scope: agent === "alicia" ? "agent:alicia" : `agent:${agent}`,
+    source: "reflection", trigger: "auto-reflexión", lesson,
+    risk_level: declaredCosmetic ? "L0" : "L1",
+  });
   return { agent, proposed: true, lesson };
 }
 

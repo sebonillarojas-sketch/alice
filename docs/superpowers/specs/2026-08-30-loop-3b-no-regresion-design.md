@@ -284,6 +284,14 @@ agrega un runner determinista detrás de `checkRegression` sin tocar nada más.
 
 ## Bordes conocidos
 
+> **Resuelto el 2026-09-02.** `reflection.js` ya declara el nivel: cuando la lección es
+> de pura forma la prefija con `[cosmético]`, y un guard versionado
+> (`src/risk-levels.js`, aplicado en `proposeLesson`) concede el `L0` solo si el texto le
+> da la razón. El camino de auto-apply ya se ejecuta en producción, con la salvedad de
+> que una lección cosmética sigue necesitando evidencia ≥3 antes de auto-aplicarse. Las
+> otras cuatro fuentes siguen en `L1` a propósito. El borde de abajo queda como registro
+> de por qué esta capa no corría cuando se escribió.
+
 **Ninguna ruta del repo crea jamás una lección L0, hoy.** Los cinco call sites de
 `proposeLesson` hardcodean `risk_level: "L1"`: `reflection.js:44`, `tools.js:791`, y los
 tres mappers de `lesson-capture.js`. Nada en el repo produce una lección `L0`, así que el
