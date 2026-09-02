@@ -18,6 +18,7 @@ import { useRecurring, recurringLabel } from "./modules/recurring/useRecurring";
 import { RecurringPicker, RecurringBadge } from "./modules/recurring/RecurringPicker";
 import { db } from "./lib/supabase";
 import { useNotifications } from "./lib/useNotifications.js";
+import { countUnread } from "./lib/notifications.js";
 import { useAuth } from "./auth/AuthContext.jsx";
 import { ALICIA_URL } from "./lib/brain.js";
 
@@ -10195,20 +10196,98 @@ function CalendarToolView({ tasks, openDetail, onCreate, userId = "sb", users = 
 }
 
 // ═══ NOTIFICATIONS TOOL · all messages with actions ══════════════════════
-// ─── NOTIFICACIONES · eventos del sistema (tarea creada / por vencer / cerrada) ───
-// Diferencia conceptual con Mensajes: notificaciones = eventos automáticos del sistema, no comunicación humana
-function NotificationsToolView({ activity, markNotifRead, markAllNotifsRead, openTask, navigate, isCEO, onApproveDropboxDelete, onDenyDropboxDelete }) {
+// ─── NOTIFICACIONES · dos fuentes, dos secciones ───
+// 1) `dbNotifs`: filas reales de la tabla `notifications` (Supabase) — task
+//    assignments y demás eventos por-destinatario, con RLS. Es el rastro que
+//    faltaba: antes esto solo disparaba un banner nativo efímero y, si se
+//    perdía (permiso denegado, Focus de macOS, pantalla apagada), no quedaba
+//    constancia en ningún lado.
+// 2) `activity`: feed local de localStorage con las acciones del propio
+//    usuario en este navegador (crear/editar/cerrar tareas). Preexistente,
+//    documentado en CLAUDE.md como fuente única de ESE tipo de evento — se
+//    conserva tal cual, en su propia sección, para no perder ese historial.
+function NotificationsToolView({
+  activity, markNotifRead, markAllNotifsRead, openTask, navigate, isCEO, onApproveDropboxDelete, onDenyDropboxDelete,
+  dbNotifs, dbNotifStatus, markDbNotifRead, markAllDbNotifsRead,
+}) {
   const [filter, setFilter] = useState("all"); // all | unread
   const items = filter === "unread" ? activity.filter(a => !a.read) : activity;
   const unreadCount = activity.filter(a => !a.read).length;
 
+  const dbUnread = countUnread(dbNotifs);
+  const conectado = dbNotifStatus === "SUBSCRIBED";
+  const sinConexion = dbNotifStatus === "CHANNEL_ERROR" || dbNotifStatus === "TIMED_OUT";
+  // Sin esta línea, un canal caído se ve idéntico a "no hay novedades" — que es
+  // justo lo que tuvo al equipo a ciegas una hora cuando Realtime se cayó.
+  const estadoCanal = conectado
+    ? { texto: "Conectado", color: C.green }
+    : sinConexion
+    ? { texto: "Sin conexión — puede haber novedades que no llegaron", color: C.brick }
+    : { texto: "Conectando…", color: C.muted };
+
+  const abrirDbNotif = (n) => {
+    if (!n.read_at) markDbNotifRead(n.id);
+    if (n.deep_link) window.location.hash = n.deep_link; // mismo routing que usa el hook para el click del banner
+  };
+
   return (
     <div className="px-4 lg:px-10 py-8 lg:py-12 max-w-[840px] mx-auto">
+      {/* ── Sección 1 · notificaciones reales (tabla `notifications`) ── */}
       <div className="mb-8 flex items-end justify-between flex-wrap gap-3">
         <div>
           <NavyRule />
-          <div className="mt-4"><Eyebrow>Notificaciones · {activity.length}</Eyebrow></div>
-          <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Eventos del sistema</h1>
+          <div className="mt-4"><Eyebrow>Notificaciones · {dbNotifs.length}</Eyebrow></div>
+          <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Notificaciones</h1>
+          <div className="text-[12px] mt-2 flex items-center gap-2 flex-wrap" style={{ color: C.muted }}>
+            <span>{dbUnread > 0 ? `${dbUnread} sin leer` : "Todo al día"}</span>
+            <span aria-hidden="true">·</span>
+            <span style={{ color: estadoCanal.color, fontWeight: 600 }}>● {estadoCanal.texto}</span>
+          </div>
+        </div>
+        {dbUnread > 0 && (
+          <button onClick={markAllDbNotifsRead} className="px-3 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 500 }}>
+            Marcar todas como leídas
+          </button>
+        )}
+      </div>
+
+      {dbNotifs.length === 0 ? (
+        <div className="text-center py-12" style={{ backgroundColor: C.paper, border: `1px dashed ${C.lineSoft}`, borderRadius: 2 }}>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>Sin notificaciones</div>
+          <div style={{ fontSize: 11, color: C.muted, fontStyle: "italic", marginTop: 4 }}>
+            Cuando te asignen una tarea u ocurra un evento que te involucre, aparece acá.
+          </div>
+        </div>
+      ) : (
+        <div style={{ border: `1px solid ${C.lineSoft}`, borderRadius: 2, backgroundColor: C.paper }}>
+          {dbNotifs.map((n, i) => (
+            <button key={n.id} onClick={() => abrirDbNotif(n)} className="w-full text-left px-4 py-3 flex items-start gap-3 hover:opacity-90" style={{
+              borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none",
+              backgroundColor: !n.read_at ? `${C.cobalt}05` : "transparent",
+              borderLeft: !n.read_at ? `3px solid ${C.cobalt}` : "3px solid transparent",
+              cursor: "pointer",
+            }}>
+              <div className="flex-1 min-w-0">
+                <div style={{ fontSize: 12, color: C.ink, lineHeight: 1.5, fontWeight: n.read_at ? 500 : 700 }}>{n.title}</div>
+                {n.body && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{n.body}</div>}
+                <div className="mt-1" style={{ fontSize: 10, color: C.muted }}>{timeAgo(new Date(n.created_at).getTime())}</div>
+              </div>
+              {!n.read_at && (
+                <span className="text-[9px] flex-shrink-0" style={{ color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+                  Sin leer
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Sección 2 · actividad local (acciones propias en este navegador) ── */}
+      <div className="mt-12 mb-8 flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <NavyRule />
+          <div className="mt-4"><Eyebrow>Actividad · {activity.length}</Eyebrow></div>
+          <h1 className="text-[32px] lg:text-[36px] mt-3" style={{ color: C.ink, fontWeight: 500, letterSpacing: "-0.025em" }}>Tu actividad</h1>
           <div className="text-[12px] mt-2" style={{ color: C.muted }}>{unreadCount > 0 ? `${unreadCount} sin leer` : "Todo al día"}</div>
         </div>
         {unreadCount > 0 && (
@@ -15075,7 +15154,12 @@ export default function HyggeOS({ authUser } = {}) {
   // Notificaciones de escritorio · respeta el toggle de Ajustes, que hasta ahora
   // existía en la UI (prefs.notifyDesktop) y no estaba conectado a nada.
   const notifyDesktop = (users.find(u => u.id === authUser?.id)?.preferences || DEFAULT_PREFS).notifyDesktop !== false;
-  useNotifications({ enabled: notifyDesktop, setTasks, loaded });
+  // dbNotifs/dbNotifStatus alimentan el panel de Notificaciones y el badge del
+  // sidebar — antes esta data se generaba y se tiraba (solo disparaba un
+  // banner). `enabled` sigue atado al toggle de banners de escritorio: si se
+  // apaga, este hook no corre y el panel/badge tampoco se actualizan. Es una
+  // acoplamiento preexistente que no tocamos acá (ver reporte).
+  const { notifs: dbNotifs, status: dbNotifStatus, markRead: markDbNotifRead, markAllRead: markAllDbNotifsRead } = useNotifications({ enabled: notifyDesktop, setTasks, loaded });
 
   // Realtime cross-usuario: cuando otro miembro crea/edita/borra una tarea en
   // Supabase, se refleja en vivo sin recargar (respeta RLS; requiere las policies
@@ -15596,7 +15680,10 @@ export default function HyggeOS({ authUser } = {}) {
 
   const activeFilterCount = filters.priorities.length + filters.assignees.length + filters.statuses.length + (filters.includeSubspaces ? 0 : 1);
   const inboxCount = tasks.filter(t => (t.source === "smartcapture" || t.space === "inbox") && !t.checked).length;
-  const notifCount = activity.filter(a => !a.read).length;
+  // Antes salía de `activity` (acciones locales del propio usuario) — el badge
+  // no reflejaba nada de lo que llegaba por Realtime. Ahora cuenta no leídas
+  // de la tabla `notifications`, que es la señal real de que algo llegó.
+  const notifCount = countUnread(dbNotifs);
   const messagesCount = messages.filter(m => !m.read).length;
 
   useEffect(() => {
@@ -16204,7 +16291,7 @@ REGLAS:
       return <MessagesToolView messages={messages} markRead={markMessageRead} markAllRead={markAllMessagesRead} deleteMessage={deleteMessage} openTask={openDetail} sendMessage={sendMessage} users={users} currentUserId={currentUserId} />;
     }
     if (currentSpace === "notifications") {
-      return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} />;
+      return <NotificationsToolView activity={activity} markNotifRead={markNotifRead} markAllNotifsRead={markAllNotifsRead} openTask={openDetail} navigate={navigate} isCEO={authUser?.isCEO} onApproveDropboxDelete={approveDropboxDelete} onDenyDropboxDelete={denyDropboxDelete} dbNotifs={dbNotifs} dbNotifStatus={dbNotifStatus} markDbNotifRead={markDbNotifRead} markAllDbNotifsRead={markAllDbNotifsRead} />;
     }
     if (currentSpace === "mistareas") {
       // Tareas asignadas al usuario actual, across TODOS los spaces (no space-scoped).

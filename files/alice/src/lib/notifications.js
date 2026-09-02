@@ -50,3 +50,23 @@ export function taskIdFromDeepLink(link) {
   const m = /^#\/task\/(\d+)/.exec(String(link || ""));
   return m ? parseInt(m[1], 10) : null;
 }
+
+// Fusiona filas nuevas (recuperación o Realtime) con la lista visible en el
+// panel, sin duplicar por id y sin pisar una fila ya presente — así una marca
+// de leída optimista (ver useNotifications.markRead) no se pierde si después
+// llega la misma fila de nuevo por la consulta de recuperación tras reconectar.
+// Devuelve siempre ordenado de más nueva a más vieja: es lo que ve el panel.
+export function mergeNotifications(existing, incoming) {
+  const porId = new Map((existing || []).map(n => [n.id, n]));
+  for (const n of (incoming || [])) {
+    if (n && n.id != null && !porId.has(n.id)) porId.set(n.id, n);
+  }
+  return [...porId.values()].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+// Cuenta de no leídas para el badge del sidebar — la señal principal de que
+// algo llegó. `read_at` es la marca real (server-side), no el `read` booleano
+// local de `activity`.
+export function countUnread(rows) {
+  return (rows || []).filter(r => r && !r.read_at).length;
+}

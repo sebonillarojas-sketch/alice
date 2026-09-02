@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase, db } from "./supabase";
-import { selectPending, coalesce, taskIdFromDeepLink } from "./notifications.js";
+import { selectPending, coalesce, taskIdFromDeepLink, mergeNotifications } from "./notifications.js";
 
 // Muestra un banner. Detección de capacidad, no negociable: alice.bam.pe también
 // se abre en navegador normal, y el shell de escritorio se actualiza más lento que
@@ -28,6 +28,38 @@ export function useNotifications({ enabled, setTasks, loaded }) {
   const setTasksRef = useRef(setTasks);
   setTasksRef.current = setTasks;
 
+  // Lista visible del panel de Notificaciones y estado del canal de Realtime.
+  // Antes el hook solo disparaba un banner efímero y no guardaba nada: si el
+  // banner se perdía (permiso denegado, Focus, pantalla apagada) no quedaba
+  // rastro en ningún lado. `notifs` es ese rastro — se llena desde los mismos
+  // dos lugares que ya alimentaban al banner (recuperación + Realtime), sin
+  // agregar una segunda suscripción.
+  const [notifs, setNotifs] = useState([]);
+  const [channelStatus, setChannelStatus] = useState("connecting");
+  const notifsRef = useRef(notifs);
+  notifsRef.current = notifs;
+
+  // Marca de leída optimista + persistida. Vive fuera del efecto de abajo
+  // porque no depende del canal (el clic en el panel debe funcionar aunque
+  // `enabled` esté en false, o mientras el canal está reconectando).
+  const markRead = useCallback(async (id) => {
+    const ahora = new Date().toISOString();
+    setNotifs(prev => prev.map(n => (n.id === id && !n.read_at) ? { ...n, read_at: ahora } : n));
+    try {
+      await supabase.from("notifications").update({ read_at: ahora }).eq("id", id).is("read_at", null);
+    } catch { /* la marca local ya se aplicó; un fallo de red no debe romper el clic */ }
+  }, []);
+
+  const markAllRead = useCallback(async () => {
+    const ids = notifsRef.current.filter(n => !n.read_at).map(n => n.id);
+    if (!ids.length) return;
+    const ahora = new Date().toISOString();
+    setNotifs(prev => prev.map(n => (ids.includes(n.id) ? { ...n, read_at: ahora } : n)));
+    try {
+      await supabase.from("notifications").update({ read_at: ahora }).in("id", ids);
+    } catch { /* ídem markRead */ }
+  }, []);
+
   useEffect(() => {
     if (!loaded || !enabled) return;
 
@@ -53,6 +85,13 @@ export function useNotifications({ enabled, setTasks, loaded }) {
     };
 
     const entregar = async (filas) => {
+      // El panel de Notificaciones necesita TODAS las filas que pasan por acá,
+      // no solo las que van a banner: selectPending filtra por urgency=="now"
+      // y por `mostradas`, pero una urgency=="digest" o una fila que llegó dos
+      // veces igual tiene que verse en la lista. Va antes del early return de
+      // abajo — si no, una tanda sin pendientes nunca actualizaría el panel.
+      if (vivo) setNotifs(prev => mergeNotifications(prev, filas));
+
       const pendientes = selectPending(filas, mostradas.current);
       if (!pendientes.length) return;
 
@@ -115,6 +154,11 @@ export function useNotifications({ enabled, setTasks, loaded }) {
           { event: "INSERT", schema: "public", table: "notifications", filter: `recipient=eq.${uid}` },
           payload => { if (vivo) entregar([payload.new]); })
         .subscribe((status) => {
+          // Mismo status que ya se logueaba (SUBSCRIBED/CHANNEL_ERROR/TIMED_OUT):
+          // antes solo iba a la consola. Expuesto acá es la línea "conectado /
+          // sin conexión" del panel — sin ella, un canal caído se ve idéntico
+          // a "no hay novedades", que es justo lo que dejó a ciegas al equipo.
+          if (vivo) setChannelStatus(status);
           if (status === "SUBSCRIBED") {
             console.log("🟢 realtime notifications · suscrito");
             // Si el socket se cae por un corte breve de red (sin `suspend` del
@@ -147,4 +191,6 @@ export function useNotifications({ enabled, setTasks, loaded }) {
       if (quitarOpen) quitarOpen();
     };
   }, [enabled, loaded]);
+
+  return { notifs, status: channelStatus, markRead, markAllRead };
 }
