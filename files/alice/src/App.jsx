@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./auth/AuthContext.jsx";
 import LoginScreen from "./auth/LoginScreen.jsx";
 import HyggeOS from "./HyggeOS.jsx";
 import { ALICIA_URL as BRAIN_ALICIA_URL } from "./lib/brain.js";
+import { ERPContextProvider } from "./copilot/ERPContext.jsx";
 
 const C = {
   bg: "#EEEBE3",
@@ -561,7 +562,11 @@ function Gate() {
   if (!waSet)      return <WhatsAppModal user={user} onDone={handleWa} />;
   if (!pwSet)      return <SetPasswordModal user={user} onDone={handleSetPassword} />;
 
-  return <HyggeOS authUser={user} />;
+  return (
+    <ERPContextProvider>
+      <HyggeOS authUser={user} />
+    </ERPContextProvider>
+  );
 }
 
 // Auto-update: las SPAs viejas quedan en memoria tras cada deploy ("versión anterior"
