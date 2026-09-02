@@ -1,4 +1,5 @@
-// Feyd-Rautha 🗡️ en el editor de planos: puente entre los rooms del editor
+// Adaptador legacy del editor. Los flujos nuevos viven en architecture.js bajo
+// Tweedledum (diseño/revisión) y Tweedledee (crítica independiente).
 // y el layout JSON del skill arquitecto-residencial-lima (alicia-brain).
 // El na-Barón audita la planta contra su checklist (RNE + Neufert + mercado)
 // y devuelve veredicto + layout corregido, que acá se traduce de vuelta a rooms.
