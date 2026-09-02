@@ -7,16 +7,31 @@
 import { loadAgentContext } from "./agent-voices.js";
 import Anthropic from "@anthropic-ai/sdk";
 
-// Los scopes conversacionales miran los mensajes de Alicia; los agent:<x> miran sus
-// corridas. `global` no tiene un comportamiento concreto que contrastar y por eso no
-// se verifica: es la parte "donde sea factible" de la capa.
-const CONVERSATIONAL = /^(agent:alicia|user:sb)$/;
+// `messages` la escribe saveMessage(userId, role, …) para TODOS los usuarios de
+// WhatsApp — Alicia es un bot de equipo (server.js:370-374 arma prompts por
+// colaborador), no de una sola persona. Por eso:
+//   - user:<x>     → filtra por ese user_id. Es el scope de "cómo le fue a ESTA
+//     persona con Alicia", así que mezclar la conversación de otro colaborador
+//     produciría casos donde el input es la pregunta de uno y el output la
+//     respuesta que se le mandó a otro — exactamente lo que esta capa tiene que
+//     evitar, porque acá el veredicto BLOQUEA (a diferencia de reflection.js, que
+//     solo propone).
+//   - agent:alicia → NO filtra, a propósito. Esta es la única lección de scope de
+//     Alicia y se inyecta en el prompt de CUALQUIER colaborador (no de uno en
+//     particular), así que el tráfico de todo el equipo es la evidencia correcta:
+//     si la lección degradaría la conversación de cualquier persona del equipo,
+//     tiene que frenarse igual que si degradara la de Sebastián. El riesgo de
+//     emparejar input/output de dos conversaciones distintas en el borde entre
+//     ellas sigue existiendo acá (igual que en reflection.js), pero es un costo
+//     aceptado de la ventana reciente, no el bug que este scope necesitaba arreglar.
+const ALICIA_SCOPE = /^agent:alicia$/;
+const USER_SCOPE = /^user:(.+)$/;
 
-function casesFromMessages(db, limit) {
+function casesFromMessages(db, limit, userId) {
   // Se leen 2*limit filas porque cada caso consume un par user+assistant.
-  const rows = db.prepare(
-    "SELECT role, content FROM messages ORDER BY id DESC LIMIT ?"
-  ).all(limit * 2).reverse();
+  const rows = userId
+    ? db.prepare("SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT ?").all(userId, limit * 2).reverse()
+    : db.prepare("SELECT role, content FROM messages ORDER BY id DESC LIMIT ?").all(limit * 2).reverse();
   const cases = [];
   for (let i = 0; i < rows.length - 1; i++) {
     if (rows[i].role === "user" && rows[i + 1].role === "assistant") {
@@ -52,7 +67,9 @@ function casesFromAgentRuns(db, agent, limit) {
 // `lessons`, y "no hay material que contrastar" es exactamente la respuesta correcta ahí.
 export function collectCases(db, scope, { limit = 8 } = {}) {
   try {
-    if (CONVERSATIONAL.test(scope)) return casesFromMessages(db, limit);
+    if (ALICIA_SCOPE.test(scope)) return casesFromMessages(db, limit);
+    const u = USER_SCOPE.exec(scope || "");
+    if (u) return casesFromMessages(db, limit, u[1]);
     const m = /^agent:(.+)$/.exec(scope || "");
     if (m) return casesFromAgentRuns(db, m[1], limit);
     return [];
@@ -131,20 +148,33 @@ export async function checkRegression(db, row, { client, limit = 8 } = {}) {
 // pero un auto-apply L0 bloqueado a las 6:30am no se lo cuenta a nadie.
 export function recentRegressionAlerts(db, { hours = 24 } = {}) {
   try {
+    // El SQL solo acota candidatos con una ventana ANCHA sobre updated_at (que
+    // cualquier escritura a la fila bumpea — p.ej. proposeLesson re-proponiendo el
+    // mismo texto de una lección ya bloqueada, lo que le pondría updated_at "ahora"
+    // sin que el veredicto haya cambiado). El filtro real de "últimas `hours`" horas
+    // se hace en JS contra `at`, el momento en que el juez dio ese veredicto — así
+    // un bloqueo de hace tres días no reaparece en el briefing solo porque alguien
+    // volvió a proponer el mismo texto hoy.
     const rows = db.prepare(
       `SELECT id, scope, lesson, regression_check FROM lessons
         WHERE regression_check IS NOT NULL
-          AND updated_at >= datetime('now', ?)
-        ORDER BY updated_at DESC LIMIT 10`
-    ).all(`-${hours} hours`);
+          AND updated_at >= datetime('now', '-30 days')
+        ORDER BY updated_at DESC LIMIT 200`
+    ).all();
+    const cutoffMs = Date.now() - hours * 3600 * 1000;
     return rows
       .map(r => {
         let v = null;
         try { v = JSON.parse(r.regression_check); } catch { return null; }
         if (v?.status !== "degrades" && v?.status !== "error") return null;
-        return { id: r.id, scope: r.scope, lesson: r.lesson, status: v.status, reason: v.reason || "" };
+        const atMs = v.at ? Date.parse(`${v.at.replace(" ", "T")}Z`) : NaN;
+        if (!Number.isFinite(atMs) || atMs < cutoffMs) return null;
+        return { id: r.id, scope: r.scope, lesson: r.lesson, status: v.status, reason: v.reason || "", _at: atMs };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .sort((a, b) => b._at - a._at)
+      .slice(0, 10)
+      .map(({ _at, ...rest }) => rest);
   } catch {
     return [];
   }

@@ -1,4 +1,4 @@
-// Briefing diario proactivo — corre cada mañana a las 7:00am Lima
+// Briefing diario proactivo — corre cada mañana a las 9:00am Lima (cron.js:14)
 import Anthropic from "@anthropic-ai/sdk";
 import { erp } from "./erp-client.js";
 import { googleCalendar, googleAvailable } from "./integrations/google.js";
@@ -54,7 +54,7 @@ export async function runDailyBriefing() {
     : "Base de conocimiento vacía aún.";
 
   // 4b. Lo que la capa de no-regresión frenó o no pudo verificar esta madrugada.
-  // El gate-pass corre 6:30am y el briefing 7:00am, así que la ventana de 24h lo cubre.
+  // El gate-pass corre 6:30am y el briefing 9:00am, así que la ventana de 24h lo cubre.
   const { recentRegressionAlerts, formatRegressionAlerts } = await import("./lesson-regression.js");
   const lessonAlerts = formatRegressionAlerts(recentRegressionAlerts(getDB()));
 

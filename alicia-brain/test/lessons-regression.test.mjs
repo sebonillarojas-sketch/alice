@@ -32,6 +32,32 @@ test("collectCases: scope user:sb usa la misma fuente que agent:alicia", () => {
   assert.equal(collectCases(db, "user:sb").length, 1);
 });
 
+test("collectCases: user:<x> filtra por user_id — no mezcla la conversación de otro colaborador", () => {
+  const db = dbFull();
+  // Alicia es un bot de equipo: `messages` mezcla filas de todos los colaboradores.
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('otro','user','pregunta de otro colaborador')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('otro','assistant','respuesta para otro colaborador')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','user','¿cuánto vale el terreno?')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','assistant','Unos 320 mil dólares.')").run();
+  const cases = collectCases(db, "user:sb");
+  assert.equal(cases.length, 1);
+  assert.match(cases[0].input, /cuánto vale/);
+  assert.match(cases[0].output, /320 mil/);
+  assert.doesNotMatch(JSON.stringify(cases), /otro colaborador/);
+});
+
+test("collectCases: agent:alicia NO filtra por usuario — es evidencia de todo el equipo, a propósito", () => {
+  const db = dbFull();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','user','pregunta de sebastian')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','assistant','respuesta a sebastian')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('otro','user','pregunta de otro colaborador')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('otro','assistant','respuesta a otro colaborador')").run();
+  const cases = collectCases(db, "agent:alicia");
+  assert.equal(cases.length, 2);
+  assert.match(JSON.stringify(cases), /sebastian/);
+  assert.match(JSON.stringify(cases), /otro colaborador/);
+});
+
 test("collectCases: scope de un Wondie sale de agent_runs + findings", () => {
   const db = dbFull();
   db.prepare("INSERT INTO agent_runs (agent, result, summary) VALUES ('cheshire','issues','2 bugs de login')").run();
@@ -162,10 +188,12 @@ function dbAlerts() {
   ensureLessonsSchema(d);
   return d;
 }
+// `at` (el momento del veredicto) es lo que ahora filtra la ventana — no `updated_at`.
+// `ago` acá mueve el `at` del veredicto, no la fila.
 function seed(db, { lesson, status, reason, scope = "agent:alicia", ago = 0 }) {
+  const at = new Date(Date.now() - ago * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
   const info = db.prepare("INSERT INTO lessons (scope, source, lesson, regression_check) VALUES (?,?,?,?)")
-    .run(scope, "reflection", lesson, JSON.stringify({ status, reason }));
-  if (ago) db.prepare("UPDATE lessons SET updated_at = datetime('now', ?) WHERE id = ?").run(`-${ago} hours`, Number(info.lastInsertRowid));
+    .run(scope, "reflection", lesson, JSON.stringify({ status, reason, at }));
   return Number(info.lastInsertRowid);
 }
 
@@ -183,6 +211,19 @@ test("recentRegressionAlerts: trae degrades y error, ignora pass y skipped", () 
 test("recentRegressionAlerts: ignora lo más viejo que la ventana", () => {
   const db = dbAlerts();
   seed(db, { lesson: "vieja", status: "degrades", reason: "rompe X", ago: 48 });
+  assert.equal(recentRegressionAlerts(db, { hours: 24 }).length, 0);
+});
+
+test("recentRegressionAlerts: una re-propuesta que bumpea updated_at no revive un bloqueo viejo", () => {
+  // proposeLesson dedupea sobre lecciones 'proposed'/'validated' y en ese UPDATE bumpea
+  // updated_at a 'ahora' sin tocar regression_check. Antes del fix, la ventana de 24h
+  // filtraba por updated_at, así que este bloqueo de hace 3 días reaparecía en el
+  // briefing de hoy con su motivo original.
+  const db = dbAlerts();
+  const id = seed(db, { lesson: "bloqueada hace 3 días", status: "degrades", reason: "rompe X", ago: 72 });
+  // Simula la re-propuesta: mismo texto, mismo scope, status sigue 'validated'/'proposed'
+  // → proposeLesson solo hace evidence_count++ y updated_at = datetime('now').
+  db.prepare("UPDATE lessons SET updated_at = datetime('now') WHERE id = ?").run(id);
   assert.equal(recentRegressionAlerts(db, { hours: 24 }).length, 0);
 });
 

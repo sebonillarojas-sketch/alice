@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { ensureLessonsSchema, proposeLesson, runGateOnLesson, approveLesson } from "../src/lessons.js";
+import { ensureLessonsSchema, proposeLesson, runGateOnLesson, approveLesson, rejectLesson } from "../src/lessons.js";
 
 function db0() {
   const d = new DatabaseSync(":memory:");
@@ -77,6 +77,60 @@ test("auto-apply L0 bloqueado: queda validated, esperando revisión humana", asy
   assert.equal(r.status, "validated");
   assert.equal(statusOf(db, id), "validated");
   assert.equal(regressionOf(db, id).status, "degrades");
+});
+
+// ── promoteToApplied: el guard de status re-chequeado DESPUÉS del juez ─────────────
+// El round-trip a Opus (checkRegression) tarda segundos; en ese lapso la fila puede
+// cambiar por fuera. Antes del fix, el UPDATE final era incondicional.
+
+test("promoteToApplied: un reject que llega mientras el juez piensa NO termina en applied", async () => {
+  const db = db0();
+  const id = validated(db);
+  // El "juez" tarda su round-trip; mientras tanto llega un reject humano (otro canal).
+  const client = { messages: { create: async () => {
+    rejectLesson(db, id, { by: "sb-whatsapp" });
+    return { content: [{ type: "text", text: '{"verdict":"pass","offending":[],"reason":"ok"}' }] };
+  } } };
+  const r = await approveLesson(db, id, { by: "sb", client });
+  assert.equal(r.applied, false);
+  assert.equal(r.stale, true);
+  assert.equal(statusOf(db, id), "rejected");
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM knowledge").get().c, 0);
+});
+
+test("promoteToApplied: una lección rechazada durante el juicio no revive a 'validated' aunque el veredicto sea degrades", async () => {
+  const db = db0();
+  const id = validated(db);
+  const client = { messages: { create: async () => {
+    rejectLesson(db, id, { by: "sb-whatsapp" });
+    return { content: [{ type: "text", text: '{"verdict":"degrades","offending":[0],"reason":"rompe algo"}' }] };
+  } } };
+  const r = await approveLesson(db, id, { by: "sb", client });
+  assert.equal(r.applied, false);
+  assert.equal(r.blocked, false);
+  assert.equal(r.stale, true);
+  // La invariante: el juez frena, no mata — pero tampoco puede REVIVIR una ya rechazada.
+  assert.equal(statusOf(db, id), "rejected");
+});
+
+test("promoteToApplied: doble approve — solo una aplica y escribe al cerebro una vez", async () => {
+  const db = db0();
+  const id = validated(db);
+  let resolveA;
+  const clientA = { messages: { create: () => new Promise(res => {
+    resolveA = () => res({ content: [{ type: "text", text: '{"verdict":"pass","offending":[],"reason":"ok"}' }] });
+  }) } };
+  const pA = approveLesson(db, id, { by: "sb", client: clientA });
+  // Mientras A todavía espera al juez, un segundo approve corre entero y aplica primero.
+  const rB = await approveLesson(db, id, { by: "sb", client: PASS() });
+  resolveA();
+  const rA = await pA;
+  const applied = [rA, rB].filter(r => r.applied);
+  assert.equal(applied.length, 1);
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM knowledge").get().c, 1);
+  // La que perdió la carrera queda anotada como 'stale', no como un error silencioso.
+  const lost = rA.applied ? rB : rA;
+  assert.equal(lost.stale, true);
 });
 
 test("una lección que contradice una regla dura ni siquiera llega al juez", async () => {

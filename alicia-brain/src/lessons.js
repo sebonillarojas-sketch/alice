@@ -83,16 +83,16 @@ export async function runGatePass(db, { hardRules = [], minEvidence = 3, client 
   const rows = db.prepare("SELECT id FROM lessons WHERE status = 'proposed'").all();
   const counts = { evaluated: 0, applied: 0, rejected: 0, validated: 0, blocked: 0 };
   for (const { id } of rows) {
-    const before = db.prepare("SELECT risk_level FROM lessons WHERE id = ?").get(id);
-    const { status } = await runGateOnLesson(db, id, { hardRules, minEvidence, client });
+    const { status, decision } = await runGateOnLesson(db, id, { hardRules, minEvidence, client });
     counts.evaluated++;
     if (status === "applied") counts.applied++;
     else if (status === "rejected") counts.rejected++;
     else if (status === "validated") {
       counts.validated++;
-      // Una L0 que sale del gate como 'validated' es una que el juez frenó: la L0 sin
-      // bloqueo se auto-aplica. Distinguirlas es lo que después alimenta el briefing.
-      if (before?.risk_level === "L0") counts.blocked++;
+      // decision 'auto_apply' + status final 'validated' es exactamente "el juez la
+      // frenó": la L0 sin bloqueo sale con status 'applied'. Sin segunda query ni
+      // asumir que L0 es el único nivel que auto-aplica (evaluateGate podría cambiar).
+      if (decision === "auto_apply") counts.blocked++;
     }
   }
   return counts;
@@ -128,21 +128,41 @@ export function applyLessonToBrain(db, id) {
 export async function promoteToApplied(db, id, { by = "human", client } = {}) {
   const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id);
   if (!row) throw new Error(`lesson ${id} no existe`);
+  // Status capturado ANTES del juez: checkRegression es un round-trip a Opus, segundos
+  // en los que puede llegar un reject humano, un segundo approve del mismo id, o puede
+  // que la lección ya estuviera 'rejected'. Los dos UPDATE de abajo llevan
+  // "AND status = ?" contra este valor, así que solo escriben si nadie tocó la fila
+  // mientras el juez pensaba — eso tapa los tres casos con un único guard:
+  // el veto humano nunca se pisa con un 'applied' tardío, un doble approve no aplica
+  // ni escribe dos veces al cerebro, y una lección 'rejected' no puede resucitar.
+  const before = row.status;
   const { checkRegression } = await import("./lesson-regression.js");
   const regression = await checkRegression(db, row, { client });
-  db.prepare("UPDATE lessons SET regression_check = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(JSON.stringify(regression), id);
 
   // Solo 'degrades' frena. 'skipped' y 'error' aplican igual: fail-open a propósito —
   // una lección es texto reversible en un prompt, y un falso bloqueo traba el loop entero.
   if (regression.status === "degrades") {
     // Nunca 'rejected': el juez puede frenar una lección, no matarla. Queda 'validated'
     // para que la mire un humano (y para que el gate-pass no la re-juzgue cada madrugada).
-    db.prepare("UPDATE lessons SET status = 'validated', updated_at = datetime('now') WHERE id = ?").run(id);
+    const w = db.prepare(
+      "UPDATE lessons SET status = 'validated', regression_check = ?, updated_at = datetime('now') WHERE id = ? AND status = ?"
+    ).run(JSON.stringify(regression), id, before);
+    if (!w.changes) {
+      // La fila cambió de status mientras el juez pensaba (stale): no pisamos nada,
+      // devolvemos el status real para que el llamador sepa que no hizo falta frenarla.
+      const cur = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id).status;
+      return { status: cur, applied: false, blocked: false, stale: true, regression };
+    }
     return { status: "validated", applied: false, blocked: true, regression };
   }
 
-  db.prepare("UPDATE lessons SET status = 'applied', validated_by = ?, applied_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(by, id);
+  const w = db.prepare(
+    "UPDATE lessons SET status = 'applied', regression_check = ?, validated_by = ?, applied_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = ?"
+  ).run(JSON.stringify(regression), by, id, before);
+  if (!w.changes) {
+    const cur = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id).status;
+    return { status: cur, applied: false, stale: true, regression };
+  }
   applyLessonToBrain(db, id);
   return { status: "applied", applied: true, regression };
 }

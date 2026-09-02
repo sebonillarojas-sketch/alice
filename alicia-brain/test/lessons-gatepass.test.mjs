@@ -23,4 +23,24 @@ test("runGatePass evalúa todas las proposed y cuenta resultados", async () => {
   assert.equal(r.applied, 1);
   assert.equal(r.rejected, 1);
   assert.equal(r.validated, 1);
+  assert.equal(r.blocked, 0);
+});
+
+test("runGatePass cuenta 'blocked': una L0 que el juez frena queda validated, no applied", async () => {
+  const db = new DatabaseSync(":memory:");
+  ensureLessonsSchema(db);
+  db.exec(`CREATE TABLE knowledge (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, category TEXT, content TEXT, updated_at TEXT DEFAULT (datetime('now')));
+           CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, role TEXT, content TEXT, created_at TEXT DEFAULT (datetime('now')));`);
+  // Material para que checkRegression tenga algo que contrastar (si no, cae en 'skipped').
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','user','hola')").run();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','assistant','hola, ¿en qué te ayudo?')").run();
+  const { id } = proposeLesson(db, { scope: "agent:alicia", source: "reflection", lesson: "saludar más corto", risk_level: "L0" });
+  db.prepare("UPDATE lessons SET evidence_count = 3 WHERE id = ?").run(id);
+  const client = { messages: { create: async () => ({ content: [{ type: "text", text: '{"verdict":"degrades","offending":[0],"reason":"pierde calidez"}' }] }) } };
+  const r = await runGatePass(db, { hardRules: HARD_RULES, minEvidence: 3, client });
+  assert.equal(r.evaluated, 1);
+  assert.equal(r.applied, 0);
+  assert.equal(r.validated, 1);
+  assert.equal(r.blocked, 1);
+  assert.equal(db.prepare("SELECT status FROM lessons WHERE id=?").get(id).status, "validated");
 });

@@ -162,10 +162,13 @@ tiene autoridad para matar una lección, solo para frenarla y pedir ojos.
 - **WhatsApp (Alicia).** `approve_lesson` devuelve `{ applied: false, regression: {...} }`
   y Alicia dice el motivo en la misma respuesta. Como la aprobación es inline y
   bloqueante, el veredicto llega en el mismo turno en que lo pediste. Sin trabajo extra.
-- **Briefing matutino (`briefing.js`).** Una línea con las lecciones que el gate-pass de
-  las 6:30am bloqueó o no pudo verificar esa madrugada. Es el **único** aviso del camino
-  no atendido, que hoy muere en los logs. Se emite desde una sola función, que es la
-  costura por donde después entra la notificación de escritorio.
+- **Briefing matutino (`briefing.js`).** Una línea con los veredictos `degrades`/`error`
+  de las últimas 24 horas, **vengan del camino que vengan** — auto-apply L0 o aprobación
+  humana. Se decidió no filtrar por `validated_by = 'auto'` (que hubiera limitado esto al
+  "camino no atendido" del gate-pass, como se pensó originalmente) porque hoy, sin L0 en
+  producción (ver "Bordes conocidos"), ese filtro dejaría el aviso permanentemente vacío.
+  Se emite desde una sola función, que es la costura por donde después entra la
+  notificación de escritorio.
 
 ## Datos y estados
 
@@ -237,7 +240,10 @@ red.
 
 1. Existe `lesson-regression.js` y `lessons.regression_check` guarda el último veredicto.
 2. Una lección cuyo juez responde `degrades` **no** llega a `applied` por ninguno de los
-   dos caminos, y si era L0 queda en `validated` esperando revisión humana.
+   dos caminos. Verificado con tests para los dos caminos (auto-apply L0 y aprobación
+   humana): una L0 bloqueada queda en `validated` esperando revisión humana. En
+   producción hoy esto solo se ejerce por el camino humano — ver "Bordes conocidos" sobre
+   por qué el camino L0 no corre con datos reales todavía.
 3. Una lección cuyo juez responde `pass` llega a `applied` como siempre.
 4. Sin material o con el juez caído, la lección se aplica igual y el veredicto distingue
    `skipped` de `error`.
@@ -277,6 +283,20 @@ eso la interfaz del veredicto no menciona al juez: cuando las lecciones muten c�
 agrega un runner determinista detrás de `checkRegression` sin tocar nada más.
 
 ## Bordes conocidos
+
+**Ninguna ruta del repo crea jamás una lección L0, hoy.** Los cinco call sites de
+`proposeLesson` hardcodean `risk_level: "L1"`: `reflection.js:44`, `tools.js:791`, y los
+tres mappers de `lesson-capture.js`. Nada en el repo produce una lección `L0`, así que el
+camino de auto-apply (`evaluateGate` → `decision: "auto_apply"` → `runGateOnLesson` →
+`promoteToApplied`) **no se ejecuta en producción hoy** — está probado con tests que lo
+fuerzan a mano (`risk_level: 'L0'` seteado directo en la fila), pero ningún flujo real
+propone una lección con ese nivel. La consecuencia directa: esta capa, en producción,
+corre únicamente sobre aprobaciones humanas (`approveLesson`), y la línea del briefing
+matutino no tiene disparador productivo salvo un veredicto `degrades`/`error` que salga
+de ese camino humano — el camino "gate-pass bloqueó a las 6:30am sin que nadie mirara"
+que motivó originalmente esta sección del spec no ocurre todavía. Asignar `risk_level`
+con criterio (un clasificador real en vez del hardcode a L1) es un sub-proyecto aparte,
+con su propia decisión de diseño, y queda fuera de este alcance.
 
 **El panel del Tea Table no explica el bloqueo.** El endpoint devolverá
 `{ status, applied: false, regression: {...} }`, pero `HyggeOS.jsx:12737` hoy solo
