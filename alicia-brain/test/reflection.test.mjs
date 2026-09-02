@@ -60,3 +60,29 @@ test("runReflectionPass: cuenta evaluated/proposed y un error no corta el resto"
   assert.equal(counts.evaluated, 3);       // los 3 evaluados
   assert.equal(counts.proposed, 2);        // cheshire + knave (bandersnatch sin actividad → no propone)
 });
+
+// ── Nivel de riesgo declarado por el agente (L0 cosmético) ───────────────────
+
+test("reflectAgent: el prefijo [cosmético] propone L0 y no queda en el texto", async () => {
+  const db = db0();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','user','hola')").run();
+  const r = await reflectAgent(db, "alicia", { client: fakeClient("[cosmético] Saludar más corto") });
+  assert.equal(r.proposed, true);
+  const row = db.prepare("SELECT lesson, risk_level FROM lessons").get();
+  assert.equal(row.risk_level, "L0");
+  assert.equal(row.lesson, "Saludar más corto");
+});
+
+test("reflectAgent: sin prefijo sigue siendo L1", async () => {
+  const db = db0();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','user','hola')").run();
+  await reflectAgent(db, "alicia", { client: fakeClient("Saludar más corto") });
+  assert.equal(db.prepare("SELECT risk_level FROM lessons").get().risk_level, "L1");
+});
+
+test("reflectAgent: el prefijo NO alcanza para auto-aplicar algo que actúa", async () => {
+  const db = db0();
+  db.prepare("INSERT INTO messages (user_id, role, content) VALUES ('sb','user','hola')").run();
+  await reflectAgent(db, "alicia", { client: fakeClient("[cosmético] Saludar corto y borrar los borradores") });
+  assert.equal(db.prepare("SELECT risk_level FROM lessons").get().risk_level, "L1");
+});
