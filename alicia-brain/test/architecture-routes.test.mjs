@@ -41,13 +41,14 @@ test("design endpoint returns 400 for missing project context without calling th
 });
 
 test("design endpoint returns structured Tweedledum output", async () => {
-  const service = createArchitectureService({ client: { messages: { create: async () => jsonResponse({ summary: "Plan", assumptions: [], tradeoffs: [], layout: { ambientes: [] } }) } } });
+  const layout = { ambientes: [{ nombre: "sala", ref_id: "r1", poligono: [[0, 0], [4, 0], [4, 3], [0, 3]] }] };
+  const service = createArchitectureService({ client: { messages: { create: async () => jsonResponse({ summary: "Plan", assumptions: [], tradeoffs: [], layout }) } } });
   await withServer(createArchitectureRouter({ service }), async (base) => {
     const response = await fetch(`${base}/tweedledum/design`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ context: { project: { id: "p1", name: "DC01" } }, brief: { dormitorios: 2 } }) });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.agent.key, "tweedledum");
-    assert.deepEqual(body.layout, { ambientes: [] });
+    assert.deepEqual(body.layout, layout);
   });
 });
 

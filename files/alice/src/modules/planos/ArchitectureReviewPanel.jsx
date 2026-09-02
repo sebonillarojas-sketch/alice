@@ -63,6 +63,7 @@ export default function ArchitectureReviewPanel({
             <div style={{ marginTop: 7, padding: 10, background: C.card, border: `1px solid ${C.line}`, fontFamily: mono, fontSize: 10.5, lineHeight: 1.5, color: C.ink }}>
               {critique?.summary || result.design?.summary || result.output?.summary || "Resultado estructurado recibido."}
             </div>
+            {result.appliedVersionId && <div style={{ marginTop: 7, padding: "7px 9px", borderLeft: `3px solid ${C.green}`, background: "#F5FAF6", fontFamily: mono, fontSize: 9.5, color: C.green }}>geometría aplicada al plano · {result.appliedVersionId}</div>}
 
             {findings.length > 0 && <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 6 }}>
               {findings.map((finding) => (

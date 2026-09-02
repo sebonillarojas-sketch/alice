@@ -2,10 +2,34 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyPlanVersion,
+  architectureDesignReadiness,
+  createActivatedPlanVersion,
   createPlanVersion,
   mapFindingLocation,
   serializeValidation,
 } from "../src/modules/planos/architecture.js";
+
+test("Tweedledum can start from an empty canvas when project dimensions exist", () => {
+  assert.deepEqual(
+    architectureDesignReadiness({ rooms: [], boundary: null, areaTarget: 60 }),
+    { ok: true, reason: null },
+  );
+  assert.equal(architectureDesignReadiness({ rooms: [], boundary: null, areaTarget: 0 }).ok, false);
+});
+
+test("a generated version becomes the active drawable canvas immediately", () => {
+  const generated = createActivatedPlanVersion([], {
+    projectId: "p1",
+    parentVersionId: null,
+    createdBy: "tweedledum",
+    snapshot: { rooms: [{ id: "room_new", pts: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }] }], items: [] },
+    now: "2026-09-02T12:00:00.000Z",
+  });
+
+  assert.equal(generated.activeVersionId, "plan_p1_v1");
+  assert.equal(generated.snapshot.rooms[0].id, "room_new");
+  assert.equal(generated.history.length, 1);
+});
 
 test("new plan versions preserve their parent snapshot", () => {
   const history = [{ id: "v1", version: 1, snapshot: { rooms: [{ id: "r1" }], items: [] } }];

@@ -26,6 +26,24 @@ export function createPlanVersion(history = [], {
   return { version, history: [...existing.map(clone), version] };
 }
 
+export function architectureDesignReadiness({ rooms = [], boundary = null, areaTarget = 0 } = {}) {
+  const hasRooms = Array.isArray(rooms) && rooms.some((room) => Array.isArray(room?.pts) && room.pts.length >= 3);
+  const hasBoundary = Array.isArray(boundary) && boundary.length >= 3;
+  const hasArea = Number.isFinite(Number(areaTarget)) && Number(areaTarget) > 0;
+  return hasRooms || hasBoundary || hasArea
+    ? { ok: true, reason: null }
+    : { ok: false, reason: "Define el lote, un área objetivo o al menos un ambiente antes de diseñar." };
+}
+
+export function createActivatedPlanVersion(history = [], options = {}) {
+  const created = createPlanVersion(history, options);
+  return {
+    ...created,
+    activeVersionId: created.version.id,
+    snapshot: clone(created.version.snapshot),
+  };
+}
+
 export function applyPlanVersion(history = [], versionId) {
   const version = history.find((item) => item.id === versionId);
   if (!version) throw new Error(`Plan version ${versionId} not found`);

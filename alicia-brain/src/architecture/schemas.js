@@ -48,6 +48,16 @@ export function normalizeDesignOutput(input = {}) {
   if (!input || typeof input !== "object" || !input.layout || typeof input.layout !== "object") {
     throw new ArchitectureValidationError("Tweedledum output requires layout", ["layout"]);
   }
+  const rooms = input.layout.ambientes;
+  if (!Array.isArray(rooms) || rooms.length === 0) {
+    throw new ArchitectureValidationError("Tweedledum output requires drawable room geometry", ["layout.ambientes"]);
+  }
+  rooms.forEach((room, index) => {
+    const polygon = room?.poligono;
+    const valid = Array.isArray(polygon) && polygon.length >= 3 && polygon.every((point) =>
+      Array.isArray(point) && point.length >= 2 && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1])));
+    if (!valid) throw new ArchitectureValidationError(`Tweedledum room ${index + 1} requires drawable polygon geometry`, [`layout.ambientes[${index}].poligono`]);
+  });
   return {
     summary: String(input.summary || ""),
     assumptions: Array.isArray(input.assumptions) ? input.assumptions.map(String) : [],

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { isDeepStrictEqual } from "node:util";
 import { normalizeProjectContext } from "./context.js";
 import {
   ArchitectureValidationError,
@@ -75,13 +76,17 @@ export function createArchitectureService({ client = null, model = null } = {}) 
       const context = normalizeProjectContext(input.context);
       const request = { ...input, context };
       validateDesignRequest(request);
-      return call("tweedledum", buildTweedledumSystemPrompt(loadAdvisoryReferences("tweedledum")), {
+      const output = await call("tweedledum", buildTweedledumSystemPrompt(loadAdvisoryReferences("tweedledum")), {
         operation: "design",
         context,
         brief: input.brief || {},
         planVersion: input.planVersion || null,
         designObjective: String(input.designObjective || "balanced architecture"),
       }, normalizeDesignOutput);
+      if (input.planVersion?.layout && isDeepStrictEqual(output.layout, input.planVersion.layout)) {
+        throw new ArchitectureModelError("Tweedledum did not produce new plan geometry");
+      }
+      return output;
     },
 
     async revise(input = {}) {

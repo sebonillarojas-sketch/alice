@@ -246,7 +246,7 @@ import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
 import { reanclarItems, disenarConFeyd, roomsALayout, layoutARooms } from "./feyd.js";
 import {
-  applyPlanVersion, createPlanVersion, critiqueWithTweedledee,
+  applyPlanVersion, architectureDesignReadiness, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
   designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
 } from "./architecture.js";
 import ArchitectureReviewPanel from "./ArchitectureReviewPanel.jsx";
@@ -1614,15 +1614,19 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     return { rooms: nextRooms, items: reanclarItems(baseItems, baseRooms, nextRooms) };
   };
   const runDesign = async () => {
-    if (!rooms.length || architectureBusy) return;
+    if (architectureBusy) return;
+    const readiness = architectureDesignReadiness({ rooms, boundary: lote?.pts || footprint, areaTarget: brief.areaObjetivo });
+    if (!readiness.ok) { setArchitectureError(readiness.reason); return; }
     setArchitectureBusy("Tweedledum"); setArchitectureError("");
     try {
       const { source, history } = ensureSourceVersion();
       const output = await designWithTweedledum({ context: contextFor(source.id), brief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, designObjective: "balanced residential architecture" });
-      const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromLayout(output.layout, source.snapshot.rooms, source.snapshot.items) });
+      const proposal = createActivatedPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromLayout(output.layout, source.snapshot.rooms, source.snapshot.items) });
       setArchitectureVersions(proposal.history);
+      commit(proposal.snapshot.rooms, proposal.snapshot.items);
+      setActiveArchitectureVersionId(proposal.activeVersionId);
       recordArchitectureRun({ mode: "design", sourceVersionId: source.id, resultVersionId: proposal.version.id, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }] });
-      setArchitectureResult({ mode: "design", design: output, applyVersionId: proposal.version.id });
+      setArchitectureResult({ mode: "design", design: output, appliedVersionId: proposal.version.id });
     } catch (e) { setArchitectureError(e.message || "No se pudo diseñar"); }
     finally { setArchitectureBusy(null); }
   };
@@ -1639,7 +1643,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     finally { setArchitectureBusy(null); }
   };
   const runReviewCycle = async () => {
-    if (!rooms.length || architectureBusy) return;
+    if (architectureBusy) return;
+    const readiness = architectureDesignReadiness({ rooms, boundary: lote?.pts || footprint, areaTarget: brief.areaObjetivo });
+    if (!readiness.ok) { setArchitectureError(readiness.reason); return; }
     setArchitectureBusy("review cycle"); setArchitectureError("");
     try {
       const { source, history } = ensureSourceVersion();
@@ -1659,9 +1665,13 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         revisionVersion = next.version; finalHistory = next.history;
       }
       setArchitectureVersions(finalHistory);
+      const resultVersionId = revisionVersion?.id || proposal.version.id;
+      const applied = applyPlanVersion(finalHistory, resultVersionId);
+      commit(applied.snapshot.rooms, applied.snapshot.items);
+      setActiveArchitectureVersionId(resultVersionId);
       recordArchitectureRun({ mode: "cycle", sourceVersionId: source.id, proposalVersionId: proposal.version.id, resultVersionId: revisionVersion?.id || proposal.version.id,
         agents: [{ key: design.agent.key, promptVersion: design.promptVersion }, { key: critique.agent.key, promptVersion: critique.promptVersion }, ...(revision ? [{ key: revision.agent.key, promptVersion: revision.promptVersion }] : [])], findings: critique.findings });
-      setArchitectureResult({ mode: "cycle", design, critique, revision, proposalVersionId: proposal.version.id, revisionVersionId: revisionVersion?.id || null });
+      setArchitectureResult({ mode: "cycle", design, critique, revision, appliedVersionId: resultVersionId });
     } catch (e) { setArchitectureError(e.message || "No se pudo completar el ciclo"); }
     finally { setArchitectureBusy(null); }
   };

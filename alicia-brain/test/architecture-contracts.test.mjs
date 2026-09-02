@@ -12,7 +12,10 @@ import { publicAgentRegistry } from "../src/architecture/registry.js";
 test("public registry exposes versions and schemas without prompt text", () => {
   const agents = publicAgentRegistry();
   assert.deepEqual(agents.map((agent) => agent.key), ["tweedledum", "tweedledee"]);
-  assert.ok(agents.every((agent) => agent.promptVersion === "1.0.0"));
+  assert.deepEqual(Object.fromEntries(agents.map((agent) => [agent.key, agent.promptVersion])), {
+    tweedledum: "1.1.0",
+    tweedledee: "1.0.0",
+  });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
 });
 

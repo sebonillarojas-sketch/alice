@@ -34,14 +34,57 @@ test("Tweedledum design includes project context and returns normalized structur
   const calls = [];
   const client = { messages: { create: async (request) => {
     calls.push(request);
-    return { content: [{ type: "text", text: "```json\n{\"summary\":\"Balanced plan\",\"assumptions\":[],\"tradeoffs\":[\"compact hall\"],\"layout\":{\"ambientes\":[]},\"rationale\":\"private\"}\n```" }] };
+    return { content: [{ type: "text", text: "```json\n{\"summary\":\"Balanced plan\",\"assumptions\":[],\"tradeoffs\":[\"compact hall\"],\"layout\":{\"ambientes\":[{\"nombre\":\"sala\",\"ref_id\":\"r1\",\"poligono\":[[0,0],[4,0],[4,3],[0,3]]}]},\"rationale\":\"private\"}\n```" }] };
   } } };
   const service = createArchitectureService({ client, model: "test-model" });
   const result = await service.design({ context: { ...context, sourcePlanVersionId: null }, brief: { dormitorios: 2 } });
   assert.match(JSON.stringify(calls[0].messages), /DC01/);
-  assert.equal(result.layout.ambientes.length, 0);
+  assert.equal(result.layout.ambientes.length, 1);
   assert.equal(result.agent.key, "tweedledum");
-  assert.equal(result.promptVersion, "1.0.0");
+  assert.equal(result.promptVersion, "1.1.0");
+});
+
+test("Tweedledum rejects a design response with no drawable room geometry", async () => {
+  const client = { messages: { create: async () => ({
+    content: [{ type: "text", text: JSON.stringify({
+      summary: "Here is the concept",
+      assumptions: [],
+      tradeoffs: [],
+      layout: { ambientes: [] },
+      rationale: "Narrative only",
+    }) }],
+  }) } };
+  const service = createArchitectureService({ client, model: "test-model" });
+
+  await assert.rejects(
+    () => service.design({ context: { ...context, sourcePlanVersionId: null }, brief: { dormitorios: 2 } }),
+    /drawable room geometry/i,
+  );
+});
+
+test("Tweedledum rejects an unchanged source plan when asked for a new design", async () => {
+  const sourceLayout = {
+    ambientes: [{ nombre: "sala", ref_id: "r1", poligono: [[0, 0], [4, 0], [4, 3], [0, 3]] }],
+  };
+  const client = { messages: { create: async () => ({
+    content: [{ type: "text", text: JSON.stringify({
+      summary: "The existing plan works",
+      assumptions: [],
+      tradeoffs: [],
+      layout: sourceLayout,
+      rationale: "No geometry changed",
+    }) }],
+  }) } };
+  const service = createArchitectureService({ client, model: "test-model" });
+
+  await assert.rejects(
+    () => service.design({
+      context,
+      brief: { dormitorios: 2 },
+      planVersion: { id: "v2", layout: sourceLayout },
+    }),
+    /new plan geometry/i,
+  );
 });
 
 test("malformed model JSON fails closed", async () => {
