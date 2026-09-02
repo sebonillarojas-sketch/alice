@@ -125,3 +125,35 @@ export async function checkRegression(db, row, { client, limit = 8 } = {}) {
     return verdict("error", e.message, cases.length);
   }
 }
+
+// Lo que el gate-pass de la madrugada frenó o no pudo verificar. Es el único camino sin
+// humano mirando: cuando aprobás por WhatsApp el veredicto vuelve en esa misma respuesta,
+// pero un auto-apply L0 bloqueado a las 6:30am no se lo cuenta a nadie.
+export function recentRegressionAlerts(db, { hours = 24 } = {}) {
+  try {
+    const rows = db.prepare(
+      `SELECT id, scope, lesson, regression_check FROM lessons
+        WHERE regression_check IS NOT NULL
+          AND updated_at >= datetime('now', ?)
+        ORDER BY updated_at DESC LIMIT 10`
+    ).all(`-${hours} hours`);
+    return rows
+      .map(r => {
+        let v = null;
+        try { v = JSON.parse(r.regression_check); } catch { return null; }
+        if (v?.status !== "degrades" && v?.status !== "error") return null;
+        return { id: r.id, scope: r.scope, lesson: r.lesson, status: v.status, reason: v.reason || "" };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export function formatRegressionAlerts(rows = []) {
+  if (!Array.isArray(rows) || !rows.length) return "";
+  return rows.map(r => r.status === "degrades"
+    ? `• Frené la lección #${r.id} (${r.scope}): "${r.lesson}" — ${r.reason}`
+    : `• No pude verificar la lección #${r.id} (${r.scope}): "${r.lesson}" — ${r.reason}. Se aplicó igual.`
+  ).join("\n");
+}

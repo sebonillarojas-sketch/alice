@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { collectCases, buildJudgePrompt, judgeRegression, checkRegression } from "../src/lesson-regression.js";
+import { collectCases, buildJudgePrompt, judgeRegression, checkRegression, recentRegressionAlerts, formatRegressionAlerts } from "../src/lesson-regression.js";
 
 // db con las tablas de las que sale el material de contraste
 function dbFull() {
@@ -153,4 +153,56 @@ test("checkRegression: LESSON_REGRESSION=off saltea y no llama al modelo", async
   } finally {
     delete process.env.LESSON_REGRESSION;
   }
+});
+
+import { ensureLessonsSchema } from "../src/lessons.js";
+
+function dbAlerts() {
+  const d = new DatabaseSync(":memory:");
+  ensureLessonsSchema(d);
+  return d;
+}
+function seed(db, { lesson, status, reason, scope = "agent:alicia", ago = 0 }) {
+  const info = db.prepare("INSERT INTO lessons (scope, source, lesson, regression_check) VALUES (?,?,?,?)")
+    .run(scope, "reflection", lesson, JSON.stringify({ status, reason }));
+  if (ago) db.prepare("UPDATE lessons SET updated_at = datetime('now', ?) WHERE id = ?").run(`-${ago} hours`, Number(info.lastInsertRowid));
+  return Number(info.lastInsertRowid);
+}
+
+test("recentRegressionAlerts: trae degrades y error, ignora pass y skipped", () => {
+  const db = dbAlerts();
+  seed(db, { lesson: "la frenada", status: "degrades", reason: "rompe X" });
+  seed(db, { lesson: "la no verificada", status: "error", reason: "API caída" });
+  seed(db, { lesson: "la buena", status: "pass", reason: "ok" });
+  seed(db, { lesson: "la sin material", status: "skipped", reason: "sin material" });
+  const rows = recentRegressionAlerts(db);
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows.map(r => r.status).sort(), ["degrades", "error"]);
+});
+
+test("recentRegressionAlerts: ignora lo más viejo que la ventana", () => {
+  const db = dbAlerts();
+  seed(db, { lesson: "vieja", status: "degrades", reason: "rompe X", ago: 48 });
+  assert.equal(recentRegressionAlerts(db, { hours: 24 }).length, 0);
+});
+
+test("recentRegressionAlerts: db sin la columna no explota", () => {
+  const d = new DatabaseSync(":memory:");
+  d.exec("CREATE TABLE lessons (id INTEGER PRIMARY KEY, lesson TEXT)");
+  assert.deepEqual(recentRegressionAlerts(d), []);
+});
+
+test("formatRegressionAlerts: sin alertas devuelve string vacío", () => {
+  assert.equal(formatRegressionAlerts([]), "");
+});
+
+test("formatRegressionAlerts: distingue la frenada de la no verificada", () => {
+  const txt = formatRegressionAlerts([
+    { id: 1, scope: "agent:alicia", lesson: "la frenada", status: "degrades", reason: "rompe X" },
+    { id: 2, scope: "agent:cheshire", lesson: "la no verificada", status: "error", reason: "API caída" },
+  ]);
+  assert.match(txt, /#1/);
+  assert.match(txt, /frené|freno|bloque/i);
+  assert.match(txt, /#2/);
+  assert.match(txt, /no pude verificar/i);
 });
