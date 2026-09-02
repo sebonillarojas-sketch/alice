@@ -16,6 +16,7 @@ import { readFile } from "fs/promises";
 import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
+import { CEO_ID, emailToUserId, resolveActingUser } from "./identity.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -59,22 +60,28 @@ const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/market-impo
 // backend no necesita el JWT secret ni JWKS: Supabase confirma sesión viva.
 const SUPABASE_URL  = process.env.SUPABASE_URL || "https://apnzitklhxrcszectbxx.supabase.co";
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwbnppdGtsaHhyY3N6ZWN0Ynh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MjUzNjcsImV4cCI6MjA5OTQwMTM2N30.OdUe_GuchvgjoDxklh_nKxxNb_rPD_IpQzj8f_XyETI"; // anon key: pública por diseño
-const _jwtCache = new Map(); // token → { ok, until }
-async function verifySupabaseJWT(token) {
-  if (!token || token.length < 100) return false; // los JWT de Supabase son largos; los del panel no llegan acá
+const _jwtCache = new Map(); // token → { user, until }
+// Antes devolvía un booleano y tiraba la identidad — de ahí venía el agujero:
+// el gate sabía que había ALGUIEN logueado, no QUIÉN. Ahora devuelve el usuario.
+async function fetchSupabaseUser(token) {
+  if (!token || token.length < 100) return null; // los JWT de Supabase son largos; los del panel no llegan acá
   const hit = _jwtCache.get(token);
-  if (hit && Date.now() < hit.until) return hit.ok;
-  let ok = false;
+  if (hit && Date.now() < hit.until) return hit.user;
+  let user = null;
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000),
     });
-    ok = r.ok;
-  } catch { ok = false; }
+    if (r.ok) {
+      const j = await r.json();
+      if (j?.email) user = { email: j.email, sub: j.id };
+    }
+  } catch { user = null; }
   if (_jwtCache.size > 500) _jwtCache.clear();
-  _jwtCache.set(token, { ok, until: Date.now() + (ok ? 10 * 60_000 : 60_000) });
-  return ok;
+  // Cachear el fallo poco (1 min) y el éxito más (10 min), igual que antes.
+  _jwtCache.set(token, { user, until: Date.now() + (user ? 10 * 60_000 : 60_000) });
+  return user;
 }
 
 function signToken(exp) {
@@ -98,22 +105,38 @@ async function panelGate(req, res, next) {
   // detrás del tunnel el Host llega como aliceai.bam.pe y el gate sigue cerrado.
   if (process.env.GATE_DEV_OPEN === "1"
     && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket?.remoteAddress || "")
-    && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || ""))) return next();
+    && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || ""))) {
+    req.aliceUser = { id: CEO_ID, via: "dev" };
+    return next();
+  }
   // El cuerpo de Alicia (su teléfono) entra con x-body-key. Hace falta porque
   // GATE_DEV_OPEN solo cubre loopback: desde otro device el Host ya no es localhost
   // y el gate lo rebota con 401. Comparación en tiempo constante y sin default:
   // si BODY_KEY no está seteado, esta puerta simplemente no existe.
   const bodyKey = req.headers["x-body-key"];
   if (BODY_KEY && bodyKey && bodyKey.length === BODY_KEY.length
-    && crypto.timingSafeEqual(Buffer.from(bodyKey), Buffer.from(BODY_KEY))) return next();
+    && crypto.timingSafeEqual(Buffer.from(bodyKey), Buffer.from(BODY_KEY))) {
+    req.aliceUser = { id: process.env.EMBODIED_USER_ID || CEO_ID, via: "body" };
+    return next();
+  }
   // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
   // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
   if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "panel_locked", detail: "PANEL_PASSWORD no configurado en Railway" });
   const auth = req.headers.authorization || "";
   const tok = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (verifyToken(tok)) return next();                 // token del panel (sb)
-  if (await verifySupabaseJWT(tok)) return next();     // sesión del ERP (equipo logueado)
+  if (verifyToken(tok)) {                              // token del panel = sesión de sb
+    req.aliceUser = { id: CEO_ID, via: "panel" };
+    return next();
+  }
+  const su = await fetchSupabaseUser(tok);             // sesión del ERP (equipo logueado)
+  if (su) {
+    const uid = emailToUserId(getDB(), su.email);
+    // Logueado en Supabase pero sin perfil en el cerebro: entra al ERP, no a Alicia.
+    if (!uid) return res.status(403).json({ error: "usuario_sin_perfil", detail: su.email });
+    req.aliceUser = { id: uid, email: su.email, via: "erp" };
+    return next();
+  }
   return res.status(401).json({ error: "no_auth" });
 }
 app.use("/api", panelGate);
@@ -281,8 +304,6 @@ function maybeRefreshPersona(userId) {
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
-
-const CEO_ID = "sb";
 
 function buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId) {
   const isCEO = userId === CEO_ID;
@@ -999,10 +1020,13 @@ function escapeXml(str) {
 // ── REST API ──────────────────────────────────────────────────────────────────
 
 app.post("/api/chat", async (req, res) => {
-  const { userId, message } = req.body;
-  if (!userId || !message) return res.status(400).json({ error: "Falta userId o message" });
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: "Falta message" });
+  // El userId del body ya NO manda: solo puede pedir "ver como" y solo si sos el CEO.
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
   try {
-    const result = await processAliciaMessage(userId, message, "app");
+    const result = await processAliciaMessage(act.userId, message, "app");
     res.json(result);
   } catch (e) {
     console.error("Chat error:", e.message);
