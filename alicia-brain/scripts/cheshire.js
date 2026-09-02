@@ -73,7 +73,10 @@ async function run() {
 
   // ── 2) Error-path del login: clave incorrecta DEBE mostrar mensaje ─────────
   try {
-    await page.fill('input[type="email"]', "cheshire@hygge.pe");
+    // Dirección inexistente a propósito: este check prueba el error-path, así que
+    // mete un intento fallido en cada corrida. Usar la cuenta real del tester acá
+    // le sumaría un fallo cada 30 minutos y terminaría bloqueándola.
+    await page.fill('input[type="email"]', "no-existe-error-path@hygge.invalid");
     await page.fill('input[type="password"]', "clave-incorrecta-cheshire");
     await page.click('button[type="submit"]');
     const errVisible = await page.getByText(/incorrect/i).first().isVisible({ timeout: 8000 }).catch(() => false);
