@@ -1,4 +1,4 @@
-// Briefing diario proactivo — corre cada mañana a las 7:00am Lima
+// Briefing diario proactivo — corre cada mañana a las 9:00am Lima (cron.js:14)
 import Anthropic from "@anthropic-ai/sdk";
 import { erp } from "./erp-client.js";
 import { googleCalendar, googleAvailable } from "./integrations/google.js";
@@ -53,6 +53,11 @@ export async function runDailyBriefing() {
     ? knowledge.map(k => `• ${k.topic}: ${k.content.slice(0, 100)}`).join("\n")
     : "Base de conocimiento vacía aún.";
 
+  // 4b. Lo que la capa de no-regresión frenó o no pudo verificar esta madrugada.
+  // El gate-pass corre 6:30am y el briefing 9:00am, así que la ventana de 24h lo cubre.
+  const { recentRegressionAlerts, formatRegressionAlerts } = await import("./lesson-regression.js");
+  const lessonAlerts = formatRegressionAlerts(recentRegressionAlerts(getDB()));
+
   // 5. Generar briefing con Claude
   const prompt = `Sos Alicia, asistente ejecutiva de Sebastián Bonilla, CEO de Hygge Holding Lima.
 Hoy es ${today}.
@@ -76,7 +81,9 @@ ${newsBlock}
 LO QUE SÉ DE HYGGE:
 ${knowledgeBlock}
 
-Armá el briefing: calendario, alertas, noticias relevantes, y una sugerencia proactiva tuya.`;
+${lessonAlerts ? `\nAPRENDIZAJE FRENADO ANOCHE:\n${lessonAlerts}\n` : ""}
+
+Armá el briefing: calendario, alertas, noticias relevantes, y una sugerencia proactiva tuya. Si hay aprendizaje frenado, mencionalo en una línea al final — no lo omitas.`;
 
   const resp = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",

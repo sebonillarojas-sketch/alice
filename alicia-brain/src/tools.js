@@ -765,8 +765,10 @@ export async function executeTool(toolName, input, userId) {
       if (userId !== "sb") return "Solo Sebastián puede aprobar lecciones.";
       const { getDB } = await import("./db.js");
       const { approveLesson } = await import("./lessons.js");
-      const r = approveLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
-      return r.applied ? `Listo, apliqué la lección #${input.id} ✓` : `La #${input.id} ya estaba ${r.status} — no la volví a tocar.`;
+      const r = await approveLesson(getDB(), Number(input.id), { by: "sb-whatsapp" });
+      if (r.applied) return `Listo, apliqué la lección #${input.id} ✓`;
+      if (r.blocked) return `No la apliqué: al contrastarla contra lo que venías haciendo, degrada. ${r.regression.reason}\nSi querés, pedímela de nuevo más tarde y la vuelvo a evaluar contra casos nuevos.`;
+      return `La #${input.id} ya estaba ${r.status} — no la volví a tocar.`;
     }
 
     case "reject_lesson": {
@@ -790,7 +792,7 @@ export async function executeTool(toolName, input, userId) {
       // Una corrección humana DIRECTA es evidencia suficiente: se corre el gate con minEvidence=1
       // (mantiene el chequeo de reglas duras y el nivel de riesgo) para que aparezca YA para aprobar,
       // sin esperar 3 repeticiones. Aprobar/aplicar sigue siendo un paso humano.
-      const res = runGateOnLesson(getDB(), id, { hardRules: HARD_RULES, minEvidence: 1 });
+      const res = await runGateOnLesson(getDB(), id, { hardRules: HARD_RULES, minEvidence: 1 });
       if (res.status === "rejected") return `No la puedo tomar: choca con una regla dura (${res.reason || "seguridad/autoridad/RNE"}).`;
       if (res.status === "applied") return "Anotado y aplicado 🧠 (era de bajo riesgo).";
       return "Anotado 🧠 — te la dejé lista para aprobar. Decime 'aplicá esa' (o miralas con review_lessons) y la incorporo.";

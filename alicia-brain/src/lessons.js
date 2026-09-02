@@ -19,6 +19,9 @@ export function ensureLessonsSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_lessons_scope ON lessons(scope, status);
     CREATE INDEX IF NOT EXISTS idx_lessons_status ON lessons(status, risk_level);
   `);
+  // Veredicto de la capa 4 del gate (no-regresión). Espejo de contradicts_check, que
+  // guarda el de la capa 1. Migración con el patrón del repo (ver db.js:153).
+  try { db.exec("ALTER TABLE lessons ADD COLUMN regression_check TEXT"); } catch {}
 }
 
 export function checkContradictsHardRules(lessonText, hardRules = []) {
@@ -50,7 +53,7 @@ export function proposeLesson(db, { scope = "global", source, trigger = null, le
   return { id: Number(info.lastInsertRowid), evidence_count: 1, created: true };
 }
 
-export function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3 } = {}) {
+export async function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3, client } = {}) {
   const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id);
   if (!row) throw new Error(`lesson ${id} no existe`);
   const contradicts = checkContradictsHardRules(row.lesson, hardRules);
@@ -58,27 +61,39 @@ export function runGateOnLesson(db, id, { hardRules = [], minEvidence = 3 } = {}
   const check = JSON.stringify(contradicts);
   let status;
   if (decision === "reject") status = "rejected";
-  else if (decision === "auto_apply") status = "applied";
   else if (decision === "needs_human") status = "validated";
+  else if (decision === "auto_apply") status = null; // lo resuelve promoteToApplied
   else status = "proposed"; // hold: evidencia insuficiente, se mantiene propuesta
+
+  // El auto-apply de las L0 es el único camino a 'applied' sin humano: pasa por la
+  // misma puerta que la aprobación, así la no-regresión también lo cubre.
+  if (status === null) {
+    const r = await promoteToApplied(db, id, { by: "auto", client });
+    db.prepare("UPDATE lessons SET contradicts_check = ?, updated_at = datetime('now') WHERE id = ?").run(check, id);
+    return { status: r.status, decision, reason: r.blocked ? r.regression.reason : contradicts.reason };
+  }
+
   db.prepare(
-    `UPDATE lessons SET status = ?, contradicts_check = ?,
-       applied_at = CASE WHEN ? = 'applied' THEN datetime('now') ELSE applied_at END,
-       validated_by = CASE WHEN ? = 'applied' THEN 'auto' ELSE validated_by END,
-       updated_at = datetime('now') WHERE id = ?`
-  ).run(status, check, status, status, id);
+    `UPDATE lessons SET status = ?, contradicts_check = ?, updated_at = datetime('now') WHERE id = ?`
+  ).run(status, check, id);
   return { status, decision, reason: contradicts.reason };
 }
 
-export function runGatePass(db, { hardRules = [], minEvidence = 3 } = {}) {
+export async function runGatePass(db, { hardRules = [], minEvidence = 3, client } = {}) {
   const rows = db.prepare("SELECT id FROM lessons WHERE status = 'proposed'").all();
-  const counts = { evaluated: 0, applied: 0, rejected: 0, validated: 0 };
+  const counts = { evaluated: 0, applied: 0, rejected: 0, validated: 0, blocked: 0 };
   for (const { id } of rows) {
-    const { status } = runGateOnLesson(db, id, { hardRules, minEvidence });
+    const { status, decision } = await runGateOnLesson(db, id, { hardRules, minEvidence, client });
     counts.evaluated++;
     if (status === "applied") counts.applied++;
     else if (status === "rejected") counts.rejected++;
-    else if (status === "validated") counts.validated++;
+    else if (status === "validated") {
+      counts.validated++;
+      // decision 'auto_apply' + status final 'validated' es exactamente "el juez la
+      // frenó": la L0 sin bloqueo sale con status 'applied'. Sin segunda query ni
+      // asumir que L0 es el único nivel que auto-aplica (evaluateGate podría cambiar).
+      if (decision === "auto_apply") counts.blocked++;
+    }
   }
   return counts;
 }
@@ -103,7 +118,56 @@ export function applyLessonToBrain(db, id) {
   return { wrote: "knowledge" };
 }
 
-export function approveLesson(db, id, { by = "human" } = {}) {
+// La ÚNICA puerta hacia 'applied'. Antes había dos caminos que escribían ese estado sin
+// saber uno del otro (el auto-apply L0 del gate y la aprobación humana); ahora los dos
+// pasan por acá, que es lo que hace que la capa de no-regresión no tenga agujeros.
+//
+// Import dinámico (no estático arriba del archivo): lesson-regression.js construye el
+// cliente Anthropic al cargar, y lessons.js lo importan las cinco suites del gate, que
+// quedarían cargando el SDK sin necesidad. Mismo estilo que tools.js/cron.js/server.js.
+export async function promoteToApplied(db, id, { by = "human", client } = {}) {
+  const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id);
+  if (!row) throw new Error(`lesson ${id} no existe`);
+  // Status capturado ANTES del juez: checkRegression es un round-trip a Opus, segundos
+  // en los que puede llegar un reject humano, un segundo approve del mismo id, o puede
+  // que la lección ya estuviera 'rejected'. Los dos UPDATE de abajo llevan
+  // "AND status = ?" contra este valor, así que solo escriben si nadie tocó la fila
+  // mientras el juez pensaba — eso tapa los tres casos con un único guard:
+  // el veto humano nunca se pisa con un 'applied' tardío, un doble approve no aplica
+  // ni escribe dos veces al cerebro, y una lección 'rejected' no puede resucitar.
+  const before = row.status;
+  const { checkRegression } = await import("./lesson-regression.js");
+  const regression = await checkRegression(db, row, { client });
+
+  // Solo 'degrades' frena. 'skipped' y 'error' aplican igual: fail-open a propósito —
+  // una lección es texto reversible en un prompt, y un falso bloqueo traba el loop entero.
+  if (regression.status === "degrades") {
+    // Nunca 'rejected': el juez puede frenar una lección, no matarla. Queda 'validated'
+    // para que la mire un humano (y para que el gate-pass no la re-juzgue cada madrugada).
+    const w = db.prepare(
+      "UPDATE lessons SET status = 'validated', regression_check = ?, updated_at = datetime('now') WHERE id = ? AND status = ?"
+    ).run(JSON.stringify(regression), id, before);
+    if (!w.changes) {
+      // La fila cambió de status mientras el juez pensaba (stale): no pisamos nada,
+      // devolvemos el status real para que el llamador sepa que no hizo falta frenarla.
+      const cur = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id).status;
+      return { status: cur, applied: false, blocked: false, stale: true, regression };
+    }
+    return { status: "validated", applied: false, blocked: true, regression };
+  }
+
+  const w = db.prepare(
+    "UPDATE lessons SET status = 'applied', regression_check = ?, validated_by = ?, applied_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = ?"
+  ).run(JSON.stringify(regression), by, id, before);
+  if (!w.changes) {
+    const cur = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id).status;
+    return { status: cur, applied: false, stale: true, regression };
+  }
+  applyLessonToBrain(db, id);
+  return { status: "applied", applied: true, regression };
+}
+
+export async function approveLesson(db, id, { by = "human", client } = {}) {
   const row = db.prepare("SELECT status FROM lessons WHERE id = ?").get(id);
   if (!row) throw new Error(`lesson ${id} no existe`);
   if (row.status === "applied") return { status: "applied", applied: false };
@@ -111,9 +175,7 @@ export function approveLesson(db, id, { by = "human" } = {}) {
   // (evidencia insuficiente) ni rejected/retired — así el endpoint abierto no puede
   // forzar la aplicación saltándose la capa de evidencia del gate.
   if (row.status !== "validated") return { status: row.status, applied: false };
-  db.prepare("UPDATE lessons SET status = 'applied', validated_by = ?, applied_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(by, id);
-  applyLessonToBrain(db, id);
-  return { status: "applied", applied: true };
+  return promoteToApplied(db, id, { by, client });
 }
 
 export function rejectLesson(db, id, { by = "human" } = {}) {

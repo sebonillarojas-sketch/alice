@@ -10,27 +10,27 @@ function db0() {
   return d;
 }
 
-test("approveLesson: validated → applied + escribe al knowledge", () => {
+test("approveLesson: validated → applied + escribe al knowledge", async () => {
   const db = db0();
   const id = Number(db.prepare("INSERT INTO lessons (scope,source,lesson,status,risk_level) VALUES ('global','teatable','responder en español','validated','L1')").run().lastInsertRowid);
-  const r = approveLesson(db, id, { by: "sb" });
+  const r = await approveLesson(db, id, { by: "sb" });
   assert.equal(r.status, "applied");
   assert.equal(r.applied, true);
   assert.equal(db.prepare("SELECT status, validated_by FROM lessons WHERE id=?").get(id).validated_by, "sb");
   assert.equal(db.prepare("SELECT content FROM knowledge").get().content, "responder en español");
 });
 
-test("approveLesson idempotente sobre applied", () => {
+test("approveLesson idempotente sobre applied", async () => {
   const db = db0();
   const id = Number(db.prepare("INSERT INTO lessons (scope,source,lesson,status) VALUES ('global','teatable','x','applied')").run().lastInsertRowid);
-  const r = approveLesson(db, id, {});
+  const r = await approveLesson(db, id, {});
   assert.equal(r.applied, false);
 });
 
-test("approveLesson NO aplica una 'proposed' (evidencia insuficiente — no saltea el gate)", () => {
+test("approveLesson NO aplica una 'proposed' (evidencia insuficiente — no saltea el gate)", async () => {
   const db = db0();
   const id = Number(db.prepare("INSERT INTO lessons (scope,source,lesson,status,risk_level) VALUES ('global','teatable','sin evidencia','proposed','L1')").run().lastInsertRowid);
-  const r = approveLesson(db, id, { by: "sb" });
+  const r = await approveLesson(db, id, { by: "sb" });
   assert.equal(r.applied, false);
   assert.equal(db.prepare("SELECT status FROM lessons WHERE id=?").get(id).status, "proposed");
   assert.equal(db.prepare("SELECT COUNT(*) c FROM knowledge").get().c, 0);

@@ -117,7 +117,7 @@ export function startCron() {
       const { runGatePass } = await import("./lessons.js");
       const { HARD_RULES } = await import("./hard-rules.js");
       const { getDB } = await import("./db.js");
-      const r = runGatePass(getDB(), { hardRules: HARD_RULES, minEvidence: 3 });
+      const r = await runGatePass(getDB(), { hardRules: HARD_RULES, minEvidence: 3 });
       console.log(`🧠 gate-pass diario · ${JSON.stringify(r)}`);
     } catch (e) { console.error("gate-pass diario error:", e.message); }
   }, { timezone: "America/Lima" });
