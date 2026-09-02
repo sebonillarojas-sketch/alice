@@ -9,6 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createArchitectureService } from "./architecture/service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -78,49 +79,38 @@ function textoDe(resp) { return resp.content.find(b => b.type === "text")?.text 
 // brief: { dormitorios, banos, area_m2, frente_m, fondo_m, fachadas, notas } — todo opcional;
 // lo no especificado se completa con la estadística de mercado del skill.
 export async function disenarPlano(brief, { autocritica = true } = {}) {
-  // El skill entero va como bloque cacheado: iteraciones y pedidos seguidos pagan solo el delta.
-  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill("full")}`, cache_control: { type: "ephemeral" } }];
-  // Inyección universal (Loop 3b #2): lecciones de diseño aplicadas para Bammy, en un bloque
-  // aparte (NO cacheado) para no romper el cache del skill grande. Silencioso si no hay.
-  try {
-    const { getDB } = await import("./db.js");
-    const { lessonsForScope, formatLessonsBlock } = await import("./lessons.js");
-    const block = formatLessonsBlock(lessonsForScope(getDB(), "agent:bammy"));
-    if (block) system.push({ type: "text", text: block });
-  } catch (e) { console.error("inyección lecciones Bammy falló:", e.message); }
-  const messages = [{
-    role: "user",
-    content: `Diseñá una planta con este brief (completá lo no especificado con la estadística de mercado del skill):\n${JSON.stringify(brief ?? {}, null, 1)}\n\nRespondé ÚNICAMENTE con el JSON estricto del layout — sin markdown, sin comentarios.${SOLO_JSON}`,
-  }];
-  const r1 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages });
-  let texto = textoDe(r1);
-  if (autocritica) {
-    // 2ª llamada reusa el MISMO system block → pega en el cache de prompt (barata)
-    messages.push(
-      { role: "assistant", content: texto },
-      { role: "user", content: `Recorré references/checklist-validacion.md ítem por ítem contra tu layout. Si TODO pasa, repetí el mismo JSON idéntico; si algo falla, corregilo.${SOLO_JSON}` },
-    );
-    const r2 = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages });
-    const t2 = textoDe(r2);
-    if (t2) texto = t2;
-  }
-  return extraerJSON(texto);
+  void autocritica; // compatibilidad: Tweedledum ya no se aprueba ni se critica a sí mismo.
+  const result = await createArchitectureService().design({
+    context: { project: { id: "legacy-editor", name: "Editor BAM" }, brief: brief || {}, sourcePlanVersionId: null },
+    brief: brief || {},
+  });
+  return result.layout;
 }
 
 // El Editor de Planos del ERP manda una planta existente (a veces solo ambientes,
 // sin muros/puertas/ventanas): Feyd la audita contra su checklist y la corrige.
 export async function corregirPlano(layout, notas = "") {
-  // modo liviano: auditar no necesita el skill completo → ~2x más rápido que diseñar
-  const system = [{ type: "text", text: `${PERSONA}\n\n${cargarSkill("corregir")}`, cache_control: { type: "ephemeral" } }];
-  const messages = [{
-    role: "user",
-    content: `Auditá y corregí esta planta que viene del editor de BAM.${notas ? ` Contexto: ${notas}.` : ""}
-${JSON.stringify(layout)}
-
-Recorré references/checklist-validacion.md ítem por ítem contra la planta. Después corregila: mantené la huella, el frente y la intención del parti todo lo posible — cirugía, no demolición (salvo que esté indefendible, y en ese caso decilo en tu veredicto). Respondé ÚNICAMENTE con este JSON:
-{"veredicto": "<1-2 líneas en tu voz>", "problemas": ["<máx 8, los más graves; problema + regla citada (RNE Art. / CHK-XX)>"], "layout": <la planta corregida en tu formato estricto>}
-Sé conciso en veredicto y problemas para no cortar el JSON. Si la planta ya está impecable, decilo (sin regalar elogios) y devolvé el layout igual.${SOLO_JSON}`,
-  }];
-  const r = await anthropic.messages.create({ model: MODEL, max_tokens: 16000, system, messages });
-  return extraerJSON(textoDe(r));
+  const service = createArchitectureService();
+  const versionId = `legacy-plan-${Date.now().toString(36)}`;
+  const context = {
+    project: { id: "legacy-editor", name: "Editor BAM" },
+    brief: notas ? { notes: notas } : {},
+    sourcePlanVersionId: versionId,
+    verifiedEvidence: [],
+  };
+  const critique = await service.critique({
+    context,
+    planVersion: { id: versionId, layout },
+    deterministicValidation: { ok: null, findings: [], note: "Legacy endpoint did not supply deterministic validation" },
+  });
+  const acceptedFindings = critique.findings.filter((finding) => ["critical", "major"].includes(finding.severity));
+  let corrected = layout;
+  if (acceptedFindings.length) {
+    corrected = (await service.revise({ context, planVersion: { id: versionId, layout }, brief: context.brief, acceptedFindings })).layout;
+  }
+  return {
+    veredicto: critique.summary,
+    problemas: critique.findings.slice(0, 8).map((finding) => `${finding.title}: ${finding.observation} — ${finding.recommendation}`),
+    layout: corrected,
+  };
 }
