@@ -49,9 +49,60 @@ const note = (ok, label, detail = "") => {
 };
 
 async function run() {
-  const browser = await chromium.launch();
-  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  // chromium.launch() y browser.close() vivían sin try/catch: si cualquiera de
+  // los dos tiraba, run() rechazaba entero y el fetch a REPORT_URL de más abajo
+  // NUNCA corría. Cero reporte es exactamente el modo de falla que v2 vino a
+  // eliminar (v1 se llamaba a la carta "nunca queda mudo"). Por eso el arranque
+  // y el cierre del navegador quedan cada uno en su propio try: si Chromium no
+  // arranca, ESO es el hallazgo que hay que reportar, no una excusa para no
+  // reportar nada.
+  let browser = null;
+  try {
+    browser = await chromium.launch();
+  } catch (e) {
+    note(false, "Chromium arrancó", e.message);
+    findings.push({ severity: "critical", category: "cheshire-infra", detail: `chromium.launch() falló en la Mac Studio: ${e.message}. Cheshire no pudo correr ningún check esta corrida.` });
+  }
 
+  if (browser) { await runChecks(browser); }
+
+  // ── Reporte al Lab (críticos → WhatsApp automático vía pipeline existente) ──
+  // A propósito NO va adentro de ningún try/catch que dependa de lo de arriba:
+  // tiene que correr pase lo que pase, incluso si Chromium ni arrancó.
+  const result = findings.some(f => f.severity === "critical") ? "issues" : findings.length ? "issues" : "ok";
+  const summary = findings.length ? `${findings.length} hallazgo(s): ${findings.map(f => f.category).join(", ")}` : "Suite E2E completa OK";
+  try {
+    const r = await fetch(REPORT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-agent-key": process.env.AGENTS_API_KEY || "" },
+      body: JSON.stringify({ agent: "cheshire", result, summary, actions_taken: actions, findings }),
+    });
+    console.log(`😺 Reporte enviado: HTTP ${r.status} · ${result} · ${summary}`);
+  } catch (e) { console.error("😺 No pude reportar:", e.message); }
+}
+
+// Todos los checks que necesitan un browser real. Separado de run() para que
+// un throw acá adentro (que los try/catch de cada check no hayan atrapado)
+// tenga una sola salida: el finally cierra el browser y run() sigue derecho
+// hacia el reporte, en vez de rechazar la promesa entera y silenciarlo todo.
+async function runChecks(browser) {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  try {
+    await runChecksInner(browser, stamp);
+  } catch (e) {
+    note(false, "Cheshire — corrida abortada", e.message);
+    findings.push({ severity: "major", category: "cheshire-crash", detail: `La corrida se cortó antes de terminar: ${e.message}` });
+  } finally {
+    try {
+      await browser.close();
+    } catch (e) {
+      note(false, "browser.close()", e.message);
+      findings.push({ severity: "minor", category: "cheshire-infra", detail: `browser.close() falló: ${e.message} — puede quedar un proceso de Chromium colgado en la Mac Studio.` });
+    }
+  }
+}
+
+async function runChecksInner(browser, stamp) {
   // ── 1) ERP carga + login renderiza + sin errores de consola ────────────────
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const consoleErrors = [];
@@ -72,6 +123,10 @@ async function run() {
   }
 
   // ── 2) Error-path del login: clave incorrecta DEBE mostrar mensaje ─────────
+  // loginPublicoOk queda afuera del try: la fase autenticada (más abajo) lo usa
+  // para decidir si un fallo de SU login es un login roto de verdad o solo la
+  // cuenta del tester — así que necesita sobrevivir aunque este check falle.
+  let loginPublicoOk = false;
   try {
     // Dirección inexistente a propósito: este check prueba el error-path, así que
     // mete un intento fallido en cada corrida. Usar la cuenta real del tester acá
@@ -82,6 +137,9 @@ async function run() {
     const errVisible = await page.getByText(/incorrect/i).first().isVisible({ timeout: 8000 }).catch(() => false);
     note(errVisible, "Login con clave incorrecta muestra el error");
     if (!errVisible) findings.push({ severity: "major", category: "ux-login", detail: "Clave incorrecta NO muestra mensaje de error (usuario queda sin feedback) — o Supabase no responde" });
+    // Si esto anduvo, el login renderiza Y Supabase responde para cualquier
+    // usuario — es la prueba de que el mecanismo en sí está sano.
+    loginPublicoOk = errVisible;
   } catch (e) {
     note(false, "Error-path del login", e.message);
     findings.push({ severity: "major", category: "ux-login", detail: `No se pudo ejercitar el login: ${e.message}` });
@@ -139,7 +197,19 @@ async function run() {
       await app.screenshot({ path: join(SHOTS, `${stamp}-app.png`) });
 
       if (!dentro) {
-        findings.push({ severity: "critical", category: "login-roto", detail: "Cheshire no pudo entrar con credenciales válidas — o el login está roto, o la cuenta del tester quedó deshabilitada/con clave cambiada." });
+        // Antes esto era "critical" (→ WhatsApp automático al equipo) sin
+        // distinguir la causa. El check público de arriba (clave incorrecta)
+        // ya prueba si el login renderiza y Supabase responde para cualquier
+        // usuario: si esa parte anda y solo falla ESTE login, lo más probable
+        // es que sea la cuenta de Cheshire (deshabilitada / clave cambiada),
+        // no un login roto para el equipo — despertar a nadie por eso rompe la
+        // confianza en el bot. Y si no se puede distinguir (el check público
+        // también falló o no corrió), tampoco subimos a "critical": no hay
+        // certeza de que no sea, otra vez, solo Cheshire.
+        const detail = loginPublicoOk
+          ? "Cheshire no pudo entrar con sus credenciales, pero el login público (clave incorrecta) SÍ renderiza y Supabase responde — probablemente la cuenta del tester quedó deshabilitada o con la clave cambiada, no un login roto para el equipo."
+          : "Cheshire no pudo entrar con credenciales válidas y tampoco se pudo confirmar que el login público esté sano — puede ser un problema real o solo de la cuenta del tester; no se pudo distinguir.";
+        findings.push({ severity: "major", category: "login-roto", detail });
       } else {
         // 5a) Errores de consola ADENTRO. v1 solo veía los del login; los de acá son
         // los que rompen el trabajo real y nadie estaba mirando.
@@ -187,19 +257,50 @@ async function run() {
           // ⌘N abre el modal de nueva tarea (HyggeOS.jsx). El atajo es más estable
           // que cualquier selector de botón.
           await app.keyboard.press("Meta+n");
-          const modal = await app.locator("input[autofocus], input:focus").first()
+          // El input de título usa inputRef.current?.focus() en un setTimeout(50)
+          // (HyggeOS.jsx:6479) — nunca tiene el atributo `autofocus`. La mitad
+          // "input[autofocus]" del selector viejo era código muerto que nunca
+          // podía matchear nada; `input:focus` es la única mitad que hace algo.
+          const titleInput = app.locator("input:focus").first();
+          const modal = await titleInput
             .waitFor({ state: "visible", timeout: 8000 }).then(() => true).catch(() => false);
           note(modal, "⌘N abre el modal de nueva tarea");
           if (!modal) {
             findings.push({ severity: "major", category: "flujo-crear-tarea", detail: "⌘N no abrió el modal de nueva tarea — el atajo o el modal se rompieron." });
           } else {
-            await app.keyboard.type(titulo);
-            await app.keyboard.press("Enter");
-            await app.waitForTimeout(2500);
-            const aparece = await app.getByText(titulo, { exact: false }).first().isVisible({ timeout: 8000 }).catch(() => false);
-            creada = aparece ? titulo : null;
-            note(aparece, "La tarea creada aparece en la lista");
-            if (!aparece) findings.push({ severity: "major", category: "flujo-crear-tarea", detail: `Creé la tarea "${titulo}" y no apareció en la lista del space ${CHESHIRE_SPACE}.` });
+            // Candado real de "solo escribe con un space de QA confirmado": si
+            // CHESHIRE_SPACE no matchea ningún space de verdad, QuickAdd cae a
+            // allSpaces[0]?.id || "hq" (HyggeOS.jsx:6411-6416) — el HQ de
+            // producción — SIN avisar. El <select> "Space" (y su hermano
+            // "Sub-space" si CHESHIRE_SPACE es un sub-space) reflejan EXACTO lo
+            // que QuickAdd va a usar al crear (HyggeOS.jsx:6434, 6497-6511):
+            // si ninguno de los dos vale CHESHIRE_SPACE, la app no quedó en el
+            // space pedido y no hay que crear nada — mismo trato que "sin
+            // CHESHIRE_SPACE".
+            // Los <select> se buscan DENTRO de la tarjeta del modal (ancestro
+            // del input de título con la clase max-w-[640px], HyggeOS.jsx:6464)
+            // y no en toda la página: la vista de fondo (lista de tareas,
+            // dashboards) tiene sus propios <select> de orden/filtro y un
+            // page.locator("select") sin acotar podría leer cualquiera de esos
+            // en vez de los de QuickAdd.
+            const modalCard = titleInput.locator("xpath=ancestor::div[contains(@class,'max-w-[640px]')]").first();
+            const selects = modalCard.locator("select");
+            const spaceSelVal = await selects.nth(0).inputValue().catch(() => "");
+            const subSpaceSelVal = await selects.nth(1).inputValue().catch(() => "");
+            const spaceConfirmado = spaceSelVal === CHESHIRE_SPACE || subSpaceSelVal === CHESHIRE_SPACE;
+            note(spaceConfirmado, "CHESHIRE_SPACE confirmado en QuickAdd", spaceConfirmado ? "" : `QuickAdd quedó en "${spaceSelVal}"/"${subSpaceSelVal}"`);
+            if (!spaceConfirmado) {
+              findings.push({ severity: "minor", category: "cheshire-space-invalido", detail: `CHESHIRE_SPACE="${CHESHIRE_SPACE}" no matchea ningún space real (¿typo, o se borró el space de QA?). QuickAdd hubiera creado la tarea en "${spaceSelVal || subSpaceSelVal}" en su lugar — no se creó nada. Tratado como sin CHESHIRE_SPACE.` });
+              await app.keyboard.press("Escape");
+            } else {
+              await app.keyboard.type(titulo);
+              await app.keyboard.press("Enter");
+              await app.waitForTimeout(2500);
+              const aparece = await app.getByText(titulo, { exact: false }).first().isVisible({ timeout: 8000 }).catch(() => false);
+              creada = aparece ? titulo : null;
+              note(aparece, "La tarea creada aparece en la lista");
+              if (!aparece) findings.push({ severity: "major", category: "flujo-crear-tarea", detail: `Creé la tarea "${titulo}" y no apareció en la lista del space ${CHESHIRE_SPACE}.` });
+            }
           }
         }
       }
@@ -210,17 +311,35 @@ async function run() {
       // Limpieza: lo que Cheshire crea, Cheshire lo borra. Si esto falla, avisa —
       // basura acumulándose en silencio es peor que un test que no corrió.
       if (creada) {
+        let clickErr = "";
         try {
+          // Clic 1: abre el detalle y clickea "Eliminar" del header. OJO — ESE
+          // BOTÓN NO BORRA: onDelete acá es deleteTaskCascade, que solo hace
+          // setDeleteTaskTarget(...) y abre DeleteTaskModal (HyggeOS.jsx:16128-
+          // 16133), un segundo diálogo con su propio botón de confirmación
+          // (HyggeOS.jsx:7030-7079). Confiar en que este primer clic ya
+          // resolvía el borrado era el bug: la tarea de prueba quedaba viva
+          // para siempre y el reporte encima mentía "se borró ✅".
           await app.getByText(creada, { exact: false }).first().click({ timeout: 8000 });
           await app.waitForTimeout(1200);
-          const borrado = await app.getByRole("button", { name: /eliminar|borrar/i }).first()
-            .click({ timeout: 5000 }).then(() => true).catch(() => false);
+          await app.getByRole("button", { name: /eliminar|borrar/i }).first().click({ timeout: 5000 });
+          // Clic 2: confirmar en DeleteTaskModal. Una tarea de prueba recién
+          // creada no tiene subtareas, así que el modal abre en modo "delete-
+          // all" (default) y su botón de confirmación dice "Eliminar" también
+          // (HyggeOS.jsx:7066-7068) — el mismo selector sirve para los dos.
+          await app.waitForTimeout(1000);
+          await app.getByRole("button", { name: /eliminar|borrar/i }).first().click({ timeout: 5000 });
           await app.waitForTimeout(1500);
-          note(borrado, "Limpieza: la tarea de prueba se borró");
-          if (!borrado) findings.push({ severity: "minor", category: "cheshire-basura", detail: `No pude borrar mi tarea de prueba "${creada}" en el space ${CHESHIRE_SPACE}. Hay que limpiarla a mano.` });
         } catch (e) {
-          findings.push({ severity: "minor", category: "cheshire-basura", detail: `Falló la limpieza de "${creada}": ${e.message}` });
+          clickErr = e.message;
         }
+        // No alcanza con que los clics no hayan tirado error: la única prueba
+        // real de que se borró es que la tarea haya desaparecido de la lista.
+        // Si sigue viva, el finding de basura tiene que salir igual.
+        const sigueViva = await app.getByText(creada, { exact: false }).first().isVisible({ timeout: 3000 }).catch(() => false);
+        const borrado = !sigueViva;
+        note(borrado, "Limpieza: la tarea de prueba se borró", clickErr);
+        if (!borrado) findings.push({ severity: "minor", category: "cheshire-basura", detail: `No pude borrar mi tarea de prueba "${creada}" en el space ${CHESHIRE_SPACE}${clickErr ? ` (${clickErr})` : ""}. Hay que limpiarla a mano.` });
       }
       await app.close().catch(() => {});
     }
@@ -230,20 +349,6 @@ async function run() {
     findings.push({ severity: "major", category: "js-errors", detail: `Consola con ${consoleErrors.length} error(es): ${consoleErrors.slice(0, 3).join(" | ").slice(0, 300)}` });
     note(false, "Consola sin errores", consoleErrors[0]?.slice(0, 80));
   } else { note(true, "Consola sin errores JS"); }
-
-  await browser.close();
-
-  // ── Reporte al Lab (críticos → WhatsApp automático vía pipeline existente) ──
-  const result = findings.some(f => f.severity === "critical") ? "issues" : findings.length ? "issues" : "ok";
-  const summary = findings.length ? `${findings.length} hallazgo(s): ${findings.map(f => f.category).join(", ")}` : "Suite E2E completa OK";
-  try {
-    const r = await fetch(REPORT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-agent-key": process.env.AGENTS_API_KEY || "" },
-      body: JSON.stringify({ agent: "cheshire", result, summary, actions_taken: actions, findings }),
-    });
-    console.log(`😺 Reporte enviado: HTTP ${r.status} · ${result} · ${summary}`);
-  } catch (e) { console.error("😺 No pude reportar:", e.message); }
 }
 
 run().then(() => process.exit(0)).catch(e => { console.error("😺 Cheshire crash:", e.message); process.exit(1); });
