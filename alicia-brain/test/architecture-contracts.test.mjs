@@ -5,8 +5,10 @@ import {
   ArchitectureValidationError,
   normalizeCritiqueOutput,
   normalizeDesignOutput,
+  normalizeFloorPlanOutput,
   validateCritiqueRequest,
   validateDesignRequest,
+  validateFloorPlanRequest,
 } from "../src/architecture/schemas.js";
 import { publicAgentRegistry } from "../src/architecture/registry.js";
 
@@ -18,6 +20,45 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "1.0.0");
+});
+
+test("floor proposals preserve exclusive roles and stable unit references", () => {
+  const output = normalizeFloorPlanOutput({
+    summary: "Two-unit floor",
+    floor: {
+      sourceCabidaVersionId: "cabida_p1_v3",
+      polygons: [
+        { polygonId: "core-1", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: [[4, 0], [6, 0], [6, 8], [4, 8]] },
+        { polygonId: "unit-1-part-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: [[0, 0], [4, 0], [4, 8], [0, 8]] },
+        { polygonId: "unit-2-part-1", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: [[6, 0], [10, 0], [10, 8], [6, 8]] },
+      ],
+    },
+    assumptions: [],
+    tradeoffs: [],
+  });
+  assert.equal(output.floor.polygons[1].unitRef, "unit-1");
+  assert.deepEqual(output.floor.polygons[1].polygon[0], [0, 0]);
+});
+
+test("floor proposal contract rejects ambiguous roles and references", () => {
+  const base = {
+    floor: {
+      sourceCabidaVersionId: "cabida_p1_v3",
+      polygons: [{ polygonId: "p1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: [[0, 0], [4, 0], [4, 4], [0, 4]] }],
+    },
+  };
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "terraza" }] } }), /role/i);
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], unitRef: null }] } }), /unitRef/i);
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [base.floor.polygons[0], { ...base.floor.polygons[0] }] } }), /unique polygonId/i);
+  assert.throws(() => normalizeFloorPlanOutput({ floor: { polygons: base.floor.polygons } }), /sourceCabidaVersionId/i);
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "core" }] } }), /unitRef/i);
+});
+
+test("floor planning requires exact project and Cabida version context", () => {
+  const deterministicFallback = { floor: { sourceCabidaVersionId: "cabida_p1_v3", polygons: [] } };
+  assert.throws(() => validateFloorPlanRequest({ context: { project: { id: "p1", name: "DC01" } }, floorBrief: {}, deterministicFallback }), /sourceCabidaVersionId/i);
+  assert.equal(validateFloorPlanRequest({ context: { project: { id: "p1", name: "DC01" }, sourceCabidaVersionId: "cabida_p1_v3" }, floorBrief: {}, deterministicFallback }).floorBrief instanceof Object, true);
 });
 
 test("Tweedledum rooms require stable references and preserve supported metadata", () => {

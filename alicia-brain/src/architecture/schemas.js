@@ -2,6 +2,7 @@ const SEVERITIES = new Set(["critical", "major", "minor", "info"]);
 const SEVERITY_RANK = Object.freeze({ critical: 0, major: 1, minor: 2, info: 3 });
 const CATEGORIES = new Set(["circulation", "furnishability", "daylight", "privacy", "structure", "mep", "buildability", "commercial", "regulatory", "other"]);
 const REGULATORY = new Set(["not_applicable", "advisory", "verification_required", "verified"]);
+const FLOOR_ROLES = new Set(["unidad", "core", "circulacion", "void"]);
 
 export class ArchitectureValidationError extends Error {
   constructor(message, details = []) {
@@ -21,6 +22,15 @@ const requiredText = (value, field) => {
 const requireContext = (context = {}) => {
   requiredText(context.project?.id, "context.project.id");
   requiredText(context.project?.name, "context.project.name");
+};
+
+const stringArray = (value) => Array.isArray(value) ? value.map(String) : [];
+
+const normalizePolygon = (value, field) => {
+  const valid = Array.isArray(value) && value.length >= 3 && value.every((point) =>
+    Array.isArray(point) && point.length === 2 && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1])));
+  if (!valid) throw new ArchitectureValidationError(`${field} requires drawable polygon geometry`, [field]);
+  return value.map(([x, y]) => [Number(x), Number(y)]);
 };
 
 export function validateDesignRequest(input = {}) {
@@ -43,6 +53,67 @@ export function validateCritiqueRequest(input = {}) {
     throw new ArchitectureValidationError("deterministicValidation is required", ["deterministicValidation"]);
   }
   return input;
+}
+
+export function validateFloorPlanRequest(input = {}) {
+  requireContext(input.context);
+  requiredText(input.context?.sourceCabidaVersionId, "context.sourceCabidaVersionId");
+  if (!input.floorBrief || typeof input.floorBrief !== "object") {
+    throw new ArchitectureValidationError("floorBrief is required", ["floorBrief"]);
+  }
+  if (!input.deterministicFallback || typeof input.deterministicFallback !== "object") {
+    throw new ArchitectureValidationError("deterministicFallback is required", ["deterministicFallback"]);
+  }
+  return input;
+}
+
+export function normalizeFloorPlanOutput(input = {}) {
+  if (!input || typeof input !== "object") throw new ArchitectureValidationError("Tweedledum floor output must be an object");
+  const sourceCabidaVersionId = requiredText(input.floor?.sourceCabidaVersionId, "floor.sourceCabidaVersionId");
+  if (!Array.isArray(input.floor?.polygons) || input.floor.polygons.length === 0) {
+    throw new ArchitectureValidationError("floor.polygons requires drawable geometry", ["floor.polygons"]);
+  }
+  const polygonIds = new Set();
+  const unitPrograms = new Map();
+  const polygons = input.floor.polygons.map((polygon, index) => {
+    const field = `floor.polygons[${index}]`;
+    const polygonId = requiredText(polygon?.polygonId, `${field}.polygonId`);
+    if (polygonIds.has(polygonId)) throw new ArchitectureValidationError(`Floor polygons require a unique polygonId: ${polygonId}`, [`${field}.polygonId`]);
+    polygonIds.add(polygonId);
+    const role = String(polygon?.role || "");
+    if (!FLOOR_ROLES.has(role)) throw new ArchitectureValidationError(`${field}.role is invalid`, [`${field}.role`]);
+    const unitRef = polygon?.unitRef == null ? null : requiredText(polygon.unitRef, `${field}.unitRef`);
+    if (role === "unidad" && !unitRef) throw new ArchitectureValidationError(`${field}.unitRef is required for unidad`, [`${field}.unitRef`]);
+    if (role !== "unidad" && unitRef !== null) throw new ArchitectureValidationError(`${field}.unitRef must be null for ${role}`, [`${field}.unitRef`]);
+    let unitProgram = null;
+    if (role === "unidad") {
+      const dormitorios = Number(polygon.unitProgram?.dormitorios);
+      const banos = Number(polygon.unitProgram?.banos);
+      if (!Number.isInteger(dormitorios) || dormitorios < 0 || !Number.isInteger(banos) || banos < 0) {
+        throw new ArchitectureValidationError(`${field}.unitProgram requires non-negative integer dormitorios and banos`, [`${field}.unitProgram`]);
+      }
+      unitProgram = { dormitorios, banos };
+      const prior = unitPrograms.get(unitRef);
+      if (prior && (prior.dormitorios !== dormitorios || prior.banos !== banos)) {
+        throw new ArchitectureValidationError(`Unit pieces for ${unitRef} require one consistent unitProgram`, [`${field}.unitProgram`]);
+      }
+      unitPrograms.set(unitRef, unitProgram);
+    }
+    return {
+      polygonId,
+      role,
+      name: requiredText(polygon?.name, `${field}.name`),
+      unitRef,
+      unitProgram,
+      polygon: normalizePolygon(polygon?.polygon, `${field}.polygon`),
+    };
+  });
+  return {
+    summary: String(input.summary || ""),
+    floor: { sourceCabidaVersionId, polygons },
+    assumptions: stringArray(input.assumptions),
+    tradeoffs: stringArray(input.tradeoffs),
+  };
 }
 
 export function normalizeDesignOutput(input = {}) {
@@ -156,5 +227,42 @@ export const CRITIQUE_OUTPUT_SCHEMA = {
   properties: {
     verdict: { enum: ["pass", "revise", "reject"] }, score: { type: "number", minimum: 0, maximum: 100 },
     summary: { type: "string" }, findings: { type: "array", maxItems: 6, items: { type: "object" } },
+  },
+};
+
+export const FLOOR_PLAN_OUTPUT_SCHEMA = {
+  type: "object",
+  required: ["summary", "floor", "assumptions", "tradeoffs"],
+  properties: {
+    summary: { type: "string" },
+    floor: {
+      type: "object",
+      required: ["sourceCabidaVersionId", "polygons"],
+      properties: {
+        sourceCabidaVersionId: { type: "string", minLength: 1 },
+        polygons: {
+          type: "array", minItems: 1,
+          items: {
+            type: "object",
+            required: ["polygonId", "role", "name", "unitRef", "unitProgram", "polygon"],
+            properties: {
+              polygonId: { type: "string", minLength: 1 },
+              role: { enum: ["unidad", "core", "circulacion", "void"] },
+              name: { type: "string", minLength: 1 },
+              unitRef: { type: ["string", "null"] },
+              unitProgram: {
+                anyOf: [
+                  { type: "null" },
+                  { type: "object", required: ["dormitorios", "banos"], properties: { dormitorios: { type: "integer", minimum: 0 }, banos: { type: "integer", minimum: 0 } } },
+                ],
+              },
+              polygon: { type: "array", minItems: 3, items: { type: "array", minItems: 2, maxItems: 2, items: { type: "number" } } },
+            },
+          },
+        },
+      },
+    },
+    assumptions: { type: "array", items: { type: "string" } },
+    tradeoffs: { type: "array", items: { type: "string" } },
   },
 };
