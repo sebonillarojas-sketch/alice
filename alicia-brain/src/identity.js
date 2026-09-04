@@ -26,3 +26,13 @@ export function resolveActingUser({ actorId, requestedUserId } = {}) {
   if (actorId !== CEO_ID) return { ok: false, error: "impersonacion_no_permitida" };
   return { ok: true, actorId, userId: requestedUserId, impersonating: true };
 }
+
+// ¿puede este actor tocar los datos de esta persona? Sólo los suyos, salvo que
+// sea el CEO. Misma regla que resolveActingUser, pero para las rutas que reciben
+// al usuario objetivo por path o query (/api/history/:userId y compañía) en vez
+// de por body: ahí no hay "actuar como", sólo leer o escribir sobre alguien.
+export function puedeVer(actorId, targetId) {
+  if (!actorId) return false;
+  if (actorId === CEO_ID) return true;
+  return actorId === targetId;
+}

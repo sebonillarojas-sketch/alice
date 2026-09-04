@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { CEO_ID, emailToUserId, resolveActingUser } from "../src/identity.js";
+import { CEO_ID, emailToUserId, puedeVer, resolveActingUser } from "../src/identity.js";
 import { seedTeamEmails } from "../src/db.js";
 
 function db0() {
@@ -61,6 +61,27 @@ test("sin actorId no hay acceso", () => {
     { ok: false, error: "no_auth" });
 });
 
+test("puedeVer: cada quien puede con lo suyo", () => {
+  assert.equal(puedeVer("jt", "jt"), true);
+});
+
+test("puedeVer: nadie puede con los datos de otro", () => {
+  assert.equal(puedeVer("jt", "sb"), false);
+  assert.equal(puedeVer("vd", "jm"), false);
+});
+
+test("puedeVer: el CEO puede con los de cualquiera", () => {
+  assert.equal(puedeVer(CEO_ID, "jt"), true);
+  assert.equal(puedeVer(CEO_ID, CEO_ID), true);
+  assert.equal(puedeVer(CEO_ID, "desconocido"), true);
+});
+
+test("puedeVer: sin actor no se puede nada (ni con un target vacío)", () => {
+  assert.equal(puedeVer(null, "jt"), false);
+  assert.equal(puedeVer(undefined, undefined), false);
+  assert.equal(puedeVer("", ""), false);
+});
+
 test("seedTeamEmails deja a las 7 personas resolubles por email", () => {
   const d = new DatabaseSync(":memory:");
   d.exec(`CREATE TABLE profiles (user_id TEXT PRIMARY KEY, name TEXT, email TEXT);`);
@@ -95,9 +116,25 @@ test("seedTeamEmails es idempotente", () => {
   assert.equal(emailToUserId(d, "jose@hygge.pe"), "jt");
 });
 
-test("seedTeamEmails no crea perfiles que no existen", () => {
+// Antes esto era un UPDATE y no podía crear la fila que falta: sin fila en
+// profiles la persona no resolvía su identidad y se quedaba sin Alicia, y había
+// que entrar a Railway a escribir el INSERT a mano.
+test("seedTeamEmails crea el perfil que falta, con el user_id de nombre", () => {
   const d = new DatabaseSync(":memory:");
-  d.exec(`CREATE TABLE profiles (user_id TEXT PRIMARY KEY, name TEXT, email TEXT);`);
+  d.exec(`CREATE TABLE profiles (user_id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT);`);
   seedTeamEmails(d);
-  assert.equal(d.prepare("SELECT COUNT(*) c FROM profiles").get().c, 0);
+  assert.equal(d.prepare("SELECT COUNT(*) c FROM profiles").get().c, 7);
+  assert.equal(emailToUserId(d, "jose@hygge.pe"), "jt");
+  assert.equal(d.prepare("SELECT name FROM profiles WHERE user_id='jt'").get().name, "jt");
+});
+
+test("seedTeamEmails no pisa el perfil que ya existe al crear los que faltan", () => {
+  const d = new DatabaseSync(":memory:");
+  d.exec(`CREATE TABLE profiles (user_id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT);`);
+  d.exec(`INSERT INTO profiles (user_id,name,email) VALUES ('jt','Jose Torres','jose.torres@hygge.pe')`);
+  seedTeamEmails(d);
+  const jt = d.prepare("SELECT name, email FROM profiles WHERE user_id='jt'").get();
+  assert.equal(jt.name, "Jose Torres");
+  assert.equal(jt.email, "jose.torres@hygge.pe");
+  assert.equal(emailToUserId(d, "vane@hygge.pe"), "vd");
 });

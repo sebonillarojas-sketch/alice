@@ -215,11 +215,20 @@ const TEAM_EMAILS = {
 
 // Solo rellena huecos: si alguien cargó un email a mano con
 // PATCH /api/profile/:id/email, ese gana. Idempotente.
+// Upsert y no UPDATE: un UPDATE no puede crear la fila que falta, y sin fila en
+// profiles esa persona no resuelve su identidad desde el JWT y se queda sin
+// Alicia. Como esto corre en initSchema, un deploy se repara solo — no hace
+// falta entrar a Railway a escribir SQL a mano.
+// `name` es NOT NULL: en el caso INSERT va el user_id de placeholder. La fila
+// mínima alcanza para resolver la identidad; el perfil de verdad (nombre, rol,
+// skills) se carga después desde el panel.
 export function seedTeamEmails(db) {
   const stmt = db.prepare(
-    "UPDATE profiles SET email = ? WHERE user_id = ? AND (email IS NULL OR email = '')"
+    `INSERT INTO profiles (user_id, name, email) VALUES (?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET email = excluded.email
+     WHERE profiles.email IS NULL OR profiles.email = ''`
   );
-  for (const [userId, email] of Object.entries(TEAM_EMAILS)) stmt.run(email, userId);
+  for (const [userId, email] of Object.entries(TEAM_EMAILS)) stmt.run(userId, userId, email);
 }
 
 // Reconstruye agent_runs SIN el CHECK-enum de `agent` (deja TEXT libre, como agent_findings).

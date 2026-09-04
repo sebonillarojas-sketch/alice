@@ -16,7 +16,7 @@ import { readFile } from "fs/promises";
 import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
-import { CEO_ID, emailToUserId, resolveActingUser } from "./identity.js";
+import { CEO_ID, emailToUserId, puedeVer, resolveActingUser } from "./identity.js";
 import { renderErpContext } from "./erp-context.js";
 import { readThread } from "./history.js";
 dotenv.config();
@@ -143,13 +143,27 @@ async function panelGate(req, res, next) {
       return res.status(503).json({ error: "identidad_no_disponible" });
     }
     // Logueado en Supabase pero sin perfil en el cerebro: entra al ERP, no a Alicia.
-    if (!uid) return res.status(403).json({ error: "usuario_sin_perfil", detail: su.email });
-    req.aliceUser = { id: uid, email: su.email, via: "erp" };
+    // Literalmente: pasa el gate con aliceUser en null y sigue teniendo Dropbox,
+    // calendario, agentes y análisis. Lo que queda cerrado es todo lo que depende
+    // de saber QUIÉN es (chat, copilot, historial, memorias, insights, persona):
+    // esas rutas piden aliceUser y contestan 401 por su cuenta. Antes esto era un
+    // 403 acá arriba y le tumbaba el backend entero del ERP a esa persona.
+    req.aliceUser = uid ? { id: uid, email: su.email, via: "erp" } : null;
     return next();
   }
   return res.status(401).json({ error: "no_auth" });
 }
 app.use("/api", panelGate);
+
+// Guarda para las rutas que reciben al usuario objetivo por path, query o body.
+// Devuelve false y ya contestó: el llamador sólo tiene que hacer `return`.
+// A propósito NO es un middleware: son diez rutas sueltas repartidas por el
+// archivo, y montarlas en un router aparte movería más código del que arregla.
+function identidadOk(req, res, targetId) {
+  if (!req.aliceUser?.id) { res.status(401).json({ error: "no_auth" }); return false; }
+  if (!puedeVer(req.aliceUser.id, targetId)) { res.status(403).json({ error: "no_autorizado" }); return false; }
+  return true;
+}
 
 app.post("/api/login", (req, res) => {
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "PANEL_PASSWORD no configurado" });
@@ -1184,6 +1198,7 @@ app.post("/api/embodied",
   });
 
 app.get("/api/profile/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   const profile = await getProfile(req.params.userId);
   if (!profile) return res.status(404).json({ error: "No encontrado" });
   res.json(profile);
@@ -1192,11 +1207,13 @@ app.get("/api/profile/:userId", async (req, res) => {
 app.get("/api/profiles", async (req, res) => res.json(await getAllProfiles()));
 
 app.get("/api/history/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   const limit = parseInt(req.query.limit) || 50;
   res.json(await getRecentMessages(req.params.userId, limit));
 });
 
 app.get("/api/memories/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   const { rows } = query(
     `SELECT * FROM memories WHERE user_id = ? ORDER BY importance DESC, created_at DESC LIMIT 100`,
     [req.params.userId]
@@ -1868,7 +1885,9 @@ function isWhisperHallucination(text) {
 
 const SERVER_STARTED_AT = Date.now();
 app.get("/api/home", async (req, res) => {
-  const user = (req.query.user || CEO_ID).toLowerCase().replace(/[^a-z]/g, "") || CEO_ID;
+  // El default deja de ser el CEO: sin ?user cada quien ve lo suyo.
+  const user = (req.query.user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (!identidadOk(req, res, user)) return;
 
   // Agenda de hoy (hora de Lima)
   const todayEvents = (async () => {
@@ -1922,9 +1941,11 @@ app.get("/api/home", async (req, res) => {
 // Si viene taskId, usa un evento idempotente (mismo id ⇒ edita en vez de duplicar).
 app.post("/api/calendar/event", async (req, res) => {
   try {
-    const { user = "sb", taskId, title, date, time, endTime, description } = req.body || {};
+    // El default deja de ser "sb": escribir en el calendario de otro es cosa del CEO.
+    const { user, taskId, title, date, time, endTime, description } = req.body || {};
+    const u = String(user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!identidadOk(req, res, u)) return;
     if (!title || !date) return res.status(400).json({ error: "title y date requeridos" });
-    const u = String(user).toLowerCase().replace(/[^a-z]/g, "") || "sb";
     const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
     const calUser = googleAvailable(u) ? u : (googleAvailable("sb") ? "sb" : null);
     if (!calUser) return res.json({ ok: false, note: "Google Calendar no conectado" });
@@ -1947,8 +1968,12 @@ app.delete("/api/calendar/event/:taskId", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Actualizar email de un perfil (para el mapeo de calendarios)
+// Actualizar email de un perfil. Solo el CEO: desde que la identidad sale del
+// JWT vía profiles.email, esta columna es la raíz del modelo de identidad y
+// escribirla es escalar privilegios (borrás el email del CEO, te lo ponés vos,
+// y en el siguiente request sos el CEO).
 app.patch("/api/profile/:userId/email", (req, res) => {
+  if (req.aliceUser?.id !== CEO_ID) return res.status(403).json({ error: "solo_ceo" });
   try {
     const { email } = req.body || {};
     query("UPDATE profiles SET email = ?, updated_at = datetime('now') WHERE user_id = ?", [email || null, req.params.userId]);
@@ -1959,10 +1984,13 @@ app.patch("/api/profile/:userId/email", (req, res) => {
 // ── Persona · fine-tune manual + lectura ──────────────────────────────────────
 
 app.get("/api/persona/:userId", (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   res.json(getPersona(req.params.userId) || {});
 });
 
+// Solo el CEO: esto no es leer, es escribir cómo Alicia trata a una persona.
 app.put("/api/persona/:userId", (req, res) => {
+  if (req.aliceUser?.id !== CEO_ID) return res.status(403).json({ error: "no_autorizado" });
   try {
     const b = req.body || {};
     const clamp = (v, def, max = 10) => Math.max(0, Math.min(max, parseInt(v ?? def)));
@@ -2047,6 +2075,7 @@ Respondé SOLO con JSON, sin markdown:
 }
 
 app.get("/api/insights/:userId", (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   try {
     const { rows } = query("SELECT report, updated_at FROM user_insights WHERE user_id = ?", [req.params.userId]);
     if (!rows[0]) return res.json({ report: null });
@@ -2055,6 +2084,7 @@ app.get("/api/insights/:userId", (req, res) => {
 });
 
 app.post("/api/insights/:userId/refresh", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   try {
     const report = await generateInsights(req.params.userId);
     if (!report) return res.json({ report: null, reason: "Sin conversaciones suficientes todavía" });
