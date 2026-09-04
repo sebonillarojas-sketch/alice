@@ -27,7 +27,31 @@ test("Tweedledee receives plan and validation but not Tweedledum rationale", asy
   assert.match(body, /sourcePlanVersionId/);
   assert.doesNotMatch(body, /anchor the critic/);
   assert.equal(result.agent.key, "tweedledee");
-  assert.equal(result.promptVersion, "1.0.0");
+  assert.equal(result.promptVersion, "1.1.0");
+});
+
+test("Tweedledee sends a bounded critique request to the model", async () => {
+  const calls = [];
+  const client = { messages: { create: async (request) => {
+    calls.push(request);
+    return { content: [{ type: "text", text: JSON.stringify({ verdict: "pass", score: 90, summary: "Sound plan", findings: [] }) }] };
+  } } };
+  const rooms = Array.from({ length: 24 }, (_, index) => ({
+    nombre: `ambiente ${index + 1}`,
+    ref_id: `r${index + 1}`,
+    poligono: [[index, 0], [index + 4, 0], [index + 4, 3], [index, 3]],
+  }));
+  const service = createArchitectureService({ client, model: "test-model" });
+
+  await service.critique({
+    context,
+    planVersion: { id: "v2", layout: { ambientes: rooms } },
+    deterministicValidation: { ok: true, findings: [] },
+  });
+
+  assert.equal(calls[0].max_tokens, 2500);
+  assert.ok(calls[0].system.length < 6000, `critic system prompt is ${calls[0].system.length} characters`);
+  assert.ok(calls[0].messages[0].content.length < 6000, `critic payload is ${calls[0].messages[0].content.length} characters`);
 });
 
 test("Tweedledum design includes project context and returns normalized structured output", async () => {

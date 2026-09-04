@@ -14,7 +14,7 @@ test("public registry exposes versions and schemas without prompt text", () => {
   assert.deepEqual(agents.map((agent) => agent.key), ["tweedledum", "tweedledee"]);
   assert.deepEqual(Object.fromEntries(agents.map((agent) => [agent.key, agent.promptVersion])), {
     tweedledum: "1.1.0",
-    tweedledee: "1.0.0",
+    tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
 });
@@ -70,6 +70,21 @@ test("verified regulatory claims retain only matching evidence references", () =
   }, { verifiedEvidence: [{ id: "ev-1", title: "Municipal certificate", verified: true }] });
   assert.equal(output.findings[0].regulatoryStatus, "verified");
   assert.deepEqual(output.findings[0].evidenceRefs, ["ev-1"]);
+});
+
+test("Tweedledee returns at most six prioritized findings", () => {
+  const findings = Array.from({ length: 9 }, (_, index) => ({
+    id: `f${index + 1}`,
+    severity: index === 8 ? "critical" : index === 7 ? "major" : "minor",
+    category: "circulation",
+    title: `Issue ${index + 1}`,
+    observation: "Observed condition",
+    consequence: "Material consequence",
+    recommendation: "Specific correction",
+  }));
+  const output = normalizeCritiqueOutput({ verdict: "reject", score: 30, summary: "Prioritized review", findings });
+  assert.equal(output.findings.length, 6);
+  assert.deepEqual(output.findings.map((finding) => finding.id), ["f9", "f8", "f1", "f2", "f3", "f4"]);
 });
 
 test("design and critique requests require an exact project and plan version", () => {

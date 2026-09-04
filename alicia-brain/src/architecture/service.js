@@ -37,7 +37,12 @@ function responseText(response) {
   return response?.content?.find((block) => block.type === "text")?.text || "";
 }
 
-const requestPayload = (value) => JSON.stringify(value, null, 2);
+const requestPayload = (value) => JSON.stringify(value);
+
+const OUTPUT_TOKEN_BUDGET = Object.freeze({
+  tweedledum: 16000,
+  tweedledee: 2500,
+});
 
 export function createArchitectureService({ client = null, model = null } = {}) {
   let resolvedClient = client;
@@ -54,7 +59,7 @@ export function createArchitectureService({ client = null, model = null } = {}) 
     try {
       response = await getClient().messages.create({
         model: model || agent.model,
-        max_tokens: agentKey === "tweedledum" ? 16000 : 8000,
+        max_tokens: OUTPUT_TOKEN_BUDGET[agentKey],
         system,
         messages: [{ role: "user", content: requestPayload(payload) }],
       });

@@ -117,7 +117,7 @@ Decisiones de producto del ERP que NO están en el código-comentario y hay que 
 ALICE now has two separate, server-side architecture roles:
 
 - **Tweedledum** designs and revises structured layouts. Prompt `1.1.0`.
-- **Tweedledee** critiques one exact plan version. Prompt `1.0.0`.
+- **Tweedledee** critiques one exact plan version. Prompt `1.1.0`; responses are capped at six prioritized findings with a compact advisory checklist.
 
 The old `/api/arquitecto/disenar` and `/api/arquitecto/corregir` routes remain as compatibility aliases for existing Editor calls. New code should use:
 

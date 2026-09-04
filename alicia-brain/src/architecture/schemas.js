@@ -1,4 +1,5 @@
 const SEVERITIES = new Set(["critical", "major", "minor", "info"]);
+const SEVERITY_RANK = Object.freeze({ critical: 0, major: 1, minor: 2, info: 3 });
 const CATEGORIES = new Set(["circulation", "furnishability", "daylight", "privacy", "structure", "mep", "buildability", "commercial", "regulatory", "other"]);
 const REGULATORY = new Set(["not_applicable", "advisory", "verification_required", "verified"]);
 
@@ -72,7 +73,9 @@ export function normalizeCritiqueOutput(input = {}, context = {}) {
   const score = Number(input.score);
   if (!Number.isFinite(score) || score < 0 || score > 100) throw new ArchitectureValidationError("score must be between 0 and 100", ["score"]);
   const suppliedEvidence = new Set((context.verifiedEvidence || []).filter((e) => e?.verified === true).map((e) => String(e.id)));
-  const findings = (Array.isArray(input.findings) ? input.findings : []).map((finding, index) => {
+  const candidates = Array.isArray(input.findings) ? [...input.findings] : [];
+  candidates.sort((a, b) => (SEVERITY_RANK[a?.severity] ?? 2) - (SEVERITY_RANK[b?.severity] ?? 2));
+  const findings = candidates.slice(0, 6).map((finding, index) => {
     const category = CATEGORIES.has(finding.category) ? finding.category : "other";
     const evidenceRefs = (Array.isArray(finding.evidenceRefs) ? finding.evidenceRefs : []).map(String).filter((id) => suppliedEvidence.has(id));
     let regulatoryStatus = REGULATORY.has(finding.regulatoryStatus) ? finding.regulatoryStatus : "not_applicable";
@@ -120,6 +123,6 @@ export const CRITIQUE_OUTPUT_SCHEMA = {
   required: ["verdict", "score", "summary", "findings"],
   properties: {
     verdict: { enum: ["pass", "revise", "reject"] }, score: { type: "number", minimum: 0, maximum: 100 },
-    summary: { type: "string" }, findings: { type: "array", items: { type: "object" } },
+    summary: { type: "string" }, findings: { type: "array", maxItems: 6, items: { type: "object" } },
   },
 };
