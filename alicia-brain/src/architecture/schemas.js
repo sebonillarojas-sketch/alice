@@ -53,7 +53,12 @@ export function normalizeDesignOutput(input = {}) {
   if (!Array.isArray(rooms) || rooms.length === 0) {
     throw new ArchitectureValidationError("Tweedledum output requires drawable room geometry", ["layout.ambientes"]);
   }
+  const refs = new Set();
   rooms.forEach((room, index) => {
+    requiredText(room?.nombre, `layout.ambientes[${index}].nombre`);
+    const refId = requiredText(room?.ref_id, `layout.ambientes[${index}].ref_id`);
+    if (refs.has(refId)) throw new ArchitectureValidationError(`Tweedledum room ${index + 1} requires a unique ref_id`, [`layout.ambientes[${index}].ref_id`]);
+    refs.add(refId);
     const polygon = room?.poligono;
     const valid = Array.isArray(polygon) && polygon.length >= 3 && polygon.every((point) =>
       Array.isArray(point) && point.length >= 2 && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1])));
@@ -114,7 +119,34 @@ export const DESIGN_OUTPUT_SCHEMA = {
   required: ["summary", "assumptions", "tradeoffs", "layout"],
   properties: {
     summary: { type: "string" }, assumptions: { type: "array", items: { type: "string" } },
-    tradeoffs: { type: "array", items: { type: "string" } }, layout: { type: "object" }, rationale: { type: "string" },
+    tradeoffs: { type: "array", items: { type: "string" } },
+    layout: {
+      type: "object",
+      required: ["ambientes"],
+      properties: {
+        ambientes: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["nombre", "ref_id", "poligono"],
+            properties: {
+              nombre: { type: "string", minLength: 1 },
+              ref_id: { type: "string", minLength: 1 },
+              tipo: { type: "string" },
+              zona: { type: "string" },
+              luz: { type: "boolean" },
+              poligono: {
+                type: "array",
+                minItems: 3,
+                items: { type: "array", minItems: 2, maxItems: 2, items: { type: "number" } },
+              },
+            },
+          },
+        },
+      },
+    },
+    rationale: { type: "string" },
   },
 };
 

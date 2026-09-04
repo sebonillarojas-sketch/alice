@@ -4,6 +4,7 @@ import { normalizeProjectContext } from "../src/architecture/context.js";
 import {
   ArchitectureValidationError,
   normalizeCritiqueOutput,
+  normalizeDesignOutput,
   validateCritiqueRequest,
   validateDesignRequest,
 } from "../src/architecture/schemas.js";
@@ -13,10 +14,22 @@ test("public registry exposes versions and schemas without prompt text", () => {
   const agents = publicAgentRegistry();
   assert.deepEqual(agents.map((agent) => agent.key), ["tweedledum", "tweedledee"]);
   assert.deepEqual(Object.fromEntries(agents.map((agent) => [agent.key, agent.promptVersion])), {
-    tweedledum: "1.1.0",
+    tweedledum: "1.2.0",
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
+});
+
+test("Tweedledum rooms require stable references and preserve supported metadata", () => {
+  assert.throws(() => normalizeDesignOutput({
+    layout: { ambientes: [{ nombre: "sala", poligono: [[0, 0], [2, 0], [2, 2]] }] },
+  }), /ref_id/);
+  const output = normalizeDesignOutput({
+    layout: { ambientes: [{ nombre: "sala", ref_id: "social", tipo: "social", zona: "social", luz: true, poligono: [[0, 0], [2, 0], [2, 2]] }] },
+  });
+  assert.deepEqual(output.layout.ambientes[0], {
+    nombre: "sala", ref_id: "social", tipo: "social", zona: "social", luz: true, poligono: [[0, 0], [2, 0], [2, 2]],
+  });
 });
 
 test("project context keeps the exact source plan version and safe defaults", () => {

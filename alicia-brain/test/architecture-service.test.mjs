@@ -103,7 +103,7 @@ test("Tweedledum design includes project context and returns normalized structur
   assert.match(JSON.stringify(calls[0].messages), /DC01/);
   assert.equal(result.layout.ambientes.length, 1);
   assert.equal(result.agent.key, "tweedledum");
-  assert.equal(result.promptVersion, "1.1.0");
+  assert.equal(result.promptVersion, "1.2.0");
 });
 
 test("Tweedledum rejects a design response with no drawable room geometry", async () => {
