@@ -603,6 +603,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const [profiles, setProfiles] = useState(loadProfiles);
   const [selectedUserId, setSelectedUserId] = useState(currentUserId);
   const [messages, setMessages] = useState(() => loadChat(currentUserId));
+  const [hiloFallo, setHiloFallo] = useState(false);   // no se pudo traer el hilo del servidor
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
@@ -716,7 +717,10 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           signal: AbortSignal.timeout(10000),
         });
-        if (!res.ok) return;                       // sin conexión seguimos con el caché
+        // Un 403, una sesión vencida o Railway despertándose dejaban la copia
+        // vieja en pantalla sin decir nada: exactamente el síntoma de "Alicia no
+        // se acuerda" que este hilo vino a matar, con otra causa. Lo avisamos.
+        if (!res.ok) { if (vivo && generacion.current === gen) setHiloFallo(true); return; }
         const { messages: hilo } = await res.json();
         if (!vivo || generacion.current !== gen || !Array.isArray(hilo)) return;
         const mapped = hilo.map((m) => ({
@@ -727,7 +731,11 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         }));
         setMessages(mapped);
         saveChat(selectedUserId, mapped);
-      } catch { /* el caché de localStorage ya está en pantalla */ }
+        setHiloFallo(false);
+      } catch {
+        // el caché de localStorage ya está en pantalla, pero desactualizado
+        if (vivo && generacion.current === gen) setHiloFallo(true);
+      }
     })();
     return () => { vivo = false; };
   }, [selectedUserId, currentUserId]);
@@ -1022,15 +1030,24 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
               ))}
             </select>
           )}
+          {/* Dice "vista local" porque es lo único que borra: el hilo vive en el
+              servidor y vuelve entero al recargar. Antes el tacho prometía
+              borrar la conversación y no borraba nada. */}
           {messages.length > 0 && (
-            <button onClick={() => { window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-              <Trash2 size={11} /> Limpiar
+            <button title="Vacía la pantalla y el caché del navegador. El hilo sigue en el servidor y vuelve al recargar." onClick={() => { window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <Trash2 size={11} /> Limpiar vista local
             </button>
           )}
         </div>
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {hiloFallo && (
+            <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "2px 0" }}>
+              No pude cargar el hilo — estás viendo una copia local.
+            </div>
+          )}
 
           {messages.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 20, opacity: 0.7 }}>
