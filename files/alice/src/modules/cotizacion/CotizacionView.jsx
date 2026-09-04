@@ -7,6 +7,7 @@ import { DISTRICTS_DATA, TREND_LABEL } from "../mercado/sectorData.js";
 import { calcularCuotasPorBanco, generarCronogramaPropio, RATIO_ENDEUDAMIENTO_DEFAULT } from "./financiamiento.js";
 import { resumenRetornoPorFuente, resumenListingsAuto, percentilEnRango } from "./retorno.js";
 import { downloadPrintableDocument } from "../../lib/exportHtml.js";
+import { useERPContext } from "../../copilot/ERPContext.jsx";
 
 // ─── BRAND (mismos tokens + primitivas editoriales que el resto de ALICE,
 // ver HyggeOS.jsx § PRIMITIVES: NavyRule/Eyebrow/Panel/KpiBar) ──────────────
@@ -171,6 +172,14 @@ export default function CotizacionView() {
   const [fpMonto, setFpMonto] = useState(null); // null = usa precioUnidad - inicialMonto
   const [fpTasa, setFpTasa] = useState(0);
   const [fpMeses, setFpMeses] = useState(12);
+
+  useERPContext("cotizacion", () => ({
+    title: `Cotización · ${tipologia} en ${district}`,
+    entity: { type: "distrito", id: district },
+    state: { district, tipologia, areaM2, precioM2, moneda, ingresoMensual, inicialPct, plazoAnios },
+    derived: { bancosConTasa: bankRates.length, datosAl: marketTs },
+    actions: [],
+  }));
   const [fpFechaInicio, setFpFechaInicio] = useState("");
 
   const fpMontoEfectivo = fpMonto ?? Math.max(0, precioUnidad - inicialMonto);

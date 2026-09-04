@@ -15,6 +15,7 @@ import {
   LamMercadoSector, LamMercadoPosicion, LamCabidaParams,
   LamVolumetria, LamPlanos,
 } from "./laminas.jsx";
+import { useERPContext } from "../../copilot/ERPContext.jsx";
 
 const BG = "#E3E1DE", INK = "#000000", ORANGE = "#F7643B";
 const MONO = "'CS Genio Mono','JetBrains Mono','SF Mono',Menlo,monospace";
@@ -85,6 +86,14 @@ export default function MesaDeTrabajo() {
   const [printing, setPrinting] = useState(false);
   const [tick, setTick] = useState(0);
   const [aviso, setAviso] = useState(null);
+
+  useERPContext("mesa", () => ({
+    title: nombre ? `Mesa de trabajo · ${nombre}` : "Mesa de trabajo",
+    entity: terrenoId ? { type: "terreno", id: terrenoId } : null,
+    state: { proyecto: nombre || null, pestaña: tab },
+    derived: {},
+    actions: [],
+  }));
 
   const terrenos = useMemo(() => loadTerrenos(), [tick]);
   const proyectos = useMemo(() => loadProyectos(), [tick, aviso]);
