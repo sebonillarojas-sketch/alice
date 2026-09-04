@@ -46,7 +46,7 @@ function responsePayload(response, toolName) {
 const requestPayload = (value) => JSON.stringify(value);
 
 const OUTPUT_TOKEN_BUDGET = Object.freeze({
-  tweedledum: 16000,
+  tweedledum: 6000,
   tweedledee: 2500,
 });
 

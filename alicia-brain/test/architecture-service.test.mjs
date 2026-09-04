@@ -68,6 +68,21 @@ test("Tweedledum consumes forced structured output without relying on JSON text"
   assert.equal(result.layout.ambientes[0].ref_id, "r2");
 });
 
+test("Tweedledum uses a bounded output budget for fast geometry responses", async () => {
+  const calls = [];
+  const output = {
+    summary: "New plan", assumptions: [], tradeoffs: [],
+    layout: { ambientes: [{ nombre: "sala", ref_id: "social", poligono: [[0, 0], [4, 0], [4, 3], [0, 3]] }] },
+  };
+  const client = { messages: { create: async (request) => {
+    calls.push(request);
+    return { content: [{ type: "tool_use", name: "submit_tweedledum_output", input: output }] };
+  } } };
+  const service = createArchitectureService({ client, model: "test-model" });
+  await service.design({ context: { ...context, sourcePlanVersionId: null }, brief: { program: { dormitorios: 0, banos: 0 } } });
+  assert.ok(calls[0].max_tokens <= 6000, `designer budget is ${calls[0].max_tokens} tokens`);
+});
+
 test("Tweedledee sends a bounded critique request to the model", async () => {
   const calls = [];
   const client = { messages: { create: async (request) => {
