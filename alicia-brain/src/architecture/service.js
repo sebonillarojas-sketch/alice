@@ -37,6 +37,12 @@ function responseText(response) {
   return response?.content?.find((block) => block.type === "text")?.text || "";
 }
 
+function responsePayload(response, toolName) {
+  const toolUse = response?.content?.find((block) => block.type === "tool_use" && block.name === toolName);
+  if (toolUse?.input && typeof toolUse.input === "object") return toolUse.input;
+  return extractJson(responseText(response));
+}
+
 const requestPayload = (value) => JSON.stringify(value);
 
 const OUTPUT_TOKEN_BUDGET = Object.freeze({
@@ -55,6 +61,7 @@ export function createArchitectureService({ client = null, model = null } = {}) 
 
   const call = async (agentKey, system, payload, normalize) => {
     const agent = ARCHITECTURE_AGENT_REGISTRY[agentKey];
+    const outputToolName = `submit_${agentKey}_output`;
     let response;
     try {
       response = await getClient().messages.create({
@@ -62,13 +69,19 @@ export function createArchitectureService({ client = null, model = null } = {}) 
         max_tokens: OUTPUT_TOKEN_BUDGET[agentKey],
         system,
         messages: [{ role: "user", content: requestPayload(payload) }],
+        tools: [{
+          name: outputToolName,
+          description: `Submit the final structured ${agent.displayName} result.`,
+          input_schema: agent.outputSchema,
+        }],
+        tool_choice: { type: "tool", name: outputToolName, disable_parallel_tool_use: true },
       });
     } catch (error) {
       if (error instanceof ArchitectureValidationError || error instanceof ArchitectureModelError) throw error;
       throw new ArchitectureModelError(`${agent.displayName} request failed: ${error.message}`, error);
     }
     let output;
-    try { output = normalize(extractJson(responseText(response))); }
+    try { output = normalize(responsePayload(response, outputToolName)); }
     catch (error) {
       if (error instanceof ArchitectureModelError) throw error;
       throw new ArchitectureModelError(`${agent.displayName} returned an invalid structured response: ${error.message}`, error);

@@ -30,6 +30,44 @@ test("Tweedledee receives plan and validation but not Tweedledum rationale", asy
   assert.equal(result.promptVersion, "1.1.0");
 });
 
+test("Tweedledee consumes forced structured output without relying on JSON text", async () => {
+  const calls = [];
+  const output = { verdict: "revise", score: 72, summary: "One material issue", findings: [] };
+  const client = { messages: { create: async (request) => {
+    calls.push(request);
+    return { stop_reason: "tool_use", content: [{ type: "tool_use", id: "toolu_critic", name: "submit_tweedledee_output", input: output }] };
+  } } };
+  const service = createArchitectureService({ client, model: "test-model" });
+
+  const result = await service.critique({
+    context,
+    planVersion: { id: "v2", layout: { ambientes: [{ nombre: "sala", ref_id: "r1", poligono: [[0, 0], [4, 0], [4, 3], [0, 3]] }] } },
+    deterministicValidation: { ok: true, findings: [] },
+  });
+
+  assert.equal(result.score, 72);
+  assert.deepEqual(calls[0].tool_choice, { type: "tool", name: "submit_tweedledee_output", disable_parallel_tool_use: true });
+  assert.equal(calls[0].tools[0].input_schema.required.includes("findings"), true);
+});
+
+test("Tweedledum consumes forced structured output without relying on JSON text", async () => {
+  const output = {
+    summary: "New plan",
+    assumptions: [],
+    tradeoffs: [],
+    layout: { ambientes: [{ nombre: "sala", ref_id: "r2", poligono: [[0, 0], [5, 0], [5, 3], [0, 3]] }] },
+    rationale: "Compact circulation",
+  };
+  const client = { messages: { create: async () => ({
+    stop_reason: "tool_use",
+    content: [{ type: "tool_use", id: "toolu_designer", name: "submit_tweedledum_output", input: output }],
+  }) } };
+  const service = createArchitectureService({ client, model: "test-model" });
+
+  const result = await service.design({ context: { ...context, sourcePlanVersionId: null }, brief: { dormitorios: 2 } });
+  assert.equal(result.layout.ambientes[0].ref_id, "r2");
+});
+
 test("Tweedledee sends a bounded critique request to the model", async () => {
   const calls = [];
   const client = { messages: { create: async (request) => {
