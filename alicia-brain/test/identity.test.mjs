@@ -82,6 +82,15 @@ test("puedeVer: sin actor no se puede nada (ni con un target vacío)", () => {
   assert.equal(puedeVer("", ""), false);
 });
 
+// Las rutas de calendario sanean el ?user a [a-z]: un "?user=123" o un "?user="
+// llegan como "". Con actor presente eso NO puede pasar por "es lo mío": el id
+// de nadie es la cadena vacía, así que un target que se sanea a nada se deniega.
+test("puedeVer: un target que quedó vacío no es 'lo mío'", () => {
+  assert.equal(puedeVer("jt", ""), false);
+  assert.equal(puedeVer("jt", undefined), false);
+  assert.equal(puedeVer("jt", null), false);
+});
+
 test("seedTeamEmails deja a las 7 personas resolubles por email", () => {
   const d = new DatabaseSync(":memory:");
   d.exec(`CREATE TABLE profiles (user_id TEXT PRIMARY KEY, name TEXT, email TEXT);`);

@@ -1204,7 +1204,28 @@ app.get("/api/profile/:userId", async (req, res) => {
   res.json(profile);
 });
 
-app.get("/api/profiles", async (req, res) => res.json(await getAllProfiles()));
+// Lo sensible acá NO son los emails: ya viajan en el bundle del ERP
+// (files/alice/src/auth/users.js), esconderlos del lado del server no compra
+// nada. Es el bloque de coaching: la lectura privada que Alicia hace de una
+// persona, la misma categoría que /api/insights/:userId. Así que la ruta sigue
+// devolviendo a todo el equipo —es la lista del directorio y bloquearla rompería
+// a quien la consuma— pero fuera del CEO cada quien ve su ficha entera y del
+// resto solo lo de directorio. Las skills quedan: son "qué hace esta persona",
+// no una evaluación.
+const CAMPOS_COACHING = ["strengths", "opportunities", "work_style",
+  "growth_short", "growth_long", "growth_notes"];
+
+app.get("/api/profiles", async (req, res) => {
+  if (!req.aliceUser?.id) return res.status(401).json({ error: "no_auth" });
+  const todos = await getAllProfiles();
+  if (req.aliceUser.id === CEO_ID) return res.json(todos);
+  res.json(todos.map((p) => {
+    if (p.user_id === req.aliceUser.id) return p;
+    const ficha = { ...p };
+    for (const campo of CAMPOS_COACHING) delete ficha[campo];
+    return ficha;
+  }));
+});
 
 app.get("/api/history/:userId", async (req, res) => {
   if (!identidadOk(req, res, req.params.userId)) return;
@@ -1844,10 +1865,13 @@ app.get("/api/calendar/team", async (req, res) => {
 });
 
 // Eventos de Google Calendar de un usuario, para la vista Calendario del cockpit.
-// ⚠️ Deuda (auditoría #9): público como /api/calendar/team porque el ERP no manda JWT aún.
+// El ERP sí manda el JWT desde que existe el interceptor de files/alice/src/lib/
+// supabase.js, así que acá vale la misma regla que en el resto: el default de
+// ?user deja de ser "sb" y pasa a ser vos, y la agenda de otro es cosa del CEO.
 app.get("/api/calendar/events", async (req, res) => {
   try {
-    const user = (req.query.user || "sb").toLowerCase().replace(/[^a-z]/g, "") || "sb";
+    const user = String(req.query.user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!identidadOk(req, res, user)) return;
     const days = Math.min(parseInt(req.query.days) || 21, 60);
     const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
     const calUser = googleAvailable(user) ? user : (googleAvailable("sb") ? "sb" : null);
@@ -1957,9 +1981,13 @@ app.post("/api/calendar/event", async (req, res) => {
 });
 
 // Borrar el evento de calendario asociado a una tarea (cuando se elimina la tarea o pierde su fecha).
+// Es destructivo y sobre el calendario de una persona: con ?user=sb de default,
+// cualquiera del equipo borraba eventos de la agenda del CEO. Mismo criterio que
+// en POST: el default sos vos, y tocar la agenda de otro es cosa del CEO.
 app.delete("/api/calendar/event/:taskId", async (req, res) => {
   try {
-    const u = String(req.query.user || "sb").toLowerCase().replace(/[^a-z]/g, "") || "sb";
+    const u = String(req.query.user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!identidadOk(req, res, u)) return;
     const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
     const calUser = googleAvailable(u) ? u : (googleAvailable("sb") ? "sb" : null);
     if (!calUser) return res.json({ ok: false, note: "Google Calendar no conectado" });
