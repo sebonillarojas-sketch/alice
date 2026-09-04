@@ -186,7 +186,7 @@ export function generarDistribuciones(footprint, frontIdx, cfg = {}) {
     if (!res.units.length) continue;
     const rooms = [];
     if (res.core) rooms.push({ id: res.core.id, name: "core", tipo: "core", pts: res.core.pts });
-    if (res.corridor) rooms.push({ id: res.corridor.id, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
+    (res.corridors || (res.corridor ? [res.corridor] : [])).forEach((corridor) => rooms.push({ id: corridor.id, name: "corredor", tipo: "pasillo", pts: corridor.pts }));
     res.units.forEach((u) => {
       const t = esDeposito(u) ? { id: "depósito" } : tipologiaCercana(u.areaReal, u.frame.ub - u.frame.ua, u.tipologia?.dorms);
       u.tipologia = t;
@@ -214,7 +214,7 @@ export function amoblarParti(parti, brief = {}, overrides = {}) {
   const { res } = parti;
   const rooms = [], items = [], notas = [];
   if (res.core) rooms.push({ id: `${res.core.id}a`, name: "core", tipo: "core", pts: res.core.pts });
-  if (res.corridor) rooms.push({ id: `${res.corridor.id}a`, name: "corredor", tipo: "pasillo", pts: res.corridor.pts });
+  (res.corridors || (res.corridor ? [res.corridor] : [])).forEach((corridor) => rooms.push({ id: `${corridor.id}a`, name: "corredor", tipo: "pasillo", pts: corridor.pts }));
 
   let amobladas = 0;
   res.units.forEach((u) => {

@@ -37,12 +37,12 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
 
   // ¿doble crujía? si el fondo da para dos bandas + corredor
   const doble = fondo >= 2 * 4.0 + corrDepth;
-  const bandDepth = doble ? (fondo - corrDepth) / 2 : Math.min(fondo, 9);
+  const bandDepth = doble ? (fondo - corrDepth) / 2 : Math.max(fondo - corrDepth, 0);
 
   let lista;
   if (unidades && unidades.length) {
     // tipologías explícitas: el área ideal manda; el empaquetado las escala al footprint
-    lista = unidades.map((t) => ({ tip: `${t.dorms}D`, area: t.area[1], tipologia: t }));
+    lista = unidades.map((t, index) => ({ tip: `${t.dorms}D`, area: t.area[1], tipologia: t, unitRef: `unit-${index + 1}` }));
   } else {
     const uds = Math.max(1, Math.round(udsPiso));
     const mix3 = Math.max(0, 100 - mix1 - mix2);
@@ -53,7 +53,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     const { n1, n2, n3 } = mezcla(uds, mix1, mix2);
     lista = [
       ...Array(n3).fill("3D"), ...Array(n2).fill("2D"), ...Array(n1).fill("1D"),
-    ].map((tip) => ({ tip, area: ratios[tip] * esc }));
+    ].map((tip, index) => ({ tip, area: ratios[tip] * esc, unitRef: `unit-${index + 1}` }));
   }
 
   // recorta cualquier rectángulo (siempre convexo) a la forma REAL del lote:
@@ -110,7 +110,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
         if (!poly) return;             // cae entera fuera del lote → no existe
         if (area(poly) < 2) return;    // esquirla junto al core: ni depósito merece
         units.push({
-          id: rid(), tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
+          id: rid(), unitRef: unit.unitRef, tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
           tipologia: unit.tipologia || null, partida: segs.length > 1 ? si : null,
           frame: { ua, ub, v0: fila.v0, v1: fila.v0 + fila.depth, banda: fila.v0 === 0 ? 0 : 1 },
         });
@@ -119,10 +119,15 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     });
   });
 
-  const corrRect = doble
-    ? [F.toWorld(0, bandDepth), F.toWorld(frente, bandDepth), F.toWorld(frente, bandDepth + corrDepth), F.toWorld(0, bandDepth + corrDepth)]
-    : null;
-  const corridor = corrRect ? { id: rid(), tipo: "corredor", pts: recortar(corrRect) || corrRect.map(round) } : null;
+  const corridorV0 = bandDepth;
+  const corridorV1 = Math.min(bandDepth + corrDepth, fondo);
+  const corridors = [[0, coreU0], [coreU1, frente]].flatMap(([u0, u1]) => {
+    if (u1 - u0 < 0.05 || corridorV1 - corridorV0 < 0.05) return [];
+    const rect = [F.toWorld(u0, corridorV0), F.toWorld(u1, corridorV0), F.toWorld(u1, corridorV1), F.toWorld(u0, corridorV1)];
+    const pts = recortar(rect);
+    return pts && area(pts) >= 0.05 ? [{ id: rid(), tipo: "corredor", pts }] : [];
+  });
+  const corridor = corridors.length === 1 ? corridors[0] : null;
 
-  return { units, core, corridor, F, frente, fondo, doble, bandDepth, corrDepth, warns };
+  return { units, core, corridor, corridors, F, frente, fondo, doble, bandDepth, corrDepth, warns };
 }

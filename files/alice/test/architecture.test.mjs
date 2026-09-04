@@ -10,6 +10,7 @@ import {
 } from "../src/modules/planos/architecture.js";
 import * as interior from "../src/modules/planos/feyd.js";
 import * as architectureApi from "../src/modules/planos/architecture.js";
+import { fallbackFloorProposal, proposalToParti } from "../src/modules/cabida/floorProposal.js";
 
 const square = (x0, y0, x1, y1) => [
   { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
@@ -223,4 +224,43 @@ test("critique layout contains compact native item references", () => {
     [{ id: "i1", ref: "sofa-2c", x: 2, y: 2, rot: 90, w: 1.6, d: 0.9, selected: true }],
   );
   assert.deepEqual(layout.items, [{ id: "i1", ref: "sofa-2c", x: 2, y: 2, rot: 90, w: 1.6, d: 0.9 }]);
+});
+
+test("packFloor fallback emits exclusive core and circulation polygons", () => {
+  const proposal = fallbackFloorProposal({
+    footprint: square(0, 0, 14, 12),
+    frontIdx: 0,
+    brief: { udsPiso: 4, pct1: 50, pct2: 50, areaObjetivo: 24 },
+    sourceCabidaVersionId: "cabida_p1_v4",
+  });
+  assert.equal(proposal.floor.sourceCabidaVersionId, "cabida_p1_v4");
+  const ids = proposal.floor.polygons.map((item) => item.polygonId);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(new Set(proposal.floor.polygons.filter((item) => item.role === "unidad").map((item) => item.unitRef)).size, 4);
+
+  const boxes = (item) => {
+    const xs = item.polygon.map(([x]) => x), ys = item.polygon.map(([, y]) => y);
+    return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+  };
+  const core = proposal.floor.polygons.find((item) => item.role === "core");
+  for (const hall of proposal.floor.polygons.filter((item) => item.role === "circulacion")) {
+    const a = boxes(core), b = boxes(hall);
+    const overlapArea = Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX))
+      * Math.max(0, Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY));
+    assert.equal(overlapArea, 0);
+  }
+});
+
+test("floor proposal preview preserves polygon and unit metadata", () => {
+  const proposal = fallbackFloorProposal({
+    footprint: square(0, 0, 14, 12), frontIdx: 0,
+    brief: { udsPiso: 2, pct1: 50, pct2: 50, areaObjetivo: 36 },
+    sourceCabidaVersionId: "cabida_p1_v5",
+  });
+  const parti = proposalToParti(proposal);
+  const unit = parti.rooms.find((room) => room.role === "unidad");
+  assert.ok(unit.polygonId);
+  assert.ok(unit.unitRef);
+  assert.ok(Number.isInteger(unit.unitProgram.dormitorios));
+  assert.deepEqual(unit.pts[0], { x: proposal.floor.polygons.find((item) => item.polygonId === unit.polygonId).polygon[0][0], y: proposal.floor.polygons.find((item) => item.polygonId === unit.polygonId).polygon[0][1] });
 });
