@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 
 import { ALICIA_URL } from "../../lib/brain.js";
+import { useCopilotSnapshot } from "../../copilot/ERPContext.jsx";
+import { supabase } from "../../lib/supabase.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BAM = "#A855F7";
@@ -691,6 +693,38 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     }
   }, [selectedUserId, isAdmin]);
 
+  // El hilo vive en el servidor (tabla `messages`, un hilo por persona, todos los
+  // canales). localStorage pasa a ser caché: pinta al instante y lo reemplaza
+  // lo que llegue del cerebro. Antes era la fuente de verdad, y por eso el space
+  // mostraba una conversación que Alicia no recordaba.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        const qs = new URLSearchParams({ limit: "60" });
+        if (selectedUserId !== currentUserId) qs.set("userId", selectedUserId);
+        const res = await fetch(`${ALICIA_URL}/api/copilot/history?${qs}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!res.ok) return;                       // sin conexión seguimos con el caché
+        const { messages: hilo } = await res.json();
+        if (!vivo || !Array.isArray(hilo)) return;
+        const mapped = hilo.map((m) => ({
+          role: m.role, content: m.content, actions: m.actions || [],
+          // SQLite devuelve "YYYY-MM-DD HH:MM:SS" (con espacio); Safari no lo
+          // parsea, así que lo pasamos a ISO antes de agregarle la "Z".
+          channel: m.channel, ts: Date.parse(m.createdAt.replace(" ", "T") + "Z") || Date.now(),
+        }));
+        setMessages(mapped);
+        saveChat(selectedUserId, mapped);
+      } catch { /* el caché de localStorage ya está en pantalla */ }
+    })();
+    return () => { vivo = false; };
+  }, [selectedUserId, currentUserId]);
+
   // Save profiles whenever they change
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
 
@@ -791,6 +825,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
   // Send message to Alicia
   const BRAIN_URL = ALICIA_URL;
+  const takeSnapshot = useCopilotSnapshot();
 
   const send = useCallback(async (text) => {
     if (!text.trim() || sending) return;
@@ -803,10 +838,21 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     try {
       // Alicia vive en el backend (aliceai): cerebro Claude, memoria y herramientas.
       // Sin fallback a Anthropic-directo (sacamos la key del browser por seguridad).
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
       const res = await fetch(`${BRAIN_URL}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedUserId, message: text.trim() }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        // userId solo viaja para el "ver como" del CEO; el servidor lo ignora
+        // para cualquier otro y toma la identidad del JWT.
+        body: JSON.stringify({
+          userId: selectedUserId,
+          message: text.trim(),
+          erpContext: takeSnapshot(),
+        }),
         signal: AbortSignal.timeout(60000),  // respuestas con tools pueden tardar ~20s
       });
       if (!res.ok) throw new Error(`El servidor de Alicia respondió ${res.status}`);
@@ -833,7 +879,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [apiKey, sending, messages, currentProfile, profiles, tasks, allSpaces, knowledgeLinks, selectedUserId, executeActions]);
+  }, [apiKey, sending, messages, currentProfile, profiles, tasks, allSpaces, knowledgeLinks, selectedUserId, executeActions, takeSnapshot]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
@@ -1030,6 +1076,11 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
                   )}
                   <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.04em", paddingInline: 4 }}>
                     {new Date(msg.ts).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                    {msg.channel && msg.channel !== "app" && (
+                      <span style={{ fontSize: 9, color: C.muted, marginLeft: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        {msg.channel === "whatsapp" ? "· whatsapp" : msg.channel === "embodied" ? "· voz" : `· ${msg.channel}`}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
