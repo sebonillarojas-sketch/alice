@@ -244,9 +244,9 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { reanclarItems, disenarConFeyd, roomsALayout, layoutARooms } from "./feyd.js";
+import { disenarConFeyd, materializeInteriorLayout, planALayout, resolveArchitectureProgram, roomsALayout } from "./feyd.js";
 import {
-  applyPlanVersion, architectureDesignReadiness, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
+  applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
   designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
 } from "./architecture.js";
 import ArchitectureReviewPanel from "./ArchitectureReviewPanel.jsx";
@@ -1578,6 +1578,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const wallPx = Math.max(muro * k, 1.5);
   const aberturas = items.filter((t) => porId[t.ref]?.cat === "abertura");
   const muebles = items.filter((t) => porId[t.ref]?.cat !== "abertura");
+  const designBoundary = footprint || lote?.pts || null;
+  const architectureProgram = resolveArchitectureProgram(brief, rooms);
+  const architectureBrief = { ...brief, program: architectureProgram };
 
   const snapshotLive = () => ({ rooms: structuredClone(rooms), items: structuredClone(items) });
   const ensureSourceVersion = () => {
@@ -1594,34 +1597,38 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setActiveArchitectureVersionId(next.version.id);
     return { source: next.version, history: next.history };
   };
-  const contextFor = (sourcePlanVersionId) => ({
+  const contextFor = (sourcePlanVersionId) => buildArchitectureContext({
     project: { id: proyecto.id, name: proyecto.nombre || "Proyecto BAM" },
     brief,
-    site: { lotType: tipoLote, boundary: lote?.pts || null, frontEdgeIndex: frontIdx },
+    program: architectureProgram,
+    lotBoundary: lote?.pts || null,
+    designBoundary,
+    site: { lotType: tipoLote, boundary: designBoundary, frontEdgeIndex: frontIdx },
     constraints: { setbacks: { front: retiro, side: retiroLat, rear: retiroPost }, wallThickness: muro, clearHeight: altura },
     lockedElements: rooms.filter((room) => room.tipo === "core").map((room) => ({ type: "room", id: room.id })),
-    assumptions: [],
     sourcePlanVersionId,
-    verifiedEvidence: [],
   });
   const recordArchitectureRun = (run) => setArchitectureRuns((prev) => [...prev.slice(-49), { id: `ar_${Date.now().toString(36)}`, createdAt: new Date().toISOString(), ...run }]);
   const mappedCritique = (critique, targetRooms, targetItems) => ({
     ...critique,
     findings: (critique.findings || []).map((finding) => ({ ...finding, mappedLocation: mapFindingLocation(finding, targetRooms, targetItems) })),
   });
-  const snapshotFromLayout = (layout, baseRooms, baseItems) => {
-    const nextRooms = layoutARooms(layout);
-    return { rooms: nextRooms, items: reanclarItems(baseItems, baseRooms, nextRooms) };
+  const snapshotFromLayout = (layout) => {
+    const generated = materializeInteriorLayout(layout, { boundary: designBoundary, program: architectureProgram });
+    if (!generated.validation.ok) {
+      throw new Error(`La distribución interior no pasó las reglas: ${generated.validation.messages.slice(0, 3).join(" · ")}`);
+    }
+    return { rooms: generated.rooms, items: generated.items };
   };
   const runDesign = async () => {
     if (architectureBusy) return;
-    const readiness = architectureDesignReadiness({ rooms, boundary: lote?.pts || footprint, areaTarget: brief.areaObjetivo });
+    const readiness = architectureDesignReadiness({ rooms, boundary: designBoundary, areaTarget: brief.areaObjetivo });
     if (!readiness.ok) { setArchitectureError(readiness.reason); return; }
     setArchitectureBusy("Tweedledum"); setArchitectureError("");
     try {
       const { source, history } = ensureSourceVersion();
-      const output = await designWithTweedledum({ context: contextFor(source.id), brief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, designObjective: "balanced residential architecture" });
-      const proposal = createActivatedPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromLayout(output.layout, source.snapshot.rooms, source.snapshot.items) });
+      const output = await designWithTweedledum({ context: contextFor(source.id), brief: architectureBrief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, architectureBrief) }, designObjective: "complete furnished residential interior" });
+      const proposal = createActivatedPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromLayout(output.layout) });
       setArchitectureVersions(proposal.history);
       commit(proposal.snapshot.rooms, proposal.snapshot.items);
       setActiveArchitectureVersionId(proposal.activeVersionId);
@@ -1635,7 +1642,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setArchitectureBusy("Tweedledee"); setArchitectureError("");
     try {
       const { source } = ensureSourceVersion();
-      const outputRaw = await critiqueWithTweedledee({ context: contextFor(source.id), planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, deterministicValidation: serializeValidation(val), designObjective: "balanced residential architecture" });
+      const outputRaw = await critiqueWithTweedledee({ context: contextFor(source.id), planVersion: { id: source.id, layout: planALayout(source.snapshot.rooms, source.snapshot.items, architectureBrief) }, deterministicValidation: serializeValidation(val), designObjective: "complete furnished residential interior" });
       const output = mappedCritique(outputRaw, source.snapshot.rooms, source.snapshot.items);
       recordArchitectureRun({ mode: "critique", sourceVersionId: source.id, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }], findings: output.findings });
       setArchitectureResult({ mode: "critique", output, critique: output });
@@ -1644,23 +1651,23 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   };
   const runReviewCycle = async () => {
     if (architectureBusy) return;
-    const readiness = architectureDesignReadiness({ rooms, boundary: lote?.pts || footprint, areaTarget: brief.areaObjetivo });
+    const readiness = architectureDesignReadiness({ rooms, boundary: designBoundary, areaTarget: brief.areaObjetivo });
     if (!readiness.ok) { setArchitectureError(readiness.reason); return; }
     setArchitectureBusy("review cycle"); setArchitectureError("");
     try {
       const { source, history } = ensureSourceVersion();
-      const design = await designWithTweedledum({ context: contextFor(source.id), brief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, brief) }, designObjective: "balanced residential architecture" });
-      const proposalSnapshot = snapshotFromLayout(design.layout, source.snapshot.rooms, source.snapshot.items);
+      const design = await designWithTweedledum({ context: contextFor(source.id), brief: architectureBrief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, architectureBrief) }, designObjective: "complete furnished residential interior" });
+      const proposalSnapshot = snapshotFromLayout(design.layout);
       const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: proposalSnapshot });
       setArchitectureVersions(proposal.history); // si la crítica falla, el diseño igual queda recuperable
       const proposalValidation = validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null });
-      const critiqueRaw = await critiqueWithTweedledee({ context: contextFor(proposal.version.id), planVersion: { id: proposal.version.id, layout: roomsALayout(proposalSnapshot.rooms, brief) }, deterministicValidation: serializeValidation(proposalValidation), designObjective: "balanced residential architecture" });
+      const critiqueRaw = await critiqueWithTweedledee({ context: contextFor(proposal.version.id), planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, architectureBrief) }, deterministicValidation: serializeValidation(proposalValidation), designObjective: "complete furnished residential interior" });
       const critique = mappedCritique(critiqueRaw, proposalSnapshot.rooms, proposalSnapshot.items);
       const acceptedFindings = critique.findings.filter((finding) => ["critical", "major"].includes(finding.severity));
       let revision = null, revisionVersion = null, finalHistory = proposal.history;
       if (acceptedFindings.length) {
-        revision = await reviseWithTweedledum({ context: contextFor(proposal.version.id), brief, planVersion: { id: proposal.version.id, layout: design.layout }, acceptedFindings, designObjective: "resolve accepted critique findings" });
-        const revisedSnapshot = snapshotFromLayout(revision.layout, proposalSnapshot.rooms, proposalSnapshot.items);
+        revision = await reviseWithTweedledum({ context: contextFor(proposal.version.id), brief: architectureBrief, planVersion: { id: proposal.version.id, layout: design.layout }, acceptedFindings, designObjective: "resolve accepted critique findings" });
+        const revisedSnapshot = snapshotFromLayout(revision.layout);
         const next = createPlanVersion(finalHistory, { projectId: proyecto.id, parentVersionId: proposal.version.id, createdBy: "tweedledum", snapshot: revisedSnapshot });
         revisionVersion = next.version; finalHistory = next.history;
       }
@@ -1775,6 +1782,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         result={architectureResult}
         versions={architectureVersions}
         currentVersion={architectureVersions.find((version) => version.id === activeArchitectureVersionId)}
+        program={architectureProgram}
+        onProgramChange={(next) => setBrief((current) => ({
+          ...current,
+          architectureDormitorios: next.dormitorios,
+          architectureBanos: next.banos,
+        }))}
         onDesign={runDesign}
         onCritique={runCritique}
         onCycle={runReviewCycle}

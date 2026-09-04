@@ -21,6 +21,8 @@ export default function ArchitectureReviewPanel({
   result,
   currentVersion,
   versions,
+  program,
+  onProgramChange,
   onDesign,
   onCritique,
   onCycle,
@@ -43,8 +45,21 @@ export default function ArchitectureReviewPanel({
       </header>
 
       <div style={{ padding: 12, overflowY: "auto", flex: 1 }}>
+        <div style={{ marginBottom: 9, padding: "8px 10px", display: "flex", alignItems: "center", gap: 10, background: C.card, border: `1px solid ${C.line}` }}>
+          <span style={{ fontFamily: sans, fontSize: 9.5, fontWeight: 800, color: C.soft, textTransform: "uppercase", letterSpacing: "0.07em" }}>interior</span>
+          <label style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.ink }}>dorm.
+            <select value={program?.dormitorios ?? 2} disabled={busy} onChange={(event) => onProgramChange?.({ ...program, dormitorios: Number(event.target.value) })} style={{ marginLeft: 4, border: `1px solid ${C.line}`, background: C.card, fontFamily: mono, fontSize: 9.5 }}>
+              {[0, 1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
+          <label style={{ fontFamily: mono, fontSize: 9.5, color: C.ink }}>baños
+            <select value={program?.banos ?? 2} disabled={busy} onChange={(event) => onProgramChange?.({ ...program, banos: Number(event.target.value) })} style={{ marginLeft: 4, border: `1px solid ${C.line}`, background: C.card, fontFamily: mono, fontSize: 9.5 }}>
+              {[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
-          <Action icon={<Sparkles size={13} color={C.blue} />} title="Tweedledum" copy="Diseña una nueva versión." onClick={onDesign} disabled={busy} accent="#B8C3EE" />
+          <Action icon={<Sparkles size={13} color={C.blue} />} title="Tweedledum" copy="Distribuye y amuebla el interior." onClick={onDesign} disabled={busy} accent="#B8C3EE" />
           <Action icon={<ShieldCheck size={13} color={C.red} />} title="Tweedledee" copy="Critica la versión actual." onClick={onCritique} disabled={busy} accent="#DDBDBD" />
           <div style={{ gridColumn: "1 / -1" }}>
             <Action icon={<Bot size={13} color={C.orange} />} title="Review cycle" copy="Tweedledum → reglas determinísticas → Tweedledee → una revisión máxima." onClick={onCycle} disabled={busy} accent={C.orange} />

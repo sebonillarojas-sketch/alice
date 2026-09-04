@@ -35,6 +35,33 @@ export function architectureDesignReadiness({ rooms = [], boundary = null, areaT
     : { ok: false, reason: "Define el lote, un área objetivo o al menos un ambiente antes de diseñar." };
 }
 
+export function buildArchitectureContext({
+  project,
+  brief = {},
+  lotBoundary = null,
+  designBoundary = null,
+  site = {},
+  constraints = {},
+  lockedElements = [],
+  sourcePlanVersionId = null,
+  program = {},
+} = {}) {
+  return {
+    project: { id: String(project?.id || ""), name: String(project?.name || "Proyecto BAM") },
+    brief: { ...brief, program: structuredClone(program) },
+    site: {
+      ...site,
+      lotBoundary: lotBoundary ? structuredClone(lotBoundary) : null,
+      designBoundary: designBoundary ? structuredClone(designBoundary) : null,
+    },
+    constraints: structuredClone(constraints),
+    lockedElements: structuredClone(lockedElements),
+    assumptions: [],
+    sourcePlanVersionId,
+    verifiedEvidence: [],
+  };
+}
+
 export function createActivatedPlanVersion(history = [], options = {}) {
   const created = createPlanVersion(history, options);
   return {

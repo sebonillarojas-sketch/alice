@@ -9,6 +9,7 @@ import {
   serializeValidation,
 } from "../src/modules/planos/architecture.js";
 import * as interior from "../src/modules/planos/feyd.js";
+import * as architectureApi from "../src/modules/planos/architecture.js";
 
 const square = (x0, y0, x1, y1) => [
   { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
@@ -128,4 +129,27 @@ test("generated interiors reject incomplete residential programs", () => {
   });
   assert.equal(result.validation.ok, false);
   assert.deepEqual(result.validation.findings.map((finding) => finding.code), ["missing_bedrooms", "missing_bathrooms"]);
+});
+
+test("architecture context distinguishes the lot from the design boundary", () => {
+  assert.equal(typeof architectureApi.buildArchitectureContext, "function");
+  const lotBoundary = square(0, 0, 12, 12);
+  const designBoundary = square(2, 2, 10, 10);
+  const context = architectureApi.buildArchitectureContext({
+    project: { id: "p1", name: "Casa" }, brief: { nse: "C" }, lotBoundary, designBoundary,
+    sourcePlanVersionId: "v2", program: { dormitorios: 2, banos: 1 },
+  });
+  assert.deepEqual(context.site.lotBoundary, lotBoundary);
+  assert.deepEqual(context.site.designBoundary, designBoundary);
+  assert.deepEqual(context.brief.program, { dormitorios: 2, banos: 1 });
+  assert.equal(context.sourcePlanVersionId, "v2");
+});
+
+test("critique layout contains compact native item references", () => {
+  assert.equal(typeof interior.planALayout, "function");
+  const layout = interior.planALayout(
+    [{ id: "r1", name: "sala", pts: square(0, 0, 4, 4) }],
+    [{ id: "i1", ref: "sofa-2c", x: 2, y: 2, rot: 90, w: 1.6, d: 0.9, selected: true }],
+  );
+  assert.deepEqual(layout.items, [{ id: "i1", ref: "sofa-2c", x: 2, y: 2, rot: 90, w: 1.6, d: 0.9 }]);
 });

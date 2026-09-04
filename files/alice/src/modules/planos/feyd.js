@@ -44,6 +44,21 @@ export function roomsALayout(rooms, brief = {}) {
   };
 }
 
+export function planALayout(rooms, items = [], brief = {}) {
+  return {
+    ...roomsALayout(rooms, brief),
+    items: items.map((item) => ({
+      id: String(item.id),
+      ref: String(item.ref),
+      x: r2(Number(item.x) || 0),
+      y: r2(Number(item.y) || 0),
+      rot: r2(Number(item.rot) || 0),
+      w: r2(Number(item.w) || 0),
+      d: r2(Number(item.d) || 0),
+    })),
+  };
+}
+
 // layout corregido del skill → rooms del editor (snap fino para no romper cotas)
 export function layoutARooms(layout) {
   let i = 1;
