@@ -157,6 +157,51 @@ test("occupiable rooms still fail when they materially overlap", () => {
   assert.equal(validation.findings.some((finding) => finding.code === "overlapping_rooms"), true);
 });
 
+test("an invalid Tweedledum interior gets exactly one targeted revision", async () => {
+  assert.equal(typeof interior.materializeWithOneRevision, "function");
+  const invalidLayout = {
+    ambientes: [
+      { nombre: "sala", ref_id: "social", poligono: [[0, 0], [4, 0], [4, 3], [0, 3]] },
+      { nombre: "cocina", ref_id: "kitchen", poligono: [[4, 0], [8, 0], [8, 3], [4, 3]] },
+      { nombre: "dormitorio principal", ref_id: "bedroom", poligono: [[0, 3], [6, 3], [6, 8], [0, 8]] },
+      { nombre: "baño 1", ref_id: "bath-1", poligono: [[4, 3], [6, 3], [6, 5.5], [4, 5.5]] },
+      { nombre: "baño 2", ref_id: "bath-2", poligono: [[6, 3], [8, 3], [8, 5.5], [6, 5.5]] },
+      { nombre: "pasillo", ref_id: "hall", poligono: [[4, 5.5], [8, 5.5], [8, 8], [4, 8]] },
+    ],
+  };
+  const correctedLayout = {
+    ambientes: invalidLayout.ambientes.map((room) => room.ref_id === "bedroom"
+      ? { ...room, poligono: [[0, 3], [4, 3], [4, 8], [0, 8]] }
+      : room),
+  };
+  let revisions = 0;
+  const result = await interior.materializeWithOneRevision({
+    layout: invalidLayout,
+    boundary: square(0, 0, 8, 8),
+    program: { dormitorios: 1, banos: 2, nse: "C" },
+    revise: async (findings) => {
+      revisions += 1;
+      assert.ok(findings.some((finding) => finding.code === "overlapping_rooms"));
+      return { layout: correctedLayout };
+    },
+  });
+  assert.equal(revisions, 1);
+  assert.equal(result.repaired, true);
+  assert.equal(result.generated.validation.ok, true, result.generated.validation.messages.join(" · "));
+});
+
+test("a valid Tweedledum interior avoids the revision call", async () => {
+  assert.equal(typeof interior.materializeWithOneRevision, "function");
+  const result = await interior.materializeWithOneRevision({
+    layout: completeLayout,
+    boundary: square(0, 0, 8, 8),
+    program: { dormitorios: 1, banos: 1, nse: "C" },
+    revise: async () => assert.fail("valid geometry must not be revised"),
+  });
+  assert.equal(result.repaired, false);
+  assert.equal(result.generated.validation.ok, true);
+});
+
 test("architecture context distinguishes the lot from the design boundary", () => {
   assert.equal(typeof architectureApi.buildArchitectureContext, "function");
   const lotBoundary = square(0, 0, 12, 12);

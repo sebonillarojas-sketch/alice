@@ -244,7 +244,7 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { disenarConFeyd, materializeInteriorLayout, planALayout, resolveArchitectureProgram, roomsALayout } from "./feyd.js";
+import { disenarConFeyd, materializeInteriorLayout, materializeWithOneRevision, planALayout, resolveArchitectureProgram, roomsALayout } from "./feyd.js";
 import {
   applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
   designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
@@ -1613,8 +1613,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     ...critique,
     findings: (critique.findings || []).map((finding) => ({ ...finding, mappedLocation: mapFindingLocation(finding, targetRooms, targetItems) })),
   });
-  const snapshotFromLayout = (layout) => {
-    const generated = materializeInteriorLayout(layout, { boundary: designBoundary, program: architectureProgram });
+  const snapshotFromGenerated = (generated) => {
     if (!generated.validation.ok) {
       throw new Error(`La distribución interior no pasó las reglas: ${generated.validation.messages.slice(0, 3).join(" · ")}`);
     }
@@ -1628,12 +1627,23 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     try {
       const { source, history } = ensureSourceVersion();
       const output = await designWithTweedledum({ context: contextFor(source.id), brief: architectureBrief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, architectureBrief) }, designObjective: "complete furnished residential interior" });
-      const proposal = createActivatedPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromLayout(output.layout) });
+      const resolved = await materializeWithOneRevision({
+        layout: output.layout,
+        boundary: designBoundary,
+        program: architectureProgram,
+        revise: (acceptedFindings) => reviseWithTweedledum({
+          context: contextFor(source.id), brief: architectureBrief,
+          planVersion: { id: source.id, layout: output.layout }, acceptedFindings,
+          designObjective: "repair deterministic interior geometry findings",
+        }),
+      });
+      const finalDesign = resolved.revision || output;
+      const proposal = createActivatedPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: snapshotFromGenerated(resolved.generated) });
       setArchitectureVersions(proposal.history);
       commit(proposal.snapshot.rooms, proposal.snapshot.items);
       setActiveArchitectureVersionId(proposal.activeVersionId);
-      recordArchitectureRun({ mode: "design", sourceVersionId: source.id, resultVersionId: proposal.version.id, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }] });
-      setArchitectureResult({ mode: "design", design: output, appliedVersionId: proposal.version.id });
+      recordArchitectureRun({ mode: "design", sourceVersionId: source.id, resultVersionId: proposal.version.id, repaired: resolved.repaired, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }, ...(resolved.revision ? [{ key: resolved.revision.agent.key, promptVersion: resolved.revision.promptVersion }] : [])] });
+      setArchitectureResult({ mode: "design", design: finalDesign, repaired: resolved.repaired, appliedVersionId: proposal.version.id });
     } catch (e) { setArchitectureError(e.message || "No se pudo diseñar"); }
     finally { setArchitectureBusy(null); }
   };
@@ -1657,17 +1667,25 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     try {
       const { source, history } = ensureSourceVersion();
       const design = await designWithTweedledum({ context: contextFor(source.id), brief: architectureBrief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, architectureBrief) }, designObjective: "complete furnished residential interior" });
-      const proposalSnapshot = snapshotFromLayout(design.layout);
+      const initialGenerated = materializeInteriorLayout(design.layout, { boundary: designBoundary, program: architectureProgram });
+      const proposalSnapshot = { rooms: initialGenerated.rooms, items: initialGenerated.items };
       const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: proposalSnapshot });
       setArchitectureVersions(proposal.history); // si la crítica falla, el diseño igual queda recuperable
-      const proposalValidation = validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null });
-      const critiqueRaw = await critiqueWithTweedledee({ context: contextFor(proposal.version.id), planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, architectureBrief) }, deterministicValidation: serializeValidation(proposalValidation), designObjective: "complete furnished residential interior" });
+      const critiqueRaw = await critiqueWithTweedledee({ context: contextFor(proposal.version.id), planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, architectureBrief) }, deterministicValidation: initialGenerated.validation, designObjective: "complete furnished residential interior" });
       const critique = mappedCritique(critiqueRaw, proposalSnapshot.rooms, proposalSnapshot.items);
       const acceptedFindings = critique.findings.filter((finding) => ["critical", "major"].includes(finding.severity));
-      let revision = null, revisionVersion = null, finalHistory = proposal.history;
-      if (acceptedFindings.length) {
-        revision = await reviseWithTweedledum({ context: contextFor(proposal.version.id), brief: architectureBrief, planVersion: { id: proposal.version.id, layout: design.layout }, acceptedFindings, designObjective: "resolve accepted critique findings" });
-        const revisedSnapshot = snapshotFromLayout(revision.layout);
+      const resolved = await materializeWithOneRevision({
+        layout: design.layout,
+        boundary: designBoundary,
+        program: architectureProgram,
+        revisionFindings: acceptedFindings,
+        revise: (findings) => reviseWithTweedledum({ context: contextFor(proposal.version.id), brief: architectureBrief, planVersion: { id: proposal.version.id, layout: design.layout }, acceptedFindings: findings, designObjective: "resolve deterministic validation and accepted critique findings" }),
+      });
+      const finalSnapshot = snapshotFromGenerated(resolved.generated);
+      const revision = resolved.revision;
+      let revisionVersion = null, finalHistory = proposal.history;
+      if (revision) {
+        const revisedSnapshot = finalSnapshot;
         const next = createPlanVersion(finalHistory, { projectId: proyecto.id, parentVersionId: proposal.version.id, createdBy: "tweedledum", snapshot: revisedSnapshot });
         revisionVersion = next.version; finalHistory = next.history;
       }

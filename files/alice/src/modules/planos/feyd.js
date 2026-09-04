@@ -150,6 +150,30 @@ export function materializeInteriorLayout(layout, { boundary = null, program = {
   return { rooms, items, validation: validateGeneratedInterior({ rooms, items, boundary, program }) };
 }
 
+const revisionFinding = (finding, index) => ({
+  id: finding.id || `deterministic_${index + 1}`,
+  code: finding.code,
+  severity: finding.severity || "major",
+  category: "buildability",
+  title: finding.code === "overlapping_rooms" ? "Ambientes superpuestos" : "Distribución interior inválida",
+  observation: finding.message,
+  consequence: "La geometría no puede aplicarse al plano.",
+  recommendation: "Corrige los polígonos sin cambiar el programa ni la huella.",
+  location: finding.targetId ? { roomId: finding.targetId } : null,
+});
+
+export async function materializeWithOneRevision({ layout, boundary = null, program = {}, revisionFindings = [], revise = null } = {}) {
+  const initial = materializeInteriorLayout(layout, { boundary, program });
+  const deterministicFindings = initial.validation.findings.map(revisionFinding);
+  const acceptedFindings = [...deterministicFindings, ...revisionFindings];
+  if (!acceptedFindings.length || typeof revise !== "function") {
+    return { generated: initial, revision: null, repaired: false, initialValidation: initial.validation };
+  }
+  const revision = await revise(acceptedFindings);
+  const generated = materializeInteriorLayout(revision.layout, { boundary, program });
+  return { generated, revision, repaired: true, initialValidation: initial.validation };
+}
+
 // F1 · Feyd deja de vaciar/desincronizar el mobiliario.
 // Feyd audita SOLO los ambientes (roomsALayout no le manda muebles), y su
 // corrección reescribe los polígonos. Antes, al aplicar, los muebles quedaban
