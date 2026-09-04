@@ -5179,6 +5179,17 @@ function GrowthDashboard({ terrenos, onSelect, onCreate, onUpdate, selectedTerre
   const [filterPriceMax, setFilterPriceMax] = useState("");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  useERPContext("growth", () => {
+    const sel = terrenos.find((t) => t.id === selectedTerrenoId) || null;
+    return {
+      title: "Growth · pipeline de terrenos",
+      entity: sel ? { type: "terreno", id: sel.id } : null,
+      state: { totalTerrenos: terrenos.length, terrenoAbierto: sel?.name || null },
+      derived: {},
+      actions: [],
+    };
+  });
+
   const filtered = useMemo(() => {
     let list = filterStatus === "all" ? terrenos : terrenos.filter(t => t.status === filterStatus);
     if (filterDistrict.trim()) list = list.filter(t => (t.district || "").toLowerCase().includes(filterDistrict.toLowerCase()));
@@ -5405,18 +5416,6 @@ function GrowthDashboard({ terrenos, onSelect, onCreate, onUpdate, selectedTerre
 
 function GrowthSpace({ terrenos, onSelect, onCreate, onUpdate, selectedTerrenoId }) {
   const [tab, setTab] = React.useState("terrenos");
-
-  useERPContext("growth", () => {
-    const sel = terrenos.find((t) => t.id === selectedTerrenoId) || null;
-    return {
-      title: "Growth · pipeline de terrenos",
-      entity: sel ? { type: "terreno", id: sel.id } : null,
-      state: { totalTerrenos: terrenos.length, terrenoAbierto: sel?.name || null, pestaña: tab },
-      derived: {},
-      actions: [],
-    };
-  });
-
   const tabs = [
     { id: "terrenos", label: "Terrenos" },
     { id: "mercado",  label: "Análisis de Mercado" },
