@@ -641,6 +641,12 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const recognitionRef = useRef(null);
 
   const audioRef = useRef(null);
+  // Se incrementa cada vez que `send` toca `messages` a mano. El fetch del
+  // historial guarda la generación vigente ANTES de salir a la red; si al
+  // volver ya cambió, alguien mandó un mensaje mientras tanto y aplicar la
+  // respuesta pisaría ese turno en pantalla. No la borres para "simplificar":
+  // `vivo` cubre desmontaje/cambio de usuario, esto cubre el turno propio.
+  const generacion = useRef(0);
 
   const speak = useCallback(async (text) => {
     if (!voiceEnabled) return;
@@ -699,6 +705,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   // mostraba una conversación que Alicia no recordaba.
   useEffect(() => {
     let vivo = true;
+    const gen = generacion.current;   // snapshot: si `send` avanza esto antes de que vuelva el fetch, se descarta
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -711,7 +718,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         });
         if (!res.ok) return;                       // sin conexión seguimos con el caché
         const { messages: hilo } = await res.json();
-        if (!vivo || !Array.isArray(hilo)) return;
+        if (!vivo || generacion.current !== gen || !Array.isArray(hilo)) return;
         const mapped = hilo.map((m) => ({
           role: m.role, content: m.content, actions: m.actions || [],
           // SQLite devuelve "YYYY-MM-DD HH:MM:SS" (con espacio); Safari no lo
@@ -831,6 +838,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     if (!text.trim() || sending) return;
     const userMsg = { role: "user", content: text.trim(), ts: Date.now() };
     const newHistory = [...messages, userMsg];
+    generacion.current++;   // invalida cualquier fetch de historial que haya salido antes de este turno
     setMessages(newHistory);
     setInput("");
     setSending(true);
