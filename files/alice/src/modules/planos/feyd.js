@@ -3,8 +3,9 @@
 // y el layout JSON del skill arquitecto-residencial-lima (alicia-brain).
 // El na-Barón audita la planta contra su checklist (RNE + Neufert + mercado)
 // y devuelve veredicto + layout corregido, que acá se traduce de vuelta a rooms.
-import { snapPt, area, centroid, pointInPolygon } from "./geometry.js";
+import { snapPt, area, bbox, centroid, clipConvex, isConvex, pointInPolygon } from "./geometry.js";
 import { amoblarDesdeLayout } from "./distribucion.js";
+import { validarPlan } from "./validacion.js";
 import { ALICIA_URL } from "../../lib/brain.js";
 
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -29,6 +30,7 @@ export function roomsALayout(rooms, brief = {}) {
     .filter((r) => r.pts?.length >= 3)
     .map((r) => ({
       nombre: r.name || r.tipo || "ambiente",
+      ref_id: String(r.id),
       poligono: r.pts.map((p) => [r2(p.x), r2(p.y)]),
       zona: zonaDe(r.name),
       luz: conLuz(r.name),
@@ -45,6 +47,7 @@ export function roomsALayout(rooms, brief = {}) {
 // layout corregido del skill → rooms del editor (snap fino para no romper cotas)
 export function layoutARooms(layout) {
   let i = 1;
+  const used = new Set();
   const tipoDe = (n = "") => {
     const s = n.toLowerCase();
     if (s.includes("pasillo") || s.includes("corredor")) return "pasillo";
@@ -54,12 +57,76 @@ export function layoutARooms(layout) {
   };
   return (layout?.ambientes || [])
     .filter((a) => a.poligono?.length >= 3)
-    .map((a) => ({
-      id: `fy${Date.now().toString(36)}_${i++}`,
-      name: a.nombre,
-      tipo: tipoDe(a.nombre),
-      pts: a.poligono.map(([x, y]) => snapPt({ x, y }, 0.05)),
-    }));
+    .map((a) => {
+      const supplied = String(a.ref_id || "").trim();
+      const id = supplied && !used.has(supplied) ? supplied : `fy${Date.now().toString(36)}_${i++}`;
+      used.add(id);
+      return {
+        id,
+        name: a.nombre,
+        tipo: a.tipo || tipoDe(a.nombre),
+        pts: a.poligono.map(([x, y]) => snapPt({ x, y }, 0.05)),
+      };
+    });
+}
+
+const countNamed = (rooms, pattern) => rooms.filter((room) => pattern.test(String(room.name || room.tipo || "").toLowerCase())).length;
+const positiveInt = (value, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.round(number) : fallback;
+};
+
+export function resolveArchitectureProgram(brief = {}, rooms = []) {
+  const inferredBedrooms = countNamed(rooms, /dorm|habitaci[oó]n/);
+  const inferredBathrooms = countNamed(rooms, /ba[ñn]o/);
+  return {
+    dormitorios: positiveInt(brief.architectureDormitorios ?? brief.dormitorios ?? brief.dorms, inferredBedrooms || 2),
+    banos: positiveInt(brief.architectureBanos ?? brief.banos, inferredBathrooms || 2),
+    nse: ["A", "B", "C", "D"].includes(brief.nse) ? brief.nse : "C",
+    cocina: brief.cocina === "cerrada" || brief.cocinaCerrada ? "cerrada" : "abierta",
+    lavanderia: brief.lavanderia !== false,
+    banoVisita: brief.banoVisita === true || brief.bano_visita === true || brief.visita === true,
+  };
+}
+
+function overlapArea(a, b) {
+  if (!isConvex(a.pts) || !isConvex(b.pts)) return 0;
+  const clipped = clipConvex(a.pts, b.pts);
+  return clipped.length >= 3 ? area(clipped) : 0;
+}
+
+export function validateGeneratedInterior({ rooms = [], items = [], boundary = null, program = {} } = {}) {
+  const base = validarPlan({ rooms, items, limite: boundary });
+  const findings = [];
+  const bedrooms = countNamed(rooms, /dorm|habitaci[oó]n/);
+  const bathrooms = countNamed(rooms, /ba[ñn]o/);
+  const requiredBedrooms = positiveInt(program.dormitorios, 0);
+  const requiredBathrooms = positiveInt(program.banos, 0);
+  if (bedrooms < requiredBedrooms) findings.push({ code: "missing_bedrooms", severity: "major", message: `Faltan ${requiredBedrooms - bedrooms} dormitorio(s)` });
+  if (bathrooms < requiredBathrooms) findings.push({ code: "missing_bathrooms", severity: "major", message: `Faltan ${requiredBathrooms - bathrooms} baño(s)` });
+  if (!countNamed(rooms, /sala|social|comedor|estar|living/)) findings.push({ code: "missing_social_space", severity: "major", message: "Falta un ambiente social" });
+  if (!countNamed(rooms, /cocina|kitchen/)) findings.push({ code: "missing_kitchen", severity: "major", message: "Falta una cocina" });
+  for (let i = 0; i < rooms.length; i++) {
+    if (area(rooms[i].pts || []) < 0.5) findings.push({ code: "invalid_room_area", severity: "major", targetId: rooms[i].id, message: `${rooms[i].name} no tiene área útil` });
+    for (let j = i + 1; j < rooms.length; j++) {
+      if (overlapArea(rooms[i], rooms[j]) > 0.05) findings.push({ code: "overlapping_rooms", severity: "major", targetId: rooms[i].id, message: `${rooms[i].name} se superpone con ${rooms[j].name}` });
+    }
+  }
+  findings.push(...base.fueraLote.map((entry) => ({ code: "outside_boundary", severity: "major", targetId: entry.id, message: `${entry.name} está fuera de la huella` })));
+  findings.push(...base.sinPiso.map((entry) => ({ code: "item_without_room", severity: "major", targetId: entry.id, message: `${entry.name} no pertenece a un ambiente` })));
+  findings.push(...base.aislados.map((entry) => ({ code: "unreachable_room", severity: "major", targetId: entry.id, message: `${entry.name} no tiene acceso` })));
+  return { ok: findings.length === 0, findings, messages: findings.map((finding) => finding.message) };
+}
+
+export function materializeInteriorLayout(layout, { boundary = null, program = {} } = {}) {
+  const rooms = layoutARooms(layout);
+  const extent = bbox((boundary?.length ? boundary : rooms.flatMap((room) => room.pts)) || []);
+  const width = Math.max(0, extent.maxX - extent.minX);
+  const depth = Math.max(0, extent.maxY - extent.minY);
+  const localRooms = rooms.map((room) => ({ ...room, pts: room.pts.map((point) => ({ x: point.x - extent.minX, y: point.y - extent.minY })) }));
+  const items = amoblarDesdeLayout(localRooms, width, depth, program.nse || "C")
+    .map((item) => ({ ...item, x: r2(item.x + extent.minX), y: r2(item.y + extent.minY) }));
+  return { rooms, items, validation: validateGeneratedInterior({ rooms, items, boundary, program }) };
 }
 
 // F1 · Feyd deja de vaciar/desincronizar el mobiliario.
