@@ -71,3 +71,37 @@ test("floor-plan endpoint returns the selected valid source", async () => {
     assert.equal(body.selected.floor.sourceCabidaVersionId, "cabida_v1");
   });
 });
+
+test("floor-plan route preserves Cabida version and maps invalid candidates to polygon IDs", async () => {
+  const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  const valid = {
+    summary: "Floor", assumptions: [], tradeoffs: [],
+    floor: { sourceCabidaVersionId: "cabida_p1_v7", polygons: [
+      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: rect(4, 4, 6, 10) },
+      { polygonId: "hall-left", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: rect(0, 4, 4, 5) },
+      { polygonId: "hall-right", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: rect(6, 4, 10, 5) },
+      { polygonId: "unit-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: rect(0, 0, 4, 4) },
+      { polygonId: "unit-2", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: rect(6, 0, 10, 4) },
+    ] },
+  };
+  const invalid = structuredClone(valid);
+  invalid.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 3.5, 4, 5);
+  const client = { messages: { create: async () => ({ content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: invalid }] }) } };
+  const service = createArchitectureService({ client, model: "test-model" });
+  await withServer(createArchitectureRouter({ service }), async (base) => {
+    const response = await fetch(`${base}/tweedledum/floor-plan`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        context: { project: { id: "p1", name: "DC01" }, sourceCabidaVersionId: "cabida_p1_v7", site: { buildableFootprint: rect(0, 0, 10, 10) } },
+        floorBrief: { unitsPerFloor: 2, bedroomMix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 }, targetAverageArea: 16 },
+        deterministicFallback: valid,
+      }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.source, "deterministic_fallback");
+    assert.equal(body.selected.floor.sourceCabidaVersionId, "cabida_p1_v7");
+    assert.deepEqual(body.candidateValidation.original.findings.find((finding) => finding.code === "polygon_overlap").polygonIds.sort(), ["hall-left", "unit-1"]);
+    assert.doesNotMatch(JSON.stringify(body), /You are Tweedledum/);
+  });
+});
