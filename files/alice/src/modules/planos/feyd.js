@@ -174,6 +174,80 @@ export async function materializeWithOneRevision({ layout, boundary = null, prog
   return { generated, revision, repaired: true, initialValidation: initial.validation };
 }
 
+const floorPoints = (polygon) => (polygon || []).map(([x, y]) => ({ x: Number(x), y: Number(y) }));
+
+export function splitAcceptedFloor(floor = {}) {
+  const polygons = Array.isArray(floor.polygons) ? floor.polygons : [];
+  const lockedRooms = polygons.filter((item) => item.role !== "unidad").map((item) => ({
+    id: item.polygonId,
+    polygonId: item.polygonId,
+    name: item.name,
+    tipo: item.role === "circulacion" ? "pasillo" : item.role,
+    role: item.role,
+    pts: floorPoints(item.polygon),
+    locked: true,
+  }));
+  const grouped = new Map();
+  for (const item of polygons.filter((candidate) => candidate.role === "unidad")) {
+    const unit = grouped.get(item.unitRef) || { unitRef: item.unitRef, program: { ...item.unitProgram }, pieces: [] };
+    unit.pieces.push({ polygonId: item.polygonId, name: item.name, pts: floorPoints(item.polygon) });
+    grouped.set(item.unitRef, unit);
+  }
+  const units = [...grouped.values()].map((unit) => ({
+    ...unit,
+    polygonId: unit.pieces.length === 1 ? unit.pieces[0].polygonId : null,
+    boundary: unit.pieces.length === 1 ? unit.pieces[0].pts.map((point) => ({ ...point })) : null,
+  }));
+  return { lockedRooms, units };
+}
+
+const pendingUnitRooms = (unit) => unit.pieces.map((piece) => ({
+  id: piece.polygonId,
+  polygonId: piece.polygonId,
+  unitRef: unit.unitRef,
+  unitProgram: { ...unit.program },
+  name: piece.name,
+  tipo: "unidad",
+  role: "unidad",
+  pts: piece.pts.map((point) => ({ ...point })),
+  pendingInterior: true,
+}));
+
+export async function materializeUnitInteriors({ floor, designUnit, reviseUnit = null } = {}) {
+  const { lockedRooms, units } = splitAcceptedFloor(floor);
+  const rooms = lockedRooms.map((room) => structuredClone(room));
+  const items = [];
+  const unitResults = [];
+  for (const unit of units) {
+    if (!unit.boundary || typeof designUnit !== "function") {
+      rooms.push(...pendingUnitRooms(unit));
+      unitResults.push({ unitRef: unit.unitRef, ok: false, repaired: false, reason: unit.boundary ? "designer_unavailable" : "multi_piece_boundary" });
+      continue;
+    }
+    try {
+      const design = await designUnit(unit);
+      const resolved = await materializeWithOneRevision({
+        layout: design.layout,
+        boundary: unit.boundary,
+        program: unit.program,
+        revise: typeof reviseUnit === "function" ? (findings) => reviseUnit(unit, design, findings) : null,
+      });
+      if (!resolved.generated.validation.ok) {
+        rooms.push(...pendingUnitRooms(unit));
+        unitResults.push({ unitRef: unit.unitRef, ok: false, repaired: resolved.repaired, validation: resolved.generated.validation, design, revision: resolved.revision });
+        continue;
+      }
+      rooms.push(...resolved.generated.rooms.map((room) => ({ ...room, id: `${unit.unitRef}:${room.id}`, unitRef: unit.unitRef, sourcePolygonId: unit.polygonId })));
+      items.push(...resolved.generated.items.map((item) => ({ ...item, id: `${unit.unitRef}:${item.id}`, unitRef: unit.unitRef, sourcePolygonId: unit.polygonId })));
+      unitResults.push({ unitRef: unit.unitRef, ok: true, repaired: resolved.repaired, validation: resolved.generated.validation, design, revision: resolved.revision });
+    } catch (error) {
+      rooms.push(...pendingUnitRooms(unit));
+      unitResults.push({ unitRef: unit.unitRef, ok: false, repaired: false, reason: error?.message || "design_failed" });
+    }
+  }
+  return { rooms, items, unitResults };
+}
+
 // F1 · Feyd deja de vaciar/desincronizar el mobiliario.
 // Feyd audita SOLO los ambientes (roomsALayout no le manda muebles), y su
 // corrección reescribe los polígonos. Antes, al aplicar, los muebles quedaban

@@ -96,6 +96,7 @@ export function proposalToParti(proposal = {}) {
       unitProgram: item.unitProgram ? { ...item.unitProgram } : null,
       pts: toPoints(item.polygon),
       locked: item.role !== "unidad",
+      pendingInterior: item.role === "unidad",
     })),
     items: [],
     notas: [proposal.summary || "Propuesta de planta típica"],

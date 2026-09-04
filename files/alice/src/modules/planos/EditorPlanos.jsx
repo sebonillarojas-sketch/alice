@@ -244,7 +244,7 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { disenarConFeyd, materializeInteriorLayout, materializeWithOneRevision, planALayout, resolveArchitectureProgram, roomsALayout } from "./feyd.js";
+import { disenarConFeyd, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, resolveArchitectureProgram, roomsALayout } from "./feyd.js";
 import {
   applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
   designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
@@ -253,6 +253,7 @@ import ArchitectureReviewPanel from "./ArchitectureReviewPanel.jsx";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
 import { useProyectos } from "../cabida/proyectos.js";
 import { clasificarBordes } from "../cabida/loteReal.js";
+import { proposalToParti } from "../cabida/floorProposal.js";
 
 const FICHA_DEF = {
   proyecto: "Nuevo proyecto", tipo: "Edificio Multifamiliar", ubicacion: "", cliente: "",
@@ -855,9 +856,14 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
   const P = proyecto?.plano || {};                  // plano guardado del proyecto activo
+  const acceptedFloorProposal = P.floorProposal || null;
+  const seedAcceptedFloor = acceptedFloorProposal && P.floorProposalMaterializedId !== acceptedFloorProposal.id;
+  const acceptedFloorRooms = seedAcceptedFloor
+    ? proposalToParti({ summary: acceptedFloorProposal.summary, floor: acceptedFloorProposal.floor }).rooms
+    : null;
 
-  const [rooms, setRooms] = useState(P.rooms || []);   // ambientes: { id, name, pts, tipo? }
-  const [items, setItems] = useState(P.items || []);   // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
+  const [rooms, setRooms] = useState(acceptedFloorRooms || P.rooms || []);   // ambientes: { id, name, pts, tipo? }
+  const [items, setItems] = useState(seedAcceptedFloor ? [] : (P.items || []));   // mobiliario/aberturas: { id, ref, x, y, rot, w, d }
   const [muro, setMuro] = useState(P.muro ?? 0.15);    // espesor de muro (m)
   const [altura, setAltura] = useState(P.altura ?? 2.4); // altura libre (m)
   // dibujo lineal (whiteboard): trazos a mano alzada sobre el plano
@@ -974,6 +980,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
   useEffect(() => {
     const snap = { rooms, items, muro, altura, view, lote, tipoLote, retiro, retiroLat, retiroPost, frontIdx, brief, ficha, trazos,
+      floorProposal: acceptedFloorProposal, floorProposalMaterializedId: acceptedFloorProposal?.id || P.floorProposalMaterializedId || null,
       architectureVersions, architectureRuns, activeArchitectureVersionId };
     if (onSavePlano) onSavePlano(snap);
     else { try { localStorage.setItem(STORE, JSON.stringify(snap)); } catch { /* cuota */ } }
@@ -1608,6 +1615,17 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     lockedElements: rooms.filter((room) => room.tipo === "core").map((room) => ({ type: "room", id: room.id })),
     sourcePlanVersionId,
   });
+  const contextForUnit = (sourcePlanVersionId, unit) => buildArchitectureContext({
+    project: { id: proyecto.id, name: proyecto.nombre || "Proyecto BAM" },
+    brief,
+    program: { ...unit.program, nse: architectureProgram.nse },
+    lotBoundary: lote?.pts || null,
+    designBoundary: unit.boundary,
+    site: { lotType: tipoLote, boundary: unit.boundary, frontEdgeIndex: frontIdx, sourceCabidaVersionId: acceptedFloorProposal?.sourceCabidaVersionId || null },
+    constraints: { setbacks: { front: retiro, side: retiroLat, rear: retiroPost }, wallThickness: muro, clearHeight: altura },
+    lockedElements: rooms.filter((room) => room.locked).map((room) => ({ type: "room", id: room.id })),
+    sourcePlanVersionId,
+  });
   const recordArchitectureRun = (run) => setArchitectureRuns((prev) => [...prev.slice(-49), { id: `ar_${Date.now().toString(36)}`, createdAt: new Date().toISOString(), ...run }]);
   const mappedCritique = (critique, targetRooms, targetItems) => ({
     ...critique,
@@ -1626,6 +1644,50 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setArchitectureBusy("Tweedledum"); setArchitectureError("");
     try {
       const { source, history } = ensureSourceVersion();
+      if (acceptedFloorProposal?.floor) {
+        const resolvedFloor = await materializeUnitInteriors({
+          floor: acceptedFloorProposal.floor,
+          designUnit: (unit) => {
+            const unitProgram = { ...unit.program, nse: architectureProgram.nse };
+            return designWithTweedledum({
+              context: contextForUnit(source.id, unit),
+              brief: { ...brief, program: unitProgram },
+              planVersion: { id: source.id, layout: roomsALayout([{ id: unit.polygonId, name: unit.unitRef, tipo: "unidad", pts: unit.boundary }], { program: unitProgram }) },
+              designObjective: `complete residential interior for ${unit.unitRef}`,
+            });
+          },
+          reviseUnit: (unit, design, acceptedFindings) => {
+            const unitProgram = { ...unit.program, nse: architectureProgram.nse };
+            return reviseWithTweedledum({
+              context: contextForUnit(source.id, unit),
+              brief: { ...brief, program: unitProgram },
+              planVersion: { id: source.id, layout: design.layout },
+              acceptedFindings,
+              designObjective: `repair deterministic interior geometry for ${unit.unitRef}`,
+            });
+          },
+        });
+        const proposal = createActivatedPlanVersion(history, {
+          projectId: proyecto.id,
+          parentVersionId: source.id,
+          createdBy: "tweedledum",
+          snapshot: { rooms: resolvedFloor.rooms, items: resolvedFloor.items },
+        });
+        setArchitectureVersions(proposal.history);
+        commit(proposal.snapshot.rooms, proposal.snapshot.items);
+        setActiveArchitectureVersionId(proposal.activeVersionId);
+        const successful = resolvedFloor.unitResults.filter((unit) => unit.ok).length;
+        recordArchitectureRun({
+          mode: "design_units",
+          sourceVersionId: source.id,
+          sourceCabidaVersionId: acceptedFloorProposal.sourceCabidaVersionId,
+          resultVersionId: proposal.version.id,
+          units: resolvedFloor.unitResults.map((unit) => ({ unitRef: unit.unitRef, ok: unit.ok, repaired: unit.repaired })),
+          agents: resolvedFloor.unitResults.flatMap((unit) => [unit.design, unit.revision].filter(Boolean).map((entry) => ({ key: entry.agent?.key || "tweedledum", promptVersion: entry.promptVersion || null }))),
+        });
+        setArchitectureResult({ mode: "design", design: { summary: `${successful}/${resolvedFloor.unitResults.length} unidades diseñadas` }, repaired: resolvedFloor.unitResults.some((unit) => unit.repaired), appliedVersionId: proposal.version.id });
+        return;
+      }
       const output = await designWithTweedledum({ context: contextFor(source.id), brief: architectureBrief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, architectureBrief) }, designObjective: "complete furnished residential interior" });
       const resolved = await materializeWithOneRevision({
         layout: output.layout,

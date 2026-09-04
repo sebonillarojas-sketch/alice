@@ -262,6 +262,7 @@ test("floor proposal preview preserves polygon and unit metadata", () => {
   assert.ok(unit.polygonId);
   assert.ok(unit.unitRef);
   assert.ok(Number.isInteger(unit.unitProgram.dormitorios));
+  assert.equal(unit.pendingInterior, true);
   assert.deepEqual(unit.pts[0], { x: proposal.floor.polygons.find((item) => item.polygonId === unit.polygonId).polygon[0][0], y: proposal.floor.polygons.find((item) => item.polygonId === unit.polygonId).polygon[0][1] });
 });
 
@@ -300,4 +301,56 @@ test("Cabida version references are stable and change with geometry inputs", () 
   assert.equal(a, b);
   assert.notEqual(a, c);
   assert.match(a, /^cabida_p1_/);
+});
+
+const acceptedFloor = () => ({
+  sourceCabidaVersionId: "cabida_p1_units",
+  polygons: [
+    { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: [[8, 0], [10, 0], [10, 8], [8, 8]] },
+    { polygonId: "hall", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: [[0, 8], [18, 8], [18, 9], [0, 9]] },
+    { polygonId: "shaft", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: [[8, 9], [10, 9], [10, 10], [8, 10]] },
+    { polygonId: "unit-a", role: "unidad", name: "unidad A", unitRef: "unit-a", unitProgram: { dormitorios: 1, banos: 1 }, polygon: [[0, 0], [8, 0], [8, 8], [0, 8]] },
+    { polygonId: "unit-b", role: "unidad", name: "unidad B", unitRef: "unit-b", unitProgram: { dormitorios: 1, banos: 1 }, polygon: [[10, 0], [18, 0], [18, 8], [10, 8]] },
+  ],
+});
+
+test("accepted Cabida floors split locked infrastructure from unit boundaries", () => {
+  const result = interior.splitAcceptedFloor(acceptedFloor());
+  assert.deepEqual(result.lockedRooms.map((room) => room.tipo), ["core", "pasillo", "void"]);
+  assert.ok(result.lockedRooms.every((room) => room.locked === true));
+  assert.deepEqual(result.units.map((unit) => unit.unitRef), ["unit-a", "unit-b"]);
+  assert.deepEqual(result.units[0].program, { dormitorios: 1, banos: 1 });
+  assert.deepEqual(result.units[0].boundary, square(0, 0, 8, 8));
+});
+
+test("accepted units are designed sequentially and infrastructure remains unchanged", async () => {
+  const calls = [];
+  const translate = (layout, dx) => ({ ambientes: layout.ambientes.map((room) => ({ ...room, poligono: room.poligono.map(([x, y]) => [x + dx, y]) })) });
+  const result = await interior.materializeUnitInteriors({
+    floor: acceptedFloor(),
+    designUnit: async (unit) => {
+      calls.push(`design:${unit.unitRef}`);
+      return { layout: translate(completeLayout, unit.unitRef === "unit-b" ? 10 : 0) };
+    },
+    reviseUnit: async () => assert.fail("valid unit geometry must not be revised"),
+  });
+  assert.deepEqual(calls, ["design:unit-a", "design:unit-b"]);
+  assert.deepEqual(result.rooms.filter((room) => room.locked).map((room) => room.id), ["core", "hall", "shaft"]);
+  assert.equal(result.rooms.filter((room) => room.unitRef === "unit-a").length, 4);
+  assert.ok(result.rooms.filter((room) => room.unitRef).every((room) => room.id.startsWith(`${room.unitRef}:`)));
+  assert.ok(result.items.every((item) => item.id.startsWith(`${item.unitRef}:`)));
+});
+
+test("a unit that still fails after one revision remains a pending envelope", async () => {
+  let revisions = 0;
+  const invalid = { ambientes: completeLayout.ambientes.slice(0, 2) };
+  const result = await interior.materializeUnitInteriors({
+    floor: acceptedFloor(),
+    designUnit: async (unit) => ({ layout: unit.unitRef === "unit-a" ? completeLayout : invalid }),
+    reviseUnit: async () => { revisions += 1; return { layout: invalid }; },
+  });
+  assert.equal(revisions, 1);
+  assert.ok(result.rooms.some((room) => room.unitRef === "unit-b" && room.pendingInterior === true));
+  assert.ok(result.rooms.some((room) => room.unitRef === "unit-a" && !room.pendingInterior));
+  assert.equal(result.unitResults.find((unit) => unit.unitRef === "unit-b").ok, false);
 });
