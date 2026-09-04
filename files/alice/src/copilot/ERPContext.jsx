@@ -12,10 +12,27 @@ export function ERPContextProvider({ children }) {
   // ERP entero. El snapshot se lee recién cuando se manda un turno.
   const registry = useRef(new Map());   // moduleId → () => descripción
   const activeId = useRef(null);
+  // La última descripción de lo que estabas mirando, congelada al desmontar.
+  // Existe porque el chat de Alicia ocupa la pantalla entera: es UN space más,
+  // no un panel al costado. Para escribirle tenés que salir de Cabida (o de
+  // Velocity, Cotización, Obra, Mesa, Growth), y salir = desmontar = el módulo
+  // se borra del registro antes de que llegues a teclear. Sin esto el snapshot
+  // siempre llega vacío. "En qué estoy trabajando", cuando estás hablando con
+  // Alicia, es el módulo del que acabás de salir.
+  const ultimoVisto = useRef(null);
 
   const register = useCallback((moduleId, describeFn) => {
     registry.current.set(moduleId, describeFn);
     return () => {
+      // Antes de soltarlo, guardar la foto: es lo único que va a quedar de este
+      // módulo cuando la persona ya esté en el chat. Un describe() roto no puede
+      // impedir un desmontaje, así que va envuelto.
+      try {
+        const d = describeFn();
+        if (d) ultimoVisto.current = { module: moduleId, ...d };
+      } catch (e) {
+        console.warn(`[copilot] describe() de "${moduleId}" falló al desmontar:`, e);
+      }
       registry.current.delete(moduleId);
       // Si el que se desmonta era el activo, hay que soltarlo: si no, queda
       // apuntando a un módulo que ya no existe y ningún otro lo va a corregir
@@ -37,7 +54,16 @@ export function ERPContextProvider({ children }) {
         console.warn(`[copilot] describe() de "${moduleId}" falló:`, e);
       }
     }
-    return buildSnapshot(entries, activeId.current);
+    // Si el registro no tiene activo —el caso normal al estar en el chat— entra
+    // la última foto. Se agrega como una entrada más para no tocar el contrato
+    // de buildSnapshot: sigue recibiendo entradas y un moduleId activo.
+    let activo = activeId.current;
+    if (!entries.some((e) => e.module === activo)
+      && ultimoVisto.current && !registry.current.has(ultimoVisto.current.module)) {
+      entries.push(ultimoVisto.current);
+      activo = ultimoVisto.current.module;
+    }
+    return buildSnapshot(entries, activo);
   }, []);
 
   // Memoizado: si no, cada render de ERPContextProvider crea un objeto nuevo y
