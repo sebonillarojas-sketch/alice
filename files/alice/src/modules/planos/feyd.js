@@ -65,6 +65,7 @@ export function layoutARooms(layout) {
   const used = new Set();
   const tipoDe = (n = "") => {
     const s = n.toLowerCase();
+    if (/luz[ -]?cenital|patio de luz|ducto|shaft|vac[ií]o/.test(s)) return "void";
     if (s.includes("pasillo") || s.includes("corredor")) return "pasillo";
     if (s.includes("core")) return "core";
     if (["baño", "bano", "lavand", "depósito", "deposito"].some((k) => s.includes(k))) return "servicio";
@@ -110,8 +111,13 @@ function overlapArea(a, b) {
   return clipped.length >= 3 ? area(clipped) : 0;
 }
 
+const ignoresOverlap = (a, b) => {
+  if (a.tipo === "void" || b.tipo === "void") return true;
+  return (a.tipo === "core" && b.tipo === "pasillo") || (a.tipo === "pasillo" && b.tipo === "core");
+};
+
 export function validateGeneratedInterior({ rooms = [], items = [], boundary = null, program = {} } = {}) {
-  const base = validarPlan({ rooms, items, limite: boundary });
+  const base = validarPlan({ rooms: rooms.filter((room) => room.tipo !== "void"), items, limite: boundary });
   const findings = [];
   const bedrooms = countNamed(rooms, /dorm|habitaci[oó]n/);
   const bathrooms = countNamed(rooms, /ba[ñn]o/);
@@ -124,7 +130,7 @@ export function validateGeneratedInterior({ rooms = [], items = [], boundary = n
   for (let i = 0; i < rooms.length; i++) {
     if (area(rooms[i].pts || []) < 0.5) findings.push({ code: "invalid_room_area", severity: "major", targetId: rooms[i].id, message: `${rooms[i].name} no tiene área útil` });
     for (let j = i + 1; j < rooms.length; j++) {
-      if (overlapArea(rooms[i], rooms[j]) > 0.05) findings.push({ code: "overlapping_rooms", severity: "major", targetId: rooms[i].id, message: `${rooms[i].name} se superpone con ${rooms[j].name}` });
+      if (!ignoresOverlap(rooms[i], rooms[j]) && overlapArea(rooms[i], rooms[j]) > 0.05) findings.push({ code: "overlapping_rooms", severity: "major", targetId: rooms[i].id, message: `${rooms[i].name} se superpone con ${rooms[j].name}` });
     }
   }
   findings.push(...base.fueraLote.map((entry) => ({ code: "outside_boundary", severity: "major", targetId: entry.id, message: `${entry.name} está fuera de la huella` })));
@@ -138,7 +144,7 @@ export function materializeInteriorLayout(layout, { boundary = null, program = {
   const extent = bbox((boundary?.length ? boundary : rooms.flatMap((room) => room.pts)) || []);
   const width = Math.max(0, extent.maxX - extent.minX);
   const depth = Math.max(0, extent.maxY - extent.minY);
-  const localRooms = rooms.map((room) => ({ ...room, pts: room.pts.map((point) => ({ x: point.x - extent.minX, y: point.y - extent.minY })) }));
+  const localRooms = rooms.filter((room) => room.tipo !== "void").map((room) => ({ ...room, pts: room.pts.map((point) => ({ x: point.x - extent.minX, y: point.y - extent.minY })) }));
   const items = amoblarDesdeLayout(localRooms, width, depth, program.nse || "C")
     .map((item) => ({ ...item, x: r2(item.x + extent.minX), y: r2(item.y + extent.minY) }));
   return { rooms, items, validation: validateGeneratedInterior({ rooms, items, boundary, program }) };

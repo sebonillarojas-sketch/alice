@@ -131,6 +131,32 @@ test("generated interiors reject incomplete residential programs", () => {
   assert.deepEqual(result.validation.findings.map((finding) => finding.code), ["missing_bedrooms", "missing_bathrooms"]);
 });
 
+test("infrastructure and daylight overlays do not count as room overlaps", () => {
+  const layout = {
+    ambientes: [
+      { nombre: "core", ref_id: "core", tipo: "core", poligono: [[0, 0], [2, 0], [2, 8], [0, 8]] },
+      { nombre: "corredor", ref_id: "corridor", tipo: "pasillo", poligono: [[0, 3], [8, 3], [8, 4], [0, 4]] },
+      { nombre: "sala", ref_id: "social", poligono: [[2, 0], [5, 0], [5, 3], [2, 3]] },
+      { nombre: "cocina", ref_id: "kitchen", poligono: [[5, 0], [8, 0], [8, 3], [5, 3]] },
+      { nombre: "baño 1", ref_id: "bath", poligono: [[2, 4], [5, 4], [5, 8], [2, 8]] },
+      { nombre: "luz cenital", ref_id: "skylight", poligono: [[3, 5], [4, 5], [4, 6], [3, 6]] },
+    ],
+  };
+  const rooms = interior.layoutARooms(layout);
+  assert.equal(rooms.find((room) => room.id === "skylight").tipo, "void");
+  const validation = interior.validateGeneratedInterior({ rooms, boundary: square(0, 0, 8, 8), program: { dormitorios: 0, banos: 1 } });
+  assert.equal(validation.findings.some((finding) => finding.code === "overlapping_rooms"), false);
+});
+
+test("occupiable rooms still fail when they materially overlap", () => {
+  const rooms = interior.layoutARooms({ ambientes: [
+    { nombre: "sala", ref_id: "social", poligono: [[0, 0], [5, 0], [5, 4], [0, 4]] },
+    { nombre: "cocina", ref_id: "kitchen", poligono: [[4, 0], [8, 0], [8, 4], [4, 4]] },
+  ] });
+  const validation = interior.validateGeneratedInterior({ rooms, boundary: square(0, 0, 8, 8), program: { dormitorios: 0, banos: 0 } });
+  assert.equal(validation.findings.some((finding) => finding.code === "overlapping_rooms"), true);
+});
+
 test("architecture context distinguishes the lot from the design boundary", () => {
   assert.equal(typeof architectureApi.buildArchitectureContext, "function");
   const lotBoundary = square(0, 0, 12, 12);
