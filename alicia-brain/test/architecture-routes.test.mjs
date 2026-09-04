@@ -59,3 +59,15 @@ test("malformed model output maps to 502", async () => {
     assert.equal(response.status, 502);
   });
 });
+
+test("floor-plan endpoint returns the selected valid source", async () => {
+  const selected = { summary: "Floor", floor: { sourceCabidaVersionId: "cabida_v1", polygons: [] }, assumptions: [], tradeoffs: [] };
+  const service = { planFloor: async () => ({ originalProposal: selected, revision: null, validation: { ok: true, findings: [] }, selected, source: "tweedledum", promptVersion: "1.0.0" }) };
+  await withServer(createArchitectureRouter({ service }), async (base) => {
+    const response = await fetch(`${base}/tweedledum/floor-plan`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ any: "payload" }) });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.source, "tweedledum");
+    assert.equal(body.selected.floor.sourceCabidaVersionId, "cabida_v1");
+  });
+});

@@ -24,6 +24,7 @@ const handler = (fn) => async (req, res) => {
 export function createArchitectureRouter({ service = createArchitectureService() } = {}) {
   const router = express.Router();
   router.get("/agents", (_req, res) => res.json({ agents: publicAgentRegistry() }));
+  router.post("/tweedledum/floor-plan", handler((body) => service.planFloor(body)));
   router.post("/tweedledum/design", handler((body) => service.design(body)));
   router.post("/tweedledum/revise", handler((body) => service.revise(body)));
   router.post("/tweedledee/critique", handler((body) => service.critique(body)));

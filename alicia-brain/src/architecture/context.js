@@ -17,6 +17,7 @@ export function normalizeProjectContext(input = {}) {
     lockedElements: cloneArray(input.lockedElements),
     assumptions: cloneArray(input.assumptions),
     sourcePlanVersionId: input.sourcePlanVersionId == null ? null : String(input.sourcePlanVersionId),
+    sourceCabidaVersionId: input.sourceCabidaVersionId == null ? null : String(input.sourceCabidaVersionId),
     verifiedEvidence: cloneArray(input.verifiedEvidence)
       .filter((e) => e && typeof e === "object" && e.id)
       .map((e) => ({
