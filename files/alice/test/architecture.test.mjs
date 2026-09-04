@@ -10,7 +10,7 @@ import {
 } from "../src/modules/planos/architecture.js";
 import * as interior from "../src/modules/planos/feyd.js";
 import * as architectureApi from "../src/modules/planos/architecture.js";
-import { fallbackFloorProposal, proposalToParti } from "../src/modules/cabida/floorProposal.js";
+import { acceptFloorProposalRecord, appendFloorProposalRecord, cabidaVersionId, fallbackFloorProposal, proposalToParti } from "../src/modules/cabida/floorProposal.js";
 
 const square = (x0, y0, x1, y1) => [
   { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
@@ -263,4 +263,41 @@ test("floor proposal preview preserves polygon and unit metadata", () => {
   assert.ok(unit.unitRef);
   assert.ok(Number.isInteger(unit.unitProgram.dormitorios));
   assert.deepEqual(unit.pts[0], { x: proposal.floor.polygons.find((item) => item.polygonId === unit.polygonId).polygon[0][0], y: proposal.floor.polygons.find((item) => item.polygonId === unit.polygonId).polygon[0][1] });
+});
+
+test("floor planning client calls the dedicated architecture endpoint", async () => {
+  let requested = null;
+  const payload = { context: { project: { id: "p1", name: "DC01" } } };
+  const result = await architectureApi.planFloorWithTweedledum(payload, { fetchImpl: async (url, init) => {
+    requested = { url, init };
+    return { ok: true, json: async () => ({ source: "tweedledum" }) };
+  } });
+  assert.match(requested.url, /\/api\/architecture\/tweedledum\/floor-plan$/);
+  assert.deepEqual(JSON.parse(requested.init.body), payload);
+  assert.equal(result.source, "tweedledum");
+});
+
+test("floor proposal records append immutably and acceptance bridges to Planos", () => {
+  const project = { id: "p1", nombre: "DC01", cabida: {}, plano: { rooms: [{ id: "old" }] } };
+  const selected = fallbackFloorProposal({ footprint: square(0, 0, 14, 12), frontIdx: 0, brief: { udsPiso: 2, pct1: 50, pct2: 50, areaObjetivo: 36 }, sourceCabidaVersionId: "cabida_p1_a" });
+  const first = appendFloorProposalRecord(project, { source: "tweedledum", selected, validation: { ok: true, findings: [] }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:00:00.000Z" });
+  const second = appendFloorProposalRecord(first.project, { source: "revision", selected, validation: { ok: true, findings: [] }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:01:00.000Z" });
+  assert.equal(project.cabida.floorProposals, undefined);
+  assert.equal(second.record.version, 2);
+  assert.equal(second.record.parentProposalId, first.record.id);
+  assert.equal(second.project.cabida.floorProposals.length, 2);
+
+  const accepted = acceptFloorProposalRecord(second.project, first.record.id);
+  assert.equal(accepted.cabida.activeFloorProposalId, first.record.id);
+  assert.deepEqual(accepted.plano.floorProposal, first.record);
+  assert.deepEqual(accepted.plano.rooms, [{ id: "old" }]);
+});
+
+test("Cabida version references are stable and change with geometry inputs", () => {
+  const a = cabidaVersionId("p1", { footprint: [[0, 0], [10, 0], [10, 10]], unitsPerFloor: 2 });
+  const b = cabidaVersionId("p1", { footprint: [[0, 0], [10, 0], [10, 10]], unitsPerFloor: 2 });
+  const c = cabidaVersionId("p1", { footprint: [[0, 0], [11, 0], [10, 10]], unitsPerFloor: 2 });
+  assert.equal(a, b);
+  assert.notEqual(a, c);
+  assert.match(a, /^cabida_p1_/);
 });

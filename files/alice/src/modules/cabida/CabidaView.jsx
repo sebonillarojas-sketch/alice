@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
+import { useProyectos } from "./proyectos.js";
 
 const C = {
   ink: "#373737",
@@ -127,6 +128,7 @@ function Kpi({ label, value, unit, accent }) {
 const loadCabida = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || {}; } catch { return {}; } };
 
 export default function CabidaView({ initialTerreno, initialValorTerreno, compact, scopeKey, onTerrenoChange }) {
+  const { activo: proyectoActivo, store: proyectosStore } = useProyectos();
   // scopeKey (ej. terreno.id) → cada terreno guarda su cabida aparte; sin scope, estado global (app standalone)
   const STORE_KEY = scopeKey ? `hygge:cabidaState:${scopeKey}` : "hygge:cabidaState";
   const S = useRef(loadCabida(STORE_KEY)).current;            // snapshot guardado (ida y vuelta al editor)
@@ -504,6 +506,11 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
             frenteIdxOverride={frenteIdx} onFrente={setFrenteIdx}
             partiIdx={partiIdx} onParti={setPartiIdx}
             movs={movs} onMovs={setMovs} onFrenteReal={setFrente}
+            project={proyectoActivo}
+            floorProposals={proyectoActivo?.cabida?.floorProposals || []}
+            activeFloorProposalId={proyectoActivo?.cabida?.activeFloorProposalId || null}
+            onProposalGenerated={(result) => proyectosStore.addFloorProposal(proyectoActivo.id, result)}
+            onAcceptFloor={(proposalId) => proyectosStore.acceptFloorProposal(proyectoActivo.id, proposalId)}
           />
         </Card>
       </div>

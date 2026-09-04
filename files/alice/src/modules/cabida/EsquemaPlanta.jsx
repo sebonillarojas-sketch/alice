@@ -3,6 +3,8 @@ import { computeEsquema } from "./esquema.js";
 import { footprintReal } from "./loteReal.js";
 import { generarDistribuciones } from "../planos/plantas.js";
 import { bbox as polyBbox, centroid, dist, area as polyArea } from "../planos/geometry.js";
+import { planFloorWithTweedledum } from "../planos/architecture.js";
+import { cabidaVersionId, fallbackFloorProposal, proposalToParti } from "./floorProposal.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -275,10 +277,15 @@ export default function EsquemaPlanta({
   terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
   frente, tipoLote, retiros, lotePoly, cadInfo,
   frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
+  project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor,
   soloPlanta = false,
 }) {
   const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
+  const [floorBusy, setFloorBusy] = useState(false);
+  const [floorError, setFloorError] = useState("");
+  const [floorResult, setFloorResult] = useState(null);
+  const [acceptedFloorId, setAcceptedFloorId] = useState(activeFloorProposalId);
   const svgRef = useRef(null);
 
   // retiros efectivos (solo los activos cuentan); vienen definidos en el card 01
@@ -296,8 +303,11 @@ export default function EsquemaPlanta({
   // frenteIdx efectivo = override manual (clic en lindero) > el que dedujo el CAD.
   const frenteIdx = frenteIdxOverride ?? cadInfo?.frenteIdx ?? 0;
   const real = useMemo(() => {
-    if (!lotePoly || lotePoly.length < 3) return null;
-    const { lote, footprint } = footprintReal(lotePoly, frenteIdx, tipoLote, retiros);
+    const sourceLot = lotePoly?.length >= 3 ? lotePoly : [
+      { x: 0, y: 0 }, { x: frente, y: 0 },
+      { x: frente, y: terreno / Math.max(frente, 1) }, { x: 0, y: terreno / Math.max(frente, 1) },
+    ];
+    const { lote, footprint } = footprintReal(sourceLot, frenteIdx, tipoLote, retiros);
     let partis = [];
     try {
       partis = generarDistribuciones(footprint, frenteIdx, {
@@ -305,8 +315,72 @@ export default function EsquemaPlanta({
       }) || [];
     } catch { partis = []; }
     return { lote, footprint, partis };
-  }, [lotePoly, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
-  const parti = real?.partis?.[Math.min(partiIdx, Math.max((real?.partis?.length || 1) - 1, 0))] || null;
+  }, [lotePoly, terreno, frente, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
+  const totalUnits = Math.max(1, Math.round(e.uPorPiso));
+  const dormitorios1 = Math.min(totalUnits, Math.round(totalUnits * mix1 / 100));
+  const dormitorios2 = Math.min(totalUnits - dormitorios1, Math.round(totalUnits * mix2 / 100));
+  const bedroomMix = { dormitorios1, dormitorios2, dormitorios3: Math.max(0, totalUnits - dormitorios1 - dormitorios2) };
+  const compactFootprint = real?.footprint?.map((point) => [Number(point.x), Number(point.y)]) || [];
+  const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto };
+  const currentCabidaVersionId = cabidaVersionId(project?.id || "cabida", versionInputs);
+  const currentResult = floorResult?.selected?.floor?.sourceCabidaVersionId === currentCabidaVersionId ? floorResult : null;
+  const latestRecord = [...floorProposals].reverse().find((record) => record.sourceCabidaVersionId === currentCabidaVersionId) || null;
+  const displayedRecord = currentResult?.record || latestRecord;
+  const displayedProposal = currentResult?.selected || (displayedRecord ? {
+    summary: displayedRecord.summary,
+    floor: displayedRecord.floor,
+    assumptions: [],
+    tradeoffs: [],
+  } : null);
+  const proposedParti = displayedProposal ? proposalToParti(displayedProposal) : null;
+  const parti = proposedParti || real?.partis?.[Math.min(partiIdx, Math.max((real?.partis?.length || 1) - 1, 0))] || null;
+
+  const proposeFloor = async () => {
+    if (!real?.footprint?.length || floorBusy) return;
+    setFloorBusy(true); setFloorError("");
+    try {
+      const total = totalUnits;
+      const footprint = compactFootprint;
+      const lotBoundary = real.lote.map((point) => [Number(point.x), Number(point.y)]);
+      const sourceCabidaVersionId = currentCabidaVersionId;
+      const deterministicFallback = fallbackFloorProposal({
+        footprint: real.footprint,
+        frontIdx: frenteIdx,
+        brief: { udsPiso: total, pct1: mix1, pct2: mix2, areaObjetivo: areaDpto },
+        sourceCabidaVersionId,
+      });
+      const result = await planFloorWithTweedledum({
+        context: {
+          project: { id: project?.id || "cabida", name: project?.nombre || "Proyecto Cabida" },
+          sourceCabidaVersionId,
+          site: { buildableFootprint: footprint, lotBoundary, frontEdgeIndex: frenteIdx, lotType: tipoLote },
+          constraints: { setbacksApplied: true },
+          lockedElements: [],
+          verifiedEvidence: [],
+        },
+        floorBrief: { unitsPerFloor: total, bedroomMix, targetAverageArea: areaDpto, areaTolerance: 0.2 },
+        deterministicFallback,
+      });
+      const record = onProposalGenerated?.(result) || null;
+      setFloorResult({ ...result, record });
+      setAcceptedFloorId(null);
+    } catch (error) {
+      setFloorError(error?.message || "No se pudo proponer la planta");
+    } finally { setFloorBusy(false); }
+  };
+
+  const acceptFloor = () => {
+    const proposalId = floorResult?.record?.id || displayedRecord?.id;
+    if (!proposalId) return;
+    onAcceptFloor?.(proposalId);
+    setAcceptedFloorId(proposalId);
+  };
+
+  const sourceLabel = currentResult?.source === "revision" ? "revisión de Tweedledum"
+    : currentResult?.source === "deterministic_fallback" ? "respaldo determinístico"
+      : currentResult?.source === "tweedledum" ? "Tweedledum" : displayedRecord?.source || null;
+
+  useEffect(() => { setAcceptedFloorId(activeFloorProposalId); }, [activeFloorProposalId]);
 
   // cambia el frente al clic en un lindero (y actualiza el frente numérico = largo del borde)
   const elegirFrente = (i) => {
@@ -393,7 +467,7 @@ export default function EsquemaPlanta({
                       ↺ reset
                     </button>
                   )}
-                  {real.partis.map((p, i) => (
+                  {!proposedParti && real.partis.map((p, i) => (
                     <button key={i} onClick={() => onParti?.(i)} title={p.notas?.join(" · ")}
                       style={{ fontFamily: mono, fontSize: 9, padding: "2px 8px", borderRadius: 2, cursor: "pointer",
                         color: i === partiIdx ? C.card : C.ink, background: i === partiIdx ? C.ink : C.paper,
@@ -409,6 +483,20 @@ export default function EsquemaPlanta({
               <div style={{ fontFamily: mono, fontSize: 9, color: C.soft, marginTop: 6 }}>
                 clic en un lindero = marcarlo como frente · arrastra un bloque para moverlo
               </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 12 }}>
+                <button onClick={proposeFloor} disabled={floorBusy}
+                  style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: floorBusy ? "wait" : "pointer", color: C.card, background: floorBusy ? C.soft : C.ink, border: `1px solid ${floorBusy ? C.soft : C.ink}` }}>
+                  {floorBusy ? "Diseñando planta…" : "Proponer planta con Tweedledum"}
+                </button>
+                {displayedRecord && (
+                  <button onClick={acceptFloor} disabled={acceptedFloorId === displayedRecord.id}
+                    style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: acceptedFloorId === displayedRecord.id ? "default" : "pointer", color: acceptedFloorId === displayedRecord.id ? C.soft : C.orange, background: C.card, border: `1px solid ${acceptedFloorId === displayedRecord.id ? C.line : C.orange}` }}>
+                    {acceptedFloorId === displayedRecord.id ? "✓ aceptada para Planos" : "Aceptar y enviar a Planos"}
+                  </button>
+                )}
+                {sourceLabel && <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>origen: {sourceLabel}</span>}
+              </div>
+              {floorError && <div style={{ fontFamily: mono, fontSize: 10.5, color: "#A85B5B", marginTop: 8, lineHeight: 1.5 }}>{floorError}</div>}
             </>
           ) : (
             <>

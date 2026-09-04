@@ -127,6 +127,7 @@ async function callArchitecture(path, payload, fetchImpl = fetch) {
 }
 
 export const designWithTweedledum = (payload, options = {}) => callArchitecture("tweedledum/design", payload, options.fetchImpl);
+export const planFloorWithTweedledum = (payload, options = {}) => callArchitecture("tweedledum/floor-plan", payload, options.fetchImpl);
 export const reviseWithTweedledum = (payload, options = {}) => callArchitecture("tweedledum/revise", payload, options.fetchImpl);
 export const critiqueWithTweedledee = (payload, options = {}) => callArchitecture("tweedledee/critique", payload, options.fetchImpl);
 export const runArchitectureCycle = (payload, options = {}) => callArchitecture("review-cycle", payload, options.fetchImpl);
