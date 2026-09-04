@@ -663,7 +663,21 @@ export default function MercadoView() {
       acabados: factors.acabados,
       storytelling: factors.storytelling,
     },
-    derived: { proyectosEnMercado: liveProjects.length, datosAl: marketTs },
+    // Lo que el módulo YA calculó, para que Alicia razone sin recalcular. Son
+    // los números por los que existe Velocity: sin ellos el snapshot contaba
+    // los inputs y se guardaba el resultado. `absorption`, `tornado` y `spider`
+    // son arrays de puntos de gráfico y no entran; del tornado va sólo lo único
+    // que se puede decir en una palabra: qué palanca mueve más la aguja.
+    derived: {
+      velocidadUMes: velocity ? Number(velocity.toFixed(1)) : null,
+      mesesParaVender: absMonths,
+      storyScore,
+      ingresosEstimadosMUSD: revenueEst,
+      precioMercadoM2: marketRef,
+      factorMasSensible: tornado[0]?.label || null,
+      proyectosEnMercado: liveProjects.length,
+      datosAl: marketTs,
+    },
     actions: [],
   }));
 
