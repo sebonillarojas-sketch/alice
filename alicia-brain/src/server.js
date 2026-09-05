@@ -693,7 +693,16 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   ];
 
   let iterations = 0;
-  const MAX_ITERATIONS = 8;
+  // El cliente puede irse en cualquier momento (cerró la pestaña, se cayó la red).
+  // Si emitir tirara, el turno moriría acá y no se guardarían ni el mensaje ni las
+  // memorias. Emitir es best-effort SIEMPRE.
+  const emitir = (evento) => {
+    try { opts.onEvent?.(evento); } catch (e) { console.error("onEvent falló:", e.message); }
+  };
+  // Un turno del copiloto encadena más pasos que uno de WhatsApp: navega, lee,
+  // calcula. WhatsApp se queda en 8 a propósito.
+  let yaHuboTexto = false;
+  const MAX_ITERATIONS = channel === "copilot" ? 16 : 8;
 
   // Clon nocturno (SANDBOX=1): cortocircuito ANTES de tocar el LLM real — no gasta
   // tokens/plata. El chaos/fuzz del clon igual ejercita todo el pipeline hasta acá
@@ -706,9 +715,16 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
 
   while (!isSandbox() && iterations < MAX_ITERATIONS) {
     iterations++;
+    // Segunda vuelta o más: lo que el cliente ya pintó pertenece a la iteración
+    // anterior, que el cerebro va a descartar (sólo se guarda el último finalText).
+    // Sin este reset la pantalla y la base terminan diciendo cosas distintas.
+    if (iterations > 1 && yaHuboTexto) { emitir({ type: "text_reset" }); yaHuboTexto = false; }
     let resp;
     try {
-      resp = await anthropic.messages.create({
+      // .stream() en vez de .create(): el cuerpo del pedido es idéntico, pero permite
+      // ir emitiendo el texto mientras llega. finalMessage() devuelve exactamente el
+      // mismo objeto que create() devolvía, así que el resto del loop no se entera.
+      const st = anthropic.messages.stream({
         model,
         max_tokens: maxTokens,
         // Profundidad de razonamiento: "medium" para chat normal (latencia de chat);
@@ -720,11 +736,18 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
         tool_choice: { type: "auto" },
         messages: loopMessages,
       });
+      if (opts.onEvent) {
+        st.on("text", (delta) => {
+          if (!yaHuboTexto) { yaHuboTexto = true; }
+          emitir({ type: "text_delta", text: delta });
+        });
+      }
+      resp = await st.finalMessage();
     } catch (e) {
       // Si Fable no está disponible para esta cuenta, caemos a Sonnet sin romper el chat
       if (maximumEffort && /model|not_found/i.test(e.message)) {
         console.warn("Fable no disponible, fallback a Sonnet:", e.message.slice(0, 80));
-        resp = await anthropic.messages.create({
+        const stFallback = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
           max_tokens: maxTokens,
           output_config: { effort: maximumEffort ? "high" : "medium" },
@@ -733,6 +756,11 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
           tool_choice: { type: "auto" },
           messages: loopMessages,
         });
+        // Mismo manejo que el stream principal, yaHuboTexto incluido: si el fallback
+        // produce texto y no lo marcamos, la iteración siguiente no emite text_reset
+        // y la burbuja queda con dos respuestas pegadas.
+        if (opts.onEvent) stFallback.on("text", (delta) => { yaHuboTexto = true; emitir({ type: "text_delta", text: delta }); });
+        resp = await stFallback.finalMessage();
       } else throw e;
     }
 
@@ -764,6 +792,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     for (const block of toolUseBlocks) {
       let result;
       try {
+        emitir({ type: "tool_start", id: block.id, tool: block.name, input: block.input });
         if (admin && SENSITIVE_ADMIN.has(block.name)) {
           // acción sensible de un admin → no se ejecuta; se manda a aprobación del CEO
           result = await encolarAprobacion(userId, profile?.name?.split(" ")[0] || userId, block.name, block.input);
@@ -773,9 +802,11 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
           console.log(`🔧 [${userId}] ${block.name}:`, JSON.stringify(block.input).slice(0, 100));
         }
         toolResults.push({ tool: block.name, input: block.input, result });
+        emitir({ type: "tool_done", id: block.id, tool: block.name, ok: true });
       } catch (e) {
         result = `Error al ejecutar ${block.name}: ${e.message}`;
         console.error(`Tool ${block.name} error:`, e.message);
+        emitir({ type: "tool_done", id: block.id, tool: block.name, ok: false });
       }
       toolResultContents.push({ type: "tool_result", tool_use_id: block.id, content: result });
     }
