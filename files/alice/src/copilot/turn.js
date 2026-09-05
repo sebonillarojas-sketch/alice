@@ -1,7 +1,12 @@
 // Abre un turno del copiloto y va entregando los eventos a medida que llegan.
 import { crearParserSSE } from "./sseParser.js";
 
-export async function abrirTurno({ url, token, body, onEvento, signal }) {
+// `onActividad` (opcional) se llama por cada chunk que llega del servidor, ANTES de
+// parsearlo. No es lo mismo que `onEvento`: los latidos (`: ping`) son comentarios y
+// el parser los descarta, así que nunca llegan a `onEvento` — pero son exactamente la
+// prueba de que la conexión sigue viva mientras una herramienta lenta corre sin emitir
+// nada. Quien mide inactividad tiene que mirar bytes, no eventos.
+export async function abrirTurno({ url, token, body, onEvento, onActividad, signal }) {
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -34,6 +39,7 @@ export async function abrirTurno({ url, token, body, onEvento, signal }) {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      onActividad?.();
       // stream:true es obligatorio: un carácter multibyte (un acento, un emoji)
       // puede quedar partido entre dos chunks y sin esto se decodifica como basura.
       parser.alimentar(decoder.decode(value, { stream: true }));

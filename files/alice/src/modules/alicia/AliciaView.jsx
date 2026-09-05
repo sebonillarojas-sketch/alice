@@ -723,6 +723,23 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     // catch tiene que poder decir qué herramientas alcanzaron a correr. Declarado
     // dentro del try, el mensaje de error perdía ese registro.
     let pasos = [];
+    // Techo por INACTIVIDAD, no por reloj de pared. El de pared que había (120s) no
+    // alcanza: este canal permite 16 iteraciones y un turno con dropbox_read +
+    // gmail_search + web_search pasa los dos minutos sin estar colgado. Al cortarlo,
+    // el cerebro igual terminaba y GUARDABA la respuesta, así que el usuario reintentaba
+    // y pagaba un turno entero de más. Lo que sí hay que cortar es el silencio: el
+    // cerebro late cada 15s (`: ping`), así que 90s sin recibir un solo byte son 6
+    // latidos perdidos — eso ya no es un turno lento, es una conexión muerta.
+    const SILENCIO_MAX = 90000;
+    const aborto = new AbortController();
+    let porInactividad = false;
+    let ocioso = null;
+    const rearmarOcioso = () => {
+      clearTimeout(ocioso);
+      if (terminado) return;
+      ocioso = setTimeout(() => { porInactividad = true; aborto.abort(); }, SILENCIO_MAX);
+    };
+    rearmarOcioso();   // el silencio antes del primer byte también cuenta
 
     try {
       // Alicia vive en el backend (aliceai): cerebro Claude, memoria y herramientas.
@@ -758,11 +775,10 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         // userId solo viaja para el "ver como" del CEO; el servidor lo ignora
         // para cualquier otro y toma la identidad del JWT.
         body: { userId: selectedUserId, message: text.trim(), erpContext: takeSnapshot() },
-        // Techo duro. El POST /api/chat que esto reemplaza tenía uno de 60s; sin
-        // nada, una conexión colgada deja `sending` en true para siempre y el
-        // composer muerto sin forma de salir. Con streaming el usuario ve avance,
-        // así que damos el doble antes de cortar.
-        signal: AbortSignal.timeout(120000),
+        // Sin ningún techo, una conexión colgada deja `sending` en true para siempre
+        // y el composer muerto sin forma de salir. El techo lo lleva `rearmarOcioso`.
+        signal: aborto.signal,
+        onActividad: rearmarOcioso,
         onEvento: ({ event, data }) => {
           // `?? ""` y no `data.text` pelado: un frame malformado pegaría el literal
           // "undefined" en medio de la respuesta.
@@ -816,11 +832,22 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       speak(responseText);
     } catch (err) {
       // `newHistory` no incluye la burbuja en vivo: reemplazar por esto la borra.
+      // Tres textos distintos porque son tres situaciones distintas:
+      //  - delCerebro: el cerebro avisó que cortó, así que NO guardó nada.
+      //  - inactividad: cortamos NOSOTROS. El cerebro puede haber terminado igual y
+      //    haber guardado la respuesta; decir "problema de conexión" es mentira y
+      //    empuja a un reintento que paga un turno entero de más.
+      //  - resto: fallo real de red o del servidor.
+      // Nunca metemos `err.message` en el caso de inactividad: el DOMException del
+      // AbortController dice "signal timed out" en inglés y no explica nada.
+      const contenido = err?.delCerebro
+        ? `Corté el turno a mitad (${err.message}). Lo que alcancé a escribir no quedó guardado, así que lo descarté. Probá de nuevo.`
+        : porInactividad
+          ? "Dejé de recibir respuesta del servidor y corté la espera. Puede que Alicia haya terminado igual y la respuesta esté guardada: recargá antes de volver a preguntar, así no pagás el turno dos veces."
+          : `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`;
       const errMsg = {
         role: "assistant",
-        content: err?.delCerebro
-          ? `Corté el turno a mitad (${err.message}). Lo que alcancé a escribir no quedó guardado, así que lo descarté. Probá de nuevo.`
-          : `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`,
+        content: contenido,
         actions: [], pasos, ts: Date.now(), isError: true,
       };
       const finalHistory = [...newHistory, errMsg];
@@ -828,6 +855,10 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       saveChat(selectedUserId, finalHistory);
     } finally {
       terminado = true;
+      // El timer de inactividad tiene que morir con el turno: si sobrevive, aborta
+      // un AbortController que ya no controla nada y encima mantiene el turno vivo
+      // en memoria por 90s más.
+      clearTimeout(ocioso);
       if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 50);
