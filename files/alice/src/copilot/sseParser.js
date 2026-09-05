@@ -20,8 +20,17 @@ export function crearParserSSE(onEvento) {
       let dataCruda = "";
       for (const linea of bloque.split("\n")) {
         if (linea.startsWith(":")) continue;              // comentario (el latido)
-        if (linea.startsWith("event: ")) event = linea.slice(7).trim();
-        else if (linea.startsWith("data: ")) dataCruda += linea.slice(6);
+        const colonIdx = linea.indexOf(":");
+        if (colonIdx === -1) continue;                   // sin field
+        const fieldName = linea.slice(0, colonIdx);
+        let fieldValue = linea.slice(colonIdx + 1);
+        // Spec SSE: un espacio después del colon es opcional
+        if (fieldValue.startsWith(" ")) fieldValue = fieldValue.slice(1);
+        if (fieldName === "event") event = fieldValue.trim();
+        else if (fieldName === "data") {
+          if (dataCruda) dataCruda += "\n";             // spec: múltiples data: se unen con \n
+          dataCruda += fieldValue;
+        }
       }
       if (!event) continue;                                // frame sin evento: no es nuestro
       let data;

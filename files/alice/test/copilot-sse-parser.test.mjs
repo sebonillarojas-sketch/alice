@@ -59,3 +59,20 @@ test("los acentos y emojis sobreviven", () => {
   parser.alimentar('event: text_delta\ndata: {"text":"cabida · 42 dptos 🏗"}\n\n');
   assert.equal(vistos[0].data.text, "cabida · 42 dptos 🏗");
 });
+
+test("event: y data: sin espacio después del colon funcionan (spec SSE)", () => {
+  const { vistos, parser } = recolectar();
+  parser.alimentar('event:done\ndata:{"a":1}\n\n');
+  assert.equal(vistos.length, 1);
+  assert.equal(vistos[0].event, "done");
+  assert.equal(vistos[0].data.a, 1);
+});
+
+test("múltiples data: se unen con newline, no concatenación", () => {
+  const { vistos, parser } = recolectar();
+  // SSE spec: si data: se repite, los valores se unen con \n
+  // Un JSON partido en dos líneas (como [ ... ])
+  parser.alimentar('event: test\ndata: [1,2\ndata: ,3]\n\n');
+  assert.equal(vistos.length, 1);
+  assert.deepEqual(vistos[0].data, [1, 2, 3]);
+});
