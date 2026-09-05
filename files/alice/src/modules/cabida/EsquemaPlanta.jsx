@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, lazy, Suspense, Component } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense, Component } from "react";
 import { computeEsquema } from "./esquema.js";
 import { footprintReal } from "./loteReal.js";
 import { generarDistribuciones } from "../planos/plantas.js";
