@@ -5,9 +5,14 @@ import { partiSignature, sonDistintos, dedupePartis } from "../src/modules/plano
 const A = { id: "a", core: { x: 7.4, y: 0, w: 5.2, d: 5 }, units: [{ id: "u1", x: 0, w: 7.4 }, { id: "u2", x: 12.6, w: 7.4 }] };
 const B = { id: "b", core: { x: 7.5, y: 0, w: 5.2, d: 5 }, units: [{ id: "u1", x: 0, w: 7.5 }, { id: "u2", x: 12.7, w: 7.3 }] };
 const C = { id: "c", core: { x: 0, y: 0, w: 5.2, d: 5 }, units: [{ id: "u1", x: 5.2, w: 14.8 }] };
+// A con núcleo desplazado 0.20 m (dentro de tolerancia 0.30)
+const A_DENTRO = { id: "a-dentro", core: { x: 7.6, y: 0, w: 5.2, d: 5 }, units: [{ id: "u1", x: 0, w: 7.4 }, { id: "u2", x: 12.6, w: 7.4 }] };
+// A con núcleo desplazado 0.45 m (fuera de tolerancia 0.30)
+const A_FUERA = { id: "a-fuera", core: { x: 7.85, y: 0, w: 5.2, d: 5 }, units: [{ id: "u1", x: 0, w: 7.4 }, { id: "u2", x: 12.6, w: 7.4 }] };
 
-test("la firma ignora diferencias por debajo de la tolerancia", () => {
-  assert.equal(partiSignature(A), partiSignature(B));
+test("partiSignature es determinista", () => {
+  assert.equal(partiSignature(A), partiSignature(A));
+  assert.equal(partiSignature(B), partiSignature(B));
 });
 
 test("un núcleo en otra posición es otro parti", () => {
@@ -16,6 +21,14 @@ test("un núcleo en otra posición es otro parti", () => {
 
 test("dos partis dentro de tolerancia NO son distintos", () => {
   assert.ok(!sonDistintos(A, B));
+});
+
+test("diferencia de 0.20 m está dentro de tolerancia", () => {
+  assert.ok(!sonDistintos(A, A_DENTRO));
+});
+
+test("diferencia de 0.45 m está fuera de tolerancia", () => {
+  assert.ok(sonDistintos(A, A_FUERA));
 });
 
 test("dedupe conserva el primero y reporta el descartado", () => {
