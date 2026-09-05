@@ -641,6 +641,26 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const endRef = useRef(null);
+  // ¿El usuario está mirando el fondo del hilo? Se registra en el evento de scroll
+  // y NO midiendo dentro del effect: para cuando el effect corre, el mensaje nuevo
+  // ya está en el DOM y `scrollHeight` creció, así que alguien que estaba pegado al
+  // fondo mide "lejos" y no se lo volvería a seguir nunca más.
+  const pegadoAlFondo = useRef(true);
+  const soltarScroll = useRef(null);
+  // Callback ref y no useRef+useEffect([]): la lista de mensajes está detrás del
+  // gate de `backendAvailable`, que se prende asincrónicamente cuando responde
+  // /health. Un effect con deps vacías correría antes de que el nodo exista y el
+  // listener no se ataría nunca.
+  const hiloRef = useCallback((nodo) => {
+    soltarScroll.current?.();
+    soltarScroll.current = null;
+    if (!nodo) return;
+    const onScroll = () => {
+      pegadoAlFondo.current = nodo.scrollHeight - nodo.scrollTop - nodo.clientHeight < 100;
+    };
+    nodo.addEventListener("scroll", onScroll, { passive: true });
+    soltarScroll.current = () => nodo.removeEventListener("scroll", onScroll);
+  }, []);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -691,9 +711,18 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
   const currentProfile = profiles[selectedUserId] || profiles[currentUserId];
 
-  // Scroll to bottom on new messages
+  // Scroll al fondo con mensajes nuevos, PERO sólo si el usuario ya estaba ahí.
+  // Antes del streaming `messages` cambiaba dos veces por turno; ahora cambia una
+  // vez por frame, así que seguir al fondo sin preguntar le arranca la pantalla de
+  // las manos a quien subió a releer algo, durante todo el turno.
+  //
+  // Sin `behavior: "smooth"` a propósito: a 60 repintados por segundo la animación
+  // suave se reinicia en cada frame (no se ve suave, se ve temblando) y además sus
+  // posiciones intermedias disparan eventos de scroll que apagarían `pegadoAlFondo`
+  // a mitad de camino. Instantáneo es lo correcto para un feed que crece, y es lo
+  // que hacen las terminales y los chats.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (pegadoAlFondo.current) endRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
 
   // When switching users (admin), load their chat
@@ -860,6 +889,10 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     // resucita texto que ya no existe en ningún lado.
     let rafId = null;
     let terminado = false;
+    // `pasos` (la traza) también vive acá afuera: si el turno muere a mitad, el
+    // catch tiene que poder decir qué herramientas alcanzaron a correr. Declarado
+    // dentro del try, el mensaje de error perdía ese registro.
+    let pasos = [];
 
     try {
       // Alicia vive en el backend (aliceai): cerebro Claude, memoria y herramientas.
@@ -869,7 +902,6 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
       // Burbuja del assistant que se va llenando en vivo. `pasos` es la traza.
       let acumulado = "";
-      let pasos = [];
       // Un setState por token re-renderiza AliciaView entero (1189 líneas) decenas
       // de veces por segundo. Agrupamos los repintados en el frame: se ve igual de
       // fluido y el navegador no se ahoga.
@@ -902,7 +934,9 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         // así que damos el doble antes de cortar.
         signal: AbortSignal.timeout(120000),
         onEvento: ({ event, data }) => {
-          if (event === "text_delta") { acumulado += data.text; pintar(); }
+          // `?? ""` y no `data.text` pelado: un frame malformado pegaría el literal
+          // "undefined" en medio de la respuesta.
+          if (event === "text_delta") { acumulado += data.text ?? ""; pintar(); }
           // El cerebro sólo guarda el texto de la última iteración: lo que el cliente
           // pintó en una vuelta anterior hay que descartarlo o la pantalla miente.
           else if (event === "text_reset") { acumulado = ""; pintar(); }
@@ -922,15 +956,27 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         },
       });
 
+      // Si el stream terminó sin `done`, el cerebro no cerró el turno y por lo tanto
+      // no guardó nada: el buffer que pintamos no existe en ninguna base. Caer al
+      // acumulado lo metería en el estado, en localStorage y en la voz, y encima el
+      // turno siguiente se compondría contra un historial que el cerebro no comparte
+      // (el effect de historial depende de [selectedUserId, currentUserId], no corre
+      // por turno: la mentira sobrevive hasta un remontaje). Es exactamente la
+      // divergencia que este bloque existe para cerrar, así que es un fallo.
+      if (!final) {
+        const e = new Error("el stream terminó sin cerrar el turno");
+        e.delCerebro = true;
+        throw e;
+      }
+
       // SIEMPRE el texto de `done`, nunca el acumulado. Entre lo que se pinta y lo
       // que el cerebro guarda hay tres divergencias reales: un rechazo pisa el texto
       // sin mandar reset, la extracción de JSON stremea el envoltorio {"message":…}
       // crudo pero guarda el valor desenvuelto, y de cada iteración sólo se guarda
       // el primer bloque de texto aunque se pinten todos. Reemplazar la burbuja por
       // `final.text` al cerrar el turno las cierra a las tres de una.
-      // El `?? acumulado` sólo aplica si el stream se cortó antes del `done`.
-      const responseText = final?.text ?? acumulado;
-      const actions = final?.actions || [];
+      const responseText = final.text ?? "";
+      const actions = final.actions || [];
 
       const aliciaMsg = { role: "assistant", content: responseText, actions, pasos, ts: Date.now() };
       const finalHistory = [...newHistory, aliciaMsg];
@@ -945,7 +991,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         content: err?.delCerebro
           ? `Corté el turno a mitad (${err.message}). Lo que alcancé a escribir no quedó guardado, así que lo descarté. Probá de nuevo.`
           : `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`,
-        actions: [], ts: Date.now(), isError: true,
+        actions: [], pasos, ts: Date.now(), isError: true,
       };
       const finalHistory = [...newHistory, errMsg];
       setMessages(finalHistory);
@@ -1102,7 +1148,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div ref={hiloRef} style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 14 }}>
 
           {hiloFallo && (
             <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "2px 0" }}>

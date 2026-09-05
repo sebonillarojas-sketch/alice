@@ -1,6 +1,6 @@
 // Alicia responde en markdown (listas, tablas, negritas, code). Hasta ahora el ERP
 // lo pintaba crudo, con los asteriscos a la vista.
-import { createContext, useContext } from "react";
+import { createContext, useContext, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -15,7 +15,7 @@ const C = { ink: "#0A0B0F", muted: "#6B6863", line: "#D9D5CD", surface: "#E5E1D6
 // importar si trae className o no.
 const DentroDePre = createContext(false);
 
-export default function Markdown({ texto }) {
+function Markdown({ texto }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -54,3 +54,9 @@ export default function Markdown({ texto }) {
     </ReactMarkdown>
   );
 }
+
+// Memoizado a propósito: con streaming, la burbuja en vivo se repinta una vez por
+// frame y la lista usa el índice como key, así que sin esto remark vuelve a parsear
+// TODOS los mensajes anteriores del assistant en cada frame. `texto` es
+// referencialmente estable en todas las burbujas menos la última.
+export default memo(Markdown);
