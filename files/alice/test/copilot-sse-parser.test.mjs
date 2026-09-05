@@ -70,9 +70,11 @@ test("event: y data: sin espacio después del colon funcionan (spec SSE)", () =>
 
 test("múltiples data: se unen con newline, no concatenación", () => {
   const { vistos, parser } = recolectar();
-  // SSE spec: si data: se repite, los valores se unen con \n
-  // Un JSON partido en dos líneas (como [ ... ])
-  parser.alimentar('event: test\ndata: [1,2\ndata: ,3]\n\n');
+  // SSE spec: si data: se repite, los valores se unen con \n (no concatenación).
+  // JSON bien formado a través de múltiples líneas.
+  // Sin \n: {\"a\":1,\"b\":2} - mismo parsing
+  // Con \n: {\"a\":1,\n\"b\":2} - pero con newline entre campos (spec compliant)
+  parser.alimentar('event: test\ndata: {"a": 1,\ndata: "b": 2}\n\n');
   assert.equal(vistos.length, 1);
-  assert.deepEqual(vistos[0].data, [1, 2, 3]);
+  assert.deepEqual(vistos[0].data, { a: 1, b: 2 });
 });
