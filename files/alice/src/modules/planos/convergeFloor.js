@@ -46,18 +46,17 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
       ledger.record(u.id, findings);
       if (!findings.length) { cerrada = true; break; }
 
+      if (ledger.bloqueado(u.id)) { motivo = "bloqueado"; break; }
+
       const deVolumen = findings.filter(esDeVolumen);
       if (deVolumen.length) {
         try { parti = rebalancear(parti, u.id, 0.60); } catch { /* sin margen: sigue como interior */ }
         continue;
       }
-      if (ledger.bloqueado(u.id)) { motivo = "bloqueado"; break; }
     }
 
     unidades.push({ id: u.id, layout, findings: ledger.mustFix(u.id) });
     if (!cerrada) pendientes.push(u.id);
-
-    if (motivo === "tope_piso") break;
   }
 
   if (motivo === "ok" && pendientes.length) motivo = "bloqueado";

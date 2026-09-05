@@ -62,3 +62,33 @@ test("respeta el tope de llamadas del piso", async () => {
   assert.equal(r.motivo, "tope_piso");
   assert.ok(r.llamadas <= 4);
 });
+
+test("con brief multi-unidad, tope_piso a mitad de la primera no oculta a la que falta", async () => {
+  const briefDos = { units: [
+    { id: "C", area: 40, fachadas: 1, frente: 8.4, fondo: 4.8 },
+    { id: "A", area: 30, fachadas: 2, frente: 7.4, fondo: 5.0 },
+  ] };
+  const dosUnidades = deps({
+    critique: async () => [{ ambiente: "sala", regla: "area_min", severidad: "critical", nivel: "interior" }],
+  });
+  const r = await convergeFloor(briefDos, dosUnidades, { llamadasPorPiso: 2 });
+  assert.equal(r.motivo, "tope_piso");
+  assert.equal(r.unidades.length, 2, "las dos unidades deben quedar listadas, tocadas o no");
+  assert.deepEqual([...r.pendientes].sort(), ["A", "C"], "ninguna unidad debe desaparecer de pendientes");
+  const noTocada = r.unidades.find((x) => x.layout === null);
+  assert.ok(noTocada, "la unidad que nunca se procesó debe listarse con layout null");
+  assert.ok(r.pendientes.includes(noTocada.id));
+});
+
+test("un RangeError de rebalancear no rompe la cadena: sigue como interior y termina bloqueada", async () => {
+  const partiEstrecho = { id: "p3", core: { x: 7.4, y: 0, w: 5.2, d: 5 },
+    units: [{ id: "C", x: 0, w: 8.4 }, { id: "A", x: 8.4, w: 3.1 }] };
+  const estrecho = deps({
+    planFloor: async () => [partiEstrecho],
+    critique: async () => [{ ambiente: "sala", regla: "no_cabe", severidad: "critical", nivel: "volumen" }],
+  });
+  const r = await convergeFloor(brief, estrecho);
+  assert.equal(r.motivo, "bloqueado");
+  assert.deepEqual(r.pendientes, ["C"]);
+  assert.equal(r.parti.units.find((u) => u.id === "A").w, 3.1, "el rebalanceo fallido no debe haber mutado el parti");
+});
