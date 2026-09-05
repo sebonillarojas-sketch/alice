@@ -1,4 +1,5 @@
 import { generarDistribuciones } from "../planos/plantas.js";
+import { clipPieces } from "../planos/clipFootprint.js";
 
 const toPolygon = (pts) => pts.map((point) => [Number(point.x), Number(point.y)]);
 const toPoints = (polygon) => polygon.map(([x, y]) => ({ x: Number(x), y: Number(y) }));
@@ -97,26 +98,48 @@ export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sou
   if (!parti?.res) throw new Error("La huella no admite una distribución determinística");
   const { core, corridors = [], corridor, units = [] } = parti.res;
   const halls = corridors.length ? corridors : (corridor ? [corridor] : []);
-  const polygons = [];
-  if (core) polygons.push({ polygonId: core.id, role: "core", name: "core", unitRef: null, unitProgram: null, polygon: toPolygon(core.pts) });
-  halls.forEach((hall, index) => polygons.push({ polygonId: hall.id, role: "circulacion", name: `circulación ${index + 1}`, unitRef: null, unitProgram: null, polygon: toPolygon(hall.pts) }));
+
+  // packFloor empaqueta sobre el rectángulo envolvente orientado al frente y deja vértices
+  // desbordados en las aristas oblicuas (medido: hasta 0.5 mm). El validador rechaza la
+  // propuesta entera por eso — "core sale de la huella edificable · … · La planta deja
+  // 272.64 m² sin asignar". Recortamos contra la huella real antes de emitir.
+  const piezas = [];
+  if (core) piezas.push({ id: core.id, role: "core", name: "core", unitRef: null, unitProgram: null, pts: core.pts });
+  halls.forEach((hall, index) => piezas.push({
+    id: hall.id, role: "circulacion", name: `circulación ${index + 1}`, unitRef: null, unitProgram: null, pts: hall.pts,
+  }));
   units.forEach((unit) => {
     const dormitorios = Math.max(1, Math.min(3, Number(unit.requestedProgram?.dormitorios ?? unit.tipologia?.dorms ?? parseInt(unit.subtipo, 10) ?? 1) || 1));
     const banos = Math.max(1, Number(unit.requestedProgram?.banos ?? unit.tipologia?.banos ?? (dormitorios <= 1 ? 1 : 2)) || 1);
-    polygons.push({
-      polygonId: unit.id,
+    piezas.push({
+      id: unit.id,
       role: "unidad",
       name: unit.name || `${dormitorios}D`,
       unitRef: unit.unitRef || unit.id,
       unitProgram: { dormitorios, banos },
-      polygon: toPolygon(unit.pts),
+      pts: unit.pts,
     });
   });
+
+  const { kept, dropped, split } = clipPieces(piezas, footprint);
+  const polygons = kept.map((pieza) => ({
+    polygonId: pieza.id,
+    role: pieza.role,
+    name: pieza.name,
+    unitRef: pieza.unitRef,
+    unitProgram: pieza.unitProgram,
+    polygon: toPolygon(pieza.pts),
+  }));
   return {
     summary: "Respaldo determinístico de packFloor",
     floor: { sourceCabidaVersionId: String(sourceCabidaVersionId || ""), polygons },
     assumptions: [],
-    tradeoffs: ["Distribución determinística utilizada como respaldo"],
+    tradeoffs: [
+      "Distribución determinística utilizada como respaldo",
+      // que un recorte con pérdida sea visible y no se coma piezas en silencio
+      ...(dropped.length ? [`${dropped.length} pieza(s) descartada(s) al recortar contra la huella`] : []),
+      ...(split ? [`${split} pieza(s) partida(s) por la huella: se conservó el fragmento mayor`] : []),
+    ],
   };
 }
 
