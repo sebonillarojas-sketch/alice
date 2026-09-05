@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthContext.jsx";
 import LoginScreen from "./auth/LoginScreen.jsx";
 import HyggeOS from "./HyggeOS.jsx";
 import { ALICIA_URL as BRAIN_ALICIA_URL } from "./lib/brain.js";
 import { ERPContextProvider } from "./copilot/ERPContext.jsx";
+import { decideCalendarGate } from "./lib/onboardingGate.js";
 
 const C = {
   bg: "#EEEBE3",
@@ -141,16 +142,54 @@ function OnboardingOverlay({ children }) {
 
 const ALICIA_URL = BRAIN_ALICIA_URL;
 
-function CalendarConsentModal({ user, onGrant }) {
+// Le pregunta al brain (dueño real de los tokens) si este usuario ya tiene
+// Google conectado. Nunca tira: cualquier caída, timeout o error de red
+// devuelve { ok:false } — es la señal que decideCalendarGate usa para fallar
+// ABIERTO. 6s de margen: es un chequeo de fondo al abrir la app, no algo que
+// el usuario esté esperando ver, así que no hace falta que sea corto.
+async function fetchGoogleStatus(userId, { timeoutMs = 6000 } = {}) {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`${ALICIA_URL}/api/google/status/${encodeURIComponent(userId)}`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false };
+    const data = await res.json();
+    return { ok: true, connected: !!data.connected };
+  } catch {
+    return { ok: false }; // brain caído / lento / CORS / lo que sea — no bloquea nada
+  }
+}
+
+// Popup de Google que puede no terminar nunca: bloqueado por el navegador,
+// cerrado a mitad de camino, o el usuario que se arrepiente y no completa el
+// consentimiento. Ninguno de esos casos puede dejar el botón colgado en
+// "Conectando…" para siempre — ese fue exactamente el bug que dejó al CEO
+// afuera del ERP (2026-08-30). Por eso: timeout de 90s + detección de cierre.
+const POPUP_TIMEOUT_MS = 90_000;
+
+function CalendarConsentModal({ user, onGrant, onSkip }) {
   const [blobState, setBlobState] = useState("idle");
   const [connecting, setConnecting] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const avatarColor = user.color === "#0A0B0F" ? C.navy : (user.color || C.navy);
 
+  const popupRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const pollRef = useRef(null);
+
+  const stopWatching = () => {
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+  useEffect(() => stopWatching, []); // por si el modal se desmonta a mitad de camino
+
   // Escucha el aviso real del callback de Google (postMessage desde el popup)
   useEffect(() => {
     const onMsg = (e) => {
       if (e.data && e.data.type === "google-connected") {
+        stopWatching();
+        setConnecting(false);
         setBlobState("happy");
         setTimeout(onGrant, 600); // recién acá marcamos el flag: conexión REAL confirmada
       }
@@ -160,6 +199,7 @@ function CalendarConsentModal({ user, onGrant }) {
   }, [onGrant]);
 
   const handleClick = () => {
+    stopWatching();
     setErrMsg("");
     setConnecting(true);
     setBlobState("listening");
@@ -172,7 +212,28 @@ function CalendarConsentModal({ user, onGrant }) {
       "google-oauth",
       `width=${w},height=${h},left=${left},top=${top}`
     );
-    if (!popup) { setConnecting(false); setBlobState("error"); setErrMsg("El navegador bloqueó la ventana. Permití popups y reintentá."); }
+    if (!popup) { setConnecting(false); setBlobState("error"); setErrMsg("El navegador bloqueó la ventana. Permití popups y reintentá."); return; }
+    popupRef.current = popup;
+
+    // Salida por timeout: si en 90s no llegó el postMessage, dejamos de esperar
+    // y lo decimos — sin esto `connecting` quedaba en true para siempre.
+    timeoutRef.current = setTimeout(() => {
+      stopWatching();
+      setConnecting(false);
+      setBlobState("error");
+      setErrMsg("Google no respondió en 90 segundos. Puede que el consentimiento no se haya completado — reintentá, o seguí y conectalo más tarde.");
+    }, POPUP_TIMEOUT_MS);
+
+    // Salida por cierre manual: si el popup se cierra sin que llegue el
+    // postMessage, no hay otro evento que nos avise — hay que hacer polling.
+    pollRef.current = setInterval(() => {
+      if (popupRef.current && popupRef.current.closed) {
+        stopWatching();
+        setConnecting(false);
+        setBlobState("error");
+        setErrMsg("Cerraste la ventana de Google antes de terminar. Reintentá, o seguí y conectalo más tarde.");
+      }
+    }, 500);
   };
 
   return (
@@ -244,6 +305,24 @@ function CalendarConsentModal({ user, onGrant }) {
           </button>
 
           {errMsg && <p style={{ fontSize: 11, color: "#c2607e", marginTop: 10, fontWeight: 600 }}>{errMsg}</p>}
+
+          {/* Escape del onboarding: una compuerta nunca debe encerrar a nadie
+              afuera de su herramienta de trabajo. A propósito NO marca el flag
+              como concedido — ver handleSkipCalendar en Gate(). */}
+          <button
+            onClick={onSkip}
+            style={{
+              width: "100%", padding: "10px 0", marginTop: 10,
+              backgroundColor: "transparent", color: C.muted,
+              border: "none", borderRadius: 2,
+              fontSize: 11, fontWeight: 600, cursor: "pointer",
+              letterSpacing: "0.04em",
+              fontFamily: "'DM Sans', sans-serif",
+              textDecoration: "underline", textUnderlineOffset: 3,
+            }}
+          >
+            Lo hago después
+          </button>
 
           <p style={{ fontSize: 10, color: C.muted, marginTop: 14, lineHeight: 1.6, letterSpacing: "0.01em" }}>
             Solo lectura · ALICE nunca crea ni borra eventos sin confirmación explícita.
@@ -514,15 +593,59 @@ function Gate() {
   const [pwSet, setPwSet]           = useState(null);
 
   useEffect(() => {
-    if (user) {
-      setCalGranted(localStorage.getItem(CAL_KEY(user.id)) === "1");
-      setWaSet(localStorage.getItem(WA_KEY(user.id)) !== null);
-      setPwSet(hasSetOwnPassword(user.id));
-    } else {
+    if (!user) {
       setCalGranted(null);
       setWaSet(null);
       setPwSet(null);
+      return;
     }
+    // localStorage puede TIRAR (no solo devolver null): Safari con "bloquear
+    // todas las cookies", storage deshabilitado por política de MDM, modo
+    // restringido. Sin este try/catch, la excepción quedaba sin manejar acá
+    // arriba, ninguno de los tres setState de abajo se llegaba a ejecutar, y
+    // la pantalla se quedaba en "Cargando..." para siempre — el mismo defecto
+    // (fallar CERRADO) que esta rama vino a matar, un nivel más arriba de
+    // donde ya lo arreglamos. Un storage roto no es motivo para dejar a nadie
+    // afuera de su herramienta de trabajo: cualquier excepción acá hace pass.
+    try {
+      setWaSet(localStorage.getItem(WA_KEY(user.id)) !== null);
+      setPwSet(hasSetOwnPassword(user.id));
+    } catch (e) {
+      console.error("Gate: localStorage/hasSetOwnPassword inaccesible, fallando abierto:", e);
+      setWaSet(true);
+      setPwSet(true);
+    }
+
+    // Compuerta de Calendar: la caché local (localStorage) NUNCA basta sola
+    // para bloquear — se borra con la caché del navegador, cambiando de
+    // navegador, o en incógnito, y eso fue lo que dejó al CEO afuera del ERP
+    // el 2026-08-30. Si la caché ya dice "sí", confiamos (camino rápido, sin
+    // red). Si dice "no" (o nunca se seteó), le preguntamos al brain — que sí
+    // conoce el estado real — y decideCalendarGate decide, fallando ABIERTO
+    // ante cualquier problema de red (ver lib/onboardingGate.js).
+    let cancelled = false;
+    (async () => {
+      try {
+        const cachedGranted = localStorage.getItem(CAL_KEY(user.id)) === "1";
+        const brainStatus = cachedGranted ? null : await fetchGoogleStatus(user.id);
+        if (cancelled) return;
+        const { pass, persist } = decideCalendarGate({ cachedGranted, brainStatus });
+        if (persist) {
+          try { localStorage.setItem(CAL_KEY(user.id), "1"); }
+          catch { /* no se pudo cachear — no es motivo para bloquear, solo se repite el chequeo la próxima vez */ }
+        }
+        setCalGranted(pass);
+      } catch (e) {
+        // Cualquier excepción acá (localStorage.getItem, o algo inesperado en
+        // fetchGoogleStatus/decideCalendarGate) NO puede dejar calGranted en
+        // null para siempre — eso es la pantalla de "Cargando..." colgada que
+        // reportó la revisión. Un try/catch roto en el momento de decidir se
+        // trata igual que cualquier otro modo de falla de esta rama: se entra.
+        console.error("Gate: chequeo de Calendar tiró, fallando abierto:", e);
+        if (!cancelled) setCalGranted(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user, hasSetOwnPassword]);
 
   if (!loaded) {
@@ -538,6 +661,13 @@ function Gate() {
     localStorage.setItem(CAL_KEY(user.id), "1");
     setCalGranted(true);
   };
+
+  // "Lo hago después": entra al ERP sin marcar el flag como concedido. A
+  // propósito NO escribe "1" en localStorage — no sabemos si está conectado,
+  // así que la próxima sesión se le vuelve a ofrecer en vez de mentirle a la
+  // caché. Esto es lo que impide que un onboarding sin salida bloquee a
+  // alguien (la regla #3 del arreglo: fallar abierto, nunca cerrado).
+  const handleSkipCalendar = () => setCalGranted(true);
 
   const handleWa = (phone) => {
     localStorage.setItem(WA_KEY(user.id), phone || "");
@@ -558,7 +688,7 @@ function Gate() {
       </div>
     );
   }
-  if (!calGranted) return <CalendarConsentModal user={user} onGrant={handleGrant} />;
+  if (!calGranted) return <CalendarConsentModal user={user} onGrant={handleGrant} onSkip={handleSkipCalendar} />;
   if (!waSet)      return <WhatsAppModal user={user} onDone={handleWa} />;
   if (!pwSet)      return <SetPasswordModal user={user} onDone={handleSetPassword} />;
 
