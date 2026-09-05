@@ -218,7 +218,10 @@ y **después del objeto de parámetros** (justo después de `messages: loopMessa
 Hacer lo mismo con la llamada del fallback a Sonnet (línea ~727): `anthropic.messages.create({` → `const stFallback = anthropic.messages.stream({`, y después del objeto:
 
 ```js
-      if (opts.onEvent) stFallback.on("text", (delta) => emitir({ type: "text_delta", text: delta }));
+      // Mismo manejo que el stream principal, yaHuboTexto incluido: si el fallback
+      // produce texto y no lo marcamos, la iteración siguiente no emite text_reset
+      // y la burbuja queda con dos respuestas pegadas.
+      if (opts.onEvent) stFallback.on("text", (delta) => { yaHuboTexto = true; emitir({ type: "text_delta", text: delta }); });
       resp = await stFallback.finalMessage();
 ```
 
@@ -620,9 +623,18 @@ export default function Markdown({ texto }) {
         ul: ({ children }) => <ul style={{ margin: "0 0 8px", paddingLeft: 18 }}>{children}</ul>,
         ol: ({ children }) => <ol style={{ margin: "0 0 8px", paddingLeft: 18 }}>{children}</ol>,
         li: ({ children }) => <li style={{ margin: "2px 0" }}>{children}</li>,
-        code: ({ inline, children }) => inline
-          ? <code style={{ background: C.surface, padding: "1px 4px", borderRadius: 2, fontSize: "0.92em" }}>{children}</code>
-          : <pre style={{ background: C.surface, padding: 10, borderRadius: 2, overflowX: "auto", fontSize: 12 }}><code>{children}</code></pre>,
+        // OJO: react-markdown v9+ (instala la 10.x) YA NO pasa la prop `inline`.
+        // Los bloques cercados llegan como <pre><code class="language-x">, el código
+        // inline como <code> sin clase. Por eso se estilan por separado.
+        pre: ({ children }) => (
+          <pre style={{ background: C.surface, padding: 10, borderRadius: 2, overflowX: "auto", fontSize: 12, margin: "0 0 8px" }}>{children}</pre>
+        ),
+        code: ({ className, children }) => (
+          <code
+            className={className}
+            style={className ? undefined : { background: C.surface, padding: "1px 4px", borderRadius: 2, fontSize: "0.92em" }}
+          >{children}</code>
+        ),
         // Las tablas del ERP pueden ser anchas: scrollean en su propio contenedor
         // en vez de estirar la burbuja.
         table: ({ children }) => (
