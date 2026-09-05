@@ -185,3 +185,35 @@ test("a floor requires both core and circulation roles", () => {
   assert.ok(codes.includes("missing_core"));
   assert.ok(codes.includes("missing_circulation"));
 });
+
+// ── tolerancia constructiva ───────────────────────────────────────────────────
+// El validador exigia EPS = 1e-7 m (0.1 micrones) para la contencion. Un vertice
+// medio milimetro afuera —ruido de redondeo de packFloor o de un modelo que escribe
+// coordenadas con 3 decimales— hacia rechazar la unidad entera, y con ella la planta.
+// En obra, un centimetro no es un error de diseno: es la precision del replanteo.
+test("un desborde de medio milimetro NO es salirse de la huella", () => {
+  const huella = rect(0, 0, 20, 10);
+  const res = validateFloorProposal({
+    floor: { sourceCabidaVersionId: "V", polygons: [
+      polygon("a", "core", [[0, 0], [10, 0], [10, 10], [0, 10]]),
+      // 0.0005 m afuera en el borde derecho: ruido, no error
+      polygon("b", "unidad", [[10, 0], [20.0005, 0], [20.0005, 10], [10, 10]],
+        { unitRef: "u1", unitProgram: { dormitorios: 2, banos: 2 } }),
+    ] },
+  }, { buildableFootprint: huella, sourceCabidaVersionId: "V" });
+  const codigos = res.findings.map((f) => f.code);
+  assert.ok(!codigos.includes("outside_buildable_footprint"),
+    `medio milimetro no debe rechazarse: ${JSON.stringify(res.findings)}`);
+});
+
+test("medio metro afuera SI se rechaza", () => {
+  const huella = rect(0, 0, 20, 10);
+  const res = validateFloorProposal({
+    floor: { sourceCabidaVersionId: "V", polygons: [
+      polygon("b", "unidad", [[10, 0], [20.5, 0], [20.5, 10], [10, 10]],
+        { unitRef: "u1", unitProgram: { dormitorios: 2, banos: 2 } }),
+    ] },
+  }, { buildableFootprint: huella, sourceCabidaVersionId: "V" });
+  assert.ok(res.findings.map((f) => f.code).includes("outside_buildable_footprint"),
+    "medio metro afuera es un error real y debe marcarse");
+});

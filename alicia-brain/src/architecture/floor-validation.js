@@ -1,4 +1,11 @@
 const EPS = 1e-7;
+// Tolerancia CONSTRUCTIVA para la contención, distinta del épsilon numérico.
+// EPS (0.1 µm) sirve para robustez de punto flotante; usarlo para decidir si una pieza
+// "sale de la huella" hacía rechazar plantas enteras por ruido de redondeo: packFloor deja
+// vértices ~0.5 mm afuera en aristas oblicuas, y un modelo que escribe coordenadas con
+// 2-3 decimales se sale por milímetros siempre. En obra 1 cm es la precisión del replanteo;
+// un error real de reparto se mide en decímetros o metros.
+const CONTAINMENT_TOLERANCE_M = 0.01;
 export const AREA_TOLERANCE = 0.20;
 export const OVERLAP_EPSILON_M2 = 0.01;
 const MIN_SHARED_EDGE_M = 0.05;
@@ -16,18 +23,22 @@ function polygonArea(polygon) {
   }, 0)) / 2;
 }
 
-function pointOnSegment(point, a, b) {
-  if (!nearZero(cross(a, b, point))) return false;
-  return point.x >= Math.min(a.x, b.x) - EPS && point.x <= Math.max(a.x, b.x) + EPS
-    && point.y >= Math.min(a.y, b.y) - EPS && point.y <= Math.max(a.y, b.y) + EPS;
+function pointOnSegment(point, a, b, tol = EPS) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const largo = Math.hypot(dx, dy);
+  // distancia perpendicular real del punto al segmento, para poder tolerar en metros
+  const desvio = largo > EPS ? Math.abs(cross(a, b, point)) / largo : Math.hypot(point.x - a.x, point.y - a.y);
+  if (desvio > tol) return false;
+  return point.x >= Math.min(a.x, b.x) - tol && point.x <= Math.max(a.x, b.x) + tol
+    && point.y >= Math.min(a.y, b.y) - tol && point.y <= Math.max(a.y, b.y) + tol;
 }
 
-function pointInPolygon(point, polygon, includeBoundary = true) {
+function pointInPolygon(point, polygon, includeBoundary = true, tol = EPS) {
   const pts = points(polygon);
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const a = pts[j], b = pts[i];
-    if (pointOnSegment(point, a, b)) return includeBoundary;
+    if (pointOnSegment(point, a, b, tol)) return includeBoundary;
     if ((b.y > point.y) !== (a.y > point.y)
       && point.x < ((a.x - b.x) * (point.y - b.y)) / (a.y - b.y) + b.x) inside = !inside;
   }
@@ -154,7 +165,7 @@ function polygonsOverlap(a, b) {
 
 function polygonInside(inner, outer) {
   const pts = points(inner);
-  if (!pts.length || pts.some((point) => !pointInPolygon(point, outer, true))) return false;
+  if (!pts.length || pts.some((point) => !pointInPolygon(point, outer, true, CONTAINMENT_TOLERANCE_M))) return false;
   return edges(inner).every(([a, b]) => {
     const parameters = [0, 1];
     const dx = b.x - a.x, dy = b.y - a.y;
@@ -176,7 +187,7 @@ function polygonInside(inner, outer) {
     const sorted = [...new Set(parameters.map((value) => value.toFixed(9)))].map(Number).sort((x, y) => x - y);
     return sorted.slice(0, -1).every((start, index) => {
       const t = (start + sorted[index + 1]) / 2;
-      return pointInPolygon({ x: a.x + dx * t, y: a.y + dy * t }, outer, true);
+      return pointInPolygon({ x: a.x + dx * t, y: a.y + dy * t }, outer, true, CONTAINMENT_TOLERANCE_M);
     });
   });
 }
