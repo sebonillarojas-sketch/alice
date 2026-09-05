@@ -9,6 +9,7 @@ import {
   validateCritiqueRequest,
   validateDesignRequest,
   validateFloorPlanRequest,
+  validateFloorProgram,
   FLOOR_PLAN_OUTPUT_SCHEMA,
 } from "./schemas.js";
 import { ARCHITECTURE_AGENT_REGISTRY } from "./registry.js";
@@ -16,8 +17,6 @@ import { loadAdvisoryReferences } from "./knowledge.js";
 import { buildTweedledumSystemPrompt } from "./prompts/tweedledum.v1.js";
 import { buildTweedledeeSystemPrompt } from "./prompts/tweedledee.v1.js";
 import { buildTweedledumFloorSystemPrompt, TWEEDLEDUM_FLOOR_PROMPT_VERSION } from "./prompts/tweedledum-floor.v1.js";
-import { validateFloorProposal } from "./floor-validation.js";
-import { commercialBaselineFinding, evaluateFloorCommercialPerformance } from "./floor-commercial.js";
 
 export class ArchitectureModelError extends Error {
   constructor(message, cause = null) {
@@ -96,33 +95,24 @@ export function createArchitectureService({ client = null, model = null } = {}) 
   };
 
   return {
+    // Tweedledum ya no dibuja geometría: devuelve un "parti" (decisión aproximada de
+    // zonificación) y el motor determinista del frontend (files/alice) lo prorratea y
+    // tesela exacto contra la huella real. Por eso este servicio deja de validar
+    // geometría — no hay polígonos que validar — y valida solo el PROGRAMA: que el
+    // parti conserve la versión de Cabida, el conteo de unidades, la mezcla de
+    // dormitorios y anchos positivos. El camino determinístico (deterministicFallback)
+    // sigue siendo la propuesta con polígonos de siempre; este servicio no la
+    // reinterpreta, solo la usa como respaldo cuando el parti del modelo no cierra.
     async planFloor(input = {}) {
       const context = normalizeProjectContext(input.context);
       const request = { ...input, context };
       validateFloorPlanRequest(request);
-      const validationOptions = {
-        buildableFootprint: context.site.buildableFootprint,
+      const floorBrief = input.floorBrief || {};
+      const fallback = input.deterministicFallback;
+      const programOptions = {
         sourceCabidaVersionId: context.sourceCabidaVersionId,
-        unitsPerFloor: input.floorBrief.unitsPerFloor,
-        mix: input.floorBrief.bedroomMix,
-        targetAverageArea: input.floorBrief.targetAverageArea,
-        targetAreaByBedrooms: input.floorBrief.targetAreaByBedrooms,
-        areaTolerance: input.floorBrief.areaTolerance,
-      };
-      let fallback;
-      try { fallback = normalizeFloorPlanOutput(input.deterministicFallback); }
-      catch (error) { throw new ArchitectureModelError(`Deterministic fallback is invalid: ${error.message}`, error); }
-      const fallbackValidation = validateFloorProposal(fallback, validationOptions);
-      const commercialBrief = input.floorBrief.commercialBrief || {};
-      const fallbackEvaluation = evaluateFloorCommercialPerformance(fallback, commercialBrief);
-      const assess = (proposal) => {
-        const validation = validateFloorProposal(proposal, { ...validationOptions, enforceIndividualUnitArea: true, requireExteriorFrontage: true });
-        const evaluation = evaluateFloorCommercialPerformance(proposal, commercialBrief);
-        const commercialFinding = fallbackValidation.ok ? commercialBaselineFinding(evaluation, fallbackEvaluation) : null;
-        if (validation.ok && commercialFinding) {
-          return { validation: { ...validation, ok: false, findings: [...validation.findings, commercialFinding] }, evaluation };
-        }
-        return { validation, evaluation };
+        unitsPerFloor: floorBrief.unitsPerFloor,
+        mix: floorBrief.bedroomMix,
       };
       const callFloor = (payload) => call(
         "tweedledum",
@@ -141,46 +131,41 @@ export function createArchitectureService({ client = null, model = null } = {}) 
       let revision = null;
       let originalValidation = null;
       let revisionValidation = null;
-      let originalEvaluation = null;
-      let revisionEvaluation = null;
       let fallbackReason = null;
       try {
-        originalProposal = await callFloor({ operation: "design_floor", context, floorBrief: input.floorBrief, deterministicBaseline: { validation: fallbackValidation, evaluation: fallbackEvaluation } });
-        ({ validation: originalValidation, evaluation: originalEvaluation } = assess(originalProposal));
+        originalProposal = await callFloor({ operation: "design_floor", context, floorBrief });
+        originalValidation = validateFloorProgram(originalProposal.parti, programOptions);
         if (originalValidation.ok) {
-          return { originalProposal, revision, validation: originalValidation, evaluation: originalEvaluation, selected: originalProposal, source: "tweedledum", candidateValidation: { original: originalValidation, revision: null, fallback: fallbackValidation }, candidateEvaluation: { original: originalEvaluation, revision: null, fallback: fallbackEvaluation }, agent: originalProposal.agent, promptVersion: originalProposal.promptVersion, model: originalProposal.model };
+          return { originalProposal, revision, validation: originalValidation, selected: originalProposal, source: "tweedledum", candidateValidation: { original: originalValidation, revision: null }, agent: originalProposal.agent, promptVersion: originalProposal.promptVersion, model: originalProposal.model };
         }
         revision = await callFloor({
           operation: "revise_floor",
           context,
-          floorBrief: input.floorBrief,
-          proposal: originalProposal.floor,
-          deterministicFindings: originalValidation.findings,
-          deterministicBaseline: { validation: fallbackValidation, evaluation: fallbackEvaluation },
+          floorBrief,
+          parti: originalProposal.parti,
+          findings: originalValidation.findings,
         });
-        ({ validation: revisionValidation, evaluation: revisionEvaluation } = assess(revision));
+        revisionValidation = validateFloorProgram(revision.parti, programOptions);
         if (revisionValidation.ok) {
-          return { originalProposal, revision, validation: revisionValidation, evaluation: revisionEvaluation, selected: revision, source: "revision", candidateValidation: { original: originalValidation, revision: revisionValidation, fallback: fallbackValidation }, candidateEvaluation: { original: originalEvaluation, revision: revisionEvaluation, fallback: fallbackEvaluation }, agent: revision.agent, promptVersion: revision.promptVersion, model: revision.model };
+          return { originalProposal, revision, validation: revisionValidation, selected: revision, source: "revision", candidateValidation: { original: originalValidation, revision: revisionValidation }, agent: revision.agent, promptVersion: revision.promptVersion, model: revision.model };
         }
-        fallbackReason = "Tweedledum revision did not pass deterministic validation";
+        fallbackReason = "Tweedledum revision did not pass program validation";
       } catch (error) {
         fallbackReason = error.message || "Tweedledum floor planning failed";
       }
 
-      if (!fallbackValidation.ok) {
-        throw new ArchitectureModelError(`Deterministic fallback failed validation: ${fallbackValidation.findings.map((item) => item.message).join(" · ")}`);
+      if (!fallback || typeof fallback !== "object" || fallback.floor?.sourceCabidaVersionId !== context.sourceCabidaVersionId) {
+        throw new ArchitectureModelError("Deterministic fallback is invalid: missing or mismatched floor proposal");
       }
       const agent = ARCHITECTURE_AGENT_REGISTRY.tweedledum;
       return {
         originalProposal,
         revision,
-        validation: fallbackValidation,
-        evaluation: fallbackEvaluation,
+        validation: { ok: true, findings: [] },
         selected: fallback,
         source: "deterministic_fallback",
         fallbackReason,
-        candidateValidation: { original: originalValidation, revision: revisionValidation, fallback: fallbackValidation },
-        candidateEvaluation: { original: originalEvaluation, revision: revisionEvaluation, fallback: fallbackEvaluation },
+        candidateValidation: { original: originalValidation, revision: revisionValidation },
         agent: { key: agent.key, displayName: agent.displayName },
         promptVersion: TWEEDLEDUM_FLOOR_PROMPT_VERSION,
         model: model || agent.model,

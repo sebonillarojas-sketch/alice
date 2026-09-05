@@ -183,7 +183,10 @@ test("critique rejects plan-version mismatch before calling the model", async ()
 });
 
 const floorRect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-const floorOutput = (sourceCabidaVersionId = "cabida_p1_v3") => ({
+
+// El respaldo determinístico sigue siendo polígonos (fallbackFloorProposal no cambia):
+// esta fixture representa exactamente ese contrato viejo, usado SOLO como deterministicFallback.
+const polygonFallback = (sourceCabidaVersionId = "cabida_p1_v3") => ({
   summary: "Two units",
   assumptions: [],
   tradeoffs: [],
@@ -200,31 +203,46 @@ const floorOutput = (sourceCabidaVersionId = "cabida_p1_v3") => ({
     ],
   },
 });
+
+// El modelo ahora entrega un parti (decisión aproximada), no polígonos.
+const partiOutput = (sourceCabidaVersionId = "cabida_p1_v3") => ({
+  summary: "Two units",
+  assumptions: [],
+  tradeoffs: [],
+  parti: {
+    sourceCabidaVersionId,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 2 },
+    units: [
+      { unitRef: "unit-1", orden: 1, ancho: 8, dormitorios: 1, banos: 1 },
+      { unitRef: "unit-2", orden: 2, ancho: 8, dormitorios: 2, banos: 2 },
+    ],
+  },
+});
+
 const floorRequest = () => ({
   context: { project: { id: "p1", name: "DC01" }, sourceCabidaVersionId: "cabida_p1_v3", site: { buildableFootprint: floorRect(0, 0, 10, 10) } },
   floorBrief: {
     unitsPerFloor: 2,
     bedroomMix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 },
-    targetAverageArea: 16,
-    commercialBrief: { floors: 10, pricePerSellableM2: 2_000, costPerBuiltM2: 800 },
   },
-  deterministicFallback: floorOutput(),
+  deterministicFallback: polygonFallback(),
 });
 
-const underperformingFloorOutput = () => ({
+// mismo conteo de unidades, pero ambas de 1 dormitorio: viola bedroomMix (1×1D + 1×2D esperado).
+const wrongMixPartiOutput = () => ({
   summary: "Two undersized units",
   assumptions: [],
   tradeoffs: [],
-  floor: {
+  parti: {
     sourceCabidaVersionId: "cabida_p1_v3",
-    polygons: [
-      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: floorRect(4, 0, 6, 10) },
-      { polygonId: "hall-left", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: floorRect(0, 3.25, 4, 4.25) },
-      { polygonId: "hall-right", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: floorRect(6, 3.25, 10, 4.25) },
-      { polygonId: "unit-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: floorRect(0, 0, 4, 3.25) },
-      { polygonId: "unit-2", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: floorRect(6, 0, 10, 3.25) },
-      { polygonId: "void-left", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: floorRect(0, 4.25, 4, 10) },
-      { polygonId: "void-right", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: floorRect(6, 4.25, 10, 10) },
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 2 },
+    units: [
+      { unitRef: "unit-1", orden: 1, ancho: 8, dormitorios: 1, banos: 1 },
+      { unitRef: "unit-2", orden: 2, ancho: 8, dormitorios: 1, banos: 1 },
     ],
   },
 });
@@ -233,23 +251,23 @@ test("floor planning selects a valid first proposal in one bounded call", async 
   const calls = [];
   const client = { messages: { create: async (request) => {
     calls.push(request);
-    return { content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: floorOutput() }] };
+    return { content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: partiOutput() }] };
   } } };
   const result = await createArchitectureService({ client, model: "test-model" }).planFloor(floorRequest());
   assert.equal(result.source, "tweedledum");
   assert.equal(result.validation.ok, true);
-  assert.equal(result.selected.floor.sourceCabidaVersionId, "cabida_p1_v3");
+  assert.equal(result.selected.parti.sourceCabidaVersionId, "cabida_p1_v3");
   assert.equal(calls.length, 1);
   assert.equal(calls[0].max_tokens, 3500);
   assert.equal(calls[0].tools[0].name, "submit_tweedledum_floor_output");
-  assert.equal(result.promptVersion, "1.2.0");
+  assert.equal(result.promptVersion, "2.0.0");
   assert.equal(result.candidateValidation.original.ok, true);
   assert.equal(result.candidateValidation.revision, null);
 });
 
-test("floor planning revises a geometrically valid proposal that sells less than the fallback", async () => {
+test("floor planning revises a proposal with the wrong bedroom mix before selecting it", async () => {
   const calls = [];
-  const responses = [underperformingFloorOutput(), floorOutput()];
+  const responses = [wrongMixPartiOutput(), partiOutput()];
   const client = { messages: { create: async (request) => {
     calls.push(request);
     return { content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: responses.shift() }] };
@@ -259,16 +277,16 @@ test("floor planning revises a geometrically valid proposal that sells less than
 
   assert.equal(result.source, "revision");
   assert.equal(calls.length, 2);
-  assert.match(calls[1].messages[0].content, /commercial_underperformance/);
-  assert.equal(result.evaluation.sellableAreaPerFloor, 32);
-  assert.equal(result.candidateEvaluation.original.sellableAreaPerFloor, 26);
-  assert.equal(result.candidateEvaluation.fallback.sellableAreaPerFloor, 32);
+  assert.match(calls[1].messages[0].content, /unit_mix_mismatch/);
+  assert.equal(result.candidateValidation.original.ok, false);
+  assert.equal(result.candidateValidation.revision.ok, true);
+  assert.equal(result.selected.parti.units.length, 2);
 });
 
 test("floor planning makes exactly one targeted revision before selecting it", async () => {
-  const invalid = floorOutput("cabida_old");
+  const invalid = partiOutput("cabida_old");
   const calls = [];
-  const responses = [invalid, floorOutput()];
+  const responses = [invalid, partiOutput()];
   const client = { messages: { create: async (request) => {
     calls.push(request);
     return { content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: responses.shift() }] };
@@ -277,7 +295,7 @@ test("floor planning makes exactly one targeted revision before selecting it", a
   assert.equal(result.source, "revision");
   assert.equal(calls.length, 2);
   assert.match(calls[1].messages[0].content, /source_version_mismatch/);
-  assert.equal(result.revision.floor.sourceCabidaVersionId, "cabida_p1_v3");
+  assert.equal(result.revision.parti.sourceCabidaVersionId, "cabida_p1_v3");
   assert.equal(result.candidateValidation.original.ok, false);
   assert.equal(result.candidateValidation.revision.ok, true);
 });

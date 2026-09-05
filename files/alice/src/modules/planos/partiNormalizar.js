@@ -1,0 +1,175 @@
+// Normalización PURA del parti aproximado que devuelve Tweedledum (la decisión
+// de zonificación) a un parti exacto: anchos que suman exactamente el frente
+// disponible, unidades por encima del mínimo constructivo y posiciones en
+// milímetros. packFloor / clipPieces (lote.js) ya saben teselar un parti exacto
+// contra la huella real; este módulo es el puente entre "Tweedledum decide" y
+// "ALICE dibuja".
+//
+// Por diseño Tweedledum nunca tiene que hacer que sus números cierren: los
+// anchos son aproximados y pueden sumar de más o de menos que el frente. Esta
+// normalización es la que prorratea y redondea para que el resultado sea
+// constructiva y geométricamente exacto, sin perder ni ganar ancho total.
+import { MIN_ANCHO_UNIDAD } from "./rebalance.js";
+
+// mismo criterio que usa packFloor (lote.js) para decidir crujía simple vs.
+// doble cuando el fondo alcanza para dos bandas + corredor.
+const BAND_MIN_DEPTH = 4.0;
+export const CORREDOR_PROFUNDIDAD_DEFAULT = 1.6;
+
+const MM = 0.001;
+export const redondearMM = (value) => Math.round(Number(value) / MM) * MM;
+
+const clampInt = (value, min, max, fallback) => {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+};
+
+function elegirCrujias(crujias, fondo, corredorProfundidad) {
+  if (crujias === 1 || crujias === 2) return crujias;
+  const fondoNum = Number(fondo);
+  if (!Number.isFinite(fondoNum)) return 1;
+  return fondoNum >= 2 * BAND_MIN_DEPTH + corredorProfundidad ? 2 : 1;
+}
+
+/**
+ * Reparte `disponible` metros entre `pesos` (anchos aproximados, >=0),
+ * respetando `minimo` por unidad cuando el espacio alcanza. Si no alcanza para
+ * que todas lleguen al mínimo, reparte proporcionalmente sin forzarlo (mejor
+ * esfuerzo: el resultado sigue sumando exactamente `disponible`).
+ *
+ * Invariante: sum(resultado) === disponible (salvo error de punto flotante).
+ *
+ * @param {number[]} pesos
+ * @param {number} disponible
+ * @param {number} [minimo]
+ * @returns {number[]}
+ */
+export function prorratearAnchos(pesos, disponible, minimo = MIN_ANCHO_UNIDAD) {
+  const n = pesos.length;
+  if (n === 0) return [];
+  if (!(disponible > 0)) return pesos.map(() => 0);
+
+  const pesosSaneados = pesos.map((p) => (Number.isFinite(p) && p > 0 ? p : 0));
+  const anchos = new Array(n).fill(0);
+  const fijo = new Array(n).fill(false);
+  let libres = pesosSaneados.map((_, i) => i);
+  let restante = disponible;
+
+  for (let iter = 0; iter < n + 1 && libres.length; iter += 1) {
+    const puedeForzarMinimo = libres.length * minimo <= restante + 1e-9;
+    const sumaPesosLibres = libres.reduce((s, i) => s + pesosSaneados[i], 0);
+    libres.forEach((i) => {
+      anchos[i] = sumaPesosLibres > 0 ? (pesosSaneados[i] / sumaPesosLibres) * restante : restante / libres.length;
+    });
+    if (!puedeForzarMinimo) break; // sin margen: reparto proporcional simple, sin forzar el mínimo
+    const bajoMinimo = libres.filter((i) => anchos[i] < minimo - 1e-9);
+    if (!bajoMinimo.length) break; // ya todas cumplen el mínimo
+    bajoMinimo.forEach((i) => { fijo[i] = true; anchos[i] = minimo; restante -= minimo; });
+    libres = libres.filter((i) => !fijo[i]);
+  }
+  return anchos;
+}
+
+/**
+ * Convierte el parti APROXIMADO de Tweedledum en uno EXACTO: anchos que suman
+ * el frente disponible (frente − core.ancho), redondeados a milímetros, con
+ * las unidades ordenadas por `orden` y posicionadas de izquierda a derecha
+ * alrededor del core. Función pura: no muta `parti`.
+ *
+ * @param {object} parti - { sourceCabidaVersionId, crujias, corredorProfundidad, core:{posicion,ancho}, units:[{unitRef,orden,ancho,dormitorios,banos}] }
+ * @param {{frente:number, fondo:number}} marco - dimensiones del marco orientado (metros)
+ * @returns {object} parti exacto: { sourceCabidaVersionId, crujias, corredorProfundidad, core:{posicion,ancho}, units:[{unitRef,orden,ancho,x,dormitorios,banos}] }
+ */
+export function normalizarParti(parti = {}, { frente, fondo } = {}) {
+  const frenteNum = Number(frente);
+  if (!(frenteNum > 0)) throw new RangeError("normalizarParti requiere un frente > 0");
+
+  const corredorEntrada = Number(parti.corredorProfundidad);
+  const corredorProfundidad = corredorEntrada > 0 ? corredorEntrada : CORREDOR_PROFUNDIDAD_DEFAULT;
+  const crujias = elegirCrujias(parti.crujias, fondo, corredorProfundidad);
+
+  // el core siempre necesita algo de ancho; si el aproximado es absurdo (<=0 o
+  // más grande que el propio frente) se acota dejando margen para al menos una
+  // unidad al mínimo constructivo.
+  const coreAnchoBruto = Number(parti.core?.ancho);
+  const coreAnchoSano = Number.isFinite(coreAnchoBruto) && coreAnchoBruto > 0 ? coreAnchoBruto : MIN_ANCHO_UNIDAD;
+  const coreAncho = Math.min(coreAnchoSano, Math.max(0.01, frenteNum - 0.01));
+  const disponible = Math.max(0, frenteNum - coreAncho);
+
+  const unitsOrdenados = (Array.isArray(parti.units) ? parti.units : [])
+    .map((u, index) => ({
+      unitRef: String(u?.unitRef ?? `unit-${index + 1}`),
+      orden: Number.isFinite(Number(u?.orden)) ? Number(u.orden) : index + 1,
+      anchoAprox: Number(u?.ancho) > 0 ? Number(u.ancho) : 0,
+      dormitorios: clampInt(u?.dormitorios, 1, 3, 1),
+      banos: clampInt(u?.banos, 1, 9, 1),
+    }))
+    .sort((a, b) => a.orden - b.orden);
+
+  const coreAnchoMM = redondearMM(coreAncho);
+
+  if (!unitsOrdenados.length) {
+    return {
+      sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
+      crujias,
+      corredorProfundidad,
+      core: { posicion: redondearMM(0), ancho: coreAnchoMM },
+      units: [],
+    };
+  }
+
+  // ¿cuántas unidades (en orden) caen antes del core, según la posición y los
+  // anchos APROXIMADOS de Tweedledum? Esta cuenta no necesita ser exacta: solo
+  // decide el lado del core en el que cae cada unidad; la posición final del
+  // core se deriva de los anchos ya exactos de las unidades a su izquierda.
+  const posicionAprox = Number(parti.core?.posicion);
+  const posicionAproxSana = Number.isFinite(posicionAprox) ? Math.max(0, posicionAprox) : 0;
+  let acumulado = 0;
+  let indiceCorte = unitsOrdenados.length;
+  for (let i = 0; i < unitsOrdenados.length; i += 1) {
+    if (acumulado >= posicionAproxSana) { indiceCorte = i; break; }
+    acumulado += unitsOrdenados[i].anchoAprox;
+  }
+
+  const pesos = unitsOrdenados.map((u) => u.anchoAprox);
+  const anchosExactos = prorratearAnchos(pesos, disponible);
+
+  // redondeo a milímetros con el residuo acumulado volcado a la última unidad
+  // (por orden): el mismo criterio que ya usa rebalancear() para no perder ni
+  // ganar ancho total al redondear.
+  let residuo = 0;
+  const anchosMM = anchosExactos.map((w) => {
+    const redondeado = redondearMM(w);
+    residuo += w - redondeado;
+    return redondeado;
+  });
+  if (anchosMM.length) {
+    anchosMM[anchosMM.length - 1] = redondearMM(anchosMM[anchosMM.length - 1] + residuo);
+  }
+
+  const izquierda = unitsOrdenados.slice(0, indiceCorte);
+  const derecha = unitsOrdenados.slice(indiceCorte);
+
+  let cursor = 0;
+  const unitsSalida = [];
+  izquierda.forEach((u, i) => {
+    const ancho = anchosMM[i];
+    unitsSalida.push({ unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor), dormitorios: u.dormitorios, banos: u.banos });
+    cursor = redondearMM(cursor + ancho);
+  });
+  const corePosicion = redondearMM(cursor);
+  cursor = redondearMM(cursor + coreAnchoMM);
+  derecha.forEach((u, i) => {
+    const ancho = anchosMM[indiceCorte + i];
+    unitsSalida.push({ unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor), dormitorios: u.dormitorios, banos: u.banos });
+    cursor = redondearMM(cursor + ancho);
+  });
+
+  return {
+    sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
+    crujias,
+    corredorProfundidad,
+    core: { posicion: corePosicion, ancho: coreAnchoMM },
+    units: unitsSalida,
+  };
+}
