@@ -7,12 +7,30 @@ const Eyebrow = ({ children }) => (
   <div style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, fontWeight: 700 }}>{children}</div>
 );
 
-export default function PanelContexto() {
+// isAdmin/profiles/selectedUserId/onSelectUser son opcionales: el panel funciona
+// solo con el snapshot. El selector de "viendo como" aparece nada más para el CEO
+// — es la única forma que le queda de abrir la conversación de otra persona desde
+// que se borró el panel de perfiles (esa capacidad ya existía server-side).
+export default function PanelContexto({ isAdmin, profiles, selectedUserId, currentUserId, onSelectUser }) {
   const takeSnapshot = useCopilotSnapshot();
   const { active, others } = takeSnapshot();
 
   return (
     <div style={{ padding: 16, borderLeft: `1px solid ${C.line}`, backgroundColor: C.paper, height: "100%", overflowY: "auto" }}>
+      {isAdmin && profiles && (
+        <div style={{ marginBottom: 16 }}>
+          <Eyebrow>Viendo como</Eyebrow>
+          <select
+            value={selectedUserId}
+            onChange={(e) => onSelectUser?.(e.target.value)}
+            style={{ marginTop: 6, width: "100%", padding: "5px 6px", fontSize: 12, borderRadius: 2, border: `1px solid ${C.line}`, backgroundColor: C.paper, color: C.ink }}
+          >
+            {Object.values(profiles).map((p) => (
+              <option key={p.userId} value={p.userId}>{p.name}{p.userId === currentUserId ? " (yo)" : ""}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <Eyebrow>Contexto</Eyebrow>
       {!active ? (
         <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>

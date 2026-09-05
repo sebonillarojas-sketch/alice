@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  Send, Mic, MicOff, Loader2, ChevronRight, ChevronDown,
-  Plus, X, Check, Edit3, Sparkles, Brain, Target,
-  Briefcase, TrendingUp, User, KeyRound, Trash2, Eye, EyeOff,
-  Zap, BookOpen
+  Send, Mic, MicOff, Loader2, KeyRound, Trash2, Eye, EyeOff,
 } from "lucide-react";
 
 import { ALICIA_URL } from "../../lib/brain.js";
@@ -353,20 +350,6 @@ function AliciaAvatar({ size = 32, state = "idle" }) {
   );
 }
 
-function Tag({ children, color }) {
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 3,
-      fontSize: 10, letterSpacing: "0.06em", fontWeight: 600,
-      padding: "2px 8px", borderRadius: 2,
-      backgroundColor: color ? color + "18" : C.lineSoft,
-      color: color || C.muted, border: `1px solid ${color ? color + "30" : C.line}`,
-    }}>
-      {children}
-    </span>
-  );
-}
-
 // ── API Key gate ───────────────────────────────────────────────────────────────
 function ApiKeySetup({ onSave }) {
   const [val, setVal] = useState("");
@@ -423,160 +406,6 @@ function ApiKeySetup({ onSave }) {
   );
 }
 
-// ── Profile panel ──────────────────────────────────────────────────────────────
-function ProfilePanel({ profile, isOwn, onEdit, onSelectUser, isSelected }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div
-      onClick={() => onSelectUser && onSelectUser(profile.userId)}
-      style={{
-        padding: "14px 16px", borderRadius: 3,
-        border: `1px solid ${isSelected ? BAM + "60" : C.line}`,
-        backgroundColor: isSelected ? BAM + "08" : C.paper,
-        cursor: "pointer", transition: "all 0.14s",
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: expanded ? 14 : 0 }}>
-        <Avatar initials={profile.initials} dot={profile.dot} size={34} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</div>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{profile.role}</div>
-        </div>
-        <button onClick={e => { e.stopPropagation(); setExpanded(v => !v); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 2, display: "flex" }}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-      </div>
-      {expanded && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }} onClick={e => e.stopPropagation()}>
-          {/* Projects */}
-          <div>
-            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 5, fontWeight: 700 }}>Proyectos</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {profile.projects.map(p => <Tag key={p} color={BAM}>{p}</Tag>)}
-            </div>
-          </div>
-          {/* Skills */}
-          <div>
-            <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 5, fontWeight: 700 }}>Skills actuales</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {profile.skills.current.map(s => <Tag key={s}>{s}</Tag>)}
-            </div>
-          </div>
-          {profile.skills.developing.length > 0 && (
-            <div>
-              <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 5, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                <TrendingUp size={9} /> Desarrollando
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {profile.skills.developing.map(s => <Tag key={s} color="#5F8A6A">{s}</Tag>)}
-              </div>
-            </div>
-          )}
-          {/* Growth */}
-          {(profile.growth.shortTerm || profile.growth.longTerm) && (
-            <div>
-              <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 5, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                <Target size={9} /> Objetivos
-              </div>
-              {profile.growth.shortTerm && <div style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.55, marginBottom: 3 }}>· Corto: {profile.growth.shortTerm}</div>}
-              {profile.growth.longTerm && <div style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.55 }}>· Largo: {profile.growth.longTerm}</div>}
-            </div>
-          )}
-          {/* Alicia's memory */}
-          {profile.aliciaMemory.length > 0 && (
-            <div>
-              <div style={{ fontSize: 9, color: BAM, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 5, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                <Brain size={9} /> Notas de Alicia
-              </div>
-              {profile.aliciaMemory.slice(-3).map((m, i) => (
-                <div key={i} style={{ fontSize: 11, color: C.muted, lineHeight: 1.5, marginBottom: 3, paddingLeft: 8, borderLeft: `2px solid ${BAM}30` }}>
-                  {m.note}
-                </div>
-              ))}
-            </div>
-          )}
-          {isOwn && (
-            <button onClick={() => onEdit(profile)} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", cursor: "pointer", fontSize: 11, color: C.muted }}>
-              <Edit3 size={11} /> Editar perfil
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Profile editor modal ───────────────────────────────────────────────────────
-function ProfileEditor({ profile, onSave, onClose }) {
-  const [data, setData] = useState({
-    growth: { ...profile.growth },
-    workStyle: profile.workStyle,
-    skills: {
-      developing: [...profile.skills.developing],
-      toExplore: [...profile.skills.toExplore],
-    },
-    strengths: [...profile.strengths],
-    opportunities: [...profile.opportunities],
-  });
-  const [newSkill, setNewSkill] = useState("");
-  const [newOpp, setNewOpp] = useState("");
-
-  return (
-    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ backgroundColor: C.paper, borderRadius: 4, border: `1px solid ${C.line}`, width: "100%", maxWidth: 540, maxHeight: "85vh", overflowY: "auto", padding: 28 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>Editar perfil · {profile.name}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}><X size={18} /></button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Objetivo a corto plazo</div>
-            <textarea value={data.growth.shortTerm} onChange={e => setData(d => ({ ...d, growth: { ...d.growth, shortTerm: e.target.value } }))}
-              rows={2} placeholder="Qué quiero lograr en los próximos 3-6 meses..."
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 3, border: `1px solid ${C.line}`, fontSize: 12, fontFamily: "inherit", color: C.ink, backgroundColor: C.bg, resize: "vertical", boxSizing: "border-box" }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Objetivo a largo plazo</div>
-            <textarea value={data.growth.longTerm} onChange={e => setData(d => ({ ...d, growth: { ...d.growth, longTerm: e.target.value } }))}
-              rows={2} placeholder="Hacia dónde quiero ir en 2-5 años..."
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 3, border: `1px solid ${C.line}`, fontSize: 12, fontFamily: "inherit", color: C.ink, backgroundColor: C.bg, resize: "vertical", boxSizing: "border-box" }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Skills desarrollando</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-              {data.skills.developing.map((s, i) => (
-                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 8px", borderRadius: 2, backgroundColor: "#5F8A6A18", color: "#5F8A6A", border: "1px solid #5F8A6A30" }}>
-                  {s}
-                  <button onClick={() => setData(d => ({ ...d, skills: { ...d.skills, developing: d.skills.developing.filter((_, j) => j !== i) } }))} style={{ background: "none", border: "none", cursor: "pointer", color: "#5F8A6A", padding: 0, display: "flex" }}><X size={10} /></button>
-                </span>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <input value={newSkill} onChange={e => setNewSkill(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && newSkill.trim()) { setData(d => ({ ...d, skills: { ...d.skills, developing: [...d.skills.developing, newSkill.trim()] } })); setNewSkill(""); } }}
-                placeholder="Agregar skill..." style={{ flex: 1, padding: "6px 10px", borderRadius: 3, border: `1px solid ${C.line}`, fontSize: 12, fontFamily: "inherit", color: C.ink, backgroundColor: C.bg }} />
-              <button onClick={() => { if (newSkill.trim()) { setData(d => ({ ...d, skills: { ...d.skills, developing: [...d.skills.developing, newSkill.trim()] } })); setNewSkill(""); } }}
-                style={{ padding: "6px 12px", borderRadius: 3, backgroundColor: "#5F8A6A", color: "#fff", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer" }}><Plus size={12} /></button>
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Notas de crecimiento</div>
-            <textarea value={data.growth.notes} onChange={e => setData(d => ({ ...d, growth: { ...d.growth, notes: e.target.value } }))}
-              rows={3} placeholder="Reflexiones, feedback, áreas de enfoque..."
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 3, border: `1px solid ${C.line}`, fontSize: 12, fontFamily: "inherit", color: C.ink, backgroundColor: C.bg, resize: "vertical", boxSizing: "border-box" }} />
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 24 }}>
-          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 3, border: `1px solid ${C.line}`, background: "none", fontSize: 12, fontWeight: 600, color: C.muted, cursor: "pointer" }}>Cancelar</button>
-          <button onClick={() => { onSave(data); onClose(); }} style={{ padding: "8px 18px", borderRadius: 3, backgroundColor: BAM, color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Guardar</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Action result bubble ───────────────────────────────────────────────────────
 function ActionResult({ action }) {
   const icons = { create_task: "✅", create_event: "📅", add_alicia_note: "🧠", update_growth: "🎯", update_skills: "⚡", search_file: "🔍" };
@@ -610,7 +439,6 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const [hiloFallo, setHiloFallo] = useState(false);   // no se pudo traer el hilo del servidor
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(null);
   const [showKeyReset, setShowKeyReset] = useState(false);
   const [listening, setListening] = useState(false);
 
@@ -1008,24 +836,6 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
   };
 
-  const handleSaveProfile = useCallback((profileId, data) => {
-    setProfiles(prev => ({
-      ...prev,
-      [profileId]: {
-        ...prev[profileId],
-        growth: { ...prev[profileId].growth, ...data.growth },
-        workStyle: data.workStyle,
-        skills: {
-          ...prev[profileId].skills,
-          developing: data.skills.developing,
-          toExplore: data.skills.toExplore,
-        },
-        strengths: data.strengths,
-        opportunities: data.opportunities,
-      }
-    }));
-  }, []);
-
   // ── Render: API key gate ─────────────────────────────────────────────────────
   // Con backend local no necesitamos API key en el browser
   // Solo bloqueamos si no hay backend Y no hay apiKey guardada
@@ -1234,17 +1044,14 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
       {/* ── Derecha: qué está viendo Alicia ahora mismo ── */}
       <div style={{ width: "min(280px, 80vw)", minWidth: "min(280px, 80vw)", flexShrink: 0 }}>
-        <PanelContexto />
-      </div>
-
-      {/* Profile editor modal */}
-      {editingProfile && (
-        <ProfileEditor
-          profile={editingProfile}
-          onSave={(data) => handleSaveProfile(editingProfile.userId, data)}
-          onClose={() => setEditingProfile(null)}
+        <PanelContexto
+          isAdmin={isAdmin}
+          profiles={profiles}
+          selectedUserId={selectedUserId}
+          currentUserId={currentUserId}
+          onSelectUser={setSelectedUserId}
         />
-      )}
+      </div>
 
       <style>{`
         @keyframes bounce {
