@@ -17,6 +17,7 @@ import { buildTweedledumSystemPrompt } from "./prompts/tweedledum.v1.js";
 import { buildTweedledeeSystemPrompt } from "./prompts/tweedledee.v1.js";
 import { buildTweedledumFloorSystemPrompt, TWEEDLEDUM_FLOOR_PROMPT_VERSION } from "./prompts/tweedledum-floor.v1.js";
 import { validateFloorProposal } from "./floor-validation.js";
+import { commercialBaselineFinding, evaluateFloorCommercialPerformance } from "./floor-commercial.js";
 
 export class ArchitectureModelError extends Error {
   constructor(message, cause = null) {
@@ -105,7 +106,23 @@ export function createArchitectureService({ client = null, model = null } = {}) 
         unitsPerFloor: input.floorBrief.unitsPerFloor,
         mix: input.floorBrief.bedroomMix,
         targetAverageArea: input.floorBrief.targetAverageArea,
+        targetAreaByBedrooms: input.floorBrief.targetAreaByBedrooms,
         areaTolerance: input.floorBrief.areaTolerance,
+      };
+      let fallback;
+      try { fallback = normalizeFloorPlanOutput(input.deterministicFallback); }
+      catch (error) { throw new ArchitectureModelError(`Deterministic fallback is invalid: ${error.message}`, error); }
+      const fallbackValidation = validateFloorProposal(fallback, validationOptions);
+      const commercialBrief = input.floorBrief.commercialBrief || {};
+      const fallbackEvaluation = evaluateFloorCommercialPerformance(fallback, commercialBrief);
+      const assess = (proposal) => {
+        const validation = validateFloorProposal(proposal, { ...validationOptions, enforceIndividualUnitArea: true, requireExteriorFrontage: true });
+        const evaluation = evaluateFloorCommercialPerformance(proposal, commercialBrief);
+        const commercialFinding = fallbackValidation.ok ? commercialBaselineFinding(evaluation, fallbackEvaluation) : null;
+        if (validation.ok && commercialFinding) {
+          return { validation: { ...validation, ok: false, findings: [...validation.findings, commercialFinding] }, evaluation };
+        }
+        return { validation, evaluation };
       };
       const callFloor = (payload) => call(
         "tweedledum",
@@ -124,12 +141,14 @@ export function createArchitectureService({ client = null, model = null } = {}) 
       let revision = null;
       let originalValidation = null;
       let revisionValidation = null;
+      let originalEvaluation = null;
+      let revisionEvaluation = null;
       let fallbackReason = null;
       try {
-        originalProposal = await callFloor({ operation: "design_floor", context, floorBrief: input.floorBrief });
-        originalValidation = validateFloorProposal(originalProposal, validationOptions);
+        originalProposal = await callFloor({ operation: "design_floor", context, floorBrief: input.floorBrief, deterministicBaseline: { validation: fallbackValidation, evaluation: fallbackEvaluation } });
+        ({ validation: originalValidation, evaluation: originalEvaluation } = assess(originalProposal));
         if (originalValidation.ok) {
-          return { originalProposal, revision, validation: originalValidation, selected: originalProposal, source: "tweedledum", candidateValidation: { original: originalValidation, revision: null }, agent: originalProposal.agent, promptVersion: originalProposal.promptVersion, model: originalProposal.model };
+          return { originalProposal, revision, validation: originalValidation, evaluation: originalEvaluation, selected: originalProposal, source: "tweedledum", candidateValidation: { original: originalValidation, revision: null, fallback: fallbackValidation }, candidateEvaluation: { original: originalEvaluation, revision: null, fallback: fallbackEvaluation }, agent: originalProposal.agent, promptVersion: originalProposal.promptVersion, model: originalProposal.model };
         }
         revision = await callFloor({
           operation: "revise_floor",
@@ -137,20 +156,17 @@ export function createArchitectureService({ client = null, model = null } = {}) 
           floorBrief: input.floorBrief,
           proposal: originalProposal.floor,
           deterministicFindings: originalValidation.findings,
+          deterministicBaseline: { validation: fallbackValidation, evaluation: fallbackEvaluation },
         });
-        revisionValidation = validateFloorProposal(revision, validationOptions);
+        ({ validation: revisionValidation, evaluation: revisionEvaluation } = assess(revision));
         if (revisionValidation.ok) {
-          return { originalProposal, revision, validation: revisionValidation, selected: revision, source: "revision", candidateValidation: { original: originalValidation, revision: revisionValidation }, agent: revision.agent, promptVersion: revision.promptVersion, model: revision.model };
+          return { originalProposal, revision, validation: revisionValidation, evaluation: revisionEvaluation, selected: revision, source: "revision", candidateValidation: { original: originalValidation, revision: revisionValidation, fallback: fallbackValidation }, candidateEvaluation: { original: originalEvaluation, revision: revisionEvaluation, fallback: fallbackEvaluation }, agent: revision.agent, promptVersion: revision.promptVersion, model: revision.model };
         }
         fallbackReason = "Tweedledum revision did not pass deterministic validation";
       } catch (error) {
         fallbackReason = error.message || "Tweedledum floor planning failed";
       }
 
-      let fallback;
-      try { fallback = normalizeFloorPlanOutput(input.deterministicFallback); }
-      catch (error) { throw new ArchitectureModelError(`Deterministic fallback is invalid: ${error.message}`, error); }
-      const fallbackValidation = validateFloorProposal(fallback, validationOptions);
       if (!fallbackValidation.ok) {
         throw new ArchitectureModelError(`Deterministic fallback failed validation: ${fallbackValidation.findings.map((item) => item.message).join(" · ")}`);
       }
@@ -159,10 +175,12 @@ export function createArchitectureService({ client = null, model = null } = {}) 
         originalProposal,
         revision,
         validation: fallbackValidation,
+        evaluation: fallbackEvaluation,
         selected: fallback,
         source: "deterministic_fallback",
         fallbackReason,
-        candidateValidation: { original: originalValidation, revision: revisionValidation },
+        candidateValidation: { original: originalValidation, revision: revisionValidation, fallback: fallbackValidation },
+        candidateEvaluation: { original: originalEvaluation, revision: revisionEvaluation, fallback: fallbackEvaluation },
         agent: { key: agent.key, displayName: agent.displayName },
         promptVersion: TWEEDLEDUM_FLOOR_PROMPT_VERSION,
         model: model || agent.model,

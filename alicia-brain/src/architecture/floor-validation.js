@@ -252,6 +252,8 @@ export function validateFloorProposal(proposal = {}, options = {}) {
     }
     const accessible = unit.pieces.some((piece) => circulation.some((hall) => coreConnectedHalls.has(hall.polygonId) && polygonsShareEdge(piece.polygon, hall.polygon)));
     if (!accessible) findings.push(finding("unit_without_access", `${unitRef} no toca circulación común`, unit.pieces.map((piece) => piece.polygonId), [unitRef]));
+    const exteriorFrontage = unit.pieces.some((piece) => polygonsShareEdge(piece.polygon, footprint));
+    if (options.requireExteriorFrontage && !exteriorFrontage) findings.push(finding("unit_without_exterior_frontage", `${unitRef} no tiene frente exterior aprovechable`, unit.pieces.map((piece) => piece.polygonId), [unitRef]));
   }
   if (circulation.length && cores.length && coreConnectedHalls.size === 0) {
     findings.push(finding("circulation_without_core", "La circulación común no conecta con el core", circulation.map((item) => item.polygonId)));
@@ -277,6 +279,16 @@ export function validateFloorProposal(proposal = {}, options = {}) {
   }
   const targetArea = Number(options.targetAverageArea);
   const tolerance = Number.isFinite(options.areaTolerance) ? options.areaTolerance : AREA_TOLERANCE;
+  if (options.enforceIndividualUnitArea && targetArea > 0) {
+    for (const [unitRef, unit] of units) {
+      const bedrooms = Number(unit.program?.dormitorios);
+      const typologyTarget = Number(options.targetAreaByBedrooms?.[`dormitorios${bedrooms}`]);
+      const unitTarget = typologyTarget > 0 ? typologyTarget : targetArea;
+      if (Math.abs(unit.area - unitTarget) / unitTarget > tolerance) {
+        findings.push(finding("individual_unit_area_out_of_tolerance", `${unitRef} tiene ${unit.area.toFixed(1)} m² y no cumple el área objetivo de ${unitTarget.toFixed(1)} m² para ${bedrooms} dormitorio(s)`, unit.pieces.map((piece) => piece.polygonId), [unitRef]));
+      }
+    }
+  }
   if (targetArea > 0 && Math.abs(averageUnitArea - targetArea) / targetArea > tolerance) {
     findings.push(finding("unit_area_out_of_tolerance", `El área promedio ${averageUnitArea.toFixed(1)} m² excede la tolerancia de ${(tolerance * 100).toFixed(0)}%`));
   }

@@ -20,7 +20,7 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
-  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "1.1.0");
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "1.2.0");
 });
 
 test("floor proposals preserve exclusive roles and stable unit references", () => {

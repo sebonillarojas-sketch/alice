@@ -529,6 +529,19 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
             project={proyectoActivo}
             floorProposals={proyectoActivo?.cabida?.floorProposals || []}
             activeFloorProposalId={proyectoActivo?.cabida?.activeFloorProposalId || null}
+            commercialBrief={{
+              floors: pisos,
+              fixedSellableArea: r.azTech * (1 - circulacion / 100),
+              fixedBuiltArea: r.azTech + r.sotanos,
+              fixedRevenue: r.ingAz + r.ingEst,
+              pricePerSellableM2: precioM2,
+              costPerBuiltM2: costoM2,
+              salesCostPct: costoVentas,
+              landCost: valorTerreno,
+              incomeTaxPct: impuesto,
+              targetSellableArea: r.vendible,
+              targetNetProfit: r.utilNeta,
+            }}
             onProposalGenerated={(result) => proyectosStore.addFloorProposal(proyectoActivo.id, result)}
             onAcceptFloor={(proposalId) => proyectosStore.acceptFloorProposal(proyectoActivo.id, proposalId)}
             onDiscardFloor={(proposalId, motivo) => proyectosStore.discardFloorProposal(proyectoActivo.id, proposalId, motivo)}

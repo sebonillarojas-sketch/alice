@@ -202,8 +202,31 @@ const floorOutput = (sourceCabidaVersionId = "cabida_p1_v3") => ({
 });
 const floorRequest = () => ({
   context: { project: { id: "p1", name: "DC01" }, sourceCabidaVersionId: "cabida_p1_v3", site: { buildableFootprint: floorRect(0, 0, 10, 10) } },
-  floorBrief: { unitsPerFloor: 2, bedroomMix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 }, targetAverageArea: 16 },
+  floorBrief: {
+    unitsPerFloor: 2,
+    bedroomMix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 },
+    targetAverageArea: 16,
+    commercialBrief: { floors: 10, pricePerSellableM2: 2_000, costPerBuiltM2: 800 },
+  },
   deterministicFallback: floorOutput(),
+});
+
+const underperformingFloorOutput = () => ({
+  summary: "Two undersized units",
+  assumptions: [],
+  tradeoffs: [],
+  floor: {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    polygons: [
+      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: floorRect(4, 0, 6, 10) },
+      { polygonId: "hall-left", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: floorRect(0, 3.25, 4, 4.25) },
+      { polygonId: "hall-right", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: floorRect(6, 3.25, 10, 4.25) },
+      { polygonId: "unit-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: floorRect(0, 0, 4, 3.25) },
+      { polygonId: "unit-2", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: floorRect(6, 0, 10, 3.25) },
+      { polygonId: "void-left", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: floorRect(0, 4.25, 4, 10) },
+      { polygonId: "void-right", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: floorRect(6, 4.25, 10, 10) },
+    ],
+  },
 });
 
 test("floor planning selects a valid first proposal in one bounded call", async () => {
@@ -219,9 +242,27 @@ test("floor planning selects a valid first proposal in one bounded call", async 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].max_tokens, 3500);
   assert.equal(calls[0].tools[0].name, "submit_tweedledum_floor_output");
-  assert.equal(result.promptVersion, "1.1.0");
+  assert.equal(result.promptVersion, "1.2.0");
   assert.equal(result.candidateValidation.original.ok, true);
   assert.equal(result.candidateValidation.revision, null);
+});
+
+test("floor planning revises a geometrically valid proposal that sells less than the fallback", async () => {
+  const calls = [];
+  const responses = [underperformingFloorOutput(), floorOutput()];
+  const client = { messages: { create: async (request) => {
+    calls.push(request);
+    return { content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: responses.shift() }] };
+  } } };
+
+  const result = await createArchitectureService({ client, model: "test-model" }).planFloor(floorRequest());
+
+  assert.equal(result.source, "revision");
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].messages[0].content, /commercial_underperformance/);
+  assert.equal(result.evaluation.sellableAreaPerFloor, 32);
+  assert.equal(result.candidateEvaluation.original.sellableAreaPerFloor, 26);
+  assert.equal(result.candidateEvaluation.fallback.sellableAreaPerFloor, 32);
 });
 
 test("floor planning makes exactly one targeted revision before selecting it", async () => {

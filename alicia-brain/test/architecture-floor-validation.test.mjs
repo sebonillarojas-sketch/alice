@@ -134,6 +134,50 @@ test("unit count, bedroom mix, and average area use explicit tolerances", () => 
   assert.ok(result.findings.some((finding) => finding.code === "unit_area_out_of_tolerance"));
 });
 
+test("cada unidad cumple la tolerancia de área aunque el promedio del piso coincida", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1").polygon = rect(0, 0, 4, 2);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 2, 4, 3);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-left").polygon = rect(0, 3, 4, 10);
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-2-part-1").polygon = rect(6, 0, 10, 6);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-right").polygon = rect(6, 6, 10, 7);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-right").polygon = rect(6, 7, 10, 10);
+
+  const result = validateFloorProposal(proposal, { ...options, enforceIndividualUnitArea: true });
+
+  assert.equal(result.stats.averageUnitArea, 16);
+  assert.ok(result.findings.some((finding) => finding.code === "individual_unit_area_out_of_tolerance" && finding.unitRefs.includes("unit-1")));
+  assert.ok(result.findings.some((finding) => finding.code === "individual_unit_area_out_of_tolerance" && finding.unitRefs.includes("unit-2")));
+});
+
+test("las áreas individuales se comparan con la tipología de Cabida", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1").polygon = rect(0, 0, 4, 2);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 2, 4, 3);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-left").polygon = rect(0, 3, 4, 10);
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-2-part-1").polygon = rect(6, 0, 10, 6);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-right").polygon = rect(6, 6, 10, 7);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-right").polygon = rect(6, 7, 10, 10);
+
+  const result = validateFloorProposal(proposal, {
+    ...options,
+    enforceIndividualUnitArea: true,
+    targetAreaByBedrooms: { dormitorios1: 8, dormitorios2: 24, dormitorios3: 30 },
+  });
+
+  assert.equal(result.findings.some((finding) => finding.code === "individual_unit_area_out_of_tolerance"), false);
+});
+
+test("una unidad sin frente exterior se rechaza como producto no vendible", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1").polygon = rect(1, 1, 3, 3);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 3, 4, 4);
+
+  const result = validateFloorProposal(proposal, { ...options, requireExteriorFrontage: true });
+
+  assert.ok(result.findings.some((finding) => finding.code === "unit_without_exterior_frontage" && finding.unitRefs.includes("unit-1")));
+});
+
 test("a floor requires both core and circulation roles", () => {
   const proposal = validProposal();
   proposal.floor.polygons = proposal.floor.polygons.filter((item) => !["core", "circulacion"].includes(item.role));

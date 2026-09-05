@@ -278,6 +278,7 @@ export default function EsquemaPlanta({
   frente, tipoLote, retiros, lotePoly, cadInfo,
   frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
   project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor, onDiscardFloor,
+  commercialBrief = {},
   soloPlanta = false,
 }) {
   const [show3D, setShow3D] = useState(false);
@@ -317,8 +318,9 @@ export default function EsquemaPlanta({
   }, [lotePoly, terreno, frente, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
   const totalUnits = Math.max(1, Math.round(e.uPorPiso));
   const bedroomMix = { dormitorios1: e.n1, dormitorios2: e.n2, dormitorios3: e.n3 };
+  const targetAreaByBedrooms = { dormitorios1: e.areaTip["1D"], dormitorios2: e.areaTip["2D"], dormitorios3: e.areaTip["3D"] };
   const compactFootprint = real?.footprint?.map((point) => [Number(point.x), Number(point.y)]) || [];
-  const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto };
+  const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto, targetAreaByBedrooms, commercialBrief };
   const currentCabidaVersionId = cabidaVersionId(project?.id || "cabida", versionInputs);
   // una propuesta descartada deja de mostrarse, pero sigue en floorProposals: su motivo es
   // la retroalimentación con la que Tweedledum aprende.
@@ -361,7 +363,7 @@ export default function EsquemaPlanta({
           lockedElements: [],
           verifiedEvidence: [],
         },
-        floorBrief: { unitsPerFloor: total, bedroomMix, targetAverageArea: areaDpto, areaTolerance: 0.2 },
+        floorBrief: { unitsPerFloor: total, bedroomMix, targetAverageArea: areaDpto, targetAreaByBedrooms, areaTolerance: 0.2, commercialBrief },
         deterministicFallback,
       });
       const record = onProposalGenerated?.(result) || null;
@@ -394,6 +396,11 @@ export default function EsquemaPlanta({
   const sourceLabel = currentResult?.source === "revision" ? "revisión de Tweedledum"
     : currentResult?.source === "deterministic_fallback" ? "respaldo determinístico"
       : currentResult?.source === "tweedledum" ? "Tweedledum" : displayedRecord?.source || null;
+  const commercialEvaluation = currentResult?.evaluation || displayedRecord?.evaluation || null;
+  const fallbackEvaluation = currentResult?.candidateEvaluation?.fallback || displayedRecord?.candidateEvaluation?.fallback || null;
+  const profitDelta = commercialEvaluation && fallbackEvaluation
+    ? commercialEvaluation.projectedNetProfit - fallbackEvaluation.projectedNetProfit
+    : null;
 
   useEffect(() => { setAcceptedFloorId(activeFloorProposalId); }, [activeFloorProposalId]);
 
@@ -503,6 +510,12 @@ export default function EsquemaPlanta({
                 )}
                 {sourceLabel && <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>origen: {sourceLabel}</span>}
               </div>
+              {commercialEvaluation && (
+                <div style={{ fontFamily: mono, fontSize: 10, color: C.ink, marginTop: 8, lineHeight: 1.55 }}>
+                  vendible {fmt(commercialEvaluation.sellableAreaPerFloor, 1)} m²/piso · eficiencia {fmt(commercialEvaluation.efficiencyPct, 1)}% · utilidad proyectada ${fmt(commercialEvaluation.projectedNetProfit)}
+                  {profitDelta !== null && ` · ${profitDelta >= 0 ? "+" : ""}$${fmt(profitDelta)} vs. respaldo`}
+                </div>
+              )}
               {floorError && <div style={{ fontFamily: mono, fontSize: 10.5, color: "#A85B5B", marginTop: 8, lineHeight: 1.5 }}>{floorError}</div>}
             </>
           ) : (

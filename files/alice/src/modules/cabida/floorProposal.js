@@ -31,6 +31,8 @@ export function appendFloorProposalRecord(project = {}, result = {}, { now = new
     floor: clone(selected.floor || { sourceCabidaVersionId: "", polygons: [] }),
     validation: clone(result.validation || { ok: false, findings: [] }),
     candidateValidation: clone(result.candidateValidation || null),
+    evaluation: clone(result.evaluation || null),
+    candidateEvaluation: clone(result.candidateEvaluation || null),
     fallbackReason: result.fallbackReason ? String(result.fallbackReason) : null,
     createdAt: typeof now === "string" ? now : new Date(now).toISOString(),
   };
