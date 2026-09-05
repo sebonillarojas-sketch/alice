@@ -531,6 +531,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
             activeFloorProposalId={proyectoActivo?.cabida?.activeFloorProposalId || null}
             onProposalGenerated={(result) => proyectosStore.addFloorProposal(proyectoActivo.id, result)}
             onAcceptFloor={(proposalId) => proyectosStore.acceptFloorProposal(proyectoActivo.id, proposalId)}
+            onDiscardFloor={(proposalId, motivo) => proyectosStore.discardFloorProposal(proyectoActivo.id, proposalId, motivo)}
           />
         </Card>
       </div>

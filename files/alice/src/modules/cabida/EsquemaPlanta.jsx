@@ -277,7 +277,7 @@ export default function EsquemaPlanta({
   terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
   frente, tipoLote, retiros, lotePoly, cadInfo,
   frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
-  project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor,
+  project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor, onDiscardFloor,
   soloPlanta = false,
 }) {
   const [show3D, setShow3D] = useState(false);
@@ -320,8 +320,14 @@ export default function EsquemaPlanta({
   const compactFootprint = real?.footprint?.map((point) => [Number(point.x), Number(point.y)]) || [];
   const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto };
   const currentCabidaVersionId = cabidaVersionId(project?.id || "cabida", versionInputs);
-  const currentResult = floorResult?.selected?.floor?.sourceCabidaVersionId === currentCabidaVersionId ? floorResult : null;
-  const latestRecord = [...floorProposals].reverse().find((record) => record.sourceCabidaVersionId === currentCabidaVersionId) || null;
+  // una propuesta descartada deja de mostrarse, pero sigue en floorProposals: su motivo es
+  // la retroalimentación con la que Tweedledum aprende.
+  const descartada = (record) => Boolean(record?.descartada
+    || floorProposals.find((item) => item.id === record?.id)?.descartada);
+  const resultBruto = floorResult?.selected?.floor?.sourceCabidaVersionId === currentCabidaVersionId ? floorResult : null;
+  const currentResult = descartada(resultBruto?.record) ? null : resultBruto;
+  const latestRecord = [...floorProposals].reverse().find((record) =>
+    record.sourceCabidaVersionId === currentCabidaVersionId && !record.descartada) || null;
   const displayedRecord = currentResult?.record || latestRecord;
   const displayedProposal = currentResult?.selected || (displayedRecord ? {
     summary: displayedRecord.summary,
@@ -371,6 +377,16 @@ export default function EsquemaPlanta({
     if (!proposalId) return;
     onAcceptFloor?.(proposalId);
     setAcceptedFloorId(proposalId);
+  };
+
+  // Descartar no borra: guarda el motivo y vuelve a mostrar los partis deterministas.
+  const discardFloor = () => {
+    const proposalId = displayedRecord?.id;
+    if (!proposalId) return;
+    const motivo = (window.prompt("¿Por qué no sirve esta planta? (opcional — le sirve a Tweedledum para aprender)") || "").trim();
+    onDiscardFloor?.(proposalId, motivo);
+    setFloorResult(null);
+    setAcceptedFloorId(null);
   };
 
   const sourceLabel = currentResult?.source === "revision" ? "revisión de Tweedledum"
@@ -475,6 +491,12 @@ export default function EsquemaPlanta({
                   <button onClick={acceptFloor} disabled={acceptedFloorId === displayedRecord.id}
                     style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: acceptedFloorId === displayedRecord.id ? "default" : "pointer", color: acceptedFloorId === displayedRecord.id ? C.soft : C.orange, background: C.card, border: `1px solid ${acceptedFloorId === displayedRecord.id ? C.line : C.orange}` }}>
                     {acceptedFloorId === displayedRecord.id ? "✓ aceptada para Planos" : "Aceptar y enviar a Planos"}
+                  </button>
+                )}
+                {displayedRecord && (
+                  <button onClick={discardFloor} title="oculta esta propuesta y vuelve a los partis deterministas; queda guardada con tu motivo"
+                    style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: "pointer", color: C.soft, background: C.card, border: `1px solid ${C.line}` }}>
+                    Descartar propuesta
                   </button>
                 )}
                 {sourceLabel && <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>origen: {sourceLabel}</span>}

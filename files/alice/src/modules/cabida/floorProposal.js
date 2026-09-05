@@ -54,6 +54,27 @@ export function acceptFloorProposalRecord(project = {}, proposalId) {
   };
 }
 
+// Descartar OCULTA la propuesta pero nunca la borra: el historial de propuestas
+// rechazadas, con su motivo, es la retroalimentación con la que Tweedledum aprende.
+export function discardFloorProposalRecord(project = {}, proposalId, motivo = "", { now = new Date().toISOString() } = {}) {
+  const proposals = Array.isArray(project.cabida?.floorProposals) ? project.cabida.floorProposals : [];
+  const record = proposals.find((item) => item.id === proposalId);
+  if (!record) throw new Error(`Floor proposal ${proposalId} not found`);
+  const descartadaAt = typeof now === "string" ? now : new Date(now).toISOString();
+  const cabida = clone(project.cabida || {});
+  return {
+    ...clone(project),
+    cabida: {
+      ...cabida,
+      floorProposals: proposals.map((item) => (item.id === proposalId
+        ? { ...clone(item), descartada: true, motivoDescarte: String(motivo || ""), descartadaAt }
+        : clone(item))),
+      // si la descartada estaba activa, deja de estarlo
+      activeFloorProposalId: cabida.activeFloorProposalId === proposalId ? null : cabida.activeFloorProposalId,
+    },
+  };
+}
+
 export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sourceCabidaVersionId }) {
   const candidates = generarDistribuciones(footprint, frontIdx, brief);
   const parti = candidates.find((candidate) => {
