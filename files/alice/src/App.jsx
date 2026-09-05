@@ -599,8 +599,22 @@ function Gate() {
       setPwSet(null);
       return;
     }
-    setWaSet(localStorage.getItem(WA_KEY(user.id)) !== null);
-    setPwSet(hasSetOwnPassword(user.id));
+    // localStorage puede TIRAR (no solo devolver null): Safari con "bloquear
+    // todas las cookies", storage deshabilitado por política de MDM, modo
+    // restringido. Sin este try/catch, la excepción quedaba sin manejar acá
+    // arriba, ninguno de los tres setState de abajo se llegaba a ejecutar, y
+    // la pantalla se quedaba en "Cargando..." para siempre — el mismo defecto
+    // (fallar CERRADO) que esta rama vino a matar, un nivel más arriba de
+    // donde ya lo arreglamos. Un storage roto no es motivo para dejar a nadie
+    // afuera de su herramienta de trabajo: cualquier excepción acá hace pass.
+    try {
+      setWaSet(localStorage.getItem(WA_KEY(user.id)) !== null);
+      setPwSet(hasSetOwnPassword(user.id));
+    } catch (e) {
+      console.error("Gate: localStorage/hasSetOwnPassword inaccesible, fallando abierto:", e);
+      setWaSet(true);
+      setPwSet(true);
+    }
 
     // Compuerta de Calendar: la caché local (localStorage) NUNCA basta sola
     // para bloquear — se borra con la caché del navegador, cambiando de
@@ -611,12 +625,25 @@ function Gate() {
     // ante cualquier problema de red (ver lib/onboardingGate.js).
     let cancelled = false;
     (async () => {
-      const cachedGranted = localStorage.getItem(CAL_KEY(user.id)) === "1";
-      const brainStatus = cachedGranted ? null : await fetchGoogleStatus(user.id);
-      if (cancelled) return;
-      const { pass, persist } = decideCalendarGate({ cachedGranted, brainStatus });
-      if (persist) localStorage.setItem(CAL_KEY(user.id), "1");
-      setCalGranted(pass);
+      try {
+        const cachedGranted = localStorage.getItem(CAL_KEY(user.id)) === "1";
+        const brainStatus = cachedGranted ? null : await fetchGoogleStatus(user.id);
+        if (cancelled) return;
+        const { pass, persist } = decideCalendarGate({ cachedGranted, brainStatus });
+        if (persist) {
+          try { localStorage.setItem(CAL_KEY(user.id), "1"); }
+          catch { /* no se pudo cachear — no es motivo para bloquear, solo se repite el chequeo la próxima vez */ }
+        }
+        setCalGranted(pass);
+      } catch (e) {
+        // Cualquier excepción acá (localStorage.getItem, o algo inesperado en
+        // fetchGoogleStatus/decideCalendarGate) NO puede dejar calGranted en
+        // null para siempre — eso es la pantalla de "Cargando..." colgada que
+        // reportó la revisión. Un try/catch roto en el momento de decidir se
+        // trata igual que cualquier otro modo de falla de esta rama: se entra.
+        console.error("Gate: chequeo de Calendar tiró, fallando abierto:", e);
+        if (!cancelled) setCalGranted(true);
+      }
     })();
     return () => { cancelled = true; };
   }, [user, hasSetOwnPassword]);
