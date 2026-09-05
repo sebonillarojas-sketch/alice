@@ -756,12 +756,21 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     // limpia cuando llegan los headers. Sin stream los headers recién llegan con
     // la respuesta entera, así que ese timeout acota toda la generación; con
     // stream llegan apenas arranca, el timer se limpia ahí y el `for await` sobre
-    // los eventos SSE no tiene ningún tope. Una generación colgada pasaría de
-    // cortar a los 10 minutos a no cortar nunca — y en WhatsApp, donde el turno
-    // es fire-and-forget, eso es un pedido colgado y alguien esperando para
-    // siempre una respuesta que no llega.
+    // los eventos SSE no tiene ningún tope propio — el de 600s se lo reponemos a
+    // mano abajo, en conStream. Sin eso una generación colgada pasaría de cortar a
+    // los 10 minutos a no cortar nunca — y en WhatsApp, donde el turno es
+    // fire-and-forget, eso es un pedido colgado y alguien esperando para siempre
+    // una respuesta que no llega.
     const conStream = async (params) => {
-      const st = anthropic.messages.stream(params);
+      // El techo que create() traía de fábrica hay que reponerlo a mano: sin esto
+      // una generación colgada deja el `finalMessage()` sin resolver para siempre,
+      // el `finally` de la ruta nunca corre, el contexto del turno queda pinneado y
+      // el socket contra la API abierto. El browser se rinde a los 90s de silencio,
+      // pero del lado del servidor nadie limpia — y en una instancia de Railway que
+      // vive semanas eso se acumula. 600s es el mismo tope que create() aplicaba.
+      // El signal que le pasamos entra al AbortController propio del stream
+      // (lib/MessageStream.js), así que sí corta el body, no sólo la espera.
+      const st = anthropic.messages.stream(params, { signal: AbortSignal.timeout(600_000) });
       st.on("text", (delta) => {
         // Acá se paga el reset pendiente: recién con el primer delta sabemos que
         // esta vuelta sí trae texto, que es el único momento en que vaciar la
