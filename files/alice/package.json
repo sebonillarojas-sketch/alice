@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "vite build && npx netlify-cli deploy --prod --dir=dist",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "humo": "node scripts/humo.mjs",
+    "humo:burbuja": "node scripts/humo-burbuja.mjs",
+    "humo:stream": "node scripts/humo-stream.mjs",
+    "cerebro-falso": "node scripts/cerebro-falso.mjs"
   },
   "dependencies": {
     "@mlightcad/libredwg-web": "^0.7.7",
