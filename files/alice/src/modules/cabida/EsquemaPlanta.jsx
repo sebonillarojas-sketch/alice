@@ -396,6 +396,18 @@ export default function EsquemaPlanta({
   const sourceLabel = currentResult?.source === "revision" ? "revisión de Tweedledum"
     : currentResult?.source === "deterministic_fallback" ? "respaldo determinístico"
       : currentResult?.source === "tweedledum" ? "Tweedledum" : displayedRecord?.source || null;
+
+  // Cuando el servicio cae al respaldo, la planta que se dibuja es la determinística —
+  // visualmente idéntica a la que ya estabas viendo. Sin esto, apretar el botón parece
+  // "no hacer nada". Mostramos por qué se descartó lo de Tweedledum y con qué hallazgos.
+  const fuente = currentResult?.source || displayedRecord?.source || null;
+  const cayoAlRespaldo = fuente === "deterministic_fallback";
+  const motivoRespaldo = currentResult?.fallbackReason || displayedRecord?.fallbackReason || null;
+  const hallazgosDescartados = (() => {
+    const cand = currentResult?.candidateValidation || displayedRecord?.candidateValidation || null;
+    const lista = cand?.revision?.findings?.length ? cand.revision.findings : cand?.original?.findings;
+    return Array.isArray(lista) ? lista.slice(0, 4) : [];
+  })();
   const commercialEvaluation = currentResult?.evaluation || displayedRecord?.evaluation || null;
   const fallbackEvaluation = currentResult?.candidateEvaluation?.fallback || displayedRecord?.candidateEvaluation?.fallback || null;
   const profitDelta = commercialEvaluation && fallbackEvaluation
@@ -510,6 +522,19 @@ export default function EsquemaPlanta({
                 )}
                 {sourceLabel && <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>origen: {sourceLabel}</span>}
               </div>
+              {cayoAlRespaldo && (
+                <div style={{ fontFamily: mono, fontSize: 10.5, marginTop: 10, padding: "9px 11px", lineHeight: 1.55,
+                  background: "#FFF6F0", border: `1px solid ${C.orange}`, borderRadius: 2, color: C.ink }}>
+                  <b>Tweedledum no logró una planta válida.</b> Lo que ves es el respaldo determinístico —
+                  por eso el dibujo no cambió.
+                  {motivoRespaldo && <div style={{ color: C.soft, marginTop: 4 }}>{motivoRespaldo}</div>}
+                  {hallazgosDescartados.length > 0 && (
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 16, color: C.soft }}>
+                      {hallazgosDescartados.map((f, i) => <li key={i}>{f.message || f.code}</li>)}
+                    </ul>
+                  )}
+                </div>
+              )}
               {commercialEvaluation && (
                 <div style={{ fontFamily: mono, fontSize: 10, color: C.ink, marginTop: 8, lineHeight: 1.55 }}>
                   vendible {fmt(commercialEvaluation.sellableAreaPerFloor, 1)} m²/piso · eficiencia {fmt(commercialEvaluation.efficiencyPct, 1)}% · utilidad proyectada ${fmt(commercialEvaluation.projectedNetProfit)}
