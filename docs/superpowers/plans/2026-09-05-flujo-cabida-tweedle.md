@@ -128,7 +128,11 @@ Convierte la crítica de Tweedledee en restricción: los hallazgos entran como `
 - Test: `files/alice/test/findings-ledger.test.mjs`
 
 **Interfaces:**
-- Consumes: hallazgos con la forma de `normalizeCritiqueOutput` (`{unidad, ambiente, regla, medida, esperado, severidad, nivel, category}`).
+- Consumes: hallazgos con la forma `{unidad, ambiente, regla, medida, esperado, severidad, nivel, category}`.
+  **OJO — esta forma NO es la que emite hoy `normalizeCritiqueOutput`.** Ese normalizador usa lista
+  blanca y devuelve `{id, severity, category, title, observation, consequence, recommendation,
+  location, regulatoryStatus, evidenceRefs}`: no hay `nivel`, `regla`, `ambiente` ni `unidad`.
+  Producirla es responsabilidad de la **Tarea 10**, sin la cual el mecanismo §6.3 no se dispara nunca.
 - Produces: `createLedger() -> Ledger` con `record(unidad, findings) -> {nuevos, repetidos, regresiones}`, `mustFix(unidad) -> Finding[]`, `bloqueado(unidad) -> boolean`, `resueltos(unidad, findings) -> Finding[]`.
 - `findingKey(f) -> string` exportada para reuso en Task 5.
 
@@ -441,6 +445,163 @@ git commit -m "feat(planos): resolver primero la unidad mas restrictiva"
 
 ---
 
+### Task 4b: Recorte de polígonos contra la huella real
+
+`packFloor` empaqueta sobre el **rectángulo envolvente orientado al frente**, no sobre la
+huella. Con un lote rectangular coinciden y no se nota. Con uno irregular las piezas se
+desbordan en las concavidades y el validador rechaza la propuesta entera.
+
+Reproducción medida (huella real de Sebastián: 272.64 m² dentro de una envolvente de
+31.0 × 14.5 = 449.5 m², o sea el 61 %):
+
+```
+── rectangular 31 x 14.5
+   ✓ sin hallazgos de geometría
+── irregular (trapecio con mordida)
+   outside_buildable_footprint: 1D sale de la huella edificable
+   incomplete_partition: La planta deja 56.33 m² sin asignar
+```
+
+Esta tarea recorta cada pieza contra la huella antes de emitir la propuesta.
+
+**Files:**
+- Create: `files/alice/src/modules/planos/clipFootprint.js`
+- Test: `files/alice/test/clip-footprint.test.mjs`
+
+**Interfaces:**
+- Consumes: nada. Geometría pura.
+- Produces:
+  - `clipPolygon(subject, clip) -> Point[][]` — recorta `subject` contra `clip`. Devuelve
+    **una lista** de anillos porque una pieza puede partirse en dos al cruzar una concavidad.
+    `Point` es `{x, y}`. Devuelve `[]` si no queda nada.
+  - `clipPieces(pieces, footprint, minArea = 1.0) -> {kept, dropped, split}` — aplica
+    `clipPolygon` a cada pieza `{id, pts, ...}`; descarta restos con área menor a `minArea`;
+    cuando una pieza queda partida, conserva **solo el fragmento mayor** y la cuenta en
+    `split`. `kept` conserva todos los campos originales de la pieza con `pts` recortados.
+
+**Nota de implementación:** la huella puede ser cóncava, así que Sutherland–Hodgman clásico
+(que asume recortador convexo) no alcanza. Usá **Greiner–Hormann** o descomponé el recortador
+en triángulos y uní los resultados. Si te resulta más simple y robusto: triangulá la huella
+(fan desde el centroide no sirve en cóncavos — usá *ear clipping*), recortá el sujeto contra
+cada triángulo con Sutherland–Hodgman, y devolvé los fragmentos con área > ε. No importa que
+sea O(n·m): las huellas tienen decenas de vértices, no miles.
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// files/alice/test/clip-footprint.test.mjs
+import test from "node:test";
+import assert from "node:assert/strict";
+import { clipPolygon, clipPieces } from "../src/modules/planos/clipFootprint.js";
+
+const area = (pts) => {
+  let s = 0;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a.x * b.y - b.x * a.y; }
+  return Math.abs(s) / 2;
+};
+const cuad = (x0, y0, x1, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+
+test("una pieza enteramente dentro sale intacta en area", () => {
+  const out = clipPolygon(cuad(2, 2, 4, 4), cuad(0, 0, 10, 10));
+  assert.equal(out.length, 1);
+  assert.equal(Math.round(area(out[0]) * 100) / 100, 4);
+});
+
+test("una pieza enteramente fuera desaparece", () => {
+  assert.deepEqual(clipPolygon(cuad(20, 20, 24, 24), cuad(0, 0, 10, 10)), []);
+});
+
+test("una pieza que se desborda se recorta al area comun", () => {
+  const out = clipPolygon(cuad(5, 5, 15, 15), cuad(0, 0, 10, 10));
+  assert.equal(out.length, 1);
+  assert.equal(Math.round(area(out[0]) * 100) / 100, 25);
+});
+
+test("recortador concavo: la pieza se parte en dos fragmentos", () => {
+  // huella en U: dos brazos verticales unidos abajo
+  const U = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 7, y: 10 },
+             { x: 7, y: 3 }, { x: 3, y: 3 }, { x: 3, y: 10 }, { x: 0, y: 10 }];
+  const banda = cuad(0, 5, 10, 7);           // cruza la muesca central
+  const out = clipPolygon(banda, U);
+  const total = out.reduce((s, ring) => s + area(ring), 0);
+  assert.equal(out.length, 2, "debe partirse en dos brazos");
+  assert.equal(Math.round(total * 100) / 100, 12);   // 2 brazos de 3 x 2
+});
+
+test("clipPieces conserva campos, descarta migajas y cuenta las partidas", () => {
+  const U = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 7, y: 10 },
+             { x: 7, y: 3 }, { x: 3, y: 3 }, { x: 3, y: 10 }, { x: 0, y: 10 }];
+  const piezas = [
+    { id: "a", role: "unidad", pts: cuad(0, 0, 3, 3) },      // dentro
+    { id: "b", role: "unidad", pts: cuad(20, 20, 22, 22) },  // fuera
+    { id: "c", role: "unidad", pts: cuad(0, 5, 10, 7) },     // se parte
+    { id: "d", role: "unidad", pts: cuad(3.0, 5, 3.2, 5.1) },// migaja dentro de la muesca
+  ];
+  const { kept, dropped, split } = clipPieces(piezas, U, 1.0);
+  assert.deepEqual(kept.map((p) => p.id).sort(), ["a", "c"]);
+  assert.deepEqual(dropped.map((p) => p.id).sort(), ["b", "d"]);
+  assert.equal(split, 1);
+  assert.equal(kept.find((p) => p.id === "a").role, "unidad", "debe conservar los campos");
+  assert.equal(Math.round(area(kept.find((p) => p.id === "c").pts) * 100) / 100, 6,
+    "de la pieza partida queda solo el fragmento mayor");
+});
+
+test("no muta las piezas de entrada", () => {
+  const p = [{ id: "x", pts: cuad(5, 5, 15, 15) }];
+  const antes = JSON.stringify(p);
+  clipPieces(p, cuad(0, 0, 10, 10));
+  assert.equal(JSON.stringify(p), antes);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd files/alice && node --test test/clip-footprint.test.mjs`
+Expected: FAIL — `Cannot find module '../src/modules/planos/clipFootprint.js'`
+
+- [ ] **Step 3: Escribí la implementación**
+
+Sin código dado: es la única tarea del plan donde el algoritmo es tuyo. Cumplí el contrato de
+`Interfaces` y hacé pasar los seis tests. Restricciones: ESM puro, sin dependencias nuevas,
+funciones puras y sin mutar la entrada. Los dos brazos del test de la U tienen que salir como
+dos anillos separados — si tu algoritmo devuelve un solo anillo con un puente de ancho cero,
+está mal.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd files/alice && node --test test/clip-footprint.test.mjs`
+Expected: PASS, 6 tests
+
+- [ ] **Step 5: Verificá contra el caso real**
+
+Corré esto y pegá la salida en tu reporte. Es el caso que hoy falla en producción:
+
+```bash
+cd /Users/sebas/Desktop/ALICE/files/alice && node --input-type=module -e '
+import { packFloor } from "./src/modules/planos/lote.js";
+import { clipPieces } from "./src/modules/planos/clipFootprint.js";
+const fp=[{x:0,y:0},{x:31,y:0},{x:31,y:5},{x:22,y:9},{x:22,y:14.5},{x:6,y:14.5},{x:6,y:9},{x:0,y:5}];
+const r=packFloor(fp,0,{udsPiso:5,areaObjetivo:90});
+const piezas=[...(r.core?[{id:"core",role:"core",pts:r.core.pts}]:[]),
+  ...(r.corridors||[]).map((c,i)=>({id:`c${i}`,role:"circulacion",pts:c.pts})),
+  ...r.units.map((u,i)=>({id:`u${i}`,role:"unidad",pts:u.pts}))];
+const {kept,dropped,split}=clipPieces(piezas,fp);
+console.log(`piezas ${piezas.length} → conservadas ${kept.length}, descartadas ${dropped.length}, partidas ${split}`);
+'
+```
+
+Expected: conserva la mayoría de las piezas y descarta o recorta las que se desbordaban.
+Si descarta casi todo, tu recorte está mal: reportalo como `DONE_WITH_CONCERNS`.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add files/alice/src/modules/planos/clipFootprint.js files/alice/test/clip-footprint.test.mjs
+git commit -m "feat(planos): recortar las piezas del piso contra la huella real"
+```
+
+---
+
 ### Task 5: Orquestador de la cadena
 
 Encadena todo con inyección de dependencias, para que se pueda testear sin red ni modelo.
@@ -622,6 +783,22 @@ git commit -m "feat(planos): orquestador convergente de planta tipica"
 
 **Interfaces:**
 - Consumes: `convergeFloor` (T5), `planFloorWithTweedledum` (ya importado en el archivo).
+
+**Tres cosas que las decisiones de la corrida anterior delegaron explícitamente a esta tarea y que hay que implementar acá, no en el orquestador:**
+
+1. **Adaptador de `validate`.** `convergeFloor` espera `validate(layout) -> {ok, errors}` con `errors`
+   como objetos que tengan `regla`. `validacion.js` devuelve `{fueraLote, sinPiso, aislados, total, ok,
+   ids, mensajes}` — **no tiene `errors` ni `regla`**. Pasar `validate: validarPlan` crudo hace que
+   `val.errors || []` sea `[]` siempre y en silencio, y la mitad determinista del §6.2 no corre. El
+   adaptador debe mapear cada categoría (`fueraLote`, `sinPiso`, `aislados`) a un hallazgo con un
+   `regla` distinto; si todos comparten `regla`, las claves del ledger colapsan y `bloqueado()` se
+   dispara por problemas que no son el mismo.
+2. **Cableado de `clipPieces`.** El orquestador deliberadamente no recorta polígonos. El `materialize`
+   que se le inyecta debe recortar contra la huella con `clipPieces` de `planos/clipFootprint.js`, y
+   propagar `dropped`/`split` a la UI para que un recorte con pérdida sea visible.
+3. **Gancho de persistencia (spec §8).** `convergeFloor` hoy no tiene dónde persistir por etapa. Hay
+   que agregarle una dependencia opcional `onStage(etapa, payload)` y llamarla al cerrar cada unidad,
+   para que una caída no pierda lo hecho.
 - Produces: nada nuevo hacia otras tareas.
 
 - [ ] **Step 1: Write the failing test**
@@ -902,3 +1079,37 @@ git commit -m "feat(planos): reportar el costo de cada corrida de la cadena"
 - **Quitar los pasos del Editor de Planos** (modales de paso 2 y 3, panel lateral, visor). Son ~600 líneas de `EditorPlanos.jsx` y merecen su propio plan, después de que la cadena entregue de punta a punta.
 - **La lámina en lenguaje FDC** (§10 del spec): independiente, no bloquea nada.
 - **Encargo 20 × 15** como fixture de regresión, una vez que exista `convergeFloor`.
+
+---
+
+### Task 10: El contrato de hallazgo estructurado (§6.2 del spec)
+
+**Sin esta tarea el mecanismo §6.3 no se dispara nunca.** Es la que faltaba: ninguna de las
+tareas 1 a 9 toca el prompt de Tweedledee ni el normalizador, así que el contrato de hallazgo
+del spec no tiene dueño.
+
+**El problema, verificado:** `esDeVolumen()` mira `f.nivel === "volumen"` o
+`f.regla ∈ {no_cabe, sin_fachada, sobre_insuficiente}`. Pero `normalizeCritiqueOutput`
+(`alicia-brain/src/architecture/schemas.js`) construye el objeto con lista blanca y devuelve
+`{id, severity, category, title, observation, consequence, recommendation, location,
+regulatoryStatus, evidenceRefs}`. No hay `nivel`, `regla`, `ambiente` ni `unidad` — y aunque el
+modelo los emitiera, el normalizador los descarta. El prompt tampoco los pide. Con la crítica
+real, `esDeVolumen` es siempre `false`.
+
+Efecto secundario: `findingKey` queda como `unidad||category`, así que dos hallazgos distintos
+de la misma categoría colapsan en una clave y `bloqueado()` se dispara por problemas que no son
+el mismo.
+
+**Files:**
+- Modify: `alicia-brain/src/architecture/schemas.js` (`normalizeCritiqueOutput`, `CRITIQUE_OUTPUT_SCHEMA`)
+- Modify: `alicia-brain/src/architecture/prompts/tweedledee.v1.js`
+- Test: `alicia-brain/test/architecture-contracts.test.mjs`
+
+**Qué agregar al hallazgo:** `unidad` (a qué unidad se refiere), `ambiente` (qué ambiente),
+`regla` (el discriminante estable del problema — es lo que hace única la clave del ledger),
+`nivel` (`"interior"` o `"volumen"`), y opcionalmente `medida`/`esperado`. Los campos actuales
+se conservan: esto suma, no reemplaza.
+
+**Criterio de aceptación:** un hallazgo de «no cabe el programa en este sobre» debe llegar a
+`esDeVolumen()` como `true`. Test de extremo a extremo desde la salida cruda del modelo hasta
+`esDeVolumen`.
