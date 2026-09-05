@@ -4,7 +4,7 @@ import { footprintReal } from "./loteReal.js";
 import { generarDistribuciones } from "../planos/plantas.js";
 import { bbox as polyBbox, centroid, dist, area as polyArea } from "../planos/geometry.js";
 import { planFloorWithTweedledum } from "../planos/architecture.js";
-import { cabidaVersionId, fallbackFloorProposal, proposalToParti } from "./floorProposal.js";
+import { cabidaVersionId, fallbackFloorProposal, materializeFloorProposal, proposalToParti } from "./floorProposal.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -366,8 +366,28 @@ export default function EsquemaPlanta({
         floorBrief: { unitsPerFloor: total, bedroomMix, targetAverageArea: areaDpto, targetAreaByBedrooms, areaTolerance: 0.2, commercialBrief },
         deterministicFallback,
       });
-      const record = onProposalGenerated?.(result) || null;
-      setFloorResult({ ...result, record });
+      // Tweedledum ahora devuelve un parti aproximado, no polígonos: el motor lo normaliza
+      // y tesela acá. El respaldo determinístico ya viene con `floor.polygons`, así que solo
+      // materializamos cuando hay parti. Sin esto, la propuesta del agente nunca se dibuja.
+      const conParti = result?.selected?.parti
+        ? {
+          ...result,
+          selected: {
+            ...result.selected,
+            ...materializeFloorProposal({
+              parti: result.selected.parti,
+              footprint: real.footprint,
+              frontIdx: frenteIdx,
+              sourceCabidaVersionId,
+              summary: result.selected.summary,
+              assumptions: result.selected.assumptions || [],
+              tradeoffs: result.selected.tradeoffs || [],
+            }),
+          },
+        }
+        : result;
+      const record = onProposalGenerated?.(conParti) || null;
+      setFloorResult({ ...conParti, record });
       setAcceptedFloorId(null);
     } catch (error) {
       setFloorError(error?.message || "No se pudo proponer la planta");
