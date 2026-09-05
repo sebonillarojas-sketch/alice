@@ -75,6 +75,12 @@ npm run humo:burbuja
 
 Los dos aceptan una base distinta como argumento: `npm run humo -- http://localhost:4173`.
 
+> **Ojo:** `humo:burbuja` NO puede correr contra el cerebro falso. Siembra el hilo en
+> `localStorage`, y el ERP pisa ese cache con lo que devuelve `/api/copilot/history` —
+> el falso devuelve `{ messages: [] }`, así que el hilo sembrado desaparece y el script
+> falla con todos los contadores en cero. Si venís de correr `humo:stream`, reiniciá
+> vite **sin** `VITE_ALICIA_URL` antes de este.
+
 ### `humo:stream` — necesita además el cerebro falso
 
 El dev server tiene que apuntar al cerebro falso, no al de producción:
