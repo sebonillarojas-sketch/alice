@@ -697,11 +697,15 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   // Si emitir tirara, el turno moriría acá y no se guardarían ni el mensaje ni las
   // memorias. Emitir es best-effort SIEMPRE.
   const emitir = (evento) => {
-    try { opts.onEvent?.(evento); } catch (e) { console.error("onEvent falló:", e.message); }
+    try { opts.onEvent?.(evento); } catch (e) { console.error("onEvent falló:", e?.message ?? e); }
   };
   // Un turno del copiloto encadena más pasos que uno de WhatsApp: navega, lee,
   // calcula. WhatsApp se queda en 8 a propósito.
   let yaHuboTexto = false;
+  // El reset de la burbuja se decide en una vuelta pero se paga recien cuando
+  // llega el primer delta de texto de la vuelta siguiente. Ver el comentario
+  // en el listener de `conStream`.
+  let resetPendiente = false;
   const MAX_ITERATIONS = channel === "copilot" ? 16 : 8;
 
   // Clon nocturno (SANDBOX=1): cortocircuito ANTES de tocar el LLM real — no gasta
@@ -717,50 +721,58 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     iterations++;
     // Segunda vuelta o más: lo que el cliente ya pintó pertenece a la iteración
     // anterior, que el cerebro va a descartar (sólo se guarda el último finalText).
-    // Sin este reset la pantalla y la base terminan diciendo cosas distintas.
-    if (iterations > 1 && yaHuboTexto) { emitir({ type: "text_reset" }); yaHuboTexto = false; }
+    // El reset queda PENDIENTE, no se emite acá: esta vuelta puede cerrarse sin
+    // texto (sólo tool_use), y si ya hubiéramos vaciado la burbuja la pantalla
+    // quedaría en blanco mientras la base guarda el texto de la vuelta anterior.
+    if (iterations > 1 && yaHuboTexto) { resetPendiente = true; yaHuboTexto = false; }
     let resp;
-    try {
-      // .stream() en vez de .create(): el cuerpo del pedido es idéntico, pero permite
-      // ir emitiendo el texto mientras llega. finalMessage() devuelve exactamente el
-      // mismo objeto que create() devolvía, así que el resto del loop no se entera.
-      const st = anthropic.messages.stream({
-        model,
-        max_tokens: maxTokens,
-        // Profundidad de razonamiento: "medium" para chat normal (latencia de chat);
-        // en maximum effort sube a "high" (el tope "max" puede pensar minutos y
-        // el panel corta a los 60s).
-        output_config: { effort: maximumEffort ? "high" : "medium" },
-        system: systemBlocks,
-        tools: cachedTools,
-        tool_choice: { type: "auto" },
-        messages: loopMessages,
+    // Un solo cuerpo para las dos formas de pedirlo y para el fallback: antes
+    // estaba escrito dos veces y era cuestión de tiempo que se desincronizaran.
+    const cuerpo = {
+      model,
+      max_tokens: maxTokens,
+      // Profundidad de razonamiento: "medium" para chat normal (latencia de chat);
+      // en maximum effort sube a "high" (el tope "max" puede pensar minutos y
+      // el panel corta a los 60s).
+      output_config: { effort: maximumEffort ? "high" : "medium" },
+      system: systemBlocks,
+      tools: cachedTools,
+      tool_choice: { type: "auto" },
+      messages: loopMessages,
+    };
+    // Streaming SÓLO cuando hay quien escuche. Que sin onEvent siga entrando por
+    // create() no es cosmético: create() manda con timeout de 600s y el timer se
+    // limpia cuando llegan los headers. Sin stream los headers recién llegan con
+    // la respuesta entera, así que ese timeout acota toda la generación; con
+    // stream llegan apenas arranca, el timer se limpia ahí y el `for await` sobre
+    // los eventos SSE no tiene ningún tope. Una generación colgada pasaría de
+    // cortar a los 10 minutos a no cortar nunca — y en WhatsApp, donde el turno
+    // es fire-and-forget, eso es un pedido colgado y alguien esperando para
+    // siempre una respuesta que no llega.
+    const conStream = async (params) => {
+      const st = anthropic.messages.stream(params);
+      st.on("text", (delta) => {
+        // Acá se paga el reset pendiente: recién con el primer delta sabemos que
+        // esta vuelta sí trae texto, que es el único momento en que vaciar la
+        // burbuja es correcto.
+        if (resetPendiente) { emitir({ type: "text_reset" }); resetPendiente = false; }
+        yaHuboTexto = true;
+        emitir({ type: "text_delta", text: delta });
       });
-      if (opts.onEvent) {
-        st.on("text", (delta) => {
-          if (!yaHuboTexto) { yaHuboTexto = true; }
-          emitir({ type: "text_delta", text: delta });
-        });
-      }
-      resp = await st.finalMessage();
+      return st.finalMessage();
+    };
+    try {
+      resp = opts.onEvent ? await conStream(cuerpo) : await anthropic.messages.create(cuerpo);
     } catch (e) {
       // Si Fable no está disponible para esta cuenta, caemos a Sonnet sin romper el chat
       if (maximumEffort && /model|not_found/i.test(e.message)) {
         console.warn("Fable no disponible, fallback a Sonnet:", e.message.slice(0, 80));
-        const stFallback = anthropic.messages.stream({
-          model: "claude-sonnet-4-6",
-          max_tokens: maxTokens,
-          output_config: { effort: maximumEffort ? "high" : "medium" },
-          system: systemBlocks,
-          tools: cachedTools,
-          tool_choice: { type: "auto" },
-          messages: loopMessages,
-        });
-        // Mismo manejo que el stream principal, yaHuboTexto incluido: si el fallback
-        // produce texto y no lo marcamos, la iteración siguiente no emite text_reset
-        // y la burbuja queda con dos respuestas pegadas.
-        if (opts.onEvent) stFallback.on("text", (delta) => { yaHuboTexto = true; emitir({ type: "text_delta", text: delta }); });
-        resp = await stFallback.finalMessage();
+        // Si el principal alcanzó a pintar algo antes de fallar, el fallback escribe
+        // de nuevo desde cero: sin reset quedan las dos respuestas pegadas en la
+        // misma burbuja. La vuelta no avanzó, así que el reset de arriba no aplica.
+        if (yaHuboTexto) { resetPendiente = true; yaHuboTexto = false; }
+        const cuerpoFallback = { ...cuerpo, model: "claude-sonnet-4-6" };
+        resp = opts.onEvent ? await conStream(cuerpoFallback) : await anthropic.messages.create(cuerpoFallback);
       } else throw e;
     }
 
