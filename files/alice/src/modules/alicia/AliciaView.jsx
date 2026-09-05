@@ -11,6 +11,7 @@ import { useCopilotSnapshot } from "../../copilot/ERPContext.jsx";
 import { abrirTurno } from "../../copilot/turn.js";
 import Markdown from "../../copilot/Markdown.jsx";
 import TrazaTool from "../../copilot/TrazaTool.jsx";
+import PanelContexto from "../../copilot/PanelContexto.jsx";
 import { supabase } from "../../lib/supabase.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -610,7 +611,6 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
-  const [profilesOpen, setProfilesOpen] = useState(true);
   const [showKeyReset, setShowKeyReset] = useState(false);
   const [listening, setListening] = useState(false);
 
@@ -1037,72 +1037,17 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     );
   }
 
-  const sidebarProfiles = isAdmin ? Object.values(profiles) : [profiles[currentUserId]].filter(Boolean);
   const chatProfile = profiles[selectedUserId] || profiles[currentUserId];
 
   // ── Render: main ─────────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", height: "calc(100vh - 60px)", backgroundColor: C.bg, overflow: "hidden" }}>
 
-      {/* ── Left: Profiles panel ── */}
-      <div style={{
-        width: profilesOpen ? "min(300px, 85vw)" : 0,
-        minWidth: profilesOpen ? "min(300px, 85vw)" : 0,
-        borderRight: `1px solid ${C.line}`,
-        backgroundColor: C.paper,
-        display: "flex", flexDirection: "column",
-        overflow: "hidden",
-        transition: "width 0.2s, min-width 0.2s",
-      }}>
-        {profilesOpen && (
-          <>
-            <div style={{ padding: "16px 16px 10px", borderBottom: `1px solid ${C.lineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, fontWeight: 700 }}>
-                  {isAdmin ? "Equipo" : "Tu perfil"}
-                </div>
-                {isAdmin && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{sidebarProfiles.length} colaboradores</div>}
-              </div>
-              <button onClick={() => setShowKeyReset(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 4, display: "flex" }} title="Cambiar API key">
-                <KeyRound size={13} />
-              </button>
-            </div>
-
-            {showKeyReset && (
-              <div style={{ padding: "10px 14px", backgroundColor: C.bg, borderBottom: `1px solid ${C.line}` }}>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Nueva API key:</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input type="password" placeholder="sk-ant-..." onBlur={e => { if (e.target.value.startsWith("sk-")) { saveApiKey(e.target.value); setApiKey(e.target.value); setShowKeyReset(false); } }}
-                    style={{ flex: 1, padding: "5px 8px", fontSize: 11, fontFamily: "ui-monospace,monospace", borderRadius: 2, border: `1px solid ${C.line}`, backgroundColor: C.paper, color: C.ink }} />
-                  <button onClick={() => setShowKeyReset(false)} style={{ padding: "5px 8px", background: "none", border: `1px solid ${C.line}`, borderRadius: 2, fontSize: 11, cursor: "pointer", color: C.muted }}><X size={11} /></button>
-                </div>
-              </div>
-            )}
-
-            <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
-              {sidebarProfiles.map(p => (
-                <ProfilePanel
-                  key={p.userId}
-                  profile={p}
-                  isOwn={p.userId === currentUserId || isAdmin}
-                  isSelected={p.userId === selectedUserId}
-                  onSelectUser={(uid) => setSelectedUserId(uid)}
-                  onEdit={(prof) => setEditingProfile(prof)}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ── Right: Chat ── */}
+      {/* ── Centro: Chat ── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
         {/* Chat topbar */}
         <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 12, backgroundColor: C.paper, flexShrink: 0 }}>
-          <button onClick={() => setProfilesOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 2, display: "flex" }}>
-            {profilesOpen ? <ChevronRight size={16} /> : <ChevronRight size={16} style={{ transform: "rotate(180deg)" }} />}
-          </button>
           <AliciaAvatar size={30} state={avatarState} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em" }}>
@@ -1285,6 +1230,11 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
             Alicia puede cometer errores · verificá decisiones importantes
           </div>
         </div>
+      </div>
+
+      {/* ── Derecha: qué está viendo Alicia ahora mismo ── */}
+      <div style={{ width: "min(280px, 80vw)", minWidth: "min(280px, 80vw)", flexShrink: 0 }}>
+        <PanelContexto />
       </div>
 
       {/* Profile editor modal */}
