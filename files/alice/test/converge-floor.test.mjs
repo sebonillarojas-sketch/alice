@@ -236,6 +236,59 @@ test("una regresion detectada por el validador no gasta una llamada a critique",
   assert.equal(r.llamadas, 6, "1 planFloor + 3 designUnit + 2 critique (la 3ra se ahorra)");
 });
 
+test("una regresion no cierra por omision un hallazgo que solo reportaba critique", async () => {
+  // Reproduce el hallazgo del revisor: al saltear critique en la vuelta con
+  // regresion, `findings` queda reducido a solo lo del validador. Si la barrida
+  // de cierre-por-omision corriera igual, "banio/ancho_util" -abierto solo por
+  // critique en la vuelta anterior- se marcaria resuelto sin haber sido
+  // re-verificado.
+  const tresDistintos = [
+    parti,
+    { ...parti, id: "p2", core: { ...parti.core, x: 0 } },
+    { ...parti, id: "p3", core: { ...parti.core, x: 20 } },
+  ];
+  let ronda = 0;
+  let critiqueLlamadas = 0;
+  const dep = deps({
+    planFloor: async () => tresDistintos,
+    validate: () => {
+      ronda += 1;
+      if (ronda === 3) {
+        // Vuelta 3: el validador reintroduce "sala/area_min", ya cerrado tras
+        // la vuelta 2 -> regresión, se saltea critique.
+        return { ok: false, errors: [{ ambiente: "sala", regla: "area_min", severidad: "critical", nivel: "interior" }] };
+      }
+      return { ok: true, errors: [] };
+    },
+    critique: async () => {
+      critiqueLlamadas += 1;
+      if (critiqueLlamadas === 1) {
+        return [
+          { ambiente: "sala", regla: "area_min", severidad: "critical", nivel: "interior" },
+          { ambiente: "cocina", regla: "ventilacion", severidad: "critical", nivel: "interior" },
+        ];
+      }
+      if (critiqueLlamadas === 2) {
+        // sala y cocina se resuelven; aparece un hallazgo nuevo que SOLO
+        // critique reporta y que ninguna vuelta posterior vuelve a verificar
+        // (la vuelta 3 saltea critique por la regresion de sala).
+        return [{ ambiente: "banio", regla: "ancho_util", severidad: "critical", nivel: "interior" }];
+      }
+      return [];
+    },
+  });
+
+  const r = await convergeFloor(brief, dep);
+
+  assert.equal(critiqueLlamadas, 2, "critique no debe llamarse en la vuelta con regresion");
+  const entradaC = r.unidades.find((x) => x.id === "C");
+  const claves = entradaC.findings.map((f) => `${f.ambiente}|${f.regla}`);
+  assert.ok(
+    claves.includes("banio|ancho_util"),
+    "el hallazgo que solo reportaba critique no debe cerrarse por omision al saltear la vuelta"
+  );
+});
+
 test("la unidad que converge primero se propaga como ejemplar a las siguientes", async () => {
   const briefDos = { units: [
     { id: "C", area: 40, fachadas: 1, frente: 8.4, fondo: 4.8 },
@@ -258,6 +311,44 @@ test("la unidad que converge primero se propaga como ejemplar a las siguientes",
   assert.equal(llamadasDesignUnit[0].ejemplar, null, "la primera unidad no tiene ejemplar previo");
   assert.ok(llamadasDesignUnit[1].ejemplar, "la segunda unidad debe recibir un ejemplar");
   assert.equal(llamadasDesignUnit[1].ejemplar.unidad, "C", "el ejemplar es la primera unidad que convergio");
+});
+
+test("un rebalanceo que invalida a la unidad ejemplar limpia el ejemplar", async () => {
+  const briefDos = { units: [
+    { id: "C", area: 40, fachadas: 1, frente: 8.4, fondo: 4.8 }, // más difícil: se procesa primero
+    { id: "A", area: 80, fachadas: 2, frente: 7, fondo: 6 },     // menos difícil: se procesa después
+  ] };
+  // Sin solape con el core, para que rebalancear pueda clasificar y ejecutar (arreglo 5).
+  const partiValido = { id: "pv", core: { x: 8.4, y: 0, w: 5.2, d: 5 },
+    units: [{ id: "C", x: 0, w: 8.4 }, { id: "A", x: 13.6, w: 7.4 }] };
+  let volDone = false;
+  const llamadasDesignUnit = [];
+  const dep = deps({
+    planFloor: async () => [partiValido],
+    designUnit: async ({ unidad, ejemplar }) => {
+      llamadasDesignUnit.push({ unidad: unidad.id, ejemplar });
+      return { ambientes: [] };
+    },
+    critique: async ({ unidad }) => {
+      if (unidad.id === "A" && !volDone) {
+        volDone = true;
+        return [{ ambiente: "sala", regla: "no_cabe", severidad: "critical", nivel: "volumen" }];
+      }
+      return [];
+    },
+  });
+
+  const r = await convergeFloor(briefDos, dep);
+
+  // C cierra primero y queda como ejemplar; el rebalanceo que pide A luego la
+  // invalida (mismo escenario que "un rebalanceo posterior no invalida en
+  // silencio..."), así que el ejemplar debe limpiarse antes de la siguiente
+  // vuelta de A.
+  assert.equal(r.parti.units.find((u) => u.id === "C").w, 7.8);
+  const llamadasA = llamadasDesignUnit.filter((x) => x.unidad === "A");
+  assert.equal(llamadasA.length, 2, "A debe tener 2 vueltas: la del volumen y la de despues del rebalanceo");
+  assert.equal(llamadasA[0].ejemplar && llamadasA[0].ejemplar.unidad, "C", "la primera vuelta de A todavia ve a C como ejemplar");
+  assert.equal(llamadasA[1].ejemplar, null, "tras invalidar a C el ejemplar debe limpiarse, no seguir ofreciendo un layout obsoleto");
 });
 
 test("si planFloor no devuelve ningún parti, no revienta: motivo sin_parti y todas las unidades pendientes", async () => {

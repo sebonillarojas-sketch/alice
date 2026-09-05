@@ -11,7 +11,7 @@ export function createLedger() {
   const mapFor = (m, u) => { if (!m.has(u)) m.set(u, new Map()); return m.get(u); };
 
   return {
-    record(unidad, findings = []) {
+    record(unidad, findings = [], { cerrarOmitidos = true } = {}) {
       const abiertosU = mapFor(abiertos, unidad);
       const cerradosU = mapFor(cerrados, unidad);
 
@@ -45,12 +45,19 @@ export function createLedger() {
         }
         abiertosU.set(key, { ...f, unidad });
       }
-      for (const key of [...abiertosU.keys()]) {
-        if (!vistos.has(key)) {
-          const finding = abiertosU.get(key);
-          abiertosU.delete(key);
-          cerradosU.set(key, finding);
-          vueltas.delete(key);
+      // La barrida que cierra por omisión asume que esta vuelta tuvo la foto
+      // completa (validador + crítico). Si se saltó al crítico, `findings` no
+      // representa todo lo que sigue abierto: no hay que cerrar nada sin haber
+      // re-verificado, o se pierde en silencio un hallazgo que nadie confirmó
+      // que se corrigió.
+      if (cerrarOmitidos) {
+        for (const key of [...abiertosU.keys()]) {
+          if (!vistos.has(key)) {
+            const finding = abiertosU.get(key);
+            abiertosU.delete(key);
+            cerradosU.set(key, finding);
+            vueltas.delete(key);
+          }
         }
       }
       return { nuevos, repetidos, regresiones };

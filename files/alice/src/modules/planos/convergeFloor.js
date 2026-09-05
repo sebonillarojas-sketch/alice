@@ -108,7 +108,10 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
         findings = [...hallazgosValidador, ...(await critique({ unidad: u, layout }))];
       }
 
-      ledger.record(u.id, findings);
+      // Al saltear al crítico, esta vuelta no tiene la foto completa: no puede
+      // cerrar por omisión un hallazgo abierto que solo el crítico reportaba
+      // (todavía no fue re-verificado).
+      ledger.record(u.id, findings, { cerrarOmitidos: !esRegresion });
       if (!findings.length) {
         cerrada = true;
         cerradasContra.set(u.id, sobre.w);
@@ -132,6 +135,8 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
               if (idx !== undefined) unidades[idx].layout = null;
               if (!pendientes.includes(idCerrada)) pendientes.push(idCerrada);
               cerradasContra.delete(idCerrada);
+              // La invalidada era la ejemplar: ya no es un modelo válido a imitar.
+              if (ejemplar && ejemplar.unidad === idCerrada) ejemplar = null;
             }
           }
         } catch { /* sin margen: sigue como interior */ }
