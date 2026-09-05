@@ -20,6 +20,7 @@ import { createArchitectureRouter } from "./architecture/routes.js";
 import { CEO_ID, emailToUserId, puedeVer, resolveActingUser } from "./identity.js";
 import { renderErpContext } from "./erp-context.js";
 import { readThread } from "./history.js";
+import { sseFrame, SSE_HEADERS } from "./sse.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -1117,6 +1118,54 @@ app.get("/api/copilot/history", (req, res) => {
   if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
   const limit = Math.min(Math.max(Number(req.query.limit) || 60, 1), 200);
   res.json({ userId: act.userId, messages: readThread(getDB(), act.userId, limit) });
+});
+
+// El turno del copiloto. A diferencia de /api/chat, que espera callado hasta 20
+// segundos y devuelve un JSON, acá el cliente ve el texto aparecer y qué herramienta
+// se está usando. Mismo cerebro, mismo loop: lo único que cambia es el transporte.
+app.post("/api/copilot/turn", async (req, res) => {
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
+  const { message, erpContext } = req.body || {};
+  if (!message) return res.status(400).json({ error: "Falta message" });
+
+  res.writeHead(200, SSE_HEADERS);
+  res.flushHeaders?.();
+
+  // Los proxies cortan conexiones ociosas, y un turno con varias tools puede pasar
+  // 30s sin emitir nada. Un comentario SSE (línea que arranca con ":") mantiene viva
+  // la conexión sin que el cliente tenga que interpretarlo.
+  const latido = setInterval(() => { try { res.write(": ping\n\n"); } catch {} }, 15000);
+  let vivo = true;
+  // OJO: es `res` y no `req` a propósito. `req` (el body ya leído por express.json())
+  // dispara "close" apenas termina de recibirse el request, casi al toque de entrar
+  // acá — mucho antes de que el cliente se desconecte de verdad. Con `req.on("close")`
+  // `vivo` se apagaba al instante y el turno entero corría a ciegas: nunca se emitía
+  // ni el "done", ni se limpiaba el intervalo, y la conexión quedaba colgada para
+  // siempre (verificado a mano con el curl del brief). `res` sí refleja el socket real.
+  res.on("close", () => { vivo = false; clearInterval(latido); });
+
+  const enviar = (evento, data) => {
+    if (!vivo) return;
+    try { res.write(sseFrame(evento, data)); } catch { vivo = false; }
+  };
+
+  try {
+    const { text, actions } = await processAliciaMessage(act.userId, message, "copilot", {
+      erpContext,
+      onEvent: (e) => {
+        const { type, ...resto } = e;
+        enviar(type, resto);
+      },
+    });
+    enviar("done", { text, actions });
+  } catch (e) {
+    console.error("Turn error:", e.message);
+    enviar("error", { message: e.message });
+  } finally {
+    clearInterval(latido);
+    if (vivo) res.end();
+  }
 });
 
 // ── Cuerpo (el teléfono de Alicia) ────────────────────────────────────────────
