@@ -68,13 +68,15 @@ test("event: y data: sin espacio después del colon funcionan (spec SSE)", () =>
   assert.equal(vistos[0].data.a, 1);
 });
 
-test("múltiples data: se unen con newline, no concatenación", () => {
+test("un data: partido dentro de un string JSON no se concatena", () => {
   const { vistos, parser } = recolectar();
-  // SSE spec: si data: se repite, los valores se unen con \n (no concatenación).
-  // JSON bien formado a través de múltiples líneas.
-  // Sin \n: {\"a\":1,\"b\":2} - mismo parsing
-  // Con \n: {\"a\":1,\n\"b\":2} - pero con newline entre campos (spec compliant)
-  parser.alimentar('event: test\ndata: {"a": 1,\ndata: "b": 2}\n\n');
-  assert.equal(vistos.length, 1);
-  assert.deepEqual(vistos[0].data, { a: 1, b: 2 });
+  // Spec SSE: si `data:` se repite, los valores se unen con \n. Concatenarlos a
+  // secas parece equivalente y casi siempre lo es — el caso que los separa es el
+  // corte DENTRO de un string JSON, porque ahí el \n queda dentro de las comillas:
+  //   unión con \n  ⇒ {"t":"hola\nmundo"} ⇒ salto crudo en un string ⇒ JSON inválido ⇒ 0 eventos
+  //   concatenación ⇒ {"t":"holamundo"}   ⇒ JSON válido               ⇒ 1 evento
+  // El test anterior usaba un corte entre campos, donde las dos formas dan el mismo
+  // objeto: pasaba con cualquiera de las dos y no cubría nada.
+  parser.alimentar('event: t\ndata: {"t":"hola\ndata: mundo"}\n\n');
+  assert.equal(vistos.length, 0);
 });
