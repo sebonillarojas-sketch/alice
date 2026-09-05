@@ -8,6 +8,9 @@ import {
 
 import { ALICIA_URL } from "../../lib/brain.js";
 import { useCopilotSnapshot } from "../../copilot/ERPContext.jsx";
+import { abrirTurno } from "../../copilot/turn.js";
+import Markdown from "../../copilot/Markdown.jsx";
+import TrazaTool from "../../copilot/TrazaTool.jsx";
 import { supabase } from "../../lib/supabase.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -851,51 +854,109 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     setInput("");
     setSending(true);
 
+    // Estas dos viven FUERA del try para que el `finally` pueda apagar el
+    // repintado agrupado pase lo que pase. Un rAF que sobreviva al turno vuelve
+    // a pintar la burbuja en vivo ENCIMA del mensaje final (o del de error) y
+    // resucita texto que ya no existe en ningún lado.
+    let rafId = null;
+    let terminado = false;
+
     try {
       // Alicia vive en el backend (aliceai): cerebro Claude, memoria y herramientas.
       // Sin fallback a Anthropic-directo (sacamos la key del browser por seguridad).
       const { data: sess } = await supabase.auth.getSession();
       const token = sess?.session?.access_token;
-      const res = await fetch(`${BRAIN_URL}/api/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+
+      // Burbuja del assistant que se va llenando en vivo. `pasos` es la traza.
+      let acumulado = "";
+      let pasos = [];
+      // Un setState por token re-renderiza AliciaView entero (1189 líneas) decenas
+      // de veces por segundo. Agrupamos los repintados en el frame: se ve igual de
+      // fluido y el navegador no se ahoga.
+      let pendiente = false;
+      const pintarYa = () => setMessages([...newHistory, {
+        role: "assistant", content: acumulado, pasos, ts: Date.now(), streaming: true,
+      }]);
+      const pintar = () => {
+        if (pendiente || terminado) return;
+        pendiente = true;
+        rafId = requestAnimationFrame(() => {
+          pendiente = false;
+          rafId = null;
+          if (terminado) return;   // el turno ya cerró: este frame llegó tarde
+          pintarYa();
+        });
+      };
+      pintarYa();
+
+      let final = null;
+      await abrirTurno({
+        url: `${BRAIN_URL}/api/copilot/turn`,
+        token,
         // userId solo viaja para el "ver como" del CEO; el servidor lo ignora
         // para cualquier otro y toma la identidad del JWT.
-        body: JSON.stringify({
-          userId: selectedUserId,
-          message: text.trim(),
-          erpContext: takeSnapshot(),
-        }),
-        signal: AbortSignal.timeout(60000),  // respuestas con tools pueden tardar ~20s
+        body: { userId: selectedUserId, message: text.trim(), erpContext: takeSnapshot() },
+        // Techo duro. El POST /api/chat que esto reemplaza tenía uno de 60s; sin
+        // nada, una conexión colgada deja `sending` en true para siempre y el
+        // composer muerto sin forma de salir. Con streaming el usuario ve avance,
+        // así que damos el doble antes de cortar.
+        signal: AbortSignal.timeout(120000),
+        onEvento: ({ event, data }) => {
+          if (event === "text_delta") { acumulado += data.text; pintar(); }
+          // El cerebro sólo guarda el texto de la última iteración: lo que el cliente
+          // pintó en una vuelta anterior hay que descartarlo o la pantalla miente.
+          else if (event === "text_reset") { acumulado = ""; pintar(); }
+          else if (event === "tool_start") { pasos = [...pasos, { id: data.id, tool: data.tool, input: data.input, ok: null }]; pintar(); }
+          else if (event === "tool_done") { pasos = pasos.map(p => p.id === data.id ? { ...p, ok: data.ok } : p); pintar(); }
+          else if (event === "done") { final = data; }
+          // El frame de error llega DESPUÉS de haber pintado deltas, y no viene
+          // ningún `done` que los corrija porque el cerebro no guardó nada. Lanzar
+          // corta el stream y deja que el catch tire esa burbuja: es texto que no
+          // existe en ninguna base. Ignorarlo dejaría al usuario leyendo un
+          // fantasma.
+          else if (event === "error") {
+            const e = new Error(data?.message || "el cerebro cortó el turno");
+            e.delCerebro = true;
+            throw e;
+          }
+        },
       });
-      if (!res.ok) throw new Error(`El servidor de Alicia respondió ${res.status}`);
-      const data = await res.json();
-      const responseText = data.text || "";
-      const actions = data.actions || [];
 
-      const aliciaMsg = { role: "assistant", content: responseText, actions, ts: Date.now() };
+      // SIEMPRE el texto de `done`, nunca el acumulado. Entre lo que se pinta y lo
+      // que el cerebro guarda hay tres divergencias reales: un rechazo pisa el texto
+      // sin mandar reset, la extracción de JSON stremea el envoltorio {"message":…}
+      // crudo pero guarda el valor desenvuelto, y de cada iteración sólo se guarda
+      // el primer bloque de texto aunque se pinten todos. Reemplazar la burbuja por
+      // `final.text` al cerrar el turno las cierra a las tres de una.
+      // El `?? acumulado` sólo aplica si el stream se cortó antes del `done`.
+      const responseText = final?.text ?? acumulado;
+      const actions = final?.actions || [];
+
+      const aliciaMsg = { role: "assistant", content: responseText, actions, pasos, ts: Date.now() };
       const finalHistory = [...newHistory, aliciaMsg];
       setMessages(finalHistory);
       saveChat(selectedUserId, finalHistory);
       executeActions(actions, profiles);
       speak(responseText);
     } catch (err) {
+      // `newHistory` no incluye la burbuja en vivo: reemplazar por esto la borra.
       const errMsg = {
         role: "assistant",
-        content: `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`,
+        content: err?.delCerebro
+          ? `Corté el turno a mitad (${err.message}). Lo que alcancé a escribir no quedó guardado, así que lo descarté. Probá de nuevo.`
+          : `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`,
         actions: [], ts: Date.now(), isError: true,
       };
       const finalHistory = [...newHistory, errMsg];
       setMessages(finalHistory);
       saveChat(selectedUserId, finalHistory);
     } finally {
+      terminado = true;
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [apiKey, sending, messages, currentProfile, profiles, tasks, allSpaces, knowledgeLinks, selectedUserId, executeActions, takeSnapshot]);
+  }, [apiKey, sending, messages, currentProfile, profiles, tasks, allSpaces, knowledgeLinks, selectedUserId, executeActions, takeSnapshot, speak, BRAIN_URL]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
@@ -1092,7 +1153,19 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
                     fontSize: 13, lineHeight: 1.6,
                     boxShadow: isUser ? `0 2px 8px ${BAM}30` : "0 1px 4px rgba(0,0,0,0.04)",
                   }}>
-                    {msg.content}
+                    {/* El usuario sigue en texto plano: no hay razón para interpretar
+                        markdown en lo que escribe la persona. */}
+                    {msg.role === "assistant" ? (
+                      <>
+                        {msg.pasos?.length > 0 && (
+                          <div style={{ marginBottom: 6 }}>
+                            {msg.pasos.map(p => <TrazaTool key={p.id} tool={p.tool} ok={p.ok} input={p.input} />)}
+                          </div>
+                        )}
+                        <Markdown texto={msg.content} />
+                        {msg.streaming && <span style={{ opacity: 0.4 }}>▍</span>}
+                      </>
+                    ) : msg.content}
                   </div>
                   {!isUser && msg.actions?.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 4 }}>
