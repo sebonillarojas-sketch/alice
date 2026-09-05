@@ -142,7 +142,7 @@ test("sin actorId no hay acceso", () => {
 
 - [ ] **Step 3: Correr el test y verificar que falla**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="emailToUserId|impersona|actuás|CEO|actorId"`
+Run: `cd alicia-brain && node --test --test-name-pattern="emailToUserId|impersona|actuás|CEO|actorId" test/identity.test.mjs`
 Expected: FAIL — `Cannot find module '../src/identity.js'`
 
 - [ ] **Step 4: Escribir la implementación mínima**
@@ -208,11 +208,15 @@ Sin esto, `emailToUserId` solo resuelve a `sb`: la migración de `db.js:156` ún
 
 - [ ] **Step 1: Escribir el test que falla**
 
-Agregar al final de `alicia-brain/test/identity.test.mjs`:
+Agregar `seedTeamEmails` al bloque de imports del tope de `alicia-brain/test/identity.test.mjs`:
 
 ```js
 import { seedTeamEmails } from "../src/db.js";
+```
 
+y los casos nuevos al final del mismo archivo:
+
+```js
 test("seedTeamEmails deja a las 7 personas resolubles por email", () => {
   const d = new DatabaseSync(":memory:");
   d.exec(`CREATE TABLE profiles (user_id TEXT PRIMARY KEY, name TEXT, email TEXT);`);
@@ -257,7 +261,7 @@ test("seedTeamEmails no crea perfiles que no existen", () => {
 
 - [ ] **Step 2: Correr el test y verificar que falla**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="seedTeamEmails"`
+Run: `cd alicia-brain && node --test --test-name-pattern="seedTeamEmails" test/identity.test.mjs`
 Expected: FAIL — `seedTeamEmails is not a function`
 
 - [ ] **Step 3: Escribir la implementación**
@@ -305,7 +309,7 @@ export function seedTeamEmails(db) {
 
 - [ ] **Step 4: Correr el test y verificar que pasa**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="seedTeamEmails"`
+Run: `cd alicia-brain && node --test --test-name-pattern="seedTeamEmails" test/identity.test.mjs`
 Expected: PASS (4 tests)
 
 - [ ] **Step 5: Correr la suite completa**
@@ -843,7 +847,7 @@ test("el tope del servidor deja margen sobre el del cliente (2000)", () => {
 
 - [ ] **Step 2: Correr el test y verificar que falla**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="renderErpContext|módulo activo|entidad|acciones|tope"`
+Run: `cd alicia-brain && node --test --test-name-pattern="renderErpContext|módulo activo|entidad|acciones|tope" test/erp-context.test.mjs`
 Expected: FAIL — `Cannot find module '../src/erp-context.js'`
 
 - [ ] **Step 3: Escribir la implementación**
@@ -889,7 +893,7 @@ export function renderErpContext(snapshot, cap = ERP_CONTEXT_CAP) {
 
 - [ ] **Step 4: Correr el test y verificar que pasa**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="renderErpContext|módulo activo|entidad|acciones|tope|otros módulos|basura|snapshot"`
+Run: `cd alicia-brain && node --test --test-name-pattern="renderErpContext|módulo activo|entidad|acciones|tope|otros módulos|basura|snapshot" test/erp-context.test.mjs`
 Expected: PASS (8 tests)
 
 - [ ] **Step 5: Inyectar el bloque en el prompt**
@@ -1031,7 +1035,7 @@ test("readThread con un usuario sin mensajes devuelve lista vacía", () => {
 
 - [ ] **Step 2: Correr el test y verificar que falla**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="readThread"`
+Run: `cd alicia-brain && node --test --test-name-pattern="readThread" test/history.test.mjs`
 Expected: FAIL — `Cannot find module '../src/history.js'`
 
 - [ ] **Step 3: Escribir la implementación**
@@ -1066,7 +1070,7 @@ export function readThread(db, userId, limit = 60) {
 
 - [ ] **Step 4: Correr el test y verificar que pasa**
 
-Run: `cd alicia-brain && npm test -- --test-name-pattern="readThread"`
+Run: `cd alicia-brain && node --test --test-name-pattern="readThread" test/history.test.mjs`
 Expected: PASS (7 tests)
 
 - [ ] **Step 5: Exponer la ruta**

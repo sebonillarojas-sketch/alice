@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
 import { useProyectos } from "./proyectos.js";
+import { useERPContext } from "../../copilot/ERPContext.jsx";
 
 const C = {
   ink: "#373737",
@@ -261,6 +262,25 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
     };
   }, [terreno, areaLibre, pisos, azoteaTechada, circulacion, areaDpto, mix1, mix2,
       est1, est23, visitas, m2Plaza, precioM2, factorAzotea, precioEst, costoM2, costoVentas, valorTerreno, impuesto]);
+
+  // Lo que Alicia ve cuando estás en esta pantalla. `state` son los parámetros
+  // que pusiste; `derived` lo que la cabida ya calculó — le sirven para cosas
+  // distintas: uno para cambiar, el otro para razonar sin recalcular.
+  useERPContext("cabida", () => ({
+    title: `Cabida${initialTerreno ? ` · terreno ${terreno} m²` : ""}`,
+    entity: null,
+    state: {
+      terreno, areaLibre, pisos, azoteaTechada, circulacion, areaDpto,
+      mix1, mix2, precioM2, costoM2, costoVentas, valorTerreno, impuesto,
+    },
+    derived: {
+      dptos: r.dptos, vendible: Math.round(r.vendible), construidaTotal: Math.round(r.construidaTotal),
+      sotanos: Math.round(r.sotanos), ingresos: Math.round(r.ingresos), costo: Math.round(r.costo),
+      margen: Math.round(r.margen), utilNeta: Math.round(r.utilNeta),
+      eficiencia: Number(r.eficiencia.toFixed(1)), incidencia: Number(r.incidencia.toFixed(1)),
+    },
+    actions: [],   // se llenan en la Fase 3, cuando Alicia tenga manos
+  }));
 
   const mixWarn = mix1 + mix2 > 100;
 

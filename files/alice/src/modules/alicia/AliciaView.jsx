@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 
 import { ALICIA_URL } from "../../lib/brain.js";
+import { useCopilotSnapshot } from "../../copilot/ERPContext.jsx";
+import { supabase } from "../../lib/supabase.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BAM = "#A855F7";
@@ -601,6 +603,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const [profiles, setProfiles] = useState(loadProfiles);
   const [selectedUserId, setSelectedUserId] = useState(currentUserId);
   const [messages, setMessages] = useState(() => loadChat(currentUserId));
+  const [hiloFallo, setHiloFallo] = useState(false);   // no se pudo traer el hilo del servidor
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
@@ -639,6 +642,12 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const recognitionRef = useRef(null);
 
   const audioRef = useRef(null);
+  // Se incrementa cada vez que `send` toca `messages` a mano. El fetch del
+  // historial guarda la generación vigente ANTES de salir a la red; si al
+  // volver ya cambió, alguien mandó un mensaje mientras tanto y aplicar la
+  // respuesta pisaría ese turno en pantalla. No la borres para "simplificar":
+  // `vivo` cubre desmontaje/cambio de usuario, esto cubre el turno propio.
+  const generacion = useRef(0);
 
   const speak = useCallback(async (text) => {
     if (!voiceEnabled) return;
@@ -690,6 +699,46 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       setMessages(loadChat(selectedUserId));
     }
   }, [selectedUserId, isAdmin]);
+
+  // El hilo vive en el servidor (tabla `messages`, un hilo por persona, todos los
+  // canales). localStorage pasa a ser caché: pinta al instante y lo reemplaza
+  // lo que llegue del cerebro. Antes era la fuente de verdad, y por eso el space
+  // mostraba una conversación que Alicia no recordaba.
+  useEffect(() => {
+    let vivo = true;
+    const gen = generacion.current;   // snapshot: si `send` avanza esto antes de que vuelva el fetch, se descarta
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        const qs = new URLSearchParams({ limit: "60" });
+        if (selectedUserId !== currentUserId) qs.set("userId", selectedUserId);
+        const res = await fetch(`${ALICIA_URL}/api/copilot/history?${qs}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: AbortSignal.timeout(10000),
+        });
+        // Un 403, una sesión vencida o Railway despertándose dejaban la copia
+        // vieja en pantalla sin decir nada: exactamente el síntoma de "Alicia no
+        // se acuerda" que este hilo vino a matar, con otra causa. Lo avisamos.
+        if (!res.ok) { if (vivo && generacion.current === gen) setHiloFallo(true); return; }
+        const { messages: hilo } = await res.json();
+        if (!vivo || generacion.current !== gen || !Array.isArray(hilo)) return;
+        const mapped = hilo.map((m) => ({
+          role: m.role, content: m.content, actions: m.actions || [],
+          // SQLite devuelve "YYYY-MM-DD HH:MM:SS" (con espacio); Safari no lo
+          // parsea, así que lo pasamos a ISO antes de agregarle la "Z".
+          channel: m.channel, ts: Date.parse(m.createdAt.replace(" ", "T") + "Z") || Date.now(),
+        }));
+        setMessages(mapped);
+        saveChat(selectedUserId, mapped);
+        setHiloFallo(false);
+      } catch {
+        // el caché de localStorage ya está en pantalla, pero desactualizado
+        if (vivo && generacion.current === gen) setHiloFallo(true);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [selectedUserId, currentUserId]);
 
   // Save profiles whenever they change
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
@@ -791,11 +840,13 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
 
   // Send message to Alicia
   const BRAIN_URL = ALICIA_URL;
+  const takeSnapshot = useCopilotSnapshot();
 
   const send = useCallback(async (text) => {
     if (!text.trim() || sending) return;
     const userMsg = { role: "user", content: text.trim(), ts: Date.now() };
     const newHistory = [...messages, userMsg];
+    generacion.current++;   // invalida cualquier fetch de historial que haya salido antes de este turno
     setMessages(newHistory);
     setInput("");
     setSending(true);
@@ -803,10 +854,21 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     try {
       // Alicia vive en el backend (aliceai): cerebro Claude, memoria y herramientas.
       // Sin fallback a Anthropic-directo (sacamos la key del browser por seguridad).
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
       const res = await fetch(`${BRAIN_URL}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedUserId, message: text.trim() }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        // userId solo viaja para el "ver como" del CEO; el servidor lo ignora
+        // para cualquier otro y toma la identidad del JWT.
+        body: JSON.stringify({
+          userId: selectedUserId,
+          message: text.trim(),
+          erpContext: takeSnapshot(),
+        }),
         signal: AbortSignal.timeout(60000),  // respuestas con tools pueden tardar ~20s
       });
       if (!res.ok) throw new Error(`El servidor de Alicia respondió ${res.status}`);
@@ -833,7 +895,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [apiKey, sending, messages, currentProfile, profiles, tasks, allSpaces, knowledgeLinks, selectedUserId, executeActions]);
+  }, [apiKey, sending, messages, currentProfile, profiles, tasks, allSpaces, knowledgeLinks, selectedUserId, executeActions, takeSnapshot]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
@@ -968,15 +1030,24 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
               ))}
             </select>
           )}
+          {/* Dice "vista local" porque es lo único que borra: el hilo vive en el
+              servidor y vuelve entero al recargar. Antes el tacho prometía
+              borrar la conversación y no borraba nada. */}
           {messages.length > 0 && (
-            <button onClick={() => { window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-              <Trash2 size={11} /> Limpiar
+            <button title="Vacía la pantalla y el caché del navegador. El hilo sigue en el servidor y vuelve al recargar." onClick={() => { window.speechSynthesis?.cancel(); if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setIsSpeaking(false); } const cleared = []; setMessages(cleared); saveChat(selectedUserId, cleared); }} style={{ padding: "4px 10px", borderRadius: 2, border: `1px solid ${C.line}`, background: "none", fontSize: 11, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <Trash2 size={11} /> Limpiar vista local
             </button>
           )}
         </div>
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {hiloFallo && (
+            <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "2px 0" }}>
+              No pude cargar el hilo — estás viendo una copia local.
+            </div>
+          )}
 
           {messages.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 20, opacity: 0.7 }}>
@@ -1030,6 +1101,11 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
                   )}
                   <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.04em", paddingInline: 4 }}>
                     {new Date(msg.ts).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                    {msg.channel && msg.channel !== "app" && (
+                      <span style={{ fontSize: 9, color: C.muted, marginLeft: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        {msg.channel === "whatsapp" ? "· whatsapp" : msg.channel === "embodied" ? "· voz" : `· ${msg.channel}`}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

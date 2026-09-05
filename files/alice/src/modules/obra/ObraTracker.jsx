@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { aliciaAnalyze } from "../../lib/alicia";
+import { useERPContext } from "../../copilot/ERPContext.jsx";
 
 const C = {
   bg: "#EEEBE3", paper: "#F4F1EA", ink: "#0A0B0F", inkSoft: "#2E2E33",
@@ -247,6 +248,14 @@ export default function ObraTracker({ projectId, projectName, onProgressUpdate }
   const [state, setState] = useState(() => loadState(projectId));
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+
+  useERPContext("obra", () => ({
+    title: projectName ? `Obra · ${projectName}` : "Obra · tracker de avance",
+    entity: projectId ? { type: "proyecto", id: projectId } : null,
+    state: { proyecto: projectName || null },
+    derived: {},
+    actions: [],
+  }));
 
   const handleBaselineLoaded = (newState) => {
     setState(newState);

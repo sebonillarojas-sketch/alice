@@ -11,6 +11,7 @@ import {
   Image, Newspaper, Link, Tag, X, Globe,
 } from "lucide-react";
 import { ALICIA_URL } from "../../lib/brain.js";
+import { useERPContext } from "../../copilot/ERPContext.jsx";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const C = {
@@ -645,6 +646,40 @@ export default function MercadoView() {
   });
 
   const setF = useCallback((key, val) => setFactors(f => ({ ...f, [key]: val })), []);
+
+  // `priceDelta` acá abajo es el useMemo calculado más adelante en este mismo
+  // componente (no `factors.priceDelta`, que es un campo del estado inicial que
+  // nunca se actualiza): el closure lo resuelve bien porque describeFn se llama
+  // recién cuando se arma el snapshot, después de que el render ya terminó.
+  useERPContext("velocity", () => ({
+    title: selectedDistrict ? `Velocity · ${selectedDistrict.name}` : "Velocity · simulador de velocidad de ventas",
+    entity: selectedDistrict ? { type: "distrito", id: selectedDistrict.id } : null,
+    state: {
+      distrito: selectedDistrict?.name || null,
+      unidades: factors.totalUnits,
+      deltaPrecioVsMercado: priceDelta,
+      precioM2: factors.preciom2 || null,
+      tipologia: factors.tipologia,
+      acabados: factors.acabados,
+      storytelling: factors.storytelling,
+    },
+    // Lo que el módulo YA calculó, para que Alicia razone sin recalcular. Son
+    // los números por los que existe Velocity: sin ellos el snapshot contaba
+    // los inputs y se guardaba el resultado. `absorption`, `tornado` y `spider`
+    // son arrays de puntos de gráfico y no entran; del tornado va sólo lo único
+    // que se puede decir en una palabra: qué palanca mueve más la aguja.
+    derived: {
+      velocidadUMes: velocity ? Number(velocity.toFixed(1)) : null,
+      mesesParaVender: absMonths,
+      storyScore,
+      ingresosEstimadosMUSD: revenueEst,
+      precioMercadoM2: marketRef,
+      factorMasSensible: tornado[0]?.label || null,
+      proyectosEnMercado: liveProjects.length,
+      datosAl: marketTs,
+    },
+    actions: [],
+  }));
 
   const [macro, setMacro] = useState(null); // { tasa_hip_pen, tasa_hip_usd, usd_pen }
 

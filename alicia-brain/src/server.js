@@ -17,6 +17,9 @@ import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
 import { createArchitectureRouter } from "./architecture/routes.js";
+import { CEO_ID, emailToUserId, puedeVer, resolveActingUser } from "./identity.js";
+import { renderErpContext } from "./erp-context.js";
+import { readThread } from "./history.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -60,22 +63,28 @@ const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/market-impo
 // backend no necesita el JWT secret ni JWKS: Supabase confirma sesión viva.
 const SUPABASE_URL  = process.env.SUPABASE_URL || "https://apnzitklhxrcszectbxx.supabase.co";
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwbnppdGtsaHhyY3N6ZWN0Ynh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MjUzNjcsImV4cCI6MjA5OTQwMTM2N30.OdUe_GuchvgjoDxklh_nKxxNb_rPD_IpQzj8f_XyETI"; // anon key: pública por diseño
-const _jwtCache = new Map(); // token → { ok, until }
-async function verifySupabaseJWT(token) {
-  if (!token || token.length < 100) return false; // los JWT de Supabase son largos; los del panel no llegan acá
+const _jwtCache = new Map(); // token → { user, until }
+// Antes devolvía un booleano y tiraba la identidad — de ahí venía el agujero:
+// el gate sabía que había ALGUIEN logueado, no QUIÉN. Ahora devuelve el usuario.
+async function fetchSupabaseUser(token) {
+  if (!token || token.length < 100) return null; // los JWT de Supabase son largos; los del panel no llegan acá
   const hit = _jwtCache.get(token);
-  if (hit && Date.now() < hit.until) return hit.ok;
-  let ok = false;
+  if (hit && Date.now() < hit.until) return hit.user;
+  let user = null;
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000),
     });
-    ok = r.ok;
-  } catch { ok = false; }
+    if (r.ok) {
+      const j = await r.json();
+      if (j?.email) user = { email: j.email, sub: j.id };
+    }
+  } catch { user = null; }
   if (_jwtCache.size > 500) _jwtCache.clear();
-  _jwtCache.set(token, { ok, until: Date.now() + (ok ? 10 * 60_000 : 60_000) });
-  return ok;
+  // Cachear el fallo poco (1 min) y el éxito más (10 min), igual que antes.
+  _jwtCache.set(token, { user, until: Date.now() + (user ? 10 * 60_000 : 60_000) });
+  return user;
 }
 
 function signToken(exp) {
@@ -99,26 +108,64 @@ async function panelGate(req, res, next) {
   // detrás del tunnel el Host llega como aliceai.bam.pe y el gate sigue cerrado.
   if (process.env.GATE_DEV_OPEN === "1"
     && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket?.remoteAddress || "")
-    && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || ""))) return next();
+    && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || ""))) {
+    req.aliceUser = { id: CEO_ID, via: "dev" };
+    return next();
+  }
   // El cuerpo de Alicia (su teléfono) entra con x-body-key. Hace falta porque
   // GATE_DEV_OPEN solo cubre loopback: desde otro device el Host ya no es localhost
   // y el gate lo rebota con 401. Comparación en tiempo constante y sin default:
   // si BODY_KEY no está seteado, esta puerta simplemente no existe.
   const bodyKey = req.headers["x-body-key"];
   if (BODY_KEY && bodyKey && bodyKey.length === BODY_KEY.length
-    && crypto.timingSafeEqual(Buffer.from(bodyKey), Buffer.from(BODY_KEY))) return next();
+    && crypto.timingSafeEqual(Buffer.from(bodyKey), Buffer.from(BODY_KEY))) {
+    req.aliceUser = { id: process.env.EMBODIED_USER_ID || CEO_ID, via: "body" };
+    return next();
+  }
   // Agentes externos (Cheshire en la Mac Studio): pasan con x-agent-key;
   // el valor lo valida requireAgentKey en la ruta — acá solo se les abre la puerta.
   if (req.headers["x-agent-key"] && p.startsWith("/agents/")) return next();
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "panel_locked", detail: "PANEL_PASSWORD no configurado en Railway" });
   const auth = req.headers.authorization || "";
   const tok = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (verifyToken(tok)) return next();                 // token del panel (sb)
-  if (await verifySupabaseJWT(tok)) return next();     // sesión del ERP (equipo logueado)
+  if (verifyToken(tok)) {                              // token del panel = sesión de sb
+    req.aliceUser = { id: CEO_ID, via: "panel" };
+    return next();
+  }
+  const su = await fetchSupabaseUser(tok);             // sesión del ERP (equipo logueado)
+  if (su) {
+    let uid;
+    try {
+      uid = emailToUserId(getDB(), su.email);
+    } catch (e) {
+      // Falla cerrada: si la DB no responde acá, mejor un 503 explícito que
+      // colgar el request (Express 4 no reenvía rechazos de middleware async).
+      console.error("panelGate emailToUserId:", e.message);
+      return res.status(503).json({ error: "identidad_no_disponible" });
+    }
+    // Logueado en Supabase pero sin perfil en el cerebro: entra al ERP, no a Alicia.
+    // Literalmente: pasa el gate con aliceUser en null y sigue teniendo Dropbox,
+    // calendario, agentes y análisis. Lo que queda cerrado es todo lo que depende
+    // de saber QUIÉN es (chat, copilot, historial, memorias, insights, persona):
+    // esas rutas piden aliceUser y contestan 401 por su cuenta. Antes esto era un
+    // 403 acá arriba y le tumbaba el backend entero del ERP a esa persona.
+    req.aliceUser = uid ? { id: uid, email: su.email, via: "erp" } : null;
+    return next();
+  }
   return res.status(401).json({ error: "no_auth" });
 }
 app.use("/api", panelGate);
 app.use("/api/architecture", createArchitectureRouter());
+
+// Guarda para las rutas que reciben al usuario objetivo por path, query o body.
+// Devuelve false y ya contestó: el llamador sólo tiene que hacer `return`.
+// A propósito NO es un middleware: son diez rutas sueltas repartidas por el
+// archivo, y montarlas en un router aparte movería más código del que arregla.
+function identidadOk(req, res, targetId) {
+  if (!req.aliceUser?.id) { res.status(401).json({ error: "no_auth" }); return false; }
+  if (!puedeVer(req.aliceUser.id, targetId)) { res.status(403).json({ error: "no_autorizado" }); return false; }
+  return true;
+}
 
 app.post("/api/login", (req, res) => {
   if (!PANEL_PASSWORD) return res.status(503).json({ error: "PANEL_PASSWORD no configurado" });
@@ -283,8 +330,6 @@ function maybeRefreshPersona(userId) {
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
-
-const CEO_ID = "sb";
 
 function buildSystemPrompt(profile, allProfiles, memories, knowledge, channel, userId) {
   const isCEO = userId === CEO_ID;
@@ -618,7 +663,13 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   // Fecha+hora SIEMPRE acá (no en el bloque cacheado: la hora rompería el cache cada minuto,
   // y sin timeZone el server UTC hacía que Alicia viviera en el día siguiente desde las 7pm).
   const nowLima = new Date().toLocaleString("es-PE", { timeZone: "America/Lima", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
-  systemBlocks.push({ type: "text", text: `Ahora en Lima: ${nowLima}.${liveContext ? `\n\n${liveContext}` : ""}` });
+  // El contexto del ERP viaja en el mismo bloque NO cacheado que la hora y el
+  // contexto vivo: es lo que cambia a cada rato. Ver comentario en erp-context.js.
+  const erpBlock = renderErpContext(opts.erpContext);
+  systemBlocks.push({ type: "text", text:
+    `Ahora en Lima: ${nowLima}.`
+    + (liveContext ? `\n\n${liveContext}` : "")
+    + (erpBlock ? `\n\n${erpBlock}` : "") });
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
@@ -1001,15 +1052,28 @@ function escapeXml(str) {
 // ── REST API ──────────────────────────────────────────────────────────────────
 
 app.post("/api/chat", async (req, res) => {
-  const { userId, message } = req.body;
-  if (!userId || !message) return res.status(400).json({ error: "Falta userId o message" });
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: "Falta message" });
+  // El userId del body ya NO manda: solo puede pedir "ver como" y solo si sos el CEO.
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
   try {
-    const result = await processAliciaMessage(userId, message, "app");
+    const result = await processAliciaMessage(act.userId, message, "app", { erpContext: req.body.erpContext });
     res.json(result);
   } catch (e) {
     console.error("Chat error:", e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// El hilo real que el space del ERP tiene que mostrar. Hasta ahora AliciaView
+// pintaba su propia copia de localStorage, desincronizada de lo que Alicia sí
+// recordaba en `messages` — de ahí la sensación de que "no se acuerda".
+app.get("/api/copilot/history", (req, res) => {
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.query.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
+  const limit = Math.min(Math.max(Number(req.query.limit) || 60, 1), 200);
+  res.json({ userId: act.userId, messages: readThread(getDB(), act.userId, limit) });
 });
 
 // ── Cuerpo (el teléfono de Alicia) ────────────────────────────────────────────
@@ -1136,19 +1200,43 @@ app.post("/api/embodied",
   });
 
 app.get("/api/profile/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   const profile = await getProfile(req.params.userId);
   if (!profile) return res.status(404).json({ error: "No encontrado" });
   res.json(profile);
 });
 
-app.get("/api/profiles", async (req, res) => res.json(await getAllProfiles()));
+// Lo sensible acá NO son los emails: ya viajan en el bundle del ERP
+// (files/alice/src/auth/users.js), esconderlos del lado del server no compra
+// nada. Es el bloque de coaching: la lectura privada que Alicia hace de una
+// persona, la misma categoría que /api/insights/:userId. Así que la ruta sigue
+// devolviendo a todo el equipo —es la lista del directorio y bloquearla rompería
+// a quien la consuma— pero fuera del CEO cada quien ve su ficha entera y del
+// resto solo lo de directorio. Las skills quedan: son "qué hace esta persona",
+// no una evaluación.
+const CAMPOS_COACHING = ["strengths", "opportunities", "work_style",
+  "growth_short", "growth_long", "growth_notes"];
+
+app.get("/api/profiles", async (req, res) => {
+  if (!req.aliceUser?.id) return res.status(401).json({ error: "no_auth" });
+  const todos = await getAllProfiles();
+  if (req.aliceUser.id === CEO_ID) return res.json(todos);
+  res.json(todos.map((p) => {
+    if (p.user_id === req.aliceUser.id) return p;
+    const ficha = { ...p };
+    for (const campo of CAMPOS_COACHING) delete ficha[campo];
+    return ficha;
+  }));
+});
 
 app.get("/api/history/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   const limit = parseInt(req.query.limit) || 50;
   res.json(await getRecentMessages(req.params.userId, limit));
 });
 
 app.get("/api/memories/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   const { rows } = query(
     `SELECT * FROM memories WHERE user_id = ? ORDER BY importance DESC, created_at DESC LIMIT 100`,
     [req.params.userId]
@@ -1779,10 +1867,13 @@ app.get("/api/calendar/team", async (req, res) => {
 });
 
 // Eventos de Google Calendar de un usuario, para la vista Calendario del cockpit.
-// ⚠️ Deuda (auditoría #9): público como /api/calendar/team porque el ERP no manda JWT aún.
+// El ERP sí manda el JWT desde que existe el interceptor de files/alice/src/lib/
+// supabase.js, así que acá vale la misma regla que en el resto: el default de
+// ?user deja de ser "sb" y pasa a ser vos, y la agenda de otro es cosa del CEO.
 app.get("/api/calendar/events", async (req, res) => {
   try {
-    const user = (req.query.user || "sb").toLowerCase().replace(/[^a-z]/g, "") || "sb";
+    const user = String(req.query.user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!identidadOk(req, res, user)) return;
     const days = Math.min(parseInt(req.query.days) || 21, 60);
     const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
     const calUser = googleAvailable(user) ? user : (googleAvailable("sb") ? "sb" : null);
@@ -1820,7 +1911,9 @@ function isWhisperHallucination(text) {
 
 const SERVER_STARTED_AT = Date.now();
 app.get("/api/home", async (req, res) => {
-  const user = (req.query.user || CEO_ID).toLowerCase().replace(/[^a-z]/g, "") || CEO_ID;
+  // El default deja de ser el CEO: sin ?user cada quien ve lo suyo.
+  const user = (req.query.user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (!identidadOk(req, res, user)) return;
 
   // Agenda de hoy (hora de Lima)
   const todayEvents = (async () => {
@@ -1874,9 +1967,11 @@ app.get("/api/home", async (req, res) => {
 // Si viene taskId, usa un evento idempotente (mismo id ⇒ edita en vez de duplicar).
 app.post("/api/calendar/event", async (req, res) => {
   try {
-    const { user = "sb", taskId, title, date, time, endTime, description } = req.body || {};
+    // El default deja de ser "sb": escribir en el calendario de otro es cosa del CEO.
+    const { user, taskId, title, date, time, endTime, description } = req.body || {};
+    const u = String(user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!identidadOk(req, res, u)) return;
     if (!title || !date) return res.status(400).json({ error: "title y date requeridos" });
-    const u = String(user).toLowerCase().replace(/[^a-z]/g, "") || "sb";
     const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
     const calUser = googleAvailable(u) ? u : (googleAvailable("sb") ? "sb" : null);
     if (!calUser) return res.json({ ok: false, note: "Google Calendar no conectado" });
@@ -1888,9 +1983,13 @@ app.post("/api/calendar/event", async (req, res) => {
 });
 
 // Borrar el evento de calendario asociado a una tarea (cuando se elimina la tarea o pierde su fecha).
+// Es destructivo y sobre el calendario de una persona: con ?user=sb de default,
+// cualquiera del equipo borraba eventos de la agenda del CEO. Mismo criterio que
+// en POST: el default sos vos, y tocar la agenda de otro es cosa del CEO.
 app.delete("/api/calendar/event/:taskId", async (req, res) => {
   try {
-    const u = String(req.query.user || "sb").toLowerCase().replace(/[^a-z]/g, "") || "sb";
+    const u = String(req.query.user || req.aliceUser?.id || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!identidadOk(req, res, u)) return;
     const { googleCalendar, googleAvailable } = await import("./integrations/google.js");
     const calUser = googleAvailable(u) ? u : (googleAvailable("sb") ? "sb" : null);
     if (!calUser) return res.json({ ok: false, note: "Google Calendar no conectado" });
@@ -1899,8 +1998,12 @@ app.delete("/api/calendar/event/:taskId", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Actualizar email de un perfil (para el mapeo de calendarios)
+// Actualizar email de un perfil. Solo el CEO: desde que la identidad sale del
+// JWT vía profiles.email, esta columna es la raíz del modelo de identidad y
+// escribirla es escalar privilegios (borrás el email del CEO, te lo ponés vos,
+// y en el siguiente request sos el CEO).
 app.patch("/api/profile/:userId/email", (req, res) => {
+  if (req.aliceUser?.id !== CEO_ID) return res.status(403).json({ error: "solo_ceo" });
   try {
     const { email } = req.body || {};
     query("UPDATE profiles SET email = ?, updated_at = datetime('now') WHERE user_id = ?", [email || null, req.params.userId]);
@@ -1911,10 +2014,13 @@ app.patch("/api/profile/:userId/email", (req, res) => {
 // ── Persona · fine-tune manual + lectura ──────────────────────────────────────
 
 app.get("/api/persona/:userId", (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   res.json(getPersona(req.params.userId) || {});
 });
 
+// Solo el CEO: esto no es leer, es escribir cómo Alicia trata a una persona.
 app.put("/api/persona/:userId", (req, res) => {
+  if (req.aliceUser?.id !== CEO_ID) return res.status(403).json({ error: "no_autorizado" });
   try {
     const b = req.body || {};
     const clamp = (v, def, max = 10) => Math.max(0, Math.min(max, parseInt(v ?? def)));
@@ -1999,6 +2105,7 @@ Respondé SOLO con JSON, sin markdown:
 }
 
 app.get("/api/insights/:userId", (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   try {
     const { rows } = query("SELECT report, updated_at FROM user_insights WHERE user_id = ?", [req.params.userId]);
     if (!rows[0]) return res.json({ report: null });
@@ -2007,6 +2114,7 @@ app.get("/api/insights/:userId", (req, res) => {
 });
 
 app.post("/api/insights/:userId/refresh", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
   try {
     const report = await generateInsights(req.params.userId);
     if (!report) return res.json({ report: null, reason: "Sin conversaciones suficientes todavía" });

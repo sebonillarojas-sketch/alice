@@ -8,6 +8,7 @@ import TallerBammy from "./modules/planos/TallerBammy.jsx";
 import { proyectosStore } from "./modules/cabida/proyectos.js";
 import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
 import CotizacionView from "./modules/cotizacion/CotizacionView";
+import { useERPContext } from "./copilot/ERPContext.jsx";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { DISTRICTS_DATA, COMPETITORS_DB, TREND_LABEL } from "./modules/mercado/sectorData";
 import { useTimer } from "./modules/timer/useTimer";
@@ -5178,6 +5179,17 @@ function GrowthDashboard({ terrenos, onSelect, onCreate, onUpdate, selectedTerre
   const [filterScoreMin, setFilterScoreMin] = useState("");
   const [filterPriceMax, setFilterPriceMax] = useState("");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  useERPContext("growth", () => {
+    const sel = terrenos.find((t) => t.id === selectedTerrenoId) || null;
+    return {
+      title: "Growth · pipeline de terrenos",
+      entity: sel ? { type: "terreno", id: sel.id } : null,
+      state: { totalTerrenos: terrenos.length, terrenoAbierto: sel?.name || null },
+      derived: {},
+      actions: [],
+    };
+  });
 
   const filtered = useMemo(() => {
     let list = filterStatus === "all" ? terrenos : terrenos.filter(t => t.status === filterStatus);
