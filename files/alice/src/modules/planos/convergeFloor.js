@@ -1,11 +1,26 @@
 // La cadena: partis diversos -> unidad mas dificil primero -> materializar y validar
 // -> critica estructurada -> corregir. Los hallazgos de volumen suben al reparto.
-import { dedupePartis } from "./parti.js";
-import { createLedger } from "./findingsLedger.js";
+import { sonDistintos } from "./parti.js";
+import { createLedger, findingKey } from "./findingsLedger.js";
 import { esDeVolumen, rebalancear } from "./rebalance.js";
 import { ordenarPorDificultad } from "./dificultad.js";
 
 const LIMITES = { vueltasPorUnidad: 3, llamadasPorPiso: 10 };
+const MAX_REINTENTOS_PARTI = 2;
+
+// Suma `nuevos` a `actuales` conservando solo los que sean distintos de todo lo
+// ya aceptado (no solo entre sí). Devuelve el conteo de partis descartados en
+// este lote para acumularlo con los de lotes anteriores.
+function mezclarPartisDistintos(actuales, nuevos) {
+  const kept = [...actuales];
+  let descartados = 0;
+  for (const p of nuevos) {
+    const esDistinto = kept.every((k) => sonDistintos(p, k));
+    if (esDistinto) kept.push(p);
+    else descartados += 1;
+  }
+  return { kept, descartados };
+}
 
 export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
   const lim = { ...LIMITES, ...limits };
@@ -14,9 +29,26 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
   let llamadas = 0;
   const tope = () => llamadas >= lim.llamadasPorPiso;
 
-  llamadas += 1;
-  const propuestos = await planFloor(brief);
-  const { kept, dropped } = dedupePartis(propuestos);
+  // Tweedledum propone 3 partis obligatoriamente distintos. Si el colapso de modo
+  // los deja en menos de 3 tras deduplicar, se vuelve a pedir con los ya vistos
+  // como exclusión explícita: máximo 2 reintentos, cortando antes si ya hay 3
+  // distintos o si el piso se quedó sin presupuesto de llamadas.
+  let vistos = [];
+  let kept = [];
+  let partisDescartados = 0;
+  let intentosParti = 0;
+  const maxIntentosParti = 1 + MAX_REINTENTOS_PARTI;
+
+  while (kept.length < 3 && intentosParti < maxIntentosParti && !tope()) {
+    llamadas += 1;
+    intentosParti += 1;
+    const propuestos = await planFloor(brief, vistos.length ? { excluir: vistos } : undefined);
+    vistos = vistos.concat(propuestos);
+    const mezcla = mezclarPartisDistintos(kept, propuestos);
+    kept = mezcla.kept;
+    partisDescartados += mezcla.descartados;
+  }
+
   let parti = kept[0];
 
   // Sin parti sobre el cual trabajar (planFloor vacío/fallido): no se entrega en silencio
@@ -24,7 +56,7 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
   if (!parti) {
     return {
       parti: null,
-      partisDescartados: dropped.length,
+      partisDescartados,
       unidades: [],
       pendientes: (brief.units || []).map((u) => u.id),
       llamadas,
@@ -41,6 +73,10 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
   const cerradasContra = new Map();
   const indexPorId = new Map();
 
+  // Ejemplar: la primera unidad que converge sin hallazgos se guarda y se pasa
+  // al contexto de Tweedledum para las que siguen. Mientras nadie convergió, null.
+  let ejemplar = null;
+
   for (const u of ordenarPorDificultad(brief.units || [])) {
     let vuelta = 0;
     let cerrada = false;
@@ -52,17 +88,33 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
       llamadas += 1;
 
       const sobre = parti.units.find((s) => s.id === u.id) || {};
-      const decision = await designUnit({ unidad: u, sobre, mustFix: ledger.mustFix(u.id) });
+      const decision = await designUnit({ unidad: u, sobre, mustFix: ledger.mustFix(u.id), ejemplar });
       layout = materialize(decision);
       const val = validate(layout);
 
-      if (tope()) { motivo = "tope_piso"; break; }
-      llamadas += 1;
-      const findings = [...(val.errors || []).map((e) => ({ ...e, nivel: e.nivel || "interior" })),
-                        ...(await critique({ unidad: u, layout }))];
+      // El validador determinista corre siempre. Si alguno de sus hallazgos
+      // reintroduce una clave que el ledger ya había dado por cerrada para esta
+      // unidad, es una regresión: se marca sin gastar una llamada a Tweedledee.
+      const hallazgosValidador = (val.errors || []).map((e) => ({ ...e, nivel: e.nivel || "interior" }));
+      const cerradosPrevios = new Set(ledger.resueltos(u.id).map((f) => findingKey({ ...f, unidad: u.id })));
+      const esRegresion = hallazgosValidador.some((f) => cerradosPrevios.has(findingKey({ ...f, unidad: u.id })));
+
+      let findings;
+      if (esRegresion) {
+        findings = hallazgosValidador;
+      } else {
+        if (tope()) { motivo = "tope_piso"; break; }
+        llamadas += 1;
+        findings = [...hallazgosValidador, ...(await critique({ unidad: u, layout }))];
+      }
 
       ledger.record(u.id, findings);
-      if (!findings.length) { cerrada = true; cerradasContra.set(u.id, sobre.w); break; }
+      if (!findings.length) {
+        cerrada = true;
+        cerradasContra.set(u.id, sobre.w);
+        if (!ejemplar) ejemplar = { unidad: u.id, layout };
+        break;
+      }
 
       if (ledger.bloqueado(u.id)) { motivo = "bloqueado"; break; }
 
@@ -93,5 +145,5 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
   }
 
   if (motivo === "ok" && pendientes.length) motivo = "bloqueado";
-  return { parti, partisDescartados: dropped.length, unidades, pendientes, llamadas, motivo };
+  return { parti, partisDescartados, unidades, pendientes, llamadas, motivo };
 }
