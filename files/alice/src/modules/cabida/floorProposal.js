@@ -30,6 +30,7 @@ export function appendFloorProposalRecord(project = {}, result = {}, { now = new
     summary: String(selected.summary || ""),
     floor: clone(selected.floor || { sourceCabidaVersionId: "", polygons: [] }),
     validation: clone(result.validation || { ok: false, findings: [] }),
+    candidateValidation: clone(result.candidateValidation || null),
     fallbackReason: result.fallbackReason ? String(result.fallbackReason) : null,
     createdAt: typeof now === "string" ? now : new Date(now).toISOString(),
   };
@@ -54,7 +55,11 @@ export function acceptFloorProposalRecord(project = {}, proposalId) {
 }
 
 export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sourceCabidaVersionId }) {
-  const parti = generarDistribuciones(footprint, frontIdx, brief)[0];
+  const candidates = generarDistribuciones(footprint, frontIdx, brief);
+  const parti = candidates.find((candidate) => {
+    const refs = (candidate.res?.units || []).map((unit) => unit.unitRef);
+    return refs.length === new Set(refs).size;
+  }) || candidates[0];
   if (!parti?.res) throw new Error("La huella no admite una distribución determinística");
   const { core, corridors = [], corridor, units = [] } = parti.res;
   const halls = corridors.length ? corridors : (corridor ? [corridor] : []);
@@ -62,8 +67,8 @@ export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sou
   if (core) polygons.push({ polygonId: core.id, role: "core", name: "core", unitRef: null, unitProgram: null, polygon: toPolygon(core.pts) });
   halls.forEach((hall, index) => polygons.push({ polygonId: hall.id, role: "circulacion", name: `circulación ${index + 1}`, unitRef: null, unitProgram: null, polygon: toPolygon(hall.pts) }));
   units.forEach((unit) => {
-    const dormitorios = Math.max(0, Number(unit.tipologia?.dorms ?? parseInt(unit.subtipo, 10) ?? 1) || 0);
-    const banos = Math.max(0, Number(unit.tipologia?.banos ?? (dormitorios <= 1 ? 1 : 2)) || 0);
+    const dormitorios = Math.max(1, Math.min(3, Number(unit.requestedProgram?.dormitorios ?? unit.tipologia?.dorms ?? parseInt(unit.subtipo, 10) ?? 1) || 1));
+    const banos = Math.max(1, Number(unit.requestedProgram?.banos ?? unit.tipologia?.banos ?? (dormitorios <= 1 ? 1 : 2)) || 1);
     polygons.push({
       polygonId: unit.id,
       role: "unidad",

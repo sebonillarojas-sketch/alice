@@ -77,11 +77,13 @@ test("floor-plan route preserves Cabida version and maps invalid candidates to p
   const valid = {
     summary: "Floor", assumptions: [], tradeoffs: [],
     floor: { sourceCabidaVersionId: "cabida_p1_v7", polygons: [
-      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: rect(4, 4, 6, 10) },
+      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: rect(4, 0, 6, 10) },
       { polygonId: "hall-left", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: rect(0, 4, 4, 5) },
       { polygonId: "hall-right", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: rect(6, 4, 10, 5) },
       { polygonId: "unit-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: rect(0, 0, 4, 4) },
       { polygonId: "unit-2", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: rect(6, 0, 10, 4) },
+      { polygonId: "void-left", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: rect(0, 5, 4, 10) },
+      { polygonId: "void-right", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: rect(6, 5, 10, 10) },
     ] },
   };
   const invalid = structuredClone(valid);

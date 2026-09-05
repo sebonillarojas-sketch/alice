@@ -94,10 +94,9 @@ export const porTipologia = Object.fromEntries(TIPOLOGIAS.map((t) => [t.id, t]))
 
 /** mezcla de tipologías para un piso: reparte n unidades según el mix pedido (VIS→más 2D/3D chico) */
 export function mixTipologias(n, { pct1 = 25, pct2 = 40, areaObjetivo = 60 } = {}) {
-  const pct3 = Math.max(0, 100 - pct1 - pct2);
-  const n1 = Math.round((n * pct1) / 100);
-  const n3 = Math.round((n * pct3) / 100);
-  const n2 = Math.max(0, n - n1 - n3);
+  const n1 = Math.min(n, Math.round((n * pct1) / 100));
+  const n2 = Math.min(n - n1, Math.round((n * pct2) / 100));
+  const n3 = Math.max(0, n - n1 - n2);
   const pick = (dorms) => {
     const cands = TIPOLOGIAS.filter((t) => t.dorms === dorms);
     return cands.sort((a, b) =>

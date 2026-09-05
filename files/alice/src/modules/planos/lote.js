@@ -42,7 +42,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
   let lista;
   if (unidades && unidades.length) {
     // tipologías explícitas: el área ideal manda; el empaquetado las escala al footprint
-    lista = unidades.map((t, index) => ({ tip: `${t.dorms}D`, area: t.area[1], tipologia: t, unitRef: `unit-${index + 1}` }));
+    lista = unidades.map((t, index) => ({ tip: `${t.dorms}D`, area: t.area[1], tipologia: t, unitRef: `unit-${index + 1}`, requestedProgram: { dormitorios: t.dorms, banos: t.banos } }));
   } else {
     const uds = Math.max(1, Math.round(udsPiso));
     const mix3 = Math.max(0, 100 - mix1 - mix2);
@@ -53,7 +53,10 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
     const { n1, n2, n3 } = mezcla(uds, mix1, mix2);
     lista = [
       ...Array(n3).fill("3D"), ...Array(n2).fill("2D"), ...Array(n1).fill("1D"),
-    ].map((tip, index) => ({ tip, area: ratios[tip] * esc, unitRef: `unit-${index + 1}` }));
+    ].map((tip, index) => {
+      const dormitorios = parseInt(tip, 10) || 1;
+      return { tip, area: ratios[tip] * esc, unitRef: `unit-${index + 1}`, requestedProgram: { dormitorios, banos: dormitorios <= 1 ? 1 : 2 } };
+    });
   }
 
   // recorta cualquier rectángulo (siempre convexo) a la forma REAL del lote:
@@ -110,7 +113,7 @@ export function packFloor(footprint, frontIdx = 0, opts = {}) {
         if (!poly) return;             // cae entera fuera del lote → no existe
         if (area(poly) < 2) return;    // esquirla junto al core: ni depósito merece
         units.push({
-          id: rid(), unitRef: unit.unitRef, tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
+          id: rid(), unitRef: unit.unitRef, requestedProgram: { ...unit.requestedProgram }, tipo: "unidad", subtipo: unit.tip, name: unit.tip, pts: poly, areaReal: area(poly),
           tipologia: unit.tipologia || null, partida: segs.length > 1 ? si : null,
           frame: { ua, ub, v0: fila.v0, v1: fila.v0 + fila.depth, banda: fila.v0 === 0 ? 0 : 1 },
         });

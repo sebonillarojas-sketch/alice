@@ -129,7 +129,7 @@ export function createArchitectureService({ client = null, model = null } = {}) 
         originalProposal = await callFloor({ operation: "design_floor", context, floorBrief: input.floorBrief });
         originalValidation = validateFloorProposal(originalProposal, validationOptions);
         if (originalValidation.ok) {
-          return { originalProposal, revision, validation: originalValidation, selected: originalProposal, source: "tweedledum", agent: originalProposal.agent, promptVersion: originalProposal.promptVersion, model: originalProposal.model };
+          return { originalProposal, revision, validation: originalValidation, selected: originalProposal, source: "tweedledum", candidateValidation: { original: originalValidation, revision: null }, agent: originalProposal.agent, promptVersion: originalProposal.promptVersion, model: originalProposal.model };
         }
         revision = await callFloor({
           operation: "revise_floor",
@@ -140,7 +140,7 @@ export function createArchitectureService({ client = null, model = null } = {}) 
         });
         revisionValidation = validateFloorProposal(revision, validationOptions);
         if (revisionValidation.ok) {
-          return { originalProposal, revision, validation: revisionValidation, selected: revision, source: "revision", agent: revision.agent, promptVersion: revision.promptVersion, model: revision.model };
+          return { originalProposal, revision, validation: revisionValidation, selected: revision, source: "revision", candidateValidation: { original: originalValidation, revision: revisionValidation }, agent: revision.agent, promptVersion: revision.promptVersion, model: revision.model };
         }
         fallbackReason = "Tweedledum revision did not pass deterministic validation";
       } catch (error) {

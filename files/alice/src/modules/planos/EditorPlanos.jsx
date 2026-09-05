@@ -244,7 +244,7 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { disenarConFeyd, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, resolveArchitectureProgram, roomsALayout } from "./feyd.js";
+import { disenarConFeyd, isRoomEditable, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, preserveLockedRooms, resolveArchitectureProgram, roomsALayout, splitAcceptedFloor } from "./feyd.js";
 import {
   applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
   designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
@@ -607,7 +607,7 @@ export default function EditorPlanos({ navigate }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 520 }}>
       <ProyectoTabs />
       <div style={{ flex: 1, minHeight: 0 }}>
-        <EditorPlanosInner key={activo.id} proyecto={activo} onSavePlano={guardar} navigate={navigate} />
+        <EditorPlanosInner key={`${activo.id}:${activo.plano?.floorProposal?.id || "none"}`} proyecto={activo} onSavePlano={guardar} navigate={navigate} />
       </div>
     </div>
   );
@@ -1120,6 +1120,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     }
     if (selId) {
       const r = rooms.find((x) => x.id === selId);
+      if (!isRoomEditable(r)) { setSelId(null); return; }
       const ni = r ? items.filter((t) => !pointInPolygon({ x: t.x, y: t.y }, r.pts)) : items;
       commit(rooms.filter((x) => x.id !== selId), ni);
       setSelId(null);
@@ -1132,11 +1133,15 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   }, [selItem, items, commit]);
 
   const renameSel = (name) =>
-    setRooms((rs) => rs.map((r) => (r.id === selId ? { ...r, name } : r)));
+    setRooms((rs) => rs.map((r) => (r.id === selId && isRoomEditable(r) ? { ...r, name } : r)));
 
   const clearAll = () => {
-    if ((rooms.length || items.length) && !window.confirm("¿Borrar todo el plano?")) return;
-    commit([], []);
+    const editableRooms = rooms.filter(isRoomEditable);
+    if ((editableRooms.length || items.length) && !window.confirm("¿Borrar los ambientes editables y el mobiliario?")) return;
+    const canonicalLocked = acceptedFloorProposal?.floor
+      ? splitAcceptedFloor(acceptedFloorProposal.floor).lockedRooms
+      : rooms.filter((room) => !isRoomEditable(room));
+    commit(preserveLockedRooms(canonicalLocked, []), []);
     setDraft([]); setSelId(null); setSelItem(null);
   };
 
@@ -1272,11 +1277,16 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
 
   const useVariant = useCallback((v) => {
     const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
-    commit(nr, (v.items || []).map((t) => ({ ...t })));
+    const locked = acceptedFloorProposal?.floor
+      ? splitAcceptedFloor(acceptedFloorProposal.floor).lockedRooms
+      : rooms.filter((room) => !isRoomEditable(room));
+    const nextRooms = preserveLockedRooms(locked, nr.filter((room) => isRoomEditable(room)
+      && (!acceptedFloorProposal?.floor || !["core", "pasillo", "circulacion", "void"].includes(room.tipo || room.role))));
+    commit(nextRooms, (v.items || []).map((t) => ({ ...t })));
     setShowDistrib(false); setShowTipo(false);
     setSelId(null); setSelItem(null); setDraft([]);
-    requestAnimationFrame(() => fitTo(nr));
-  }, [commit, fitTo]);
+    requestAnimationFrame(() => fitTo(nextRooms));
+  }, [acceptedFloorProposal, rooms, commit, fitTo]);
 
   // paso 2 → elegir un parti: bloques al lienzo y habilita el paso 3
   const usarParti = useCallback((p) => {
@@ -1329,7 +1339,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const selRooms = [], selItemIds = new Set(multiSel.filter((m) => m.t === "item").map((m) => m.id));
     multiSel.filter((m) => m.t === "room").forEach((m) => {
       const r = rooms.find((x) => x.id === m.id);
-      if (r) { selRooms.push({ id: r.id, orig: r.pts }); items.forEach((it) => { if (pointInPolygon({ x: it.x, y: it.y }, r.pts)) selItemIds.add(it.id); }); }
+      if (isRoomEditable(r)) { selRooms.push({ id: r.id, orig: r.pts }); items.forEach((it) => { if (pointInPolygon({ x: it.x, y: it.y }, r.pts)) selItemIds.add(it.id); }); }
     });
     const selItems = [...selItemIds].map((id) => { const it = items.find((x) => x.id === id); return it ? { id, x: it.x, y: it.y } : null; }).filter(Boolean);
     return { kind: "multi", start: world, rooms: selRooms, items: selItems, before: snapshot() };
@@ -1378,7 +1388,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
 
     // modo tipología (paso 3): click en un depto → abre el VISOR grande (variables + tipologías + editar)
     if (showTipo) {
-      const insideT = rooms.findIndex((r) => pointInPolygon(world, r.pts));
+      const insideT = rooms.findIndex((r) => isRoomEditable(r) && r.tipo === "unidad" && pointInPolygon(world, r.pts));
       if (insideT >= 0) { const r = rooms[insideT]; setTipoStage({ unit: r }); setSelId(r.id); setSelItem(null); }
       return;
     }
@@ -1393,14 +1403,16 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       svgRef.current.setPointerCapture(e.pointerId);
       return;
     }
-    const vHit = nearestVertex(rooms, world, 11 / view.scale);
+    const editableRoomIndexes = rooms.map((room, index) => (isRoomEditable(room) ? index : -1)).filter((index) => index >= 0);
+    const vHit = nearestVertex(editableRoomIndexes.map((index) => rooms[index]), world, 11 / view.scale);
     if (vHit) {
-      setSelId(rooms[vHit.roomIdx].id); setSelItem(null);
-      drag.current = { kind: "vertex", roomIdx: vHit.roomIdx, ptIdx: vHit.ptIdx, before: snapshot() };
+      const roomIdx = editableRoomIndexes[vHit.roomIdx];
+      setSelId(rooms[roomIdx].id); setSelItem(null);
+      drag.current = { kind: "vertex", roomIdx, ptIdx: vHit.ptIdx, before: snapshot() };
       svgRef.current.setPointerCapture(e.pointerId);
       return;
     }
-    const inside = rooms.findIndex((r) => pointInPolygon(world, r.pts));
+    const inside = rooms.findIndex((r) => isRoomEditable(r) && pointInPolygon(world, r.pts));
     if (inside >= 0) {
       const r = rooms[inside];
       if (e.shiftKey) { toggleMulti("room", r.id); setSelId(r.id); setSelItem(null); return; }
@@ -1637,6 +1649,28 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     }
     return { rooms: generated.rooms, items: generated.items };
   };
+  const designAcceptedFloor = (source) => materializeUnitInteriors({
+    floor: acceptedFloorProposal.floor,
+    designUnit: (unit) => {
+      const unitProgram = { ...unit.program, nse: architectureProgram.nse };
+      return designWithTweedledum({
+        context: contextForUnit(source.id, unit),
+        brief: { ...brief, program: unitProgram },
+        planVersion: { id: source.id, layout: roomsALayout([{ id: unit.polygonId, name: unit.unitRef, tipo: "unidad", pts: unit.boundary }], { program: unitProgram }) },
+        designObjective: `complete residential interior for ${unit.unitRef}`,
+      });
+    },
+    reviseUnit: (unit, design, acceptedFindings) => {
+      const unitProgram = { ...unit.program, nse: architectureProgram.nse };
+      return reviseWithTweedledum({
+        context: contextForUnit(source.id, unit),
+        brief: { ...brief, program: unitProgram },
+        planVersion: { id: source.id, layout: design.layout },
+        acceptedFindings,
+        designObjective: `repair deterministic interior geometry for ${unit.unitRef}`,
+      });
+    },
+  });
   const runDesign = async () => {
     if (architectureBusy) return;
     const readiness = architectureDesignReadiness({ rooms, boundary: designBoundary, areaTarget: brief.areaObjetivo });
@@ -1645,28 +1679,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     try {
       const { source, history } = ensureSourceVersion();
       if (acceptedFloorProposal?.floor) {
-        const resolvedFloor = await materializeUnitInteriors({
-          floor: acceptedFloorProposal.floor,
-          designUnit: (unit) => {
-            const unitProgram = { ...unit.program, nse: architectureProgram.nse };
-            return designWithTweedledum({
-              context: contextForUnit(source.id, unit),
-              brief: { ...brief, program: unitProgram },
-              planVersion: { id: source.id, layout: roomsALayout([{ id: unit.polygonId, name: unit.unitRef, tipo: "unidad", pts: unit.boundary }], { program: unitProgram }) },
-              designObjective: `complete residential interior for ${unit.unitRef}`,
-            });
-          },
-          reviseUnit: (unit, design, acceptedFindings) => {
-            const unitProgram = { ...unit.program, nse: architectureProgram.nse };
-            return reviseWithTweedledum({
-              context: contextForUnit(source.id, unit),
-              brief: { ...brief, program: unitProgram },
-              planVersion: { id: source.id, layout: design.layout },
-              acceptedFindings,
-              designObjective: `repair deterministic interior geometry for ${unit.unitRef}`,
-            });
-          },
-        });
+        const resolvedFloor = await designAcceptedFloor(source);
         const proposal = createActivatedPlanVersion(history, {
           projectId: proyecto.id,
           parentVersionId: source.id,
@@ -1728,6 +1741,37 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setArchitectureBusy("review cycle"); setArchitectureError("");
     try {
       const { source, history } = ensureSourceVersion();
+      if (acceptedFloorProposal?.floor) {
+        const resolvedFloor = await designAcceptedFloor(source);
+        const proposalSnapshot = { rooms: resolvedFloor.rooms, items: resolvedFloor.items };
+        const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: proposalSnapshot });
+        setArchitectureVersions(proposal.history);
+        const deterministicValidation = serializeValidation(validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null }));
+        const critiqueRaw = await critiqueWithTweedledee({
+          context: contextFor(proposal.version.id),
+          planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, architectureBrief) },
+          deterministicValidation,
+          designObjective: "review accepted Cabida floor and completed residential interiors without changing locked infrastructure",
+        });
+        const critique = mappedCritique(critiqueRaw, proposalSnapshot.rooms, proposalSnapshot.items);
+        commit(proposalSnapshot.rooms, proposalSnapshot.items);
+        setActiveArchitectureVersionId(proposal.version.id);
+        recordArchitectureRun({
+          mode: "cycle_units",
+          sourceVersionId: source.id,
+          sourceCabidaVersionId: acceptedFloorProposal.sourceCabidaVersionId,
+          proposalVersionId: proposal.version.id,
+          resultVersionId: proposal.version.id,
+          units: resolvedFloor.unitResults.map((unit) => ({ unitRef: unit.unitRef, ok: unit.ok, repaired: unit.repaired })),
+          agents: [
+            ...resolvedFloor.unitResults.flatMap((unit) => [unit.design, unit.revision].filter(Boolean).map((entry) => ({ key: entry.agent?.key || "tweedledum", promptVersion: entry.promptVersion || null }))),
+            { key: critique.agent.key, promptVersion: critique.promptVersion },
+          ],
+          findings: critique.findings,
+        });
+        setArchitectureResult({ mode: "cycle", design: { summary: `${resolvedFloor.unitResults.filter((unit) => unit.ok).length}/${resolvedFloor.unitResults.length} unidades diseñadas` }, critique, revision: null, appliedVersionId: proposal.version.id });
+        return;
+      }
       const design = await designWithTweedledum({ context: contextFor(source.id), brief: architectureBrief, planVersion: { id: source.id, layout: roomsALayout(source.snapshot.rooms, architectureBrief) }, designObjective: "complete furnished residential interior" });
       const initialGenerated = materializeInteriorLayout(design.layout, { boundary: designBoundary, program: architectureProgram });
       const proposalSnapshot = { rooms: initialGenerated.rooms, items: initialGenerated.items };
@@ -1764,7 +1808,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   };
   const applyArchitectureVersion = (versionId) => {
     const applied = applyPlanVersion(architectureVersions, versionId);
-    commit(applied.snapshot.rooms, applied.snapshot.items);
+    const locked = acceptedFloorProposal?.floor
+      ? splitAcceptedFloor(acceptedFloorProposal.floor).lockedRooms
+      : rooms.filter((room) => !isRoomEditable(room));
+    const replacement = applied.snapshot.rooms.filter((room) => isRoomEditable(room)
+      && (!acceptedFloorProposal?.floor || !["core", "pasillo", "circulacion", "void"].includes(room.tipo || room.role)));
+    commit(preserveLockedRooms(locked, replacement), applied.snapshot.items);
     setActiveArchitectureVersionId(versionId);
   };
 
@@ -1838,12 +1887,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         </Btn>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
-          {selId && !selItem && (
+          {selId && !selItem && isRoomEditable(sel) && (
             <input value={sel?.name || ""} onChange={(e) => renameSel(e.target.value)} placeholder="nombre"
               style={{ fontFamily: mono, fontSize: 12, color: C.ink, width: 120, textAlign: "right", background: C.card,
                 border: `1px solid ${C.line}`, borderRadius: 2, padding: "5px 8px", outline: "none" }} />
           )}
-          {(selId || selItem) && <Btn onClick={deleteSel} title="Eliminar (Supr)"><Trash2 size={13} /></Btn>}
+          {(selItem || (selId && isRoomEditable(sel))) && <Btn onClick={deleteSel} title="Eliminar (Supr)"><Trash2 size={13} /></Btn>}
           {(rooms.length > 0 || items.length > 0) && (
             <span title={val.ok ? "cumple las reglas: nada fuera del lote · nada sin piso · flujos efectivos" : val.mensajes.join(" · ")}
               style={{ fontFamily: mono, fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 2, whiteSpace: "nowrap",
@@ -2105,7 +2154,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           })}
 
           {/* vértices del ambiente seleccionado */}
-          {tool === "select" && sel && sel.pts.map(toScreen).map((p, pi) => (
+          {tool === "select" && isRoomEditable(sel) && sel.pts.map(toScreen).map((p, pi) => (
             <rect key={pi} x={p.x - 4} y={p.y - 4} width={8} height={8} fill={C.card} stroke={C.orange} strokeWidth={1.5} />
           ))}
 

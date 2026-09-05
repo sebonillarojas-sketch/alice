@@ -10,6 +10,12 @@ import { ALICIA_URL } from "../../lib/brain.js";
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
+export const isRoomEditable = (room) => room?.locked !== true;
+export const preserveLockedRooms = (current = [], replacement = []) => [
+  ...current.filter((room) => !isRoomEditable(room)).map((room) => structuredClone(room)),
+  ...replacement.map((room) => structuredClone(room)),
+];
+
 const ZONAS = [
   ["dormitorio", "intima"], ["estudio", "intima"],
   ["baño", "servicio"], ["bano", "servicio"], ["cocina", "servicio"],
@@ -176,6 +182,40 @@ export async function materializeWithOneRevision({ layout, boundary = null, prog
 
 const floorPoints = (polygon) => (polygon || []).map(([x, y]) => ({ x: Number(x), y: Number(y) }));
 
+const pointKey = (point) => `${Number(point.x).toFixed(6)},${Number(point.y).toFixed(6)}`;
+function mergePieceBoundaries(pieces = []) {
+  if (pieces.length === 1) return pieces[0].pts.map((point) => ({ ...point }));
+  const edgeGroups = new Map();
+  const pointByKey = new Map();
+  for (const piece of pieces) {
+    piece.pts.forEach((point, index) => {
+      const next = piece.pts[(index + 1) % piece.pts.length];
+      const a = pointKey(point), b = pointKey(next);
+      pointByKey.set(a, point); pointByKey.set(b, next);
+      const key = [a, b].sort().join("|");
+      edgeGroups.set(key, [...(edgeGroups.get(key) || []), [a, b]]);
+    });
+  }
+  const boundaryEdges = [...edgeGroups.values()].filter((group) => group.length === 1).map((group) => group[0]);
+  const adjacency = new Map();
+  for (const [a, b] of boundaryEdges) {
+    adjacency.set(a, [...(adjacency.get(a) || []), b]);
+    adjacency.set(b, [...(adjacency.get(b) || []), a]);
+  }
+  if (!adjacency.size || [...adjacency.values()].some((neighbors) => neighbors.length !== 2)) return null;
+  const start = boundaryEdges[0][0];
+  const ordered = [];
+  let previous = null, current = start;
+  do {
+    ordered.push(pointByKey.get(current));
+    const next = adjacency.get(current).find((key) => key !== previous);
+    previous = current;
+    current = next;
+  } while (current && current !== start && ordered.length <= boundaryEdges.length);
+  if (current !== start || ordered.length !== boundaryEdges.length) return null;
+  return ordered.map((point) => ({ ...point }));
+}
+
 export function splitAcceptedFloor(floor = {}) {
   const polygons = Array.isArray(floor.polygons) ? floor.polygons : [];
   const lockedRooms = polygons.filter((item) => item.role !== "unidad").map((item) => ({
@@ -195,8 +235,8 @@ export function splitAcceptedFloor(floor = {}) {
   }
   const units = [...grouped.values()].map((unit) => ({
     ...unit,
-    polygonId: unit.pieces.length === 1 ? unit.pieces[0].polygonId : null,
-    boundary: unit.pieces.length === 1 ? unit.pieces[0].pts.map((point) => ({ ...point })) : null,
+    polygonId: unit.pieces.map((piece) => piece.polygonId).join("+"),
+    boundary: mergePieceBoundaries(unit.pieces),
   }));
   return { lockedRooms, units };
 }

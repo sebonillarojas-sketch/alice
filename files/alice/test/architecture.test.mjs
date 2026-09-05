@@ -11,6 +11,8 @@ import {
 import * as interior from "../src/modules/planos/feyd.js";
 import * as architectureApi from "../src/modules/planos/architecture.js";
 import { acceptFloorProposalRecord, appendFloorProposalRecord, cabidaVersionId, fallbackFloorProposal, proposalToParti } from "../src/modules/cabida/floorProposal.js";
+import { validateFloorProposal } from "../../../alicia-brain/src/architecture/floor-validation.js";
+import { area } from "../src/modules/planos/geometry.js";
 
 const square = (x0, y0, x1, y1) => [
   { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
@@ -249,6 +251,16 @@ test("packFloor fallback emits exclusive core and circulation polygons", () => {
       * Math.max(0, Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY));
     assert.equal(overlapArea, 0);
   }
+  const validation = validateFloorProposal(proposal, {
+    buildableFootprint: square(0, 0, 14, 12).map((point) => [point.x, point.y]),
+    sourceCabidaVersionId: "cabida_p1_v4",
+    unitsPerFloor: 4,
+    mix: { dormitorios1: 2, dormitorios2: 2, dormitorios3: 0 },
+    targetAverageArea: 24,
+  });
+  assert.equal(validation.ok, true, validation.findings.map((finding) => finding.message).join(" · "));
+  const unitRefs = proposal.floor.polygons.filter((item) => item.role === "unidad").map((item) => item.unitRef);
+  assert.equal(new Set(unitRefs).size, unitRefs.length, "fallback units must be directly designable as single boundaries");
 });
 
 test("floor proposal preview preserves polygon and unit metadata", () => {
@@ -281,12 +293,13 @@ test("floor planning client calls the dedicated architecture endpoint", async ()
 test("floor proposal records append immutably and acceptance bridges to Planos", () => {
   const project = { id: "p1", nombre: "DC01", cabida: {}, plano: { rooms: [{ id: "old" }] } };
   const selected = fallbackFloorProposal({ footprint: square(0, 0, 14, 12), frontIdx: 0, brief: { udsPiso: 2, pct1: 50, pct2: 50, areaObjetivo: 36 }, sourceCabidaVersionId: "cabida_p1_a" });
-  const first = appendFloorProposalRecord(project, { source: "tweedledum", selected, validation: { ok: true, findings: [] }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:00:00.000Z" });
+  const first = appendFloorProposalRecord(project, { source: "tweedledum", selected, validation: { ok: true, findings: [] }, candidateValidation: { original: { ok: true, findings: [] }, revision: null }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:00:00.000Z" });
   const second = appendFloorProposalRecord(first.project, { source: "revision", selected, validation: { ok: true, findings: [] }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:01:00.000Z" });
   assert.equal(project.cabida.floorProposals, undefined);
   assert.equal(second.record.version, 2);
   assert.equal(second.record.parentProposalId, first.record.id);
   assert.equal(second.project.cabida.floorProposals.length, 2);
+  assert.deepEqual(first.record.candidateValidation, { original: { ok: true, findings: [] }, revision: null });
 
   const accepted = acceptFloorProposalRecord(second.project, first.record.id);
   assert.equal(accepted.cabida.activeFloorProposalId, first.record.id);
@@ -323,6 +336,16 @@ test("accepted Cabida floors split locked infrastructure from unit boundaries", 
   assert.deepEqual(result.units[0].boundary, square(0, 0, 8, 8));
 });
 
+test("adjacent pieces of one accepted unit merge into one design boundary", () => {
+  const floor = acceptedFloor();
+  const unit = floor.polygons.find((item) => item.polygonId === "unit-a");
+  unit.polygon = [[0, 0], [4, 0], [4, 8], [0, 8]];
+  floor.polygons.push({ ...structuredClone(unit), polygonId: "unit-a-2", polygon: [[4, 0], [8, 0], [8, 8], [4, 8]] });
+  const [merged] = interior.splitAcceptedFloor(floor).units;
+  assert.ok(Array.isArray(merged.boundary));
+  assert.equal(Math.abs(area(merged.boundary)), 64);
+});
+
 test("accepted units are designed sequentially and infrastructure remains unchanged", async () => {
   const calls = [];
   const translate = (layout, dx) => ({ ambientes: layout.ambientes.map((room) => ({ ...room, poligono: room.poligono.map(([x, y]) => [x + dx, y]) })) });
@@ -353,4 +376,14 @@ test("a unit that still fails after one revision remains a pending envelope", as
   assert.ok(result.rooms.some((room) => room.unitRef === "unit-b" && room.pendingInterior === true));
   assert.ok(result.rooms.some((room) => room.unitRef === "unit-a" && !room.pendingInterior));
   assert.equal(result.unitResults.find((unit) => unit.unitRef === "unit-b").ok, false);
+});
+
+test("locked infrastructure survives clear and replacement operations", () => {
+  const locked = { id: "core", tipo: "core", locked: true, pts: square(0, 0, 2, 8) };
+  const editable = { id: "room", name: "sala", pts: square(2, 0, 8, 8) };
+  const replacement = { id: "new", name: "cocina", pts: square(2, 0, 8, 4) };
+  assert.equal(interior.isRoomEditable(locked), false);
+  assert.equal(interior.isRoomEditable(editable), true);
+  assert.deepEqual(interior.preserveLockedRooms([locked, editable], []), [locked]);
+  assert.deepEqual(interior.preserveLockedRooms([locked, editable], [replacement]), [locked, replacement]);
 });

@@ -20,7 +20,7 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
-  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "1.0.0");
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "1.1.0");
 });
 
 test("floor proposals preserve exclusive roles and stable unit references", () => {
@@ -51,8 +51,11 @@ test("floor proposal contract rejects ambiguous roles and references", () => {
   assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "terraza" }] } }), /role/i);
   assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], unitRef: null }] } }), /unitRef/i);
   assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [base.floor.polygons[0], { ...base.floor.polygons[0] }] } }), /unique polygonId/i);
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [base.floor.polygons[0], { ...base.floor.polygons[0], polygonId: "p2" }] } }), /exactly one polygon/i);
   assert.throws(() => normalizeFloorPlanOutput({ floor: { polygons: base.floor.polygons } }), /sourceCabidaVersionId/i);
   assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "core" }] } }), /unitRef/i);
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], unitProgram: { dormitorios: 0, banos: 1 } }] } }), /unitProgram/i);
+  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "core", unitRef: null, unitProgram: { dormitorios: 1, banos: 1 } }] } }), /unitProgram/i);
 });
 
 test("floor planning requires exact project and Cabida version context", () => {

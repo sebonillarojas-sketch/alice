@@ -12,11 +12,13 @@ const validProposal = () => ({
   floor: {
     sourceCabidaVersionId: "cabida_p1_v3",
     polygons: [
-      polygon("core-1", "core", rect(4, 4, 6, 10)),
+      polygon("core-1", "core", rect(4, 0, 6, 10)),
       polygon("hall-left", "circulacion", rect(0, 4, 4, 5)),
       polygon("hall-right", "circulacion", rect(6, 4, 10, 5)),
       polygon("unit-1-part-1", "unidad", rect(0, 0, 4, 4), { unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 } }),
       polygon("unit-2-part-1", "unidad", rect(6, 0, 10, 4), { unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 } }),
+      polygon("void-left", "void", rect(0, 5, 4, 10)),
+      polygon("void-right", "void", rect(6, 5, 10, 10)),
     ],
   },
 });
@@ -52,17 +54,25 @@ test("geometry outside the footprint and wrong Cabida version fail closed", () =
   assert.ok(result.findings.some((finding) => finding.code === "outside_buildable_footprint" && finding.polygonIds.includes("unit-2-part-1")));
 });
 
-test("fragmented unit pieces count once and must use a consistent program", () => {
+test("fragmented unit pieces count once but are rejected before interior design", () => {
   const proposal = validProposal();
   const unit = proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1");
   unit.polygon = rect(0, 0, 2, 4);
   proposal.floor.polygons.push(polygon("unit-1-part-2", "unidad", rect(2, 0, 4, 4), { unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 } }));
   const result = validateFloorProposal(proposal, options);
   assert.equal(result.stats.units, 2);
-  assert.equal(result.ok, true, result.findings.map((finding) => finding.message).join(" · "));
+  assert.ok(result.findings.some((finding) => finding.code === "unsupported_multi_piece_unit"));
 
   proposal.floor.polygons.at(-1).unitProgram = { dormitorios: 3, banos: 1 };
   assert.ok(validateFloorProposal(proposal, options).findings.some((finding) => finding.code === "inconsistent_unit_program"));
+});
+
+test("disconnected pieces are rejected as unsupported unit geometry", () => {
+  const proposal = validProposal();
+  const unit = proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1");
+  unit.polygon = rect(0, 0, 1, 4);
+  proposal.floor.polygons.push(polygon("unit-1-part-2", "unidad", rect(2, 0, 4, 4), { unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 } }));
+  assert.ok(validateFloorProposal(proposal, options).findings.some((finding) => finding.code === "unsupported_multi_piece_unit" && finding.unitRefs.includes("unit-1")));
 });
 
 test("every unit must reach circulation and circulation must reach core", () => {
@@ -74,6 +84,45 @@ test("every unit must reach circulation and circulation must reach core", () => 
   disconnectedCore.floor.polygons = disconnectedCore.floor.polygons.filter((item) => item.polygonId !== "hall-right");
   disconnectedCore.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 4, 3, 5);
   assert.ok(validateFloorProposal(disconnectedCore, options).findings.some((finding) => finding.code === "circulation_without_core"));
+});
+
+test("a unit must reach the core through the same connected circulation component", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-right").polygon = rect(7, 3, 10, 4);
+  const result = validateFloorProposal(proposal, options);
+  assert.ok(result.findings.some((finding) => finding.code === "unit_without_access" && finding.unitRefs.includes("unit-2")));
+});
+
+test("coverage gaps and self-intersecting polygons fail closed", () => {
+  const gap = validProposal();
+  gap.floor.polygons.find((item) => item.polygonId === "void-left").polygon = rect(0, 6, 4, 10);
+  assert.ok(validateFloorProposal(gap, options).findings.some((finding) => finding.code === "incomplete_partition"));
+
+  const bowTie = validProposal();
+  bowTie.floor.polygons.find((item) => item.polygonId === "void-left").polygon = [[0, 5], [4, 10], [0, 10], [4, 5]];
+  assert.ok(validateFloorProposal(bowTie, options).findings.some((finding) => finding.code === "self_intersecting_polygon"));
+});
+
+test("containment detects an edge that leaves and re-enters a concave footprint", () => {
+  const concave = [[0, 0], [10, 0], [10, 2], [2, 2], [2, 4], [10, 4], [10, 6], [2, 6], [2, 8], [10, 8], [10, 10], [0, 10]];
+  const proposal = {
+    floor: {
+      sourceCabidaVersionId: "concave-v1",
+      polygons: [polygon("escaping", "void", rect(5, 1, 6, 9))],
+    },
+  };
+  const result = validateFloorProposal(proposal, { buildableFootprint: concave, sourceCabidaVersionId: "concave-v1" });
+  assert.ok(result.findings.some((finding) => finding.code === "outside_buildable_footprint"));
+});
+
+test("overlap tolerance is measured by intersection area", () => {
+  const tiny = validProposal();
+  tiny.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 3.999, 4, 5);
+  assert.equal(validateFloorProposal(tiny, options).findings.some((finding) => finding.code === "polygon_overlap"), false);
+
+  const material = validProposal();
+  material.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 3.99, 4, 5);
+  assert.equal(validateFloorProposal(material, options).findings.some((finding) => finding.code === "polygon_overlap"), true);
 });
 
 test("unit count, bedroom mix, and average area use explicit tolerances", () => {

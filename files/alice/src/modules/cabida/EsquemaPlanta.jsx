@@ -317,9 +317,7 @@ export default function EsquemaPlanta({
     return { lote, footprint, partis };
   }, [lotePoly, terreno, frente, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
   const totalUnits = Math.max(1, Math.round(e.uPorPiso));
-  const dormitorios1 = Math.min(totalUnits, Math.round(totalUnits * mix1 / 100));
-  const dormitorios2 = Math.min(totalUnits - dormitorios1, Math.round(totalUnits * mix2 / 100));
-  const bedroomMix = { dormitorios1, dormitorios2, dormitorios3: Math.max(0, totalUnits - dormitorios1 - dormitorios2) };
+  const bedroomMix = { dormitorios1: e.n1, dormitorios2: e.n2, dormitorios3: e.n3 };
   const compactFootprint = real?.footprint?.map((point) => [Number(point.x), Number(point.y)]) || [];
   const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto };
   const currentCabidaVersionId = cabidaVersionId(project?.id || "cabida", versionInputs);

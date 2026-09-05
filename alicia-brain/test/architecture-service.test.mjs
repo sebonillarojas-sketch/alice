@@ -190,11 +190,13 @@ const floorOutput = (sourceCabidaVersionId = "cabida_p1_v3") => ({
   floor: {
     sourceCabidaVersionId,
     polygons: [
-      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: floorRect(4, 4, 6, 10) },
+      { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: floorRect(4, 0, 6, 10) },
       { polygonId: "hall-left", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: floorRect(0, 4, 4, 5) },
       { polygonId: "hall-right", role: "circulacion", name: "circulación", unitRef: null, unitProgram: null, polygon: floorRect(6, 4, 10, 5) },
       { polygonId: "unit-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: floorRect(0, 0, 4, 4) },
       { polygonId: "unit-2", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: floorRect(6, 0, 10, 4) },
+      { polygonId: "void-left", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: floorRect(0, 5, 4, 10) },
+      { polygonId: "void-right", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: floorRect(6, 5, 10, 10) },
     ],
   },
 });
@@ -217,7 +219,9 @@ test("floor planning selects a valid first proposal in one bounded call", async 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].max_tokens, 3500);
   assert.equal(calls[0].tools[0].name, "submit_tweedledum_floor_output");
-  assert.equal(result.promptVersion, "1.0.0");
+  assert.equal(result.promptVersion, "1.1.0");
+  assert.equal(result.candidateValidation.original.ok, true);
+  assert.equal(result.candidateValidation.revision, null);
 });
 
 test("floor planning makes exactly one targeted revision before selecting it", async () => {
@@ -233,6 +237,8 @@ test("floor planning makes exactly one targeted revision before selecting it", a
   assert.equal(calls.length, 2);
   assert.match(calls[1].messages[0].content, /source_version_mismatch/);
   assert.equal(result.revision.floor.sourceCabidaVersionId, "cabida_p1_v3");
+  assert.equal(result.candidateValidation.original.ok, false);
+  assert.equal(result.candidateValidation.revision.ok, true);
 });
 
 test("floor planning falls back after model failure and rejects an invalid fallback", async () => {
@@ -240,7 +246,7 @@ test("floor planning falls back after model failure and rejects an invalid fallb
   const service = createArchitectureService({ client, model: "test-model" });
   const result = await service.planFloor(floorRequest());
   assert.equal(result.source, "deterministic_fallback");
-  assert.equal(result.selected.floor.polygons.length, 5);
+  assert.equal(result.selected.floor.polygons.length, 7);
 
   const invalidRequest = floorRequest();
   invalidRequest.deterministicFallback.floor.sourceCabidaVersionId = "cabida_old";

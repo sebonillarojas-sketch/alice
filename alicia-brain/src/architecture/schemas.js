@@ -89,15 +89,15 @@ export function normalizeFloorPlanOutput(input = {}) {
     if (role === "unidad") {
       const dormitorios = Number(polygon.unitProgram?.dormitorios);
       const banos = Number(polygon.unitProgram?.banos);
-      if (!Number.isInteger(dormitorios) || dormitorios < 0 || !Number.isInteger(banos) || banos < 0) {
-        throw new ArchitectureValidationError(`${field}.unitProgram requires non-negative integer dormitorios and banos`, [`${field}.unitProgram`]);
+      if (!Number.isInteger(dormitorios) || dormitorios < 1 || dormitorios > 3 || !Number.isInteger(banos) || banos < 1) {
+        throw new ArchitectureValidationError(`${field}.unitProgram requires 1-3 dormitorios and at least one baño`, [`${field}.unitProgram`]);
       }
       unitProgram = { dormitorios, banos };
       const prior = unitPrograms.get(unitRef);
-      if (prior && (prior.dormitorios !== dormitorios || prior.banos !== banos)) {
-        throw new ArchitectureValidationError(`Unit pieces for ${unitRef} require one consistent unitProgram`, [`${field}.unitProgram`]);
-      }
+      if (prior) throw new ArchitectureValidationError(`Each unitRef requires exactly one polygon: ${unitRef}`, [`${field}.unitRef`]);
       unitPrograms.set(unitRef, unitProgram);
+    } else if (polygon?.unitProgram != null) {
+      throw new ArchitectureValidationError(`${field}.unitProgram must be null for ${role}`, [`${field}.unitProgram`]);
     }
     return {
       polygonId,
@@ -232,11 +232,13 @@ export const CRITIQUE_OUTPUT_SCHEMA = {
 
 export const FLOOR_PLAN_OUTPUT_SCHEMA = {
   type: "object",
+  additionalProperties: false,
   required: ["summary", "floor", "assumptions", "tradeoffs"],
   properties: {
     summary: { type: "string" },
     floor: {
       type: "object",
+      additionalProperties: false,
       required: ["sourceCabidaVersionId", "polygons"],
       properties: {
         sourceCabidaVersionId: { type: "string", minLength: 1 },
@@ -244,6 +246,7 @@ export const FLOOR_PLAN_OUTPUT_SCHEMA = {
           type: "array", minItems: 1,
           items: {
             type: "object",
+            additionalProperties: false,
             required: ["polygonId", "role", "name", "unitRef", "unitProgram", "polygon"],
             properties: {
               polygonId: { type: "string", minLength: 1 },
@@ -253,11 +256,18 @@ export const FLOOR_PLAN_OUTPUT_SCHEMA = {
               unitProgram: {
                 anyOf: [
                   { type: "null" },
-                  { type: "object", required: ["dormitorios", "banos"], properties: { dormitorios: { type: "integer", minimum: 0 }, banos: { type: "integer", minimum: 0 } } },
+                  { type: "object", additionalProperties: false, required: ["dormitorios", "banos"], properties: { dormitorios: { type: "integer", minimum: 1, maximum: 3 }, banos: { type: "integer", minimum: 1 } } },
                 ],
               },
               polygon: { type: "array", minItems: 3, items: { type: "array", minItems: 2, maxItems: 2, items: { type: "number" } } },
             },
+            allOf: [
+              {
+                if: { properties: { role: { const: "unidad" } } },
+                then: { properties: { unitRef: { type: "string", minLength: 1 }, unitProgram: { type: "object" } } },
+                else: { properties: { unitRef: { type: "null" }, unitProgram: { type: "null" } } },
+              },
+            ],
           },
         },
       },
