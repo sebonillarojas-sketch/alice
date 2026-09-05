@@ -62,7 +62,7 @@ export function discardFloorProposalRecord(project = {}, proposalId, motivo = ""
   if (!record) throw new Error(`Floor proposal ${proposalId} not found`);
   const descartadaAt = typeof now === "string" ? now : new Date(now).toISOString();
   const cabida = clone(project.cabida || {});
-  return {
+  const base = {
     ...clone(project),
     cabida: {
       ...cabida,
@@ -73,6 +73,17 @@ export function discardFloorProposalRecord(project = {}, proposalId, motivo = ""
       activeFloorProposalId: cabida.activeFloorProposalId === proposalId ? null : cabida.activeFloorProposalId,
     },
   };
+  // Si la propuesta descartada es la que quedó sembrada en el Editor de Planos
+  // (plano.floorProposal), hay que limpiarla también ahí: si no, el usuario descarta
+  // en Cabida y la planta descartada sigue viva en Planos (EditorPlanos.jsx lee P.floorProposal).
+  // Si la descartada no es la sembrada, plano queda intacto.
+  if (project.plano?.floorProposal?.id === proposalId) {
+    const plano = clone(project.plano);
+    delete plano.floorProposal;
+    delete plano.floorProposalMaterializedId;
+    base.plano = plano;
+  }
+  return base;
 }
 
 export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sourceCabidaVersionId }) {

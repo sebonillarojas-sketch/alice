@@ -383,7 +383,9 @@ export default function EsquemaPlanta({
   const discardFloor = () => {
     const proposalId = displayedRecord?.id;
     if (!proposalId) return;
-    const motivo = (window.prompt("¿Por qué no sirve esta planta? (opcional — le sirve a Tweedledum para aprender)") || "").trim();
+    const respuesta = window.prompt("¿Por qué no sirve esta planta? (opcional — le sirve a Tweedledum para aprender)");
+    if (respuesta === null) return; // canceló el prompt: se arrepiente, no se descarta nada
+    const motivo = respuesta.trim(); // confirmar con el campo vacío sí descarta, con motivo ""
     onDiscardFloor?.(proposalId, motivo);
     setFloorResult(null);
     setAcceptedFloorId(null);

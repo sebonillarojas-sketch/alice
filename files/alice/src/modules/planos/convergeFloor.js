@@ -19,9 +19,27 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
   const { kept, dropped } = dedupePartis(propuestos);
   let parti = kept[0];
 
+  // Sin parti sobre el cual trabajar (planFloor vacío/fallido): no se entrega en silencio
+  // ni se propaga la excepción cruda del .units.find de más abajo.
+  if (!parti) {
+    return {
+      parti: null,
+      partisDescartados: dropped.length,
+      unidades: [],
+      pendientes: (brief.units || []).map((u) => u.id),
+      llamadas,
+      motivo: "sin_parti",
+    };
+  }
+
   const unidades = [];
   const pendientes = [];
   let motivo = "ok";
+
+  // Ancho del sobre contra el que cerró cada unidad ya resuelta. Si un rebalanceo
+  // posterior lo cambia, esa unidad quedó obsoleta: se reporta, no se re-resuelve.
+  const cerradasContra = new Map();
+  const indexPorId = new Map();
 
   for (const u of ordenarPorDificultad(brief.units || [])) {
     let vuelta = 0;
@@ -44,17 +62,32 @@ export async function convergeFloor(brief = {}, deps = {}, limits = {}) {
                         ...(await critique({ unidad: u, layout }))];
 
       ledger.record(u.id, findings);
-      if (!findings.length) { cerrada = true; break; }
+      if (!findings.length) { cerrada = true; cerradasContra.set(u.id, sobre.w); break; }
 
       if (ledger.bloqueado(u.id)) { motivo = "bloqueado"; break; }
 
       const deVolumen = findings.filter(esDeVolumen);
       if (deVolumen.length) {
-        try { parti = rebalancear(parti, u.id, 0.60); } catch { /* sin margen: sigue como interior */ }
+        try {
+          parti = rebalancear(parti, u.id, 0.60);
+          // Revisar si el rebalanceo dejó obsoleta a alguna unidad ya cerrada:
+          // su layout se materializó contra un sobre que el parti final ya no tiene.
+          for (const [idCerrada, wCierre] of [...cerradasContra]) {
+            const actual = parti.units.find((s) => s.id === idCerrada);
+            const wActual = actual ? actual.w : undefined;
+            if (wActual === undefined || Math.abs(wActual - wCierre) > 0.001) {
+              const idx = indexPorId.get(idCerrada);
+              if (idx !== undefined) unidades[idx].layout = null;
+              if (!pendientes.includes(idCerrada)) pendientes.push(idCerrada);
+              cerradasContra.delete(idCerrada);
+            }
+          }
+        } catch { /* sin margen: sigue como interior */ }
         continue;
       }
     }
 
+    indexPorId.set(u.id, unidades.length);
     unidades.push({ id: u.id, layout, findings: ledger.mustFix(u.id) });
     if (!cerrada) pendientes.push(u.id);
   }

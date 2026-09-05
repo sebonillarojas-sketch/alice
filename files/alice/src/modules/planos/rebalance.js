@@ -32,6 +32,15 @@ export function rebalancear(parti, unidadId, deltaM) {
   const unidadesIzq = units.filter((u) => Math.round((u.x + u.w) * 1000) / 1000 <= core.x).sort((a, b) => a.x - b.x);
   const unidadesDer = units.filter((u) => u.x >= coreEnd).sort((a, b) => a.x - b.x);
 
+  // Una unidad que solapa parcialmente el core no clasifica ni a izquierda ni a
+  // derecha: es una entrada que no debería existir. Reportarlo en vez de reubicarla
+  // igual, que solo empeoraría el solape.
+  const clasificadas = new Set([...unidadesIzq, ...unidadesDer].map((it) => it.id));
+  const sinClasificar = units.find((it) => !clasificadas.has(it.id));
+  if (sinClasificar) {
+    throw new RangeError(`${sinClasificar.id} solapa el core y no clasifica ni a izquierda ni a derecha`);
+  }
+
   // Calcular descuentos y redistribuir con residuo a la última vecina
   const descuentos = [];
   let residuoAcumulado = 0;

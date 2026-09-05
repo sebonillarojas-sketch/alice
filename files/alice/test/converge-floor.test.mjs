@@ -41,7 +41,13 @@ test("un hallazgo repetido dos vueltas bloquea la unidad y no hay tercera", asyn
 test("un hallazgo de volumen reequilibra el parti en vez de reintentar el interior", async () => {
   let subidas = 0;
   let vuelta = 0;
+  // Parti sin solape con el core (a diferencia del `parti` compartido del módulo,
+  // cuyo core se traslapa con C): necesario porque rebalancear ahora exige que toda
+  // unidad clasifique a izquierda o derecha del core (arreglo 5).
+  const partiValido = { id: "pv", core: { x: 8.4, y: 0, w: 5.2, d: 5 },
+    units: [{ id: "C", x: 0, w: 8.4 }, { id: "A", x: 13.6, w: 7.4 }] };
   const vol = deps({
+    planFloor: async () => [partiValido],
     critique: async () => {
       vuelta += 1;
       if (vuelta === 1) { subidas += 1; return [{ ambiente: "sala", regla: "no_cabe", severidad: "critical", nivel: "volumen" }]; }
@@ -91,4 +97,47 @@ test("un RangeError de rebalancear no rompe la cadena: sigue como interior y ter
   assert.equal(r.motivo, "bloqueado");
   assert.deepEqual(r.pendientes, ["C"]);
   assert.equal(r.parti.units.find((u) => u.id === "A").w, 3.1, "el rebalanceo fallido no debe haber mutado el parti");
+});
+
+test("un rebalanceo posterior no invalida en silencio un interior ya cerrado: queda pendiente con layout null", async () => {
+  const briefDos = { units: [
+    { id: "C", area: 40, fachadas: 1, frente: 8.4, fondo: 4.8 }, // más difícil: se procesa primero
+    { id: "A", area: 80, fachadas: 2, frente: 7, fondo: 6 },     // menos difícil: se procesa después
+  ] };
+  // Sin solape con el core, para que rebalancear pueda clasificar y ejecutar (arreglo 5).
+  const partiValido = { id: "pv", core: { x: 8.4, y: 0, w: 5.2, d: 5 },
+    units: [{ id: "C", x: 0, w: 8.4 }, { id: "A", x: 13.6, w: 7.4 }] };
+  let volDone = false;
+  const dep = deps({
+    planFloor: async () => [partiValido],
+    critique: async ({ unidad }) => {
+      if (unidad.id === "A" && !volDone) {
+        volDone = true;
+        return [{ ambiente: "sala", regla: "no_cabe", severidad: "critical", nivel: "volumen" }];
+      }
+      return [];
+    },
+  });
+
+  const r = await convergeFloor(briefDos, dep);
+
+  // C cerró primero contra w=8.4; el rebalanceo que pide A luego deja a C en w=7.8.
+  assert.equal(r.parti.units.find((u) => u.id === "C").w, 7.8);
+  assert.notEqual(r.motivo, "ok");
+  assert.ok(r.pendientes.includes("C"), "C debe reportarse como pendiente, no quedar oculto como resuelto");
+  const entradaC = r.unidades.find((x) => x.id === "C");
+  assert.equal(entradaC.layout, null, "el layout de C ya no es válido contra el sobre final: se reporta, no se reintenta");
+});
+
+test("si planFloor no devuelve ningún parti, no revienta: motivo sin_parti y todas las unidades pendientes", async () => {
+  const briefDos = { units: [
+    { id: "C", area: 40, fachadas: 1, frente: 8.4, fondo: 4.8 },
+    { id: "A", area: 30, fachadas: 2, frente: 7.4, fondo: 5.0 },
+  ] };
+  const vacio = deps({ planFloor: async () => [] });
+  const r = await convergeFloor(briefDos, vacio);
+  assert.equal(r.motivo, "sin_parti");
+  assert.equal(r.parti, null);
+  assert.deepEqual(r.unidades, []);
+  assert.deepEqual([...r.pendientes].sort(), ["A", "C"]);
 });

@@ -53,6 +53,15 @@ test("posiciones sin solapes: core se traslada correctamente", () => {
   assert.equal(Math.round((core.x + core.w) * 1000) / 1000, Math.round(B.x * 1000) / 1000);
 });
 
+test("una unidad que solapa el core sin clasificar a izquierda ni derecha lanza RangeError nombrándola", () => {
+  // core[7,12]; A[0,8] solapa el core 1m y no clasifica ni a izquierda (0+8=8 > 7)
+  // ni a derecha (0 < 12). Antes del arreglo, rebalancear la ignoraba en silencio
+  // y el solape empeoraba; ahora debe fallar explícito.
+  const partiConSolape = { id: "ps", core: { x: 7, y: 0, w: 5, d: 5 },
+    units: [{ id: "A", x: 0, w: 8 }, { id: "B", x: 12, w: 7 }] };
+  assert.throws(() => rebalancear(partiConSolape, "B", 0.6), (err) => err instanceof RangeError && /A/.test(err.message));
+});
+
 test("conserva total con 3+ vecinas y deltaM pequeño", () => {
   const parti3 = {
     id: "p3",
