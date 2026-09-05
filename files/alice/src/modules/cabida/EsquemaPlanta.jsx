@@ -280,7 +280,6 @@ export default function EsquemaPlanta({
   project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor,
   soloPlanta = false,
 }) {
-  const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
   const [floorBusy, setFloorBusy] = useState(false);
   const [floorError, setFloorError] = useState("");
@@ -384,20 +383,6 @@ export default function EsquemaPlanta({
   const elegirFrente = (i) => {
     onFrente?.(i);
     if (real?.lote) { const q = real.lote[(i + 1) % real.lote.length], p = real.lote[i]; onFrenteReal?.(Math.round(dist(p, q))); }
-  };
-
-  // envía la tipología como brief al generador del Editor de Planos
-  const enviarBrief = (tip) => {
-    const depth = e.filas[0]?.depth || 4.5;
-    const brief = {
-      area: +e.areaTip[tip].toFixed(1),
-      frente: +(e.areaTip[tip] / depth).toFixed(2),
-      dormitorios: parseInt(tip, 10) || 1,
-      banos: tip === "1D" ? 1 : 2,
-    };
-    try { localStorage.setItem("hygge:planBrief", JSON.stringify(brief)); } catch { /* cuota */ }
-    setBriefSent(tip);
-    setTimeout(() => setBriefSent(null), 3200);
   };
 
   const descargar = () => {
@@ -542,12 +527,6 @@ export default function EsquemaPlanta({
           <span key={t} style={{ fontFamily: mono, fontSize: 10.5, color: C.ink, display: "inline-flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 10, height: 10, background: TIP_COLOR[t], display: "inline-block", borderRadius: 1 }} />
             {t} · {fmt(e.areaTip[t])} m² · {t === "1D" ? e.n1 : t === "2D" ? e.n2 : e.n3}/piso
-            <button onClick={() => enviarBrief(t)} title="generar distribución de esta tipología en el Editor de Planos"
-              style={{ fontFamily: mono, fontSize: 9.5, color: briefSent === t ? C.card : C.orange,
-                background: briefSent === t ? C.orange : "transparent", border: `1px solid ${C.orange}`,
-                borderRadius: 2, padding: "2px 7px", cursor: "pointer" }}>
-              {briefSent === t ? "brief listo ✓" : "→ plano"}
-            </button>
           </span>
         ))}
         <span style={{ fontFamily: mono, fontSize: 10.5, color: C.soft, marginLeft: "auto" }}>
