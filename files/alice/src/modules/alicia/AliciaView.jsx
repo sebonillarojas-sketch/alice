@@ -439,6 +439,8 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const [hiloFallo, setHiloFallo] = useState(false);   // no se pudo traer el hilo del servidor
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Estado muerto a propósito: nadie lo lee ni lo setea todavía. Queda para que la
+  // decisión de producto (¿damos un botón de "resetear la key"?) siga a la vista.
   const [showKeyReset, setShowKeyReset] = useState(false);
   const [listening, setListening] = useState(false);
 
@@ -975,7 +977,13 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
                   )}
                   <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.04em", paddingInline: 4 }}>
                     {new Date(msg.ts).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
-                    {msg.channel && msg.channel !== "app" && (
+                    {/* El badge existe para avisar que el mensaje entró por OTRA puerta
+                        (WhatsApp, voz). "app" y "copilot" son las dos formas en que el
+                        ERP se identificó a lo largo del tiempo: "app" en los mensajes
+                        viejos, "copilot" desde la Fase 2 (el cerebro lo necesita para el
+                        tope de iteraciones y para turn_usage). Los dos significan "esto
+                        salió de acá", así que ninguno lleva badge — no borres uno. */}
+                    {msg.channel && msg.channel !== "app" && msg.channel !== "copilot" && (
                       <span style={{ fontSize: 9, color: C.muted, marginLeft: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                         {msg.channel === "whatsapp" ? "· whatsapp" : msg.channel === "embodied" ? "· voz" : `· ${msg.channel}`}
                       </span>
