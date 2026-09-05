@@ -26,3 +26,32 @@ jobs:
             node --check "$f"
           done
           echo "✅ Sintaxis OK"
+
+  # `node --check` NO ve variables sin declarar: parsea, no resuelve nombres. Ese es
+  # justo el error que dejó el ERP en blanco una vez. Los tests sí lo ven, y los dos
+  # paquetes ya tienen uno que corre. Sin esto, tenerlos no servía de nada en CI.
+  tests-cerebro:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests del cerebro (alicia-brain)
+        working-directory: alicia-brain
+        run: |
+          npm ci
+          npm test
+
+  tests-erp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests del ERP (files/alice)
+        working-directory: files/alice
+        run: |
+          npm ci
+          npm test
