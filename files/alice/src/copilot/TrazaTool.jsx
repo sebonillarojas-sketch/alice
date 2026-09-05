@@ -24,6 +24,17 @@ const FRASES = {
   read_conversation: "releyendo la conversación",
 };
 
+// input puede venir con referencias circulares o con BigInt (montos/ids grandes
+// del ERP); JSON.stringify lanza en ambos casos y no hay error boundary alrededor
+// del chat, así que se degrada a un texto honesto en vez de tirar abajo el hilo.
+function serializar(input) {
+  try {
+    return JSON.stringify(input ?? {}, null, 2);
+  } catch {
+    return "(no se pudo mostrar el input)";
+  }
+}
+
 export default function TrazaTool({ tool, ok, input }) {
   const [abierto, setAbierto] = useState(false);
   const frase = FRASES[tool] || tool;
@@ -43,7 +54,7 @@ export default function TrazaTool({ tool, ok, input }) {
         <pre style={{
           margin: "4px 0 0", padding: 8, background: C.surface, border: `1px solid ${C.line}`,
           borderRadius: 2, fontSize: 10, overflowX: "auto", color: C.muted,
-        }}>{JSON.stringify(input ?? {}, null, 2)}</pre>
+        }}>{serializar(input)}</pre>
       )}
     </div>
   );

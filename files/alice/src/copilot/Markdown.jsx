@@ -1,9 +1,19 @@
 // Alicia responde en markdown (listas, tablas, negritas, code). Hasta ahora el ERP
 // lo pintaba crudo, con los asteriscos a la vista.
+import { createContext, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const C = { ink: "#0A0B0F", muted: "#6B6863", line: "#D9D5CD", surface: "#E5E1D6" };
+
+// OJO: react-markdown v9+ (instala la 10.x) YA NO pasa la prop `inline`, y el
+// className tampoco sirve como discriminador: mdast-util-to-hast solo agrega
+// `className` al <code> cuando la cerca trae lenguaje (```js), pero una cerca sin
+// lenguaje o un bloque indentado también terminan en <pre><code> sin className.
+// Por eso el `pre` marca "estoy dentro de un bloque" vía contexto, y `code` lo
+// lee: si está dentro de un <pre> nunca lleva el estilo de chip inline, sin
+// importar si trae className o no.
+const DentroDePre = createContext(false);
 
 export default function Markdown({ texto }) {
   return (
@@ -14,18 +24,20 @@ export default function Markdown({ texto }) {
         ul: ({ children }) => <ul style={{ margin: "0 0 8px", paddingLeft: 18 }}>{children}</ul>,
         ol: ({ children }) => <ol style={{ margin: "0 0 8px", paddingLeft: 18 }}>{children}</ol>,
         li: ({ children }) => <li style={{ margin: "2px 0" }}>{children}</li>,
-        // OJO: react-markdown v9+ (instala la 10.x) YA NO pasa la prop `inline`.
-        // Los bloques cercados llegan como <pre><code class="language-x">, el código
-        // inline como <code> sin clase. Por eso se estilan por separado.
         pre: ({ children }) => (
-          <pre style={{ background: C.surface, padding: 10, borderRadius: 2, overflowX: "auto", fontSize: 12, margin: "0 0 8px" }}>{children}</pre>
+          <pre style={{ background: C.surface, padding: 10, borderRadius: 2, overflowX: "auto", fontSize: 12, margin: "0 0 8px" }}>
+            <DentroDePre.Provider value={true}>{children}</DentroDePre.Provider>
+          </pre>
         ),
-        code: ({ className, children }) => (
-          <code
-            className={className}
-            style={className ? undefined : { background: C.surface, padding: "1px 4px", borderRadius: 2, fontSize: "0.92em" }}
-          >{children}</code>
-        ),
+        code: ({ className, children }) => {
+          const dentroDePre = useContext(DentroDePre);
+          return (
+            <code
+              className={className}
+              style={dentroDePre ? undefined : { background: C.surface, padding: "1px 4px", borderRadius: 2, fontSize: "0.92em" }}
+            >{children}</code>
+          );
+        },
         // Las tablas del ERP pueden ser anchas: scrollean en su propio contenedor
         // en vez de estirar la burbuja.
         table: ({ children }) => (
