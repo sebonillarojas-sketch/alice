@@ -680,6 +680,12 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   // Acumulador de costo del turno: se resetea acá (por turno, no por request handler)
   // y viaja por el loop sumando cada iteración — ver uso.js.
   let uso = usoVacio();
+  // `model` es el pedido (y sigue siéndolo para el cuerpo de la request — no lo tocamos).
+  // `modeloUsado` es el que realmente respondió: cuando el fallback Fable→Sonnet dispara,
+  // los tokens acumulados en `uso` vienen de Sonnet, no de Fable, y el precio por token
+  // de los dos difiere mucho. Registrar `model` a secas dejaría la fila de costo mal
+  // atribuida justo en el turno donde el precio por token más difiere.
+  let modeloUsado = model;
   // Cache breakpoint al final del historial: el prefijo (system+tools+historial)
   // se re-usa entre turnos → el grueso del input no se re-procesa en cada mensaje.
   let loopMessages = [
@@ -769,6 +775,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     try {
       resp = opts.onEvent ? await conStream(cuerpo) : await anthropic.messages.create(cuerpo);
       uso = acumularUso(uso, resp.usage);
+      modeloUsado = model;
     } catch (e) {
       // Si Fable no está disponible para esta cuenta, caemos a Sonnet sin romper el chat
       if (maximumEffort && /model|not_found/i.test(e.message)) {
@@ -780,6 +787,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
         const cuerpoFallback = { ...cuerpo, model: "claude-sonnet-4-6" };
         resp = opts.onEvent ? await conStream(cuerpoFallback) : await anthropic.messages.create(cuerpoFallback);
         uso = acumularUso(uso, resp.usage);
+        modeloUsado = "claude-sonnet-4-6";
       } else throw e;
     }
 
@@ -842,7 +850,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   // siguen, incluido el de respuesta vacía) porque las iteraciones ya se pagaron
   // aunque el modelo no haya devuelto texto — ese turno también cuesta plata.
   console.log(`💵 [${userId}/${channel}] ${iterations} iter · in ${uso.input} · out ${uso.output} · cache r${uso.cacheRead}/w${uso.cacheWrite}`);
-  registrarUso(getDB(), { userId, channel, model, iterations, uso });
+  registrarUso(getDB(), { userId, channel, model: modeloUsado, iterations, uso });
 
   // Guardar conversación
   await saveMessage(userId, "user", userText, channel);
