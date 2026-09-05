@@ -21,6 +21,7 @@ import { CEO_ID, emailToUserId, puedeVer, resolveActingUser } from "./identity.j
 import { renderErpContext } from "./erp-context.js";
 import { readThread } from "./history.js";
 import { sseFrame, SSE_HEADERS } from "./sse.js";
+import { usoVacio, acumularUso, registrarUso } from "./uso.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -676,6 +677,9 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     : tools;
   const toolResults = [];
   let finalText = "";
+  // Acumulador de costo del turno: se resetea acá (por turno, no por request handler)
+  // y viaja por el loop sumando cada iteración — ver uso.js.
+  let uso = usoVacio();
   // Cache breakpoint al final del historial: el prefijo (system+tools+historial)
   // se re-usa entre turnos → el grueso del input no se re-procesa en cada mensaje.
   let loopMessages = [
@@ -764,6 +768,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     };
     try {
       resp = opts.onEvent ? await conStream(cuerpo) : await anthropic.messages.create(cuerpo);
+      uso = acumularUso(uso, resp.usage);
     } catch (e) {
       // Si Fable no está disponible para esta cuenta, caemos a Sonnet sin romper el chat
       if (maximumEffort && /model|not_found/i.test(e.message)) {
@@ -774,6 +779,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
         if (yaHuboTexto) { resetPendiente = true; yaHuboTexto = false; }
         const cuerpoFallback = { ...cuerpo, model: "claude-sonnet-4-6" };
         resp = opts.onEvent ? await conStream(cuerpoFallback) : await anthropic.messages.create(cuerpoFallback);
+        uso = acumularUso(uso, resp.usage);
       } else throw e;
     }
 
@@ -830,6 +836,13 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       { role: "user", content: toolResultContents },
     ];
   }
+
+  // Una línea por turno: con esto se puede sumar el gasto por canal y por persona
+  // sin esperar a la factura. Se registra ACÁ (antes de los dos `return` que le
+  // siguen, incluido el de respuesta vacía) porque las iteraciones ya se pagaron
+  // aunque el modelo no haya devuelto texto — ese turno también cuesta plata.
+  console.log(`💵 [${userId}/${channel}] ${iterations} iter · in ${uso.input} · out ${uso.output} · cache r${uso.cacheRead}/w${uso.cacheWrite}`);
+  registrarUso(getDB(), { userId, channel, model, iterations, uso });
 
   // Guardar conversación
   await saveMessage(userId, "user", userText, channel);
