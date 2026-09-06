@@ -110,3 +110,61 @@ test("normalizarParti usa el corredor por defecto si no viene o es inválido", (
   const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
   assert.equal(exacto.corredorProfundidad, CORREDOR_PROFUNDIDAD_DEFAULT);
 });
+
+test("normalizarParti con crujias:1 ignora banda: todas las unidades quedan en una sola banda", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 6, dormitorios: 3, banos: 2, banda: 2 },
+      { unitRef: "u2", orden: 2, ancho: 5, dormitorios: 2, banos: 2, banda: 2 },
+    ],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const total = exacto.units.reduce((s, u) => s + u.ancho, 0);
+  assert.ok(Math.abs(total - 16) < 1e-6, "las dos unidades deben repartirse juntas el disponible (frente 20 − core 4)");
+  assert.equal(exacto.units.length, 2);
+});
+
+test("normalizarParti con crujias:2 reparte por banda cuando alguna unidad declara banda 2", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 9, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 1 },
+      { unitRef: "u2", orden: 2, ancho: 9, dormitorios: 2, banos: 1, banda: 2 },
+    ],
+  };
+  // frente 30, core 4 → disponible 26. Cada banda prorratea su única unidad para llenar
+  // los 26 m disponibles de esa banda: ninguna unidad conserva su ancho aproximado.
+  const exacto = normalizarParti(parti, { frente: 30, fondo: 16 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  const u2 = exacto.units.find((u) => u.unitRef === "u2");
+  assert.equal(u1.banda, 1);
+  assert.equal(u2.banda, 2);
+  assert.ok(Math.abs(u1.ancho - 26) < 1e-6, `u1 (única unidad de su banda) debe llenar el disponible, dio ${u1.ancho}`);
+  assert.ok(Math.abs(u2.ancho - 26) < 1e-6, `u2 (única unidad de su banda) debe llenar el disponible, dio ${u2.ancho}`);
+});
+
+test("normalizarParti con crujias:2 y sin ninguna banda 2 se comporta igual que antes (compatibilidad)", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 6, dormitorios: 3, banos: 2 },
+      { unitRef: "u2", orden: 2, ancho: 5, dormitorios: 2, banos: 2 },
+    ],
+  };
+  const conBanda = normalizarParti(parti, { frente: 20, fondo: 16 });
+  const sinCrujiasEnUnidad = normalizarParti(
+    { ...parti, units: parti.units.map((u) => ({ ...u, banda: 1 })) },
+    { frente: 20, fondo: 16 },
+  );
+  assert.deepEqual(conBanda, sinCrujiasEnUnidad, "declarar banda:1 explícito no debe cambiar nada frente a omitirlo");
+  assert.equal(conBanda.units.length, 2, "ambas unidades quedan en la misma banda, ninguna se pierde");
+});

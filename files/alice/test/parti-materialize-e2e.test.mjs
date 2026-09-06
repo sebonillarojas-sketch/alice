@@ -64,7 +64,9 @@ test("un parti aproximado que no cierra tesela sin hallazgos geométricos sobre 
   assert.deepEqual(geometricos, [], `no debe haber hallazgos geométricos: ${JSON.stringify(geometricos)}`);
 });
 
-test("crujía doble también tesela sin hallazgos geométricos (banda 2 queda como vacío)", () => {
+test("crujía doble sin banda declarada mantiene el comportamiento de siempre (banda 2 queda como vacío)", () => {
+  // ninguna unidad declara `banda`: tiene que comportarse EXACTAMENTE como antes de
+  // agregar el reparto por banda — todas las unidades al frente, el fondo como vacío.
   const parti = {
     sourceCabidaVersionId: VERSION,
     crujias: 2,
@@ -79,6 +81,52 @@ test("crujía doble también tesela sin hallazgos geométricos (banda 2 queda co
   const resultado = validar(propuesta);
   const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
   assert.deepEqual(geometricos, [], `no debe haber hallazgos geométricos: ${JSON.stringify(geometricos)}`);
+
+  const unidades = propuesta.floor.polygons.filter((p) => p.role === "unidad");
+  assert.deepEqual(unidades.map((u) => u.unitRef).sort(), ["u1", "u2"], "las dos unidades siguen yendo al frente");
+  const vacios = propuesta.floor.polygons.filter((p) => p.role === "void");
+  assert.deepEqual(vacios.map((v) => v.polygonId), ["banda-2-void"], "el fondo sigue quedando como vacío de servicio");
+  assert.ok(
+    propuesta.tradeoffs.some((t) => t.includes("crujía doble simplificada")),
+    "debe anotar en tradeoffs que la crujía doble quedó simplificada",
+  );
+});
+
+test("crujía doble con banda 1 y banda 2 reparte unidades en las dos bandas sin dejar ningún vacío", () => {
+  // anchos aproximados que NO cierran en ninguna banda: frente disponible (31 − 5 = 26 m)
+  // vs. banda 1 (7+6=13 m) y banda 2 (8+5=13 m). Ninguna suma 26: nunca tiene que cerrar.
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 9, ancho: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 1 },
+      { unitRef: "u2", orden: 2, ancho: 6, dormitorios: 1, banos: 1, banda: 1 },
+      { unitRef: "u3", orden: 3, ancho: 8, dormitorios: 2, banos: 1, banda: 2 },
+      { unitRef: "u4", orden: 4, ancho: 5, dormitorios: 1, banos: 1, banda: 2 },
+    ],
+  };
+  const sumaBanda1 = 7 + 6;
+  const sumaBanda2 = 8 + 5;
+  const disponible = 31 - parti.core.ancho;
+  assert.notEqual(sumaBanda1, disponible);
+  assert.notEqual(sumaBanda2, disponible);
+
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const vacios = propuesta.floor.polygons.filter((p) => p.role === "void");
+  assert.deepEqual(vacios, [], "con las dos bandas ocupadas no debe quedar ningún vacío");
+
+  const unidades = propuesta.floor.polygons.filter((p) => p.role === "unidad");
+  assert.deepEqual(unidades.map((u) => u.unitRef).sort(), ["u1", "u2", "u3", "u4"], "las 4 unidades deben sobrevivir, repartidas en las dos bandas");
+
+  // ninguna pieza (unidad, core o circulación) se solapa con otra: ni entre bandas ni
+  // contra el núcleo. polygon_overlap es exactamente el código que detecta esto.
+  const resultado = validar(propuesta);
+  const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
+  assert.deepEqual(geometricos, [], `no debe haber hallazgos geométricos: ${JSON.stringify(geometricos)}`);
+  assert.deepEqual(resultado.findings.filter((f) => f.code === "polygon_overlap"), [], "ninguna banda puede solaparse con la otra ni con el núcleo");
 });
 
 test("materializeFloorProposal sigue funcionando sobre la huella rectangular", () => {

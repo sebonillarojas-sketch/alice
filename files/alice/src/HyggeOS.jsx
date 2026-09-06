@@ -1452,7 +1452,7 @@ function UserDetailModal({ userId, users, onlineUserIds, tasks, allSpaces, space
 }
 
 // ═══ TOP BAR ═════════════════════════════════════════════════════════════
-function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, onMenu, onRightPanel }) {
+function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, notifCount = 0, onMenu, onRightPanel, onNotifications }) {
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const tool = TOOLS.find(t => t.id === space);
   const spaceObj = tool ? { id: tool.id, name: tool.label, dot: tool.dot, isTool: true } : flat.find(s => s.id === space);
@@ -1478,13 +1478,17 @@ function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, onMenu, onRi
         <button onClick={onAskHygge} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 500 }}>
           <Sparkles size={11} /> <span className="hidden sm:inline">Ask Alice</span><span className="sm:hidden">AI</span>
         </button>
-        <button onClick={onRightPanel} className="lg:hidden relative p-1.5 hover:opacity-70">
+        <button onClick={onRightPanel} aria-label="Abrir panel" className="lg:hidden relative p-1.5 hover:opacity-70">
           <Bell size={16} style={{ color: C.inkSoft }} />
-          {unreadCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
+          {notifCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
         </button>
-        <button className="hidden lg:block relative p-2 hover:opacity-70">
+        {/* Este botón NO tenía onClick: se veía clicable, tenía hover y badge, y
+            no hacía absolutamente nada. Y su badge contaba MENSAJES sin leer
+            (`unreadCount`), no notificaciones — una campana avisando de otra cosa.
+            Ahora lleva al space de Notificaciones y cuenta lo que corresponde. */}
+        <button onClick={onNotifications} title="Notificaciones" aria-label="Ir a Notificaciones" className="hidden lg:block relative p-2 hover:opacity-70">
           <Bell size={15} style={{ color: C.inkSoft }} />
-          {unreadCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
+          {notifCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
         </button>
       </div>
     </header>
@@ -16535,8 +16539,8 @@ REGLAS:
           onOpenSettings={() => setSettingsOpen(true)}
           tasks={tasks} />
         <div className="flex-1 flex flex-col min-w-0">
-          <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount}
-            onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} />
+          <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount} notifCount={notifCount}
+            onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} onNotifications={() => navigate("notifications")} />
           <SmartCapture onCreate={createFromSmartCapture} detectedPatterns={detectedPatterns} savedSmartViews={smartViews} onSaveSmartView={saveSmartView} currentSpaceContext={currentSpace} users={users} currentUserId={currentUser?.id} />
           {activeSmartView && (
             <div className="px-4 lg:px-7 py-2 flex items-center gap-2 flex-wrap" style={{ backgroundColor: C.paper, borderBottom: `1px solid ${C.lineSoft}` }}>
