@@ -163,11 +163,17 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     : Math.max(F.fondo - normalizado.corredorProfundidad, 0);
 
   const piezas = [];
-  const { posicion: coreU0, ancho: coreAncho } = normalizado.core;
+  const { posicion: coreU0, ancho: coreAncho, longitud: coreLongitud } = normalizado.core;
   const coreU1 = coreU0 + coreAncho;
+  // el núcleo penetra `longitud` metros desde el frente (v=0): ya NO atraviesa el bloque
+  // entero por defecto (era el bug — una franja entera de suelo vendible perdida detrás
+  // de una escalera). Lo que queda detrás, en su propia columna, se cierra como
+  // `circulacion` más abajo — nunca queda como hueco sin asignar. (normalizarParti ya
+  // saneó `longitud` con el default acotado; este Math.min es solo una red de seguridad.)
+  const coreV1 = Math.min(coreLongitud, F.fondo);
   piezas.push({
     id: "core", role: "core", name: "core", unitRef: null, unitProgram: null,
-    pts: [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, F.fondo), F.toWorld(coreU0, F.fondo)],
+    pts: [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, coreV1), F.toWorld(coreU0, coreV1)],
   });
 
   const corridorV0 = bandDepth;
@@ -180,6 +186,21 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     });
   });
 
+  // ¿el núcleo penetra la banda del fondo? (misma comparación que ya hizo
+  // normalizarParti para decidir si esa banda se reparte a todo el frente o alrededor
+  // del núcleo — se recalcula acá porque acá es donde se sabe el fondo de cada tramo).
+  const nucleoExcedeBandaFrente = coreV1 > bandDepth + 0.001;
+  // fondo de la propia columna del núcleo: el corredor si se queda en la banda del
+  // frente (ahí termina "su banda"); el fondo del lote si penetra la banda del fondo (ya
+  // no hay banda después, es el fin del lote). Rectángulo simple, sin polígonos en L.
+  const finColumnaNucleo = nucleoExcedeBandaFrente ? F.fondo : corridorV1;
+  if (finColumnaNucleo - coreV1 > 0.05) {
+    piezas.push({
+      id: "circulacion-nucleo", role: "circulacion", name: "circulación núcleo", unitRef: null, unitProgram: null,
+      pts: [F.toWorld(coreU0, coreV1), F.toWorld(coreU1, coreV1), F.toWorld(coreU1, finColumnaNucleo), F.toWorld(coreU0, finColumnaNucleo)],
+    });
+  }
+
   const emitirUnidad = (unit, v0, v1) => {
     if (!(unit.ancho > 0)) return;
     piezas.push({
@@ -187,6 +208,32 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
       unitRef: unit.unitRef, unitProgram: { dormitorios: unit.dormitorios, banos: unit.banos },
       pts: [F.toWorld(unit.x, v0), F.toWorld(unit.x + unit.ancho, v0), F.toWorld(unit.x + unit.ancho, v1), F.toWorld(unit.x, v1)],
     });
+  };
+
+  // Completa con `circulacion` cualquier tramo de una fila (0..frente) que ni el núcleo
+  // (cuando la cruza, `coreCruzaFila`) ni ninguna unidad terminen cubriendo. Sin esto,
+  // una unidad única a un lado del núcleo puede dejar el otro lado — un tramo entero, con
+  // ancho real — sin ningún polígono (bug de producción: banda del fondo con una sola
+  // unidad declarada, el otro lado del núcleo quedaba en blanco). El propio núcleo (más
+  // su `circulacion-nucleo`) ya cubre su columna en toda la profundidad de esta fila, así
+  // que acá alcanza con marcarla como ocupada sin re-dibujarla.
+  const emitirHuecosDeFila = (units, v0, v1, coreCruzaFila, idPrefix) => {
+    if (v1 - v0 < 0.05) return;
+    const ocupados = units.filter((u) => u.ancho > 0).map((u) => [u.x, u.x + u.ancho]);
+    if (coreCruzaFila) ocupados.push([coreU0, coreU1]);
+    ocupados.sort((a, b) => a[0] - b[0]);
+    let cursor = 0;
+    let hueco = 0;
+    const cerrarHueco = (a, b) => {
+      if (b - a < 0.05) return;
+      hueco += 1;
+      piezas.push({
+        id: `${idPrefix}-hueco-${hueco}`, role: "circulacion", name: "circulación", unitRef: null, unitProgram: null,
+        pts: [F.toWorld(a, v0), F.toWorld(b, v0), F.toWorld(b, v1), F.toWorld(a, v1)],
+      });
+    };
+    ocupados.forEach(([a, b]) => { cerrarHueco(cursor, a); cursor = Math.max(cursor, b); });
+    cerrarHueco(cursor, F.frente);
   };
 
   // Con crujía simple, banda se ignora: todas las unidades van a la única banda. Con
@@ -202,6 +249,10 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
 
   if (band1Units.length) {
     band1Units.forEach((unit) => emitirUnidad(unit, 0, bandDepth));
+    // la banda del frente siempre está cruzada por el núcleo (arranca en v=0): marcar su
+    // columna como ocupada evita re-dibujarla, pero cualquier otro tramo sin unidad sí
+    // tiene que cerrarse.
+    emitirHuecosDeFila(band1Units, 0, bandDepth, true, "banda-1");
   } else if (doble && bandDepth > 0.05) {
     simplificadoFondo = true; // solo la banda del fondo tiene unidades; el frente queda de servicio
     piezas.push({
@@ -214,6 +265,10 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     const backV0 = bandDepth + normalizado.corredorProfundidad;
     if (band2Units.length) {
       band2Units.forEach((unit) => emitirUnidad(unit, backV0, F.fondo));
+      // la banda del fondo solo está cruzada por el núcleo cuando su longitud la supera
+      // (nucleoExcedeBandaFrente): si no la alcanza, esta banda ya se repartió a todo el
+      // frente en normalizarParti y no hay columna del núcleo que marcar acá.
+      emitirHuecosDeFila(band2Units, backV0, F.fondo, nucleoExcedeBandaFrente, "banda-2");
     } else if (F.fondo - backV0 > 0.05) {
       simplificadoFrente = true; // ninguna unidad declaró banda 2: comportamiento de siempre
       piezas.push({

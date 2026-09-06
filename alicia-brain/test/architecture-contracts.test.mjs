@@ -21,7 +21,7 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
-  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.1.0");
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.2.0");
 });
 
 test("floor parti normalization keeps unit order, program and Cabida version", () => {
@@ -47,6 +47,25 @@ test("floor parti normalization keeps unit order, program and Cabida version", (
   // banda ausente en ninguna unidad → default 1 en las dos (comportamiento de siempre).
   assert.equal(output.parti.units[0].banda, 1);
   assert.equal(output.parti.units[1].banda, 1);
+});
+
+test("floor parti normalization accepts core.longitud and filters out invalid values", () => {
+  const base = {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    units: [{ unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 1, banos: 1 }],
+  };
+  const conLongitud = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, longitud: 4.5 } } });
+  assert.equal(conLongitud.parti.core.longitud, 4.5);
+
+  // ausente, o un tipo/valor que no es un número positivo: se deja en null (normalizarParti,
+  // en files/alice, es quien decide el default) — nunca rechaza el parti por esto.
+  const sinLongitud = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5 } } });
+  assert.equal(sinLongitud.parti.core.longitud, null);
+
+  const longitudAbsurda = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, longitud: -3 } } });
+  assert.equal(longitudAbsurda.parti.core.longitud, null);
 });
 
 test("floor parti normalization accepts and normalizes banda per unit", () => {

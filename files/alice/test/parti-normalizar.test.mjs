@@ -138,15 +138,19 @@ test("normalizarParti con crujias:2 reparte por banda cuando alguna unidad decla
       { unitRef: "u2", orden: 2, ancho: 9, dormitorios: 2, banos: 1, banda: 2 },
     ],
   };
-  // frente 30, core 4 → disponible 26. Cada banda prorratea su única unidad para llenar
-  // los 26 m disponibles de esa banda: ninguna unidad conserva su ancho aproximado.
+  // frente 30, core 4 → disponible 26. La banda 1 (de referencia, fija la posición del
+  // core) prorratea su única unidad para llenar esos 26 m disponibles. Sin `longitud`
+  // declarada, el core cae al default (5 m), que no supera la banda del frente
+  // (fondo 16, corredor 1.5 → bandDepth = (16−1.5)/2 = 7.25): el core no alcanza la
+  // banda del fondo, así que esa banda se reparte a todo el frente (30), sin que el core
+  // la interrumpa — la unidad única de banda 2 llena el frente completo, no el disponible.
   const exacto = normalizarParti(parti, { frente: 30, fondo: 16 });
   const u1 = exacto.units.find((u) => u.unitRef === "u1");
   const u2 = exacto.units.find((u) => u.unitRef === "u2");
   assert.equal(u1.banda, 1);
   assert.equal(u2.banda, 2);
   assert.ok(Math.abs(u1.ancho - 26) < 1e-6, `u1 (única unidad de su banda) debe llenar el disponible, dio ${u1.ancho}`);
-  assert.ok(Math.abs(u2.ancho - 26) < 1e-6, `u2 (única unidad de su banda) debe llenar el disponible, dio ${u2.ancho}`);
+  assert.ok(Math.abs(u2.ancho - 30) < 1e-6, `u2 (única unidad de la banda del fondo, no interrumpida por el core) debe llenar el frente completo, dio ${u2.ancho}`);
 });
 
 test("normalizarParti con crujias:2 y sin ninguna banda 2 se comporta igual que antes (compatibilidad)", () => {

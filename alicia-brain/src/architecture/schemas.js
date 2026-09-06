@@ -83,6 +83,14 @@ export function normalizeFloorPlanOutput(input = {}) {
     throw new ArchitectureValidationError("parti.core requires numeric posicion and ancho", ["parti.core"]);
   }
 
+  // longitud: penetración aproximada del núcleo desde el frente hacia el fondo (metros).
+  // Opcional y, como todo en este contrato, aproximada. Acá solo se filtra lo mal
+  // tipado (igual que corredorProfundidad arriba); si falta o es absurda (<=0, o mayor
+  // que el fondo disponible) normalizarParti (files/alice) aplica el default acotado —
+  // esta capa nunca rechaza el parti por una longitud ausente o rara.
+  const coreLongitudRaw = Number(parti.core?.longitud);
+  const coreLongitud = Number.isFinite(coreLongitudRaw) && coreLongitudRaw > 0 ? coreLongitudRaw : null;
+
   if (!Array.isArray(parti.units) || parti.units.length === 0) {
     throw new ArchitectureValidationError("parti.units requires at least one unit", ["parti.units"]);
   }
@@ -118,7 +126,7 @@ export function normalizeFloorPlanOutput(input = {}) {
       sourceCabidaVersionId,
       crujias,
       corredorProfundidad,
-      core: { posicion: corePosicion, ancho: coreAncho },
+      core: { posicion: corePosicion, ancho: coreAncho, longitud: coreLongitud },
       units,
     },
     assumptions: stringArray(input.assumptions),
@@ -297,7 +305,7 @@ export const FLOOR_PLAN_OUTPUT_SCHEMA = {
           type: "object",
           additionalProperties: false,
           required: ["posicion", "ancho"],
-          properties: { posicion: { type: "number" }, ancho: { type: "number" } },
+          properties: { posicion: { type: "number" }, ancho: { type: "number" }, longitud: { type: "number" } },
         },
         units: {
           type: "array", minItems: 1,

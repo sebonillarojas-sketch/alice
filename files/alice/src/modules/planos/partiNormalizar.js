@@ -16,8 +16,22 @@ import { MIN_ANCHO_UNIDAD } from "./rebalance.js";
 const BAND_MIN_DEPTH = 4.0;
 export const CORREDOR_PROFUNDIDAD_DEFAULT = 1.6;
 
+// profundidad por defecto del núcleo (escalera + ascensor + hall) cuando Tweedledum no
+// la manda o manda algo absurdo: 4-6 m es lo típico para un núcleo real, tomamos el medio.
+export const CORE_LONGITUD_DEFAULT = 5.0;
+
 const MM = 0.001;
 export const redondearMM = (value) => Math.round(Number(value) / MM) * MM;
+
+// misma fórmula que usa materializeFloorProposal (floorProposal.js) para la profundidad
+// de la banda del frente: se duplica acá (como ya se duplica BAND_MIN_DEPTH) porque este
+// módulo necesita saber, antes de dibujar nada, si la longitud del núcleo se queda dentro
+// de la banda del frente o la supera.
+function calcularBandDepth(crujias, fondo, corredorProfundidad) {
+  if (!Number.isFinite(fondo)) return 0;
+  const depth = crujias === 2 ? (fondo - corredorProfundidad) / 2 : fondo - corredorProfundidad;
+  return Math.max(depth, 0);
+}
 
 const clampInt = (value, min, max, fallback) => {
   const n = Math.round(Number(value));
@@ -96,6 +110,25 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
   const coreAncho = Math.min(coreAnchoSano, Math.max(0.01, frenteNum - 0.01));
   const disponible = Math.max(0, frenteNum - coreAncho);
 
+  // longitud: penetración aproximada del núcleo desde el frente (metros). Absurda si
+  // falta, es <=0, o es mayor que el fondo disponible del marco entero (nadie puede
+  // atravesar más que el propio lote): en ese caso cae al default, acotado al fondo de
+  // la banda del frente (si esa banda es más angosta que el default, el default no la
+  // puede exceder). Un valor válido SÍ puede superar la banda del frente a propósito
+  // (double crujía, el núcleo penetra la banda del fondo): eso no es absurdo, es la
+  // Tarea 4 del contrato.
+  const fondoNum = Number(fondo);
+  const bandDepthFrente = calcularBandDepth(crujias, fondoNum, corredorProfundidad);
+  const longitudBruta = Number(parti.core?.longitud);
+  const longitudAbsurda = !Number.isFinite(longitudBruta) || longitudBruta <= 0
+    || (Number.isFinite(fondoNum) && longitudBruta > fondoNum);
+  const longitudDefault = Math.min(CORE_LONGITUD_DEFAULT, bandDepthFrente > 0 ? bandDepthFrente : (Number.isFinite(fondoNum) ? fondoNum : CORE_LONGITUD_DEFAULT));
+  const coreLongitud = redondearMM(longitudAbsurda ? longitudDefault : Math.min(longitudBruta, Number.isFinite(fondoNum) ? fondoNum : longitudBruta));
+  // ¿el núcleo penetra la banda del fondo? Solo importa con crujía doble: si no la
+  // supera, la banda del fondo queda libre a todo lo ancho (Tarea 4); si la supera, esa
+  // banda se reparte alrededor del núcleo como ya hacía antes de existir `longitud`.
+  const nucleoExcedeBandaFrente = coreLongitud > bandDepthFrente + 0.001;
+
   const unitsOrdenados = (Array.isArray(parti.units) ? parti.units : [])
     .map((u, index) => {
       // banda: 1 = frente, 2 = fondo. Cualquier valor ausente o inválido cae a 1 (misma
@@ -120,7 +153,7 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
       sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
       crujias,
       corredorProfundidad,
-      core: { posicion: redondearMM(0), ancho: coreAnchoMM },
+      core: { posicion: redondearMM(0), ancho: coreAnchoMM, longitud: coreLongitud },
       units: [],
     };
   }
@@ -194,28 +227,40 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
     redondearMM(corePosicion + coreAnchoMM),
   );
 
-  // La banda restante no fija el core: tiene que encajar en los mismos huecos
-  // izquierdo/derecho que ya definió la banda de referencia, así el core queda como una
-  // sola columna que atraviesa las dos bandas sin que ninguna se solape con él.
+  // La banda restante no fija el core. Si es la banda del fondo (la física, banda 2) Y
+  // el núcleo no la alcanza (su longitud no supera la banda del frente), el núcleo no la
+  // interrumpe en absoluto: se reparte a todo el frente, igual que si el core no
+  // existiera (Tarea 4, doble crujía). Si el núcleo SÍ la alcanza — o si la "otra" banda
+  // resultó ser la banda 1 física (caso raro: todas las unidades declararon banda 2, ver
+  // arriba), donde el núcleo siempre la atraviesa porque arranca en el frente — encaja en
+  // los mismos huecos izquierdo/derecho que ya definió la banda de referencia, como
+  // siempre: el core queda como una sola columna que atraviesa ambas bandas sin que
+  // ninguna se solape con él.
+  const otraEsBandaDelFondo = bandaOtra === band2;
   let unitsOtra = [];
   if (bandaOtra.length) {
-    const leftWidth = corePosicion;
-    const rightWidth = redondearMM(disponible - leftWidth);
-    const indiceCorteOtra = calcularIndiceCorte(bandaOtra);
-    const izquierdaOtraUnits = bandaOtra.slice(0, indiceCorteOtra);
-    const derechaOtraUnits = bandaOtra.slice(indiceCorteOtra);
-    const anchosIzqOtraMM = prorratearAnchosMM(izquierdaOtraUnits, leftWidth);
-    const anchosDerOtraMM = prorratearAnchosMM(derechaOtraUnits, rightWidth);
-    const izquierdaOtra = colocar(izquierdaOtraUnits, anchosIzqOtraMM, 0);
-    const derechaOtra = colocar(derechaOtraUnits, anchosDerOtraMM, redondearMM(corePosicion + coreAnchoMM));
-    unitsOtra = [...izquierdaOtra.salida, ...derechaOtra.salida];
+    if (otraEsBandaDelFondo && !nucleoExcedeBandaFrente) {
+      const anchosOtraMM = prorratearAnchosMM(bandaOtra, frenteNum);
+      unitsOtra = colocar(bandaOtra, anchosOtraMM, 0).salida;
+    } else {
+      const leftWidth = corePosicion;
+      const rightWidth = redondearMM(disponible - leftWidth);
+      const indiceCorteOtra = calcularIndiceCorte(bandaOtra);
+      const izquierdaOtraUnits = bandaOtra.slice(0, indiceCorteOtra);
+      const derechaOtraUnits = bandaOtra.slice(indiceCorteOtra);
+      const anchosIzqOtraMM = prorratearAnchosMM(izquierdaOtraUnits, leftWidth);
+      const anchosDerOtraMM = prorratearAnchosMM(derechaOtraUnits, rightWidth);
+      const izquierdaOtra = colocar(izquierdaOtraUnits, anchosIzqOtraMM, 0);
+      const derechaOtra = colocar(derechaOtraUnits, anchosDerOtraMM, redondearMM(corePosicion + coreAnchoMM));
+      unitsOtra = [...izquierdaOtra.salida, ...derechaOtra.salida];
+    }
   }
 
   return {
     sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
     crujias,
     corredorProfundidad,
-    core: { posicion: redondearMM(corePosicion), ancho: coreAnchoMM },
+    core: { posicion: redondearMM(corePosicion), ancho: coreAnchoMM, longitud: coreLongitud },
     units: [...izquierdaRef.salida, ...derechaRef.salida, ...unitsOtra],
   };
 }
