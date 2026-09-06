@@ -41,6 +41,9 @@ const CHESHIRE_EMAIL = (process.env.CHESHIRE_EMAIL || "").trim();
 const CHESHIRE_PASSWORD = process.env.CHESHIRE_PASSWORD || "";
 // Space donde puede crear y borrar. Sin esto no escribe nada, a propósito.
 const CHESHIRE_SPACE = (process.env.CHESHIRE_SPACE || "").trim();
+// El alice_id del tester, con el que se arman las claves de onboarding en
+// localStorage. Configurable por si algún día se le cambia el id en user_profiles.
+const CHESHIRE_ALICE_ID = (process.env.CHESHIRE_ALICE_ID || "cx").trim();
 
 const SHOTS = join(homedir(), "Library/Logs/cheshire");
 mkdirSync(SHOTS, { recursive: true });
@@ -188,6 +191,19 @@ async function runChecksInner(browser, stamp) {
     let creada = null;   // id/título de lo que cree, para poder limpiarlo en el finally
 
     try {
+      // Saltear el onboarding. Playwright arranca con un navegador limpio en cada
+      // corrida, así que Cheshire choca SIEMPRE contra las compuertas de
+      // onboarding y nunca vería el interior del ERP. Sembramos las dos marcas
+      // que viven en localStorage antes de cargar la página.
+      // La tercera compuerta (contraseña propia) NO se puede sembrar así: vive en
+      // user_metadata.pw_set de Supabase y se marca una vez sobre la cuenta.
+      await app.addInitScript((aliceId) => {
+        try {
+          localStorage.setItem(`hygge:cal:granted:${aliceId}`, "1");
+          localStorage.setItem(`hygge:user:wa:${aliceId}`, "");
+        } catch { /* storage inaccesible: el onboarding aparecerá y se reportará */ }
+      }, CHESHIRE_ALICE_ID);
+
       await app.goto(ERP_URL, { waitUntil: "networkidle", timeout: 30000 });
       await app.fill('input[type="email"]', CHESHIRE_EMAIL);
       await app.fill('input[type="password"]', CHESHIRE_PASSWORD);
