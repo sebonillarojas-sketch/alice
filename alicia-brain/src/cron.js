@@ -111,6 +111,19 @@ export function startCron() {
     await runScraperAgent({ sources: ["urbania"] }).catch(e => console.error("Scraper Urbania error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Loop de aprendizaje · fusión de lecciones equivalentes · 6:25am, justo antes del gate.
+  // Va antes a propósito: el gate mide evidencia, y hasta que las repeticiones no se
+  // funden esa evidencia está repartida entre filas y no llega al umbral nunca. Medido
+  // el 2026-09-05: 41 de 42 lecciones en evidencia 1 tras un mes de loop.
+  cron.schedule("25 6 * * *", async () => {
+    try {
+      const { mergeEquivalentLessons } = await import("./lesson-dedup.js");
+      const { getDB } = await import("./db.js");
+      const r = await mergeEquivalentLessons(getDB());
+      console.log(`🧠 fusión de lecciones · ${JSON.stringify(r)}`);
+    } catch (e) { console.error("fusión de lecciones error:", e.message); }
+  }, { timezone: "America/Lima" });
+
   // Loop de aprendizaje · gate-pass diario sobre lecciones proposed
   cron.schedule("30 6 * * *", async () => {
     try {
@@ -171,5 +184,5 @@ export function startCron() {
     await refreshRentalListings().catch(e => console.error("Rental listings boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 9am (ejecutivo + equipo) · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · gate-pass 6:30am · cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 9am (ejecutivo + equipo) · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · fusión de lecciones 6:25am · gate-pass 6:30am · cerebro→Dropbox 3:30am");
 }
