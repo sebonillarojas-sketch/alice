@@ -244,7 +244,7 @@ import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js"
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
 import { aliciaAnalyze } from "../../lib/alicia.js";
-import { disenarConFeyd, isRoomEditable, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, preserveLockedRooms, resolveArchitectureProgram, roomsALayout, splitAcceptedFloor } from "./feyd.js";
+import { isRoomEditable, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, preserveLockedRooms, resolveArchitectureProgram, roomsALayout, splitAcceptedFloor } from "./feyd.js";
 import {
   applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
   designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
@@ -1295,27 +1295,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     commit([...otras, ...nr], [...otrosItems, ...ni]);
     setTipoUnit(null); setSelId(null); setSelItem(null);
   }, [rooms, items, commit]);
-
-  // paso 3 (con IA): Feyd diseña el depto adaptándolo a la HUELLA real (polígono, incluso
-  // irregular) y siguiendo reglas; el resultado NO se inserta directo: va a un staging grande
-  // (tipoStage) para revisar/mover/rotar antes de pasarlo al plano. Si falla, cae al borrador.
-  const generarTipoConFeyd = useCallback(async (unit, prog) => {
-    if (!unit) return;
-    setTipoBusy(true); setTipoErr("");
-    const xs = unit.pts.map((p) => p.x), ys = unit.pts.map((p) => p.y);
-    const uW = Math.max(...xs) - Math.min(...xs), uD = Math.max(...ys) - Math.min(...ys);
-    try {
-      const L = await disenarConFeyd({ pts: unit.pts, dorms: prog.dorms, banos: prog.banos, visita: prog.visita, closet: prog.closet, lavanderia: prog.lavanderia, cocinaCerrada: prog.cocinaCerrada, nse: brief.nse || "C" });
-      if (!L?.rooms?.length) throw new Error("Feyd no devolvió ambientes");
-      setTipoStage({ unit, rooms: L.rooms, items: L.items || [], W: uW, D: uD });
-    } catch (e) {
-      const L = (() => { try { return feydLayout(uW, uD, prog.dorms, prog.banos, { visita: prog.visita }); } catch { return null; } })();
-      if (L?.rooms?.length) { setTipoStage({ unit, rooms: L.rooms, items: L.items || [], W: uW, D: uD }); setTipoErr(`${e.message} — borrador local`); }
-      else { setTipoErr(e.message || "no se pudo generar"); }
-    } finally {
-      setTipoBusy(false);
-    }
-  }, [brief]);
 
   // ── punteros ──────────────────────────────────────────────
   // arrastre grupal: junta las salas seleccionadas (+ sus muebles contenidos) y los items sueltos
