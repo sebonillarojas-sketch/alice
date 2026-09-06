@@ -126,7 +126,30 @@ export function normalizeFloorPlanOutput(input = {}) {
     // inválido cae a 1, así un parti sin banda se comporta exactamente como antes.
     const bandaRaw = Number(unit?.banda);
     const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
-    return { unitRef, orden, ancho, dormitorios, banos, banda };
+    // terraza: profundidad aproximada (metros) de una franja a lo ancho completo de la
+    // unidad, contra la fachada de su banda (la calle para banda 1, el patio posterior
+    // para banda 2). Opcional y aproximada como todo este contrato; 0 o ausente = sin
+    // terraza. Los mínimos (1.20 m útil, nunca deja la unidad por debajo de 4.00 m de
+    // profundidad) los aplica y reporta normalizarParti (files/alice) — acá solo se
+    // filtra lo mal tipado, igual que corredorProfundidad arriba.
+    const terrazaRaw = Number(unit?.terraza);
+    const terraza = Number.isFinite(terrazaRaw) && terrazaRaw > 0 ? terrazaRaw : null;
+    return { unitRef, orden, ancho, dormitorios, banos, banda, terraza };
+  });
+
+  // patios: ranuras vacías en el orden de una banda (una más, entre unidades), pensadas
+  // como pozo de luz/ventilación en un lote profundo. Opcionales, aproximadas, tolerantes
+  // como el resto de este contrato — normalizarParti (files/alice) aplica el mínimo
+  // (2.10 m), sube o descarta lo que no entra, y reporta cualquier ajuste.
+  const patiosRaw = Array.isArray(parti.patios) ? parti.patios : [];
+  const patios = patiosRaw.map((patio, index) => {
+    const bandaRaw = Number(patio?.banda);
+    const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
+    const ordenRaw = Number(patio?.orden);
+    const orden = Number.isFinite(ordenRaw) ? ordenRaw : index + 1;
+    const anchoRaw = Number(patio?.ancho);
+    const ancho = Number.isFinite(anchoRaw) && anchoRaw > 0 ? anchoRaw : 0;
+    return { banda, orden, ancho };
   });
 
   return {
@@ -137,6 +160,7 @@ export function normalizeFloorPlanOutput(input = {}) {
       corredorProfundidad,
       core: { posicion: corePosicion, ancho: coreAncho, longitud: coreLongitud, distanciaAlFrente: coreDistanciaAlFrente },
       units,
+      patios,
     },
     assumptions: stringArray(input.assumptions),
     tradeoffs: stringArray(input.tradeoffs),
@@ -329,6 +353,20 @@ export const FLOOR_PLAN_OUTPUT_SCHEMA = {
               dormitorios: { type: "integer", minimum: 1, maximum: 3 },
               banos: { type: "integer", minimum: 1 },
               banda: { type: "integer", enum: [1, 2] },
+              terraza: { type: "number" },
+            },
+          },
+        },
+        patios: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["ancho"],
+            properties: {
+              banda: { type: "integer", enum: [1, 2] },
+              orden: { type: "integer", minimum: 1 },
+              ancho: { type: "number" },
             },
           },
         },

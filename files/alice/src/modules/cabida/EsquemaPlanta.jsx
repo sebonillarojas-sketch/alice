@@ -55,9 +55,20 @@ function PlantaReal({ lote, footprint, parti, frenteIdx, partiIdx, movs, onFrent
   // el núcleo llega despiezado (escalera · ascensor · hall): se distinguen para poder
   // verificar de un vistazo que la circulación vertical entra en el núcleo propuesto.
   const CORE_FILL = { escalera: "#2E2E33", ascensor: "#4A4A50", "hall núcleo": "#8C8A85" };
+  // terraza y patio son las dos figuras nuevas de la placa (role:"void" en el contrato,
+  // ver floorProposal.js): tienen que leerse distintas entre sí, de una unidad vendible y
+  // del corredor. terraza toma el color de SU unidad (unitRef la liga) pero aguado, para
+  // que se vea asociada a ella sin confundirse con área vendible; patio usa la misma
+  // hachura que el lote (área abierta, sin techar), nunca un color de tipología.
+  const unitTipByRef = {};
+  (parti?.rooms || []).forEach((room) => {
+    if (room.tipo === "unidad" && room.unitRef) unitTipByRef[room.unitRef] = room.name?.split(" ")[0];
+  });
   const fillFor = (r) => r.tipo === "core" ? (CORE_FILL[r.name] || C.ink)
     : r.tipo === "pasillo" ? C.paper
-      : TIP_COLOR[r.name?.split(" ")[0]] || "#E4E2DC";
+      : r.name === "patio" ? "url(#hatchR)"
+        : r.name === "terraza" ? (TIP_COLOR[unitTipByRef[r.unitRef]] || "#E4E2DC")
+          : TIP_COLOR[r.name?.split(" ")[0]] || "#E4E2DC";
   const key = (i) => `${partiIdx}:${i}`;
   const shift = (pts, i) => { const m = movs[key(i)]; return m ? pts.map((p) => ({ x: p.x + m.dx, y: p.y + m.dy })) : pts; };
 
@@ -105,15 +116,22 @@ function PlantaReal({ lote, footprint, parti, frenteIdx, partiIdx, movs, onFrent
         const pts = shift(r.pts, i);
         const c = T(centroid(pts));
         const a = polyArea(pts);
-        const label = r.tipo === "unidad" && a * s * s > 900;
+        const esTerraza = r.name === "terraza";
+        const esPatio = r.name === "patio";
+        const label = (r.tipo === "unidad" || esTerraza || esPatio) && a * s * s > 900;
         return (
           <g key={i} onPointerDown={down(i)} style={{ cursor: "grab" }}>
             <polygon points={P(pts)} fill={fillFor(r)} stroke={C.card} strokeWidth="1.5"
-              fillOpacity={r.tipo === "core" ? 1 : 0.92} />
-            {label && (
+              fillOpacity={r.tipo === "core" ? 1 : esTerraza ? 0.4 : 0.92} />
+            {label && r.tipo === "unidad" && (
               <text x={c.x} y={c.y} fontSize="9.5" fontWeight="700" fill={C.ink} textAnchor="middle" pointerEvents="none">
                 {r.name.split(" · ")[0]}
                 <tspan x={c.x} dy="11" fontSize="8" fontWeight="400">{r.name.split(" · ")[1] || ""}</tspan>
+              </text>
+            )}
+            {label && (esTerraza || esPatio) && (
+              <text x={c.x} y={c.y + 3} fontSize="8" fontWeight="600" fill={esPatio ? C.soft : C.ink} textAnchor="middle" pointerEvents="none">
+                {r.name}
               </text>
             )}
             {r.tipo === "core" && a * s * s > 320 && (

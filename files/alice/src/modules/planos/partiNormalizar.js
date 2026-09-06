@@ -38,6 +38,38 @@ const clampInt = (value, min, max, fallback) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 };
 
+// --- Terrazas por unidad y patios de banda --------------------------------------------
+// Dos figuras nuevas sobre la misma placa de rectángulos: una terraza le quita
+// profundidad a SU unidad (contra la fachada de su banda) y la ocupa; un patio es una
+// ranura vacía más en el orden de una banda. Las dos quedan rectangulares por
+// construcción — nunca se recorta con un algoritmo que admita cóncavos.
+export const TERRAZA_MIN_UTIL = 1.20; // por debajo de esto no vale la pena construirla
+export const TERRAZA_UNIDAD_MIN_PROFUNDIDAD = 4.00; // la unidad nunca queda más angosta que esto
+export const PATIO_MIN_ANCHO = 2.10; // pozo de luz mínimo en edificación multifamiliar
+
+// Satura la terraza APROXIMADA que pidió el agente para una unidad contra los dos
+// mínimos del contrato: 1.20 m para que sea útil, nunca dejar la propia unidad por
+// debajo de 4.00 m de profundidad (bandDepth = profundidad total de la banda de esa
+// unidad). Si hay que tocar el número, se recorta LA TERRAZA (nunca la unidad) y se
+// devuelve un aviso — mismo patrón que avisosCore, más arriba: nada de ajustes en
+// silencio. terraza:0 (o ausente) es "no pidió terraza": no genera aviso.
+function saneaTerraza(terrazaAprox, bandDepth) {
+  const pedida = Number(terrazaAprox);
+  if (!Number.isFinite(pedida) || pedida <= 0) return { terraza: 0, aviso: null };
+  const maxUtil = Math.max(0, bandDepth - TERRAZA_UNIDAD_MIN_PROFUNDIDAD);
+  let terraza = Math.max(pedida, TERRAZA_MIN_UTIL);
+  if (terraza > maxUtil + 1e-9) terraza = maxUtil;
+  terraza = redondearMM(Math.max(0, terraza));
+  if (terraza <= 1e-6) {
+    return { terraza: 0, aviso: { motivo: "sin_espacio", pedida: redondearMM(pedida) } };
+  }
+  if (Math.abs(terraza - pedida) > 1e-6) {
+    const motivo = terraza > pedida ? "elevada_al_minimo" : "recortada_por_minimo_unidad";
+    return { terraza, aviso: { motivo, pedida: redondearMM(pedida), valor: terraza } };
+  }
+  return { terraza, aviso: null };
+}
+
 function elegirCrujias(crujias, fondo, corredorProfundidad) {
   if (crujias === 1 || crujias === 2) return crujias;
   const fondoNum = Number(fondo);
@@ -167,32 +199,82 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
   // fórmula de siempre.
   const nucleoExcedeBandaFrente = distanciaAlFrenteSana + coreLongitud > bandDepthFrente + 0.001;
 
-  const unitsOrdenados = (Array.isArray(parti.units) ? parti.units : [])
+  const unitsMapeadas = (Array.isArray(parti.units) ? parti.units : [])
     .map((u, index) => {
       // banda: 1 = frente, 2 = fondo. Cualquier valor ausente o inválido cae a 1 (misma
       // tolerancia que ya aplica schemas.js del lado del servidor).
       const bandaRaw = Number(u?.banda);
       const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
+      // terraza: se sanea acá contra la profundidad de la banda (bandDepthFrente vale
+      // igual para banda 1 y banda 2 — ver calcularBandDepth, ambas bandas son simétricas
+      // en este motor) — nunca contra el ancho, que se prorratea después.
+      const { terraza, aviso: terrazaAviso } = saneaTerraza(u?.terraza, bandDepthFrente);
       return {
+        isPatio: false,
         unitRef: String(u?.unitRef ?? `unit-${index + 1}`),
         orden: Number.isFinite(Number(u?.orden)) ? Number(u.orden) : index + 1,
         anchoAprox: Number(u?.ancho) > 0 ? Number(u.ancho) : 0,
         dormitorios: clampInt(u?.dormitorios, 1, 3, 1),
         banos: clampInt(u?.banos, 1, 9, 1),
         banda,
+        terraza,
+        terrazaAviso,
       };
+    });
+
+  // patios: ranuras vacías que se intercalan en el orden de su banda, exactamente como
+  // una unidad más (mismo espacio de `orden`), pero sin programa. Su ancho ya sale
+  // saneado al mínimo (PATIO_MIN_ANCHO) de esta etapa — no participa del prorrateo por
+  // peso de las unidades reales (ver prorratearAnchosMM más abajo): se reserva tal cual.
+  const patiosAvisos = [];
+  const patiosMapeados = (Array.isArray(parti.patios) ? parti.patios : [])
+    .map((p, index) => {
+      const bandaRaw = Number(p?.banda);
+      const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
+      const ordenRaw = Number(p?.orden);
+      const orden = Number.isFinite(ordenRaw) ? ordenRaw : index + 1;
+      const anchoPedido = Number(p?.ancho) > 0 ? Number(p.ancho) : 0;
+      let ancho = anchoPedido;
+      if (ancho > 0 && ancho < PATIO_MIN_ANCHO) {
+        ancho = PATIO_MIN_ANCHO;
+        patiosAvisos.push({ banda, orden, motivo: "elevado_al_minimo", pedido: redondearMM(anchoPedido), valor: PATIO_MIN_ANCHO });
+      }
+      ancho = redondearMM(ancho);
+      return { isPatio: true, unitRef: null, orden, banda, ancho, anchoAprox: ancho, dormitorios: null, banos: null, terraza: 0, terrazaAviso: null };
     })
-    .sort((a, b) => a.orden - b.orden);
+    .filter((p) => p.ancho > 0);
+
+  // ¿algún patio no entra en su banda? Se chequea contra `disponible` (frente − core),
+  // la cota más conservadora que usan las dos bandas (la banda "otra" a veces llega a
+  // usar el frente completo — más generoso, nunca menos): si un patio no entra ni ahí,
+  // se descarta entero y se reporta — nunca se le quita ancho a una unidad real para
+  // hacerle lugar.
+  const patiosPorBanda = { 1: [], 2: [] };
+  patiosMapeados.forEach((p, idx) => patiosPorBanda[p.banda].push({ idx, ancho: p.ancho }));
+  const descartarPatio = new Set();
+  [1, 2].forEach((b) => {
+    let usado = 0;
+    patiosPorBanda[b].forEach(({ idx, ancho }) => {
+      if (usado + ancho > disponible + 1e-9) {
+        descartarPatio.add(idx);
+        patiosAvisos.push({ banda: b, orden: patiosMapeados[idx].orden, motivo: "descartado_sin_espacio", valor: ancho });
+      } else usado += ancho;
+    });
+  });
+  const patiosFiltrados = patiosMapeados.filter((_, idx) => !descartarPatio.has(idx));
+
+  const unitsOrdenados = [...unitsMapeadas, ...patiosFiltrados].sort((a, b) => a.orden - b.orden);
 
   const coreAnchoMM = redondearMM(coreAncho);
 
-  if (!unitsOrdenados.length) {
+  if (!unitsMapeadas.length) {
     return {
       sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
       crujias,
       corredorProfundidad,
       core: { posicion: redondearMM(0), ancho: coreAnchoMM, longitud: coreLongitud, distanciaAlFrente: redondearMM(distanciaAlFrenteSana), avisos: avisosCore },
       units: [],
+      patiosAvisos,
     };
   }
 
@@ -216,18 +298,28 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
   // redondeo a milímetros con el residuo acumulado volcado a la última unidad (por
   // orden): el mismo criterio que ya usa rebalancear() para no perder ni ganar ancho
   // total al redondear.
+  // Los patios no pesan en el prorrateo: se reservan tal cual (ya saneados a su mínimo) y
+  // solo las unidades reales se reparten proporcionalmente lo que sobra — mismo redondeo
+  // a milímetros de siempre (residuo volcado a la última unidad real, nunca a un patio).
   const prorratearAnchosMM = (units, disponibleBanda) => {
-    const pesos = units.map((u) => u.anchoAprox);
-    const anchosExactos = prorratearAnchos(pesos, disponibleBanda);
+    const anchoPatiosTotal = units.reduce((s, u) => s + (u.isPatio ? u.ancho : 0), 0);
+    const disponibleUnidades = Math.max(0, disponibleBanda - anchoPatiosTotal);
+    const idxUnidades = [];
+    const pesos = [];
+    units.forEach((u, i) => { if (!u.isPatio) { idxUnidades.push(i); pesos.push(u.anchoAprox); } });
+    const anchosExactos = prorratearAnchos(pesos, disponibleUnidades);
+    const anchosMM = new Array(units.length).fill(0);
     let residuo = 0;
-    const anchosMM = anchosExactos.map((w) => {
-      const redondeado = redondearMM(w);
-      residuo += w - redondeado;
-      return redondeado;
+    idxUnidades.forEach((i, k) => {
+      const redondeado = redondearMM(anchosExactos[k]);
+      residuo += anchosExactos[k] - redondeado;
+      anchosMM[i] = redondeado;
     });
-    if (anchosMM.length) {
-      anchosMM[anchosMM.length - 1] = redondearMM(anchosMM[anchosMM.length - 1] + residuo);
+    if (idxUnidades.length) {
+      const last = idxUnidades[idxUnidades.length - 1];
+      anchosMM[last] = redondearMM(anchosMM[last] + residuo);
     }
+    units.forEach((u, i) => { if (u.isPatio) anchosMM[i] = u.ancho; });
     return anchosMM;
   };
 
@@ -236,7 +328,15 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
     let cursor = cursorInicial;
     units.forEach((u, i) => {
       const ancho = anchosMM[i];
-      salida.push({ unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor), dormitorios: u.dormitorios, banos: u.banos, banda: u.banda });
+      if (u.isPatio) {
+        salida.push({ isPatio: true, orden: u.orden, ancho, x: redondearMM(cursor), banda: u.banda });
+      } else {
+        salida.push({
+          unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor),
+          dormitorios: u.dormitorios, banos: u.banos, banda: u.banda,
+          terraza: u.terraza, terrazaAviso: u.terrazaAviso,
+        });
+      }
       cursor = redondearMM(cursor + ancho);
     });
     return { salida, cursorFinal: cursor };
@@ -300,5 +400,6 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
     corredorProfundidad,
     core: { posicion: redondearMM(corePosicion), ancho: coreAnchoMM, longitud: coreLongitud, distanciaAlFrente: redondearMM(distanciaAlFrenteSana), avisos: avisosCore },
     units: [...izquierdaRef.salida, ...derechaRef.salida, ...unitsOtra],
+    patiosAvisos,
   };
 }

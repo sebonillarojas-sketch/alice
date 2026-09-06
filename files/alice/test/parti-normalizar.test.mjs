@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { prorratearAnchos, normalizarParti, CORREDOR_PROFUNDIDAD_DEFAULT } from "../src/modules/planos/partiNormalizar.js";
+import {
+  prorratearAnchos, normalizarParti, CORREDOR_PROFUNDIDAD_DEFAULT,
+  TERRAZA_MIN_UTIL, TERRAZA_UNIDAD_MIN_PROFUNDIDAD, PATIO_MIN_ANCHO,
+} from "../src/modules/planos/partiNormalizar.js";
 import { MIN_ANCHO_UNIDAD } from "../src/modules/planos/rebalance.js";
 
 const sum = (arr) => arr.reduce((a, b) => a + b, 0);
@@ -227,4 +230,164 @@ test("normalizarParti con crujias:2 y sin ninguna banda 2 se comporta igual que 
   );
   assert.deepEqual(conBanda, sinCrujiasEnUnidad, "declarar banda:1 explícito no debe cambiar nada frente a omitirlo");
   assert.equal(conBanda.units.length, 2, "ambas unidades quedan en la misma banda, ninguna se pierde");
+});
+
+// --- Terrazas por unidad ---------------------------------------------------------------
+// unit.terraza le quita profundidad a SU unidad, contra la fachada de su banda. Se sanea
+// acá (no en floorProposal.js) porque acá es donde se conoce la profundidad de la banda:
+// mínimo útil 1.20 m, nunca deja la unidad por debajo de 4.00 m — se recorta LA TERRAZA,
+// nunca la unidad, y se reporta.
+
+test("normalizarParti deja la terraza tal cual cuando entra sin tocar ningún mínimo", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1, terraza: 2.5 }],
+  };
+  // fondo 12, corredor 1.6 → bandDepth 10.4: de sobra para 2.5 m de terraza + 4 m mínimos.
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  assert.equal(u1.terraza, 2.5);
+  assert.equal(u1.terrazaAviso, null, "una terraza que entra sin tocar mínimos no genera aviso");
+});
+
+test("normalizarParti recorta la terraza (no la unidad) cuando pedirla entera bajaría la unidad de 4.00 m, y lo reporta", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1, terraza: 8 }],
+  };
+  // fondo 12, corredor 1.6 → bandDepth 10.4. Pedir 8 m de terraza dejaría la unidad en
+  // 2.4 m (< 4.00): se recorta la terraza a 10.4 − 4.00 = 6.4 m.
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  assert.ok(Math.abs(u1.terraza - 6.4) < 1e-6, `la terraza debe recortarse a 6.40 m, dio ${u1.terraza}`);
+  assert.deepEqual(u1.terrazaAviso, { motivo: "recortada_por_minimo_unidad", pedida: 8, valor: 6.4 });
+});
+
+test("normalizarParti eleva la terraza al mínimo útil (1.20 m) cuando piden menos, y lo reporta", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1, terraza: 0.5 }],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  assert.equal(u1.terraza, TERRAZA_MIN_UTIL);
+  assert.deepEqual(u1.terrazaAviso, { motivo: "elevada_al_minimo", pedida: 0.5, valor: TERRAZA_MIN_UTIL });
+});
+
+test("normalizarParti descarta la terraza si la banda ni siquiera deja los 4.00 m de la unidad, y lo reporta", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1, terraza: 2 }],
+  };
+  // fondo 5.6, corredor 1.6 → bandDepth 4.0: exactamente el mínimo de la unidad, sin
+  // margen para ninguna terraza.
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 5.6 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  assert.equal(u1.terraza, 0);
+  assert.deepEqual(u1.terrazaAviso, { motivo: "sin_espacio", pedida: 2 });
+});
+
+test("normalizarParti sin terraza en ninguna unidad no genera avisos (compatibilidad)", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    core: { posicion: 8, ancho: 4 },
+    units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1 }],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  assert.equal(u1.terraza, 0);
+  assert.equal(u1.terrazaAviso, null);
+  assert.deepEqual(exacto.patiosAvisos, []);
+});
+
+// --- Patios de banda --------------------------------------------------------------------
+// parti.patios se intercala en el orden de su banda como una unidad más, pero vacía y con
+// ancho fijo (no participa del prorrateo por peso de las unidades reales).
+
+test("normalizarParti intercala un patio en el orden de su banda, entre las dos unidades vecinas", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    // posicion muy grande: las tres piezas (u1, patio, u2) quedan a la izquierda del
+    // core, en secuencia, para poder comprobar la adyacencia directa entre las tres.
+    core: { posicion: 100, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 6, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 5, dormitorios: 1, banos: 1 },
+    ],
+    patios: [{ banda: 1, orden: 1.5, ancho: 3 }],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const u1 = exacto.units.find((u) => u.unitRef === "u1");
+  const u2 = exacto.units.find((u) => u.unitRef === "u2");
+  const patio = exacto.units.find((u) => u.isPatio);
+  assert.ok(patio, "debe emitir un patio");
+  assert.equal(patio.ancho, 3, "el patio conserva su ancho pedido (ya por encima del mínimo)");
+  assert.ok(Math.abs(u1.x + u1.ancho - patio.x) < 1e-6, "el patio arranca justo donde termina u1");
+  assert.ok(Math.abs(patio.x + patio.ancho - u2.x) < 1e-6, "u2 arranca justo donde termina el patio");
+  const total = u1.ancho + patio.ancho + u2.ancho;
+  assert.ok(Math.abs(total - 16) < 1e-6, `unidades + patio deben sumar exactamente el disponible (16), dio ${total}`);
+  assert.deepEqual(exacto.patiosAvisos, []);
+});
+
+test("normalizarParti eleva un patio angosto al mínimo (2.10 m) y lo reporta", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 6, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 5, dormitorios: 1, banos: 1 },
+    ],
+    patios: [{ banda: 1, orden: 1.5, ancho: 1 }],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  const patio = exacto.units.find((u) => u.isPatio);
+  assert.equal(patio.ancho, PATIO_MIN_ANCHO);
+  assert.deepEqual(exacto.patiosAvisos, [{ banda: 1, orden: 1.5, motivo: "elevado_al_minimo", pedido: 1, valor: PATIO_MIN_ANCHO }]);
+});
+
+test("normalizarParti descarta un patio que no entra en su banda y lo reporta, sin tocar las unidades reales", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 6, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 5, dormitorios: 1, banos: 1 },
+    ],
+    // frente 20, core 4 → disponible 16: un patio de 30 m no entra de ninguna manera.
+    patios: [{ banda: 1, orden: 1.5, ancho: 30 }],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  assert.equal(exacto.units.some((u) => u.isPatio), false, "el patio descartado no debe aparecer en units");
+  assert.equal(exacto.units.length, 2, "las dos unidades reales sobreviven intactas");
+  const total = exacto.units.reduce((s, u) => s + u.ancho, 0);
+  assert.ok(Math.abs(total - 16) < 1e-6, "las unidades siguen repartiéndose todo el disponible, sin el patio");
+  assert.deepEqual(exacto.patiosAvisos, [{ banda: 1, orden: 1.5, motivo: "descartado_sin_espacio", valor: 30 }]);
+});
+
+test("normalizarParti sin patios no genera patiosAvisos ni unidades isPatio (compatibilidad)", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_test",
+    crujias: 1,
+    core: { posicion: 8, ancho: 4 },
+    units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1 }],
+  };
+  const exacto = normalizarParti(parti, { frente: 20, fondo: 12 });
+  assert.deepEqual(exacto.patiosAvisos, []);
+  assert.equal(exacto.units.some((u) => u.isPatio), false);
 });

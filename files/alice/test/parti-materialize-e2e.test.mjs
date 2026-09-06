@@ -471,3 +471,191 @@ test("un núcleo chico (3×3.5) no se despieza: sale un único core y tradeoffs 
   const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
   assert.deepEqual(geometricos, [], `cero hallazgos geométricos: ${JSON.stringify(geometricos)}`);
 });
+
+// --- Terrazas por unidad y patios de banda ---------------------------------------------
+// Dos figuras nuevas, las dos rectangulares por construcción: una terraza le quita
+// profundidad a SU unidad (contra la fachada de su banda) y la ocupa; un patio es una
+// ranura vacía intercalada en el orden de una banda. Ambas se emiten role:"void", y tienen
+// que llegar limpias a validateFloorProposal — cero hallazgos, no solo los geométricos.
+
+test("una unidad con terraza produce dos rectángulos que juntos ocupan lo que ocupaba la unidad sola (sobre la huella irregular)", () => {
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 9, ancho: 5, longitud: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 13, dormitorios: 2, banos: 1, terraza: 2.5 },
+      { unitRef: "u2", orden: 2, ancho: 13, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const terraza = propuesta.floor.polygons.find((p) => p.role === "void" && p.name === "terraza");
+  assert.ok(terraza, "debe emitir la terraza de u1");
+  assert.equal(terraza.unitRef, "u1", "la terraza apunta a su unidad");
+  assert.equal(terraza.unitProgram, null);
+
+  const u1 = propuesta.floor.polygons.find((p) => p.role === "unidad" && p.unitRef === "u1");
+  assert.ok(u1, "u1 debe seguir existiendo, más corta");
+
+  // terraza + unidad deben sumar exactamente lo que medía u1 SOLA en el mismo lote (la
+  // huella es cóncava y recorta la pieza: se compara contra un baseline sin terraza en
+  // vez de contra el área bruta del rectángulo, para no asumir que el recorte es simple).
+  const partiSinTerraza = { ...parti, units: parti.units.map((u) => ({ ...u, terraza: undefined })) };
+  const baseline = materializeFloorProposal({ parti: partiSinTerraza, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+  const u1Baseline = baseline.floor.polygons.find((p) => p.role === "unidad" && p.unitRef === "u1");
+  assert.ok(u1Baseline);
+
+  const sumaAreas = area(terraza.polygon) + area(u1.polygon);
+  assert.ok(
+    Math.abs(sumaAreas - area(u1Baseline.polygon)) < 1e-6,
+    `terraza + unidad deben sumar exactamente lo que medía u1 sola (${area(u1Baseline.polygon)}), dio ${sumaAreas}`,
+  );
+
+  const resultado = validar(propuesta);
+  assert.deepEqual(resultado.findings, [], `cero hallazgos: ${JSON.stringify(resultado.findings)}`);
+});
+
+test("una terraza pedida de más se recorta al mínimo de la unidad (nunca la unidad) y lo reporta en tradeoffs con los números", () => {
+  const rect = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 8.1 }, { x: 0, y: 8.1 }];
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 8, dormitorios: 2, banos: 1, terraza: 3 },
+      { unitRef: "u2", orden: 2, ancho: 8, dormitorios: 1, banos: 1 },
+    ],
+  };
+  // bandDepth = 8.1 − 1.6 = 6.5: pedir 3 m de terraza dejaría u1 en 3.5 m (< 4.00), se
+  // recorta a 6.5 − 4.00 = 2.5 m.
+  const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const terraza = propuesta.floor.polygons.find((p) => p.role === "void" && p.name === "terraza" && p.unitRef === "u1");
+  assert.ok(terraza);
+  assert.ok(Math.abs(area(terraza.polygon) - 8 * 2.5) < 1e-6, `la terraza recortada debe medir 8×2.50, dio ${area(terraza.polygon)}`);
+  const u1 = propuesta.floor.polygons.find((p) => p.role === "unidad" && p.unitRef === "u1");
+  assert.ok(Math.abs(area(u1.polygon) - 8 * 4.0) < 1e-6, `la unidad debe quedar en 8×4.00 (su mínimo), dio ${area(u1.polygon)}`);
+
+  assert.ok(
+    propuesta.tradeoffs.some((t) => t.includes("u1") && t.includes("terraza") && t.includes("2.50") && t.includes("3.00")),
+    `tradeoffs debe reportar el recorte con los números: ${JSON.stringify(propuesta.tradeoffs)}`,
+  );
+
+  const resultado = rectValidar(propuesta, rect);
+  assert.deepEqual(resultado.findings, [], `cero hallazgos: ${JSON.stringify(resultado.findings)}`);
+});
+
+test("un patio se intercala entre las unidades de su banda con la profundidad completa de la banda (sobre la huella irregular)", () => {
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 9, ancho: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 1 },
+      { unitRef: "u2", orden: 2, ancho: 6, dormitorios: 1, banos: 1, banda: 1 },
+      { unitRef: "u3", orden: 3, ancho: 8, dormitorios: 2, banos: 1, banda: 2 },
+      { unitRef: "u4", orden: 5, ancho: 5, dormitorios: 1, banos: 1, banda: 2 },
+    ],
+    patios: [{ banda: 2, orden: 4, ancho: 3 }],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const patio = propuesta.floor.polygons.find((p) => p.role === "void" && p.name === "patio");
+  assert.ok(patio, "debe emitir el patio");
+  assert.equal(patio.unitRef, null);
+  assert.equal(patio.unitProgram, null);
+
+  // bandDepth ((14.5 − 1.5) / 2 = 6.5) es la misma para las dos bandas: el patio debe
+  // tomar la profundidad completa de su fila.
+  const bandDepth = (14.5 - 1.5) / 2;
+  assert.ok(Math.abs(area(patio.polygon) - 3 * bandDepth) < 1e-6, `el patio debe medir 3×${bandDepth}, dio ${area(patio.polygon)}`);
+
+  const unidades = propuesta.floor.polygons.filter((p) => p.role === "unidad");
+  assert.deepEqual(unidades.map((u) => u.unitRef).sort(), ["u1", "u2", "u3", "u4"], "las 4 unidades sobreviven junto con el patio");
+
+  const resultado = validar(propuesta);
+  assert.deepEqual(resultado.findings, [], `cero hallazgos: ${JSON.stringify(resultado.findings)}`);
+});
+
+test("un patio angosto se sube al mínimo (2.10 m) y lo reporta en tradeoffs con los números", () => {
+  const rect = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 12 }, { x: 0, y: 12 }];
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 8, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 3, ancho: 8, dormitorios: 1, banos: 1 },
+    ],
+    patios: [{ banda: 1, orden: 2, ancho: 1 }],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const patio = propuesta.floor.polygons.find((p) => p.role === "void" && p.name === "patio");
+  assert.ok(patio);
+  // bandDepth (crujía simple, fondo 12, corredor 1.6) = 10.4: el patio toma el fondo
+  // completo de la banda, no el fondo del lote entero.
+  const bandDepth = 12 - 1.6;
+  assert.ok(Math.abs(area(patio.polygon) - 2.1 * bandDepth) < 1e-6, `el patio debe medir 2.10×${bandDepth}, dio ${area(patio.polygon)}`);
+
+  assert.ok(
+    propuesta.tradeoffs.some((t) => t.includes("patio") && t.includes("2.10") && t.includes("1.00")),
+    `tradeoffs debe reportar la elevación al mínimo con los números: ${JSON.stringify(propuesta.tradeoffs)}`,
+  );
+
+  const resultado = rectValidar(propuesta, rect);
+  assert.deepEqual(resultado.findings, [], `cero hallazgos: ${JSON.stringify(resultado.findings)}`);
+});
+
+test("terraza y patio combinados en la misma planta (sobre la huella irregular): cero hallazgos", () => {
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 9, ancho: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 1, terraza: 2.5 },
+      { unitRef: "u2", orden: 2, ancho: 6, dormitorios: 1, banos: 1, banda: 1 },
+      { unitRef: "u3", orden: 3, ancho: 8, dormitorios: 2, banos: 1, banda: 2 },
+      { unitRef: "u4", orden: 5, ancho: 5, dormitorios: 1, banos: 1, banda: 2 },
+    ],
+    patios: [{ banda: 2, orden: 4, ancho: 3 }],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const terraza = propuesta.floor.polygons.find((p) => p.role === "void" && p.name === "terraza" && p.unitRef === "u1");
+  const patio = propuesta.floor.polygons.find((p) => p.role === "void" && p.name === "patio");
+  assert.ok(terraza, "la terraza de u1 debe sobrevivir junto con el patio");
+  assert.ok(patio, "el patio debe sobrevivir junto con la terraza");
+
+  const resultado = validar(propuesta);
+  assert.deepEqual(resultado.findings.filter((f) => f.code === "polygon_overlap"), [], "terraza y patio no se solapan con nada");
+  assert.deepEqual(resultado.findings, [], `cero hallazgos combinando terraza y patio: ${JSON.stringify(resultado.findings)}`);
+});
+
+test("un parti sin terraza ni patios se comporta EXACTAMENTE como antes (compatibilidad)", () => {
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 9, ancho: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 7, dormitorios: 3, banos: 2 },
+      { unitRef: "u2", orden: 2, ancho: 6, dormitorios: 2, banos: 2 },
+      { unitRef: "u3", orden: 3, ancho: 6.4, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+  assert.ok(
+    propuesta.floor.polygons.every((p) => p.name !== "terraza" && p.name !== "patio"),
+    "sin terraza ni patios declarados, ninguna pieza nueva debe aparecer",
+  );
+  const resultado = validar(propuesta);
+  const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
+  assert.deepEqual(geometricos, [], `no debe haber hallazgos geométricos: ${JSON.stringify(geometricos)}`);
+});

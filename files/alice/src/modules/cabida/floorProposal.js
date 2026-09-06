@@ -1,7 +1,7 @@
 import { generarDistribuciones } from "../planos/plantas.js";
 import { clipPieces } from "../planos/clipFootprint.js";
 import { orientedFrame } from "../planos/geometry.js";
-import { normalizarParti } from "../planos/partiNormalizar.js";
+import { normalizarParti, TERRAZA_MIN_UTIL, TERRAZA_UNIDAD_MIN_PROFUNDIDAD, PATIO_MIN_ANCHO } from "../planos/partiNormalizar.js";
 
 const toPolygon = (pts) => pts.map((point) => [Number(point.x), Number(point.y)]);
 const toPoints = (polygon) => polygon.map(([x, y]) => ({ x: Number(x), y: Number(y) }));
@@ -138,6 +138,31 @@ const describirAvisosCore = (avisos = []) => avisos.map((aviso) => {
   const texto = AVISO_CORE_TEXTOS[`${aviso.campo}:${aviso.motivo}`];
   return texto ? texto(Number(aviso.valor) || 0) : `núcleo: ${aviso.campo} ajustada por el motor (${aviso.motivo})`;
 });
+
+// Traduce los avisos de terraza (por unidad, saneaTerraza en partiNormalizar.js) y de
+// patio (por banda, normalizarParti) a texto legible para `tradeoffs`, con los números —
+// nunca un ajuste silencioso. Mismo patrón que describirAvisosCore, arriba.
+const describirAvisoTerraza = (unitRef, aviso) => {
+  if (aviso.motivo === "recortada_por_minimo_unidad") {
+    return `${unitRef}: terraza recortada a ${aviso.valor.toFixed(2)} m (pedida ${aviso.pedida.toFixed(2)} m) para no dejar la unidad por debajo de ${TERRAZA_UNIDAD_MIN_PROFUNDIDAD.toFixed(2)} m de profundidad`;
+  }
+  if (aviso.motivo === "elevada_al_minimo") {
+    return `${unitRef}: terraza elevada a ${aviso.valor.toFixed(2)} m (pedida ${aviso.pedida.toFixed(2)} m): por debajo de ${TERRAZA_MIN_UTIL.toFixed(2)} m no es útil`;
+  }
+  if (aviso.motivo === "sin_espacio") {
+    return `${unitRef}: terraza descartada (pedida ${aviso.pedida.toFixed(2)} m): la banda no deja los ${TERRAZA_UNIDAD_MIN_PROFUNDIDAD.toFixed(2)} m mínimos de la unidad`;
+  }
+  return `${unitRef}: terraza ajustada por el motor (${aviso.motivo})`;
+};
+const describirAvisoPatio = (aviso) => {
+  if (aviso.motivo === "elevado_al_minimo") {
+    return `patio banda ${aviso.banda} (orden ${aviso.orden}): ancho elevado a ${aviso.valor.toFixed(2)} m (pedido ${aviso.pedido.toFixed(2)} m): por debajo de ${PATIO_MIN_ANCHO.toFixed(2)} m no sirve como pozo de luz`;
+  }
+  if (aviso.motivo === "descartado_sin_espacio") {
+    return `patio banda ${aviso.banda} (orden ${aviso.orden}) descartado: no entra en el frente disponible de esa banda`;
+  }
+  return `patio banda ${aviso.banda}: ajustado por el motor (${aviso.motivo})`;
+};
 
 export function cabidaVersionId(projectId, inputs = {}) {
   const source = JSON.stringify(inputs);
@@ -382,8 +407,43 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     });
   }
 
+  // patio: normalizarParti (partiNormalizar.js) ya lo intercaló entre las unidades de su
+  // banda como una ranura más, con la profundidad completa de la fila (v0..v1) — acá solo
+  // se dibuja como `void`, sin programa ni unitRef: es un pozo de luz/ventilación, no una
+  // unidad vendible.
+  const emitirPatio = (patio, v0, v1) => {
+    if (!(patio.ancho > 0)) return;
+    piezas.push({
+      id: `patio-${patio.orden}`, role: "void", name: "patio", unitRef: null, unitProgram: null,
+      pts: [F.toWorld(patio.x, v0), F.toWorld(patio.x + patio.ancho, v0), F.toWorld(patio.x + patio.ancho, v1), F.toWorld(patio.x, v1)],
+    });
+  };
+
+  // terraza: franja a lo ancho COMPLETO de la unidad, contra la fachada de su propia
+  // banda — la calle en banda 1 (el borde v0 de la fila) o el patio posterior en banda 2
+  // (el borde v1, el más lejano del corredor). normalizarParti ya saneó `unit.terraza`
+  // contra la profundidad de esta misma fila (bandDepth), así que acá solo se reparte el
+  // rango v0..v1 en dos rectángulos — nunca se recalcula el mínimo ni se toca el ancho.
   const emitirUnidad = (unit, v0, v1) => {
     if (!(unit.ancho > 0)) return;
+    if (unit.isPatio) { emitirPatio(unit, v0, v1); return; }
+    if (unit.terraza > 0) {
+      const esBanda2 = unit.banda === 2;
+      const terrazaV0 = esBanda2 ? v1 - unit.terraza : v0;
+      const terrazaV1 = esBanda2 ? v1 : v0 + unit.terraza;
+      const unidadV0 = esBanda2 ? v0 : terrazaV1;
+      const unidadV1 = esBanda2 ? terrazaV0 : v1;
+      piezas.push({
+        id: `${unit.unitRef}-terraza`, role: "void", name: "terraza", unitRef: unit.unitRef, unitProgram: null,
+        pts: [F.toWorld(unit.x, terrazaV0), F.toWorld(unit.x + unit.ancho, terrazaV0), F.toWorld(unit.x + unit.ancho, terrazaV1), F.toWorld(unit.x, terrazaV1)],
+      });
+      piezas.push({
+        id: unit.unitRef, role: "unidad", name: `${unit.dormitorios}D`,
+        unitRef: unit.unitRef, unitProgram: { dormitorios: unit.dormitorios, banos: unit.banos },
+        pts: [F.toWorld(unit.x, unidadV0), F.toWorld(unit.x + unit.ancho, unidadV0), F.toWorld(unit.x + unit.ancho, unidadV1), F.toWorld(unit.x, unidadV1)],
+      });
+      return;
+    }
     piezas.push({
       id: unit.unitRef, role: "unidad", name: `${unit.dormitorios}D`,
       unitRef: unit.unitRef, unitProgram: { dormitorios: unit.dormitorios, banos: unit.banos },
@@ -475,6 +535,8 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
       ...tradeoffs,
       ...nucleoTradeoffs,
       ...describirAvisosCore(normalizado.core.avisos),
+      ...normalizado.units.filter((u) => !u.isPatio && u.terrazaAviso).map((u) => describirAvisoTerraza(u.unitRef, u.terrazaAviso)),
+      ...(normalizado.patiosAvisos || []).map(describirAvisoPatio),
       ...(simplificadoFrente ? ["crujía doble simplificada: unidades solo en la banda del frente, la banda del fondo queda como vacío de servicio"] : []),
       ...(simplificadoFondo ? ["crujía doble simplificada: unidades solo en la banda del fondo, la banda del frente queda como vacío de servicio"] : []),
       ...(dropped.length ? [`${dropped.length} pieza(s) descartada(s) al recortar contra la huella`] : []),
