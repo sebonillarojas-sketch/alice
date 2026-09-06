@@ -119,15 +119,53 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
   // Tarea 4 del contrato.
   const fondoNum = Number(fondo);
   const bandDepthFrente = calcularBandDepth(crujias, fondoNum, corredorProfundidad);
+  const longitudProvista = parti.core?.longitud !== undefined && parti.core?.longitud !== null;
   const longitudBruta = Number(parti.core?.longitud);
   const longitudAbsurda = !Number.isFinite(longitudBruta) || longitudBruta <= 0
     || (Number.isFinite(fondoNum) && longitudBruta > fondoNum);
   const longitudDefault = Math.min(CORE_LONGITUD_DEFAULT, bandDepthFrente > 0 ? bandDepthFrente : (Number.isFinite(fondoNum) ? fondoNum : CORE_LONGITUD_DEFAULT));
-  const coreLongitud = redondearMM(longitudAbsurda ? longitudDefault : Math.min(longitudBruta, Number.isFinite(fondoNum) ? fondoNum : longitudBruta));
+  const coreLongitudBase = redondearMM(longitudAbsurda ? longitudDefault : Math.min(longitudBruta, Number.isFinite(fondoNum) ? fondoNum : longitudBruta));
+
+  // avisosCore: qué campos del núcleo tuvo que rellenar o acotar este motor porque
+  // Tweedledum no mandó una decisión utilizable (o mandó una que no cierra contra el
+  // fondo). materializeFloorProposal (floorProposal.js) vuelca esto a `tradeoffs` en
+  // texto legible — nunca un default silencioso.
+  const avisosCore = [];
+  if (longitudAbsurda) {
+    avisosCore.push({ campo: "longitud", motivo: longitudProvista ? "invalida" : "ausente", valor: coreLongitudBase });
+  }
+
+  // distanciaAlFrente: metros desde el frente (v=0) hasta donde empieza el núcleo.
+  // Aproximado, como todo el contrato. 0 (núcleo pegado al frente) es el default cuando
+  // falta o es absurda (no numérica o negativa) — y a diferencia de `longitud`, ausente
+  // NUNCA se reporta como relleno: 0 es exactamente el comportamiento de siempre, no una
+  // decisión que el motor le esconda al agente (criterio de compatibilidad). Un valor SÍ
+  // provisto pero inválido (negativo, mal tipado) sí se reporta: ahí el agente mandó
+  // algo que no se pudo usar.
+  const distanciaAlFrenteProvista = parti.core?.distanciaAlFrente !== undefined && parti.core?.distanciaAlFrente !== null;
+  const distanciaAlFrenteBruta = Number(parti.core?.distanciaAlFrente);
+  const distanciaAlFrenteValida = Number.isFinite(distanciaAlFrenteBruta) && distanciaAlFrenteBruta >= 0;
+  const distanciaAlFrenteSana = distanciaAlFrenteValida ? distanciaAlFrenteBruta : 0;
+  if (distanciaAlFrenteProvista && !distanciaAlFrenteValida) {
+    avisosCore.push({ campo: "distanciaAlFrente", motivo: "invalida", valor: distanciaAlFrenteSana });
+  }
+
+  // distanciaAlFrente + longitud nunca puede exceder el fondo disponible del marco
+  // entero: si excede, se recorta LONGITUD (nunca la distancia — esa es la decisión del
+  // agente, no se mueve).
+  let coreLongitud = coreLongitudBase;
+  if (Number.isFinite(fondoNum) && distanciaAlFrenteSana + coreLongitud > fondoNum + 1e-9) {
+    coreLongitud = redondearMM(Math.max(0, fondoNum - distanciaAlFrenteSana));
+    avisosCore.push({ campo: "longitud", motivo: "acotada", valor: coreLongitud });
+  }
+
   // ¿el núcleo penetra la banda del fondo? Solo importa con crujía doble: si no la
   // supera, la banda del fondo queda libre a todo lo ancho (Tarea 4); si la supera, esa
-  // banda se reparte alrededor del núcleo como ya hacía antes de existir `longitud`.
-  const nucleoExcedeBandaFrente = coreLongitud > bandDepthFrente + 0.001;
+  // banda se reparte alrededor del núcleo como ya hacía antes de existir `longitud`. Se
+  // mide desde el fondo real del núcleo (distanciaAlFrente + longitud), no solo la
+  // longitud: con distanciaAlFrente=0 (el default/compatibilidad) esto es idéntico a la
+  // fórmula de siempre.
+  const nucleoExcedeBandaFrente = distanciaAlFrenteSana + coreLongitud > bandDepthFrente + 0.001;
 
   const unitsOrdenados = (Array.isArray(parti.units) ? parti.units : [])
     .map((u, index) => {
@@ -153,7 +191,7 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
       sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
       crujias,
       corredorProfundidad,
-      core: { posicion: redondearMM(0), ancho: coreAnchoMM, longitud: coreLongitud },
+      core: { posicion: redondearMM(0), ancho: coreAnchoMM, longitud: coreLongitud, distanciaAlFrente: redondearMM(distanciaAlFrenteSana), avisos: avisosCore },
       units: [],
     };
   }
@@ -260,7 +298,7 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
     sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
     crujias,
     corredorProfundidad,
-    core: { posicion: redondearMM(corePosicion), ancho: coreAnchoMM, longitud: coreLongitud },
+    core: { posicion: redondearMM(corePosicion), ancho: coreAnchoMM, longitud: coreLongitud, distanciaAlFrente: redondearMM(distanciaAlFrenteSana), avisos: avisosCore },
     units: [...izquierdaRef.salida, ...derechaRef.salida, ...unitsOtra],
   };
 }

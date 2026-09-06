@@ -8,6 +8,21 @@ const toPoints = (polygon) => polygon.map(([x, y]) => ({ x: Number(x), y: Number
 const clone = (value) => structuredClone(value);
 const safeId = (value) => String(value || "project").replace(/[^a-zA-Z0-9_-]/g, "_");
 
+// Traduce los avisos de normalizarParti (partiNormalizar.js) — qué campos del núcleo
+// tuvo que rellenar o acotar el motor porque Tweedledum no mandó una decisión utilizable
+// — a texto legible para `tradeoffs`. Nada de defaults silenciosos: si el motor decidió
+// algo en lugar del agente, tiene que quedar escrito acá.
+const AVISO_CORE_TEXTOS = {
+  "longitud:ausente": (valor) => `profundidad del núcleo no especificada por el agente: se usó ${valor.toFixed(2)} m por defecto`,
+  "longitud:invalida": (valor) => `profundidad del núcleo inválida en lo que mandó el agente: se usó ${valor.toFixed(2)} m por defecto`,
+  "longitud:acotada": (valor) => `profundidad del núcleo recortada a ${valor.toFixed(2)} m: junto con la distancia al frente excedía el fondo del lote`,
+  "distanciaAlFrente:invalida": (valor) => `distancia del núcleo al frente inválida en lo que mandó el agente: se usó ${valor.toFixed(2)} m por defecto`,
+};
+const describirAvisosCore = (avisos = []) => avisos.map((aviso) => {
+  const texto = AVISO_CORE_TEXTOS[`${aviso.campo}:${aviso.motivo}`];
+  return texto ? texto(Number(aviso.valor) || 0) : `núcleo: ${aviso.campo} ajustada por el motor (${aviso.motivo})`;
+});
+
 export function cabidaVersionId(projectId, inputs = {}) {
   const source = JSON.stringify(inputs);
   let hash = 2166136261;
@@ -163,17 +178,21 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     : Math.max(F.fondo - normalizado.corredorProfundidad, 0);
 
   const piezas = [];
-  const { posicion: coreU0, ancho: coreAncho, longitud: coreLongitud } = normalizado.core;
+  const { posicion: coreU0, ancho: coreAncho, longitud: coreLongitud, distanciaAlFrente } = normalizado.core;
   const coreU1 = coreU0 + coreAncho;
-  // el núcleo penetra `longitud` metros desde el frente (v=0): ya NO atraviesa el bloque
-  // entero por defecto (era el bug — una franja entera de suelo vendible perdida detrás
-  // de una escalera). Lo que queda detrás, en su propia columna, se cierra como
-  // `circulacion` más abajo — nunca queda como hueco sin asignar. (normalizarParti ya
-  // saneó `longitud` con el default acotado; este Math.min es solo una red de seguridad.)
-  const coreV1 = Math.min(coreLongitud, F.fondo);
+  // el núcleo arranca `distanciaAlFrente` metros adentro del frente (v=0) — 0 es el
+  // default/compatibilidad (pegado al frente, el comportamiento de siempre) — y penetra
+  // `longitud` metros desde ahí: ya NO atraviesa el bloque entero por defecto (era el bug
+  // — una franja entera de suelo vendible perdida detrás de una escalera). Lo que queda
+  // por delante y por detrás, en su propia columna, se cierra como `circulacion` (o
+  // `unidad`, si alguna la reclama) más abajo — nunca queda como hueco sin asignar.
+  // (normalizarParti ya saneó ambos valores contra el fondo del marco; estos Math.min/max
+  // son solo una red de seguridad.)
+  const coreV0 = Math.max(0, Math.min(distanciaAlFrente, F.fondo));
+  const coreV1 = Math.min(coreV0 + coreLongitud, F.fondo);
   piezas.push({
     id: "core", role: "core", name: "core", unitRef: null, unitProgram: null,
-    pts: [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, coreV1), F.toWorld(coreU0, coreV1)],
+    pts: [F.toWorld(coreU0, coreV0), F.toWorld(coreU1, coreV0), F.toWorld(coreU1, coreV1), F.toWorld(coreU0, coreV1)],
   });
 
   const corridorV0 = bandDepth;
@@ -186,9 +205,38 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     });
   });
 
+  // Con crujía simple, banda se ignora: todas las unidades van a la única banda. Con
+  // crujía doble, normalizarParti ya repartió cada unidad a su banda (1 = frente, 2 =
+  // fondo). Se calcula acá arriba (y no más abajo, donde vivía antes) porque el tramo
+  // entre el frente y el núcleo retirado necesita saber qué unidades de la banda 1 hay
+  // ANTES de decidir si alguna reclama esa columna.
+  const band1Units = doble ? normalizado.units.filter((unit) => unit.banda !== 2) : normalizado.units;
+  const band2Units = doble ? normalizado.units.filter((unit) => unit.banda === 2) : [];
+
+  // ¿alguna unidad de la banda del frente ya ocupa la columna del núcleo (su rango de
+  // ancho se solapa con [coreU0,coreU1])? Con la geometría que produce normalizarParti
+  // esto nunca pasa (las unidades se colocan siempre a los lados del núcleo, nunca sobre
+  // su columna) — se comprueba de todos modos, defensivamente, en vez de asumirlo.
+  const columnaNucleoReclamadaPorUnidad = (units) => units.some(
+    (u) => u.ancho > 0 && u.x < coreU1 - 0.001 && u.x + u.ancho > coreU0 + 0.001,
+  );
+
+  // El tramo ENTRE el frente (v=0) y donde arranca el núcleo retirado (coreV0) nunca
+  // puede quedar sin asignar — ya hubo un bug de producción de suelo sin asignar y no
+  // puede volver. Si ninguna unidad de la banda del frente reclama esa columna (el caso
+  // de siempre), se cierra como `circulacion`, simétrico a `circulacion-nucleo` (detrás).
+  if (coreV0 > 0.05 && !columnaNucleoReclamadaPorUnidad(band1Units)) {
+    piezas.push({
+      id: "circulacion-nucleo-frente", role: "circulacion", name: "circulación núcleo (frente)", unitRef: null, unitProgram: null,
+      pts: [F.toWorld(coreU0, 0), F.toWorld(coreU1, 0), F.toWorld(coreU1, coreV0), F.toWorld(coreU0, coreV0)],
+    });
+  }
+
   // ¿el núcleo penetra la banda del fondo? (misma comparación que ya hizo
   // normalizarParti para decidir si esa banda se reparte a todo el frente o alrededor
-  // del núcleo — se recalcula acá porque acá es donde se sabe el fondo de cada tramo).
+  // del núcleo — se recalcula acá porque acá es donde se sabe el fondo de cada tramo). Se
+  // mide desde el fondo real del núcleo (coreV1, que ya incluye distanciaAlFrente): con
+  // distanciaAlFrente=0 esto es idéntico a la fórmula de siempre.
   const nucleoExcedeBandaFrente = coreV1 > bandDepth + 0.001;
   // fondo de la propia columna del núcleo: el corredor si se queda en la banda del
   // frente (ahí termina "su banda"); el fondo del lote si penetra la banda del fondo (ya
@@ -236,21 +284,19 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     cerrarHueco(cursor, F.frente);
   };
 
-  // Con crujía simple, banda se ignora: todas las unidades van a la única banda. Con
-  // crujía doble, normalizarParti ya repartió cada unidad a su banda (1 = frente, 2 =
-  // fondo); si ninguna unidad quedó en una banda, esa banda se emite como área común sin
+  // Si ninguna unidad quedó en una banda, esa banda se emite como área común sin
   // programar (void) en vez de inventar unidades que Tweedledum no pidió, y así la huella
   // sigue quedando completamente asignada (sin incomplete_partition). Si ambas bandas
   // tienen unidades, ninguna queda como void: el fondo del lote se aprovecha.
-  const band1Units = doble ? normalizado.units.filter((unit) => unit.banda !== 2) : normalizado.units;
-  const band2Units = doble ? normalizado.units.filter((unit) => unit.banda === 2) : [];
+  // (band1Units/band2Units ya se calcularon arriba, antes de dibujar el núcleo.)
   let simplificadoFrente = false;
   let simplificadoFondo = false;
 
   if (band1Units.length) {
     band1Units.forEach((unit) => emitirUnidad(unit, 0, bandDepth));
-    // la banda del frente siempre está cruzada por el núcleo (arranca en v=0): marcar su
-    // columna como ocupada evita re-dibujarla, pero cualquier otro tramo sin unidad sí
+    // la columna del núcleo (retirado o no) siempre queda cubierta en toda la fila
+    // [0,bandDepth] por circulacion-nucleo-frente + core + circulacion-nucleo juntos:
+    // marcarla como ocupada evita re-dibujarla, pero cualquier otro tramo sin unidad sí
     // tiene que cerrarse.
     emitirHuecosDeFila(band1Units, 0, bandDepth, true, "banda-1");
   } else if (doble && bandDepth > 0.05) {
@@ -294,6 +340,7 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     assumptions: [...assumptions],
     tradeoffs: [
       ...tradeoffs,
+      ...describirAvisosCore(normalizado.core.avisos),
       ...(simplificadoFrente ? ["crujía doble simplificada: unidades solo en la banda del frente, la banda del fondo queda como vacío de servicio"] : []),
       ...(simplificadoFondo ? ["crujía doble simplificada: unidades solo en la banda del fondo, la banda del frente queda como vacío de servicio"] : []),
       ...(dropped.length ? [`${dropped.length} pieza(s) descartada(s) al recortar contra la huella`] : []),

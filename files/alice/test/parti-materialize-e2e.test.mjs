@@ -269,6 +269,93 @@ test("crujía doble: si la longitud del núcleo no supera la banda del frente, l
   assert.deepEqual(geometricos, [], `no debe haber hallazgos geométricos: ${JSON.stringify(geometricos)}`);
 });
 
+// --- Núcleo retirado del frente (core.distanciaAlFrente) -----------------------------
+// El dueño del producto: "el núcleo lo debe determinar él, debe pensar". Un núcleo
+// pegado al frente se come la fachada que se vende; distanciaAlFrente > 0 lo retira
+// hacia adentro. El tramo que queda entre el frente y el núcleo nunca puede quedar sin
+// asignar — ya hubo un bug de producción de suelo sin asignar y no puede volver.
+
+test("el núcleo retirado (distanciaAlFrente:4) empieza a 4 m del frente y mide 5 m; el tramo de adelante queda asignado, nunca vacío", () => {
+  const rect = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 22.35 }, { x: 0, y: 22.35 }];
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4, longitud: 5, distanciaAlFrente: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 8, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 8, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const core = propuesta.floor.polygons.find((p) => p.role === "core");
+  assert.ok(core, "debe emitir un core");
+  const areaCore = area(core.polygon);
+  assert.ok(Math.abs(areaCore - 4 * 5) < 1e-6, `el core debe medir 4×5 (área 20), dio ${areaCore}`);
+  // el core arranca a 4 m del frente: el punto más cercano al frente de su polígono
+  // (menor "y", porque frontIdx:0 en este rectángulo mapea v directo a y) está en 4, no en 0.
+  const vMinCore = Math.min(...core.polygon.map(([, y]) => y));
+  assert.ok(Math.abs(vMinCore - 4) < 1e-6, `el core debe empezar a 4 m del frente, arrancó en ${vMinCore}`);
+
+  // el tramo de los primeros 4 m, en el ancho del núcleo, tiene que estar asignado — no
+  // puede haber ningún hueco entre v=0 y v=4 en u=[8,12].
+  const frenteNucleo = propuesta.floor.polygons.find((p) => p.polygonId === "circulacion-nucleo-frente");
+  assert.ok(frenteNucleo, "debe emitir una pieza asignada delante del núcleo retirado");
+  assert.equal(frenteNucleo.role, "circulacion");
+  const areaFrenteNucleo = area(frenteNucleo.polygon);
+  assert.ok(Math.abs(areaFrenteNucleo - 4 * 4) < 1e-6, `el tramo de adelante debe medir 4×4 (área 16), dio ${areaFrenteNucleo}`);
+
+  // cero suelo sin asignar: la suma de áreas de los polígonos debe igualar el área de la huella.
+  const areaHuella = area(rect.map((p) => [p.x, p.y]));
+  const areaTotal = propuesta.floor.polygons.reduce((sum, p) => sum + area(p.polygon), 0);
+  assert.ok(Math.abs(areaTotal - areaHuella) < 1e-6, `las piezas deben cubrir toda la huella (${areaHuella}), dieron ${areaTotal}`);
+
+  const resultado = rectValidar(propuesta, rect);
+  assert.equal(resultado.findings.length, 0, `validateFloorProposal debe dar cero hallazgos: ${JSON.stringify(resultado.findings)}`);
+});
+
+test("distanciaAlFrente:0 o ausente se comporta EXACTAMENTE como antes de la Tarea (compatibilidad)", () => {
+  const rect = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 22 }, { x: 0, y: 22 }];
+  const partiSinDistancia = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4, longitud: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 8, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 8, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const partiConCero = { ...partiSinDistancia, core: { ...partiSinDistancia.core, distanciaAlFrente: 0 } };
+
+  const propuestaSinDistancia = materializeFloorProposal({ parti: partiSinDistancia, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
+  const propuestaConCero = materializeFloorProposal({ parti: partiConCero, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  assert.deepEqual(propuestaConCero.floor.polygons, propuestaSinDistancia.floor.polygons, "distanciaAlFrente:0 explícita debe dar exactamente los mismos polígonos que omitirla");
+  // ni ausente ni 0 generan una pieza "delante del núcleo": el núcleo sigue pegado al frente.
+  assert.ok(!propuestaSinDistancia.floor.polygons.some((p) => p.polygonId === "circulacion-nucleo-frente"));
+});
+
+test("un parti sin longitud produce un tradeoff que dice explícitamente que se usó el default", () => {
+  const rect = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 22 }, { x: 0, y: 22 }];
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 8, ancho: 4 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 8, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 8, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
+  assert.ok(
+    propuesta.tradeoffs.some((t) => t.includes("profundidad del núcleo no especificada por el agente") && t.includes("por defecto")),
+    `debe anotar el default aplicado en tradeoffs: ${JSON.stringify(propuesta.tradeoffs)}`,
+  );
+});
+
 test("crujía doble: el núcleo penetra ambas bandas y una sola unidad en banda 2 no deja el otro lado del core sin polígono", () => {
   const rect = [{ x: 0, y: 0 }, { x: 30, y: 0 }, { x: 30, y: 16 }, { x: 0, y: 16 }];
   const bandDepth = (16 - 1.5) / 2; // 7.25

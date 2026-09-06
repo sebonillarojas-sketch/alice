@@ -91,6 +91,15 @@ export function normalizeFloorPlanOutput(input = {}) {
   const coreLongitudRaw = Number(parti.core?.longitud);
   const coreLongitud = Number.isFinite(coreLongitudRaw) && coreLongitudRaw > 0 ? coreLongitudRaw : null;
 
+  // distanciaAlFrente: metros desde el frente (v=0, la fachada a la calle) hasta donde
+  // empieza el núcleo. Opcional y aproximada, igual que longitud. 0 (núcleo pegado al
+  // frente) es un valor válido, no un default a filtrar — solo lo negativo o mal tipado
+  // cae a null. Si falta o es absurda, normalizarParti (files/alice) aplica 0 como
+  // default SIN reportarlo como relleno silencioso: 0 es exactamente el comportamiento
+  // de siempre, no una decisión que el motor le esconda al agente.
+  const coreDistanciaAlFrenteRaw = Number(parti.core?.distanciaAlFrente);
+  const coreDistanciaAlFrente = Number.isFinite(coreDistanciaAlFrenteRaw) && coreDistanciaAlFrenteRaw >= 0 ? coreDistanciaAlFrenteRaw : null;
+
   if (!Array.isArray(parti.units) || parti.units.length === 0) {
     throw new ArchitectureValidationError("parti.units requires at least one unit", ["parti.units"]);
   }
@@ -126,7 +135,7 @@ export function normalizeFloorPlanOutput(input = {}) {
       sourceCabidaVersionId,
       crujias,
       corredorProfundidad,
-      core: { posicion: corePosicion, ancho: coreAncho, longitud: coreLongitud },
+      core: { posicion: corePosicion, ancho: coreAncho, longitud: coreLongitud, distanciaAlFrente: coreDistanciaAlFrente },
       units,
     },
     assumptions: stringArray(input.assumptions),
@@ -305,7 +314,7 @@ export const FLOOR_PLAN_OUTPUT_SCHEMA = {
           type: "object",
           additionalProperties: false,
           required: ["posicion", "ancho"],
-          properties: { posicion: { type: "number" }, ancho: { type: "number" }, longitud: { type: "number" } },
+          properties: { posicion: { type: "number" }, ancho: { type: "number" }, longitud: { type: "number" }, distanciaAlFrente: { type: "number" } },
         },
         units: {
           type: "array", minItems: 1,

@@ -21,7 +21,7 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
-  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.2.0");
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.3.0");
 });
 
 test("floor parti normalization keeps unit order, program and Cabida version", () => {
@@ -66,6 +66,30 @@ test("floor parti normalization accepts core.longitud and filters out invalid va
 
   const longitudAbsurda = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, longitud: -3 } } });
   assert.equal(longitudAbsurda.parti.core.longitud, null);
+});
+
+test("floor parti normalization accepts core.distanciaAlFrente and filters out invalid values", () => {
+  const base = {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    units: [{ unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 1, banos: 1 }],
+  };
+  const conDistancia = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, distanciaAlFrente: 4 } } });
+  assert.equal(conDistancia.parti.core.distanciaAlFrente, 4);
+
+  // 0 es un valor válido (núcleo pegado al frente, el comportamiento de siempre) — no se
+  // filtra a null como si fuera una ausencia.
+  const cero = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, distanciaAlFrente: 0 } } });
+  assert.equal(cero.parti.core.distanciaAlFrente, 0);
+
+  // ausente: se deja en null (normalizarParti, en files/alice, aplica 0 como default) —
+  // nunca rechaza el parti por esto.
+  const sinDistancia = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5 } } });
+  assert.equal(sinDistancia.parti.core.distanciaAlFrente, null);
+
+  const distanciaAbsurda = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, distanciaAlFrente: -2 } } });
+  assert.equal(distanciaAbsurda.parti.core.distanciaAlFrente, null);
 });
 
 test("floor parti normalization accepts and normalizes banda per unit", () => {

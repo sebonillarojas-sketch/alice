@@ -153,6 +153,62 @@ test("normalizarParti con crujias:2 reparte por banda cuando alguna unidad decla
   assert.ok(Math.abs(u2.ancho - 30) < 1e-6, `u2 (única unidad de la banda del fondo, no interrumpida por el core) debe llenar el frente completo, dio ${u2.ancho}`);
 });
 
+// --- distanciaAlFrente (núcleo retirado del frente) -----------------------------------
+// El núcleo lo determina el agente, no el motor: `distanciaAlFrente` viaja del esquema
+// (alicia-brain) hasta acá, se sanea igual que `longitud`, y se recorta `longitud` (no
+// la distancia, que es la decisión del agente) si juntas exceden el fondo del marco.
+// `avisos` es cómo normalizarParti le confiesa a materializeFloorProposal (floorProposal.js)
+// qué campos del núcleo tuvo que rellenar o acotar — nada de defaults silenciosos.
+
+const partiBase = (extra = {}) => ({
+  sourceCabidaVersionId: "cabida_test",
+  crujias: 1,
+  corredorProfundidad: 1.6,
+  core: { posicion: 8, ancho: 4, ...extra },
+  units: [{ unitRef: "u1", orden: 1, ancho: 10, dormitorios: 2, banos: 1 }],
+});
+
+test("normalizarParti propaga distanciaAlFrente sana sin avisos cuando el agente la declara válida", () => {
+  const exacto = normalizarParti(partiBase({ distanciaAlFrente: 4, longitud: 5 }), { frente: 20, fondo: 22.35 });
+  assert.equal(exacto.core.distanciaAlFrente, 4);
+  assert.equal(exacto.core.longitud, 5);
+  assert.deepEqual(exacto.core.avisos, [], "una decisión válida del agente no genera avisos");
+});
+
+test("normalizarParti con distanciaAlFrente ausente o 0 se comporta EXACTAMENTE como sin la Tarea: default 0, sin aviso", () => {
+  const sinDeclarar = normalizarParti(partiBase({ longitud: 5 }), { frente: 20, fondo: 22.35 });
+  const conCero = normalizarParti(partiBase({ distanciaAlFrente: 0, longitud: 5 }), { frente: 20, fondo: 22.35 });
+  assert.equal(sinDeclarar.core.distanciaAlFrente, 0);
+  assert.deepEqual(sinDeclarar.core.avisos, [], "ausente cae a 0 en silencio: 0 es el comportamiento de siempre, no un relleno a confesar");
+  assert.deepEqual(conCero, sinDeclarar, "declarar distanciaAlFrente:0 explícito no debe cambiar nada frente a omitirlo");
+});
+
+test("normalizarParti reporta un aviso cuando distanciaAlFrente llega inválida (negativa) del agente", () => {
+  const exacto = normalizarParti(partiBase({ distanciaAlFrente: -3, longitud: 5 }), { frente: 20, fondo: 22.35 });
+  assert.equal(exacto.core.distanciaAlFrente, 0, "una distancia negativa cae al default 0");
+  assert.deepEqual(exacto.core.avisos, [{ campo: "distanciaAlFrente", motivo: "invalida", valor: 0 }]);
+});
+
+test("normalizarParti reporta un aviso cuando longitud falta (el agente no la declaró)", () => {
+  const exacto = normalizarParti(partiBase({ distanciaAlFrente: 4 }), { frente: 20, fondo: 22.35 });
+  assert.equal(exacto.core.avisos.length, 1);
+  assert.equal(exacto.core.avisos[0].campo, "longitud");
+  assert.equal(exacto.core.avisos[0].motivo, "ausente");
+  assert.ok(exacto.core.avisos[0].valor > 0);
+});
+
+test("normalizarParti recorta longitud (no la distancia) cuando distanciaAlFrente + longitud excede el fondo, y lo reporta", () => {
+  // fondo 10, distanciaAlFrente 8 (decisión del agente): longitud declarada (5) no cabe
+  // (8+5=13 > 10) → se recorta a 2 (10-8), la distancia NO se toca.
+  const exacto = normalizarParti(partiBase({ distanciaAlFrente: 8, longitud: 5 }), { frente: 20, fondo: 10 });
+  assert.equal(exacto.core.distanciaAlFrente, 8, "la distancia es la decisión del agente: no se mueve");
+  assert.equal(exacto.core.longitud, 2, "la longitud se recorta para no exceder el fondo");
+  assert.ok(
+    exacto.core.avisos.some((a) => a.campo === "longitud" && a.motivo === "acotada" && Math.abs(a.valor - 2) < 1e-6),
+    `debe reportar el recorte, avisos: ${JSON.stringify(exacto.core.avisos)}`,
+  );
+});
+
 test("normalizarParti con crujias:2 y sin ninguna banda 2 se comporta igual que antes (compatibilidad)", () => {
   const parti = {
     sourceCabidaVersionId: "cabida_test",
