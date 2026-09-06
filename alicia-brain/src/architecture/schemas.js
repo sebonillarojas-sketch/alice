@@ -104,7 +104,12 @@ export function normalizeFloorPlanOutput(input = {}) {
     if (!Number.isInteger(banos) || banos < 1) {
       throw new ArchitectureValidationError(`${field}.banos requires at least one baño`, [`${field}.banos`]);
     }
-    return { unitRef, orden, ancho, dormitorios, banos };
+    // banda: 1 = banda del frente (a la calle), 2 = banda del fondo. Solo importa cuando
+    // crujias es 2 (con crujía simple se ignora aguas abajo); cualquier valor ausente o
+    // inválido cae a 1, así un parti sin banda se comporta exactamente como antes.
+    const bandaRaw = Number(unit?.banda);
+    const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
+    return { unitRef, orden, ancho, dormitorios, banos, banda };
   });
 
   return {
@@ -306,6 +311,7 @@ export const FLOOR_PLAN_OUTPUT_SCHEMA = {
               ancho: { type: "number" },
               dormitorios: { type: "integer", minimum: 1, maximum: 3 },
               banos: { type: "integer", minimum: 1 },
+              banda: { type: "integer", enum: [1, 2] },
             },
           },
         },

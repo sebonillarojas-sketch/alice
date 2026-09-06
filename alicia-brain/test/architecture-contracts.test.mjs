@@ -44,6 +44,42 @@ test("floor parti normalization keeps unit order, program and Cabida version", (
   assert.equal(output.parti.units[1].unitRef, "unit-2");
   assert.equal(output.parti.units[1].orden, 2);
   assert.equal(output.parti.units[1].dormitorios, 2);
+  // banda ausente en ninguna unidad → default 1 en las dos (comportamiento de siempre).
+  assert.equal(output.parti.units[0].banda, 1);
+  assert.equal(output.parti.units[1].banda, 1);
+});
+
+test("floor parti normalization accepts and normalizes banda per unit", () => {
+  const base = {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 8, ancho: 5 },
+  };
+  const output = normalizeFloorPlanOutput({
+    parti: {
+      ...base,
+      units: [
+        { unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 1 },
+        { unitRef: "unit-2", orden: 2, ancho: 6, dormitorios: 1, banos: 1, banda: 2 },
+      ],
+    },
+  });
+  assert.equal(output.parti.units[0].banda, 1);
+  assert.equal(output.parti.units[1].banda, 2);
+
+  // cualquier valor fuera de {1,2} (o ausente) cae a 1: no rompe, no descarta la unidad.
+  const tolerant = normalizeFloorPlanOutput({
+    parti: {
+      ...base,
+      units: [
+        { unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 3 },
+        { unitRef: "unit-2", orden: 2, ancho: 6, dormitorios: 1, banos: 1 },
+      ],
+    },
+  });
+  assert.equal(tolerant.parti.units[0].banda, 1);
+  assert.equal(tolerant.parti.units[1].banda, 1);
 });
 
 test("floor parti contract rejects malformed shapes but tolerates numbers that do not close", () => {

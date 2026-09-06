@@ -97,13 +97,20 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
   const disponible = Math.max(0, frenteNum - coreAncho);
 
   const unitsOrdenados = (Array.isArray(parti.units) ? parti.units : [])
-    .map((u, index) => ({
-      unitRef: String(u?.unitRef ?? `unit-${index + 1}`),
-      orden: Number.isFinite(Number(u?.orden)) ? Number(u.orden) : index + 1,
-      anchoAprox: Number(u?.ancho) > 0 ? Number(u.ancho) : 0,
-      dormitorios: clampInt(u?.dormitorios, 1, 3, 1),
-      banos: clampInt(u?.banos, 1, 9, 1),
-    }))
+    .map((u, index) => {
+      // banda: 1 = frente, 2 = fondo. Cualquier valor ausente o inválido cae a 1 (misma
+      // tolerancia que ya aplica schemas.js del lado del servidor).
+      const bandaRaw = Number(u?.banda);
+      const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
+      return {
+        unitRef: String(u?.unitRef ?? `unit-${index + 1}`),
+        orden: Number.isFinite(Number(u?.orden)) ? Number(u.orden) : index + 1,
+        anchoAprox: Number(u?.ancho) > 0 ? Number(u.ancho) : 0,
+        dormitorios: clampInt(u?.dormitorios, 1, 3, 1),
+        banos: clampInt(u?.banos, 1, 9, 1),
+        banda,
+      };
+    })
     .sort((a, b) => a.orden - b.orden);
 
   const coreAnchoMM = redondearMM(coreAncho);
@@ -118,58 +125,97 @@ export function normalizarParti(parti = {}, { frente, fondo } = {}) {
     };
   }
 
-  // ¿cuántas unidades (en orden) caen antes del core, según la posición y los
-  // anchos APROXIMADOS de Tweedledum? Esta cuenta no necesita ser exacta: solo
-  // decide el lado del core en el que cae cada unidad; la posición final del
-  // core se deriva de los anchos ya exactos de las unidades a su izquierda.
+  // ¿cuántas unidades (en orden, dentro de la banda que se está posicionando) caen antes
+  // del core, según la posición y los anchos APROXIMADOS de Tweedledum? Esta cuenta no
+  // necesita ser exacta: solo decide el lado del core en el que cae cada unidad; la
+  // posición final del core se deriva de los anchos ya exactos de las unidades a su
+  // izquierda en la banda de referencia (ver más abajo).
   const posicionAprox = Number(parti.core?.posicion);
   const posicionAproxSana = Number.isFinite(posicionAprox) ? Math.max(0, posicionAprox) : 0;
-  let acumulado = 0;
-  let indiceCorte = unitsOrdenados.length;
-  for (let i = 0; i < unitsOrdenados.length; i += 1) {
-    if (acumulado >= posicionAproxSana) { indiceCorte = i; break; }
-    acumulado += unitsOrdenados[i].anchoAprox;
+  const calcularIndiceCorte = (units) => {
+    let acumulado = 0;
+    let indiceCorte = units.length;
+    for (let i = 0; i < units.length; i += 1) {
+      if (acumulado >= posicionAproxSana) { indiceCorte = i; break; }
+      acumulado += units[i].anchoAprox;
+    }
+    return indiceCorte;
+  };
+
+  // redondeo a milímetros con el residuo acumulado volcado a la última unidad (por
+  // orden): el mismo criterio que ya usa rebalancear() para no perder ni ganar ancho
+  // total al redondear.
+  const prorratearAnchosMM = (units, disponibleBanda) => {
+    const pesos = units.map((u) => u.anchoAprox);
+    const anchosExactos = prorratearAnchos(pesos, disponibleBanda);
+    let residuo = 0;
+    const anchosMM = anchosExactos.map((w) => {
+      const redondeado = redondearMM(w);
+      residuo += w - redondeado;
+      return redondeado;
+    });
+    if (anchosMM.length) {
+      anchosMM[anchosMM.length - 1] = redondearMM(anchosMM[anchosMM.length - 1] + residuo);
+    }
+    return anchosMM;
+  };
+
+  const colocar = (units, anchosMM, cursorInicial) => {
+    const salida = [];
+    let cursor = cursorInicial;
+    units.forEach((u, i) => {
+      const ancho = anchosMM[i];
+      salida.push({ unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor), dormitorios: u.dormitorios, banos: u.banos, banda: u.banda });
+      cursor = redondearMM(cursor + ancho);
+    });
+    return { salida, cursorFinal: cursor };
+  };
+
+  // Con crujía simple, banda se ignora por completo: todas las unidades van a la única
+  // banda, exactamente igual que antes. Con crujía doble, se reparten según su banda
+  // declarada; si ninguna unidad declara banda 2, "band2" queda vacía y el resultado es
+  // idéntico al de antes (compatibilidad) — es el mismo código, sin una rama aparte.
+  const usaBandas = crujias === 2;
+  const band1 = usaBandas ? unitsOrdenados.filter((u) => u.banda !== 2) : unitsOrdenados;
+  const band2 = usaBandas ? unitsOrdenados.filter((u) => u.banda === 2) : [];
+  // La banda de referencia fija la posición y el ancho del core (que atraviesa ambas
+  // bandas): se usa la banda 1 si tiene unidades; si está vacía (todas las unidades
+  // declararon banda 2), se usa la banda 2 en su lugar.
+  const bandaReferencia = band1.length ? band1 : band2;
+  const bandaOtra = bandaReferencia === band1 ? band2 : band1;
+
+  const indiceCorteRef = calcularIndiceCorte(bandaReferencia);
+  const anchosRefMM = prorratearAnchosMM(bandaReferencia, disponible);
+  const izquierdaRef = colocar(bandaReferencia.slice(0, indiceCorteRef), anchosRefMM.slice(0, indiceCorteRef), 0);
+  const corePosicion = izquierdaRef.cursorFinal;
+  const derechaRef = colocar(
+    bandaReferencia.slice(indiceCorteRef),
+    anchosRefMM.slice(indiceCorteRef),
+    redondearMM(corePosicion + coreAnchoMM),
+  );
+
+  // La banda restante no fija el core: tiene que encajar en los mismos huecos
+  // izquierdo/derecho que ya definió la banda de referencia, así el core queda como una
+  // sola columna que atraviesa las dos bandas sin que ninguna se solape con él.
+  let unitsOtra = [];
+  if (bandaOtra.length) {
+    const leftWidth = corePosicion;
+    const rightWidth = redondearMM(disponible - leftWidth);
+    const indiceCorteOtra = calcularIndiceCorte(bandaOtra);
+    const izquierdaOtraUnits = bandaOtra.slice(0, indiceCorteOtra);
+    const derechaOtraUnits = bandaOtra.slice(indiceCorteOtra);
+    const anchosIzqOtraMM = prorratearAnchosMM(izquierdaOtraUnits, leftWidth);
+    const anchosDerOtraMM = prorratearAnchosMM(derechaOtraUnits, rightWidth);
+    const izquierdaOtra = colocar(izquierdaOtraUnits, anchosIzqOtraMM, 0);
+    const derechaOtra = colocar(derechaOtraUnits, anchosDerOtraMM, redondearMM(corePosicion + coreAnchoMM));
+    unitsOtra = [...izquierdaOtra.salida, ...derechaOtra.salida];
   }
-
-  const pesos = unitsOrdenados.map((u) => u.anchoAprox);
-  const anchosExactos = prorratearAnchos(pesos, disponible);
-
-  // redondeo a milímetros con el residuo acumulado volcado a la última unidad
-  // (por orden): el mismo criterio que ya usa rebalancear() para no perder ni
-  // ganar ancho total al redondear.
-  let residuo = 0;
-  const anchosMM = anchosExactos.map((w) => {
-    const redondeado = redondearMM(w);
-    residuo += w - redondeado;
-    return redondeado;
-  });
-  if (anchosMM.length) {
-    anchosMM[anchosMM.length - 1] = redondearMM(anchosMM[anchosMM.length - 1] + residuo);
-  }
-
-  const izquierda = unitsOrdenados.slice(0, indiceCorte);
-  const derecha = unitsOrdenados.slice(indiceCorte);
-
-  let cursor = 0;
-  const unitsSalida = [];
-  izquierda.forEach((u, i) => {
-    const ancho = anchosMM[i];
-    unitsSalida.push({ unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor), dormitorios: u.dormitorios, banos: u.banos });
-    cursor = redondearMM(cursor + ancho);
-  });
-  const corePosicion = redondearMM(cursor);
-  cursor = redondearMM(cursor + coreAnchoMM);
-  derecha.forEach((u, i) => {
-    const ancho = anchosMM[indiceCorte + i];
-    unitsSalida.push({ unitRef: u.unitRef, orden: u.orden, ancho, x: redondearMM(cursor), dormitorios: u.dormitorios, banos: u.banos });
-    cursor = redondearMM(cursor + ancho);
-  });
 
   return {
     sourceCabidaVersionId: String(parti.sourceCabidaVersionId || ""),
     crujias,
     corredorProfundidad,
-    core: { posicion: corePosicion, ancho: coreAnchoMM },
-    units: unitsSalida,
+    core: { posicion: redondearMM(corePosicion), ancho: coreAnchoMM },
+    units: [...izquierdaRef.salida, ...derechaRef.salida, ...unitsOtra],
   };
 }

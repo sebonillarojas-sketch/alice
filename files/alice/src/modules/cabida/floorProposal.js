@@ -180,22 +180,42 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     });
   });
 
-  normalizado.units.forEach((unit) => {
+  const emitirUnidad = (unit, v0, v1) => {
     if (!(unit.ancho > 0)) return;
     piezas.push({
       id: unit.unitRef, role: "unidad", name: `${unit.dormitorios}D`,
       unitRef: unit.unitRef, unitProgram: { dormitorios: unit.dormitorios, banos: unit.banos },
-      pts: [F.toWorld(unit.x, 0), F.toWorld(unit.x + unit.ancho, 0), F.toWorld(unit.x + unit.ancho, bandDepth), F.toWorld(unit.x, bandDepth)],
+      pts: [F.toWorld(unit.x, v0), F.toWorld(unit.x + unit.ancho, v0), F.toWorld(unit.x + unit.ancho, v1), F.toWorld(unit.x, v1)],
     });
-  });
+  };
 
-  // crujía doble: hoy solo se reparten unidades en la banda del frente; la
-  // segunda banda queda registrada como área común sin programar (void) en vez
-  // de inventar unidades que Tweedledum no pidió, y así la huella sigue
-  // quedando completamente asignada (sin incomplete_partition).
+  // Con crujía simple, banda se ignora: todas las unidades van a la única banda. Con
+  // crujía doble, normalizarParti ya repartió cada unidad a su banda (1 = frente, 2 =
+  // fondo); si ninguna unidad quedó en una banda, esa banda se emite como área común sin
+  // programar (void) en vez de inventar unidades que Tweedledum no pidió, y así la huella
+  // sigue quedando completamente asignada (sin incomplete_partition). Si ambas bandas
+  // tienen unidades, ninguna queda como void: el fondo del lote se aprovecha.
+  const band1Units = doble ? normalizado.units.filter((unit) => unit.banda !== 2) : normalizado.units;
+  const band2Units = doble ? normalizado.units.filter((unit) => unit.banda === 2) : [];
+  let simplificadoFrente = false;
+  let simplificadoFondo = false;
+
+  if (band1Units.length) {
+    band1Units.forEach((unit) => emitirUnidad(unit, 0, bandDepth));
+  } else if (doble && bandDepth > 0.05) {
+    simplificadoFondo = true; // solo la banda del fondo tiene unidades; el frente queda de servicio
+    piezas.push({
+      id: "banda-1-void", role: "void", name: "vacío", unitRef: null, unitProgram: null,
+      pts: [F.toWorld(0, 0), F.toWorld(F.frente, 0), F.toWorld(F.frente, bandDepth), F.toWorld(0, bandDepth)],
+    });
+  }
+
   if (doble) {
     const backV0 = bandDepth + normalizado.corredorProfundidad;
-    if (F.fondo - backV0 > 0.05) {
+    if (band2Units.length) {
+      band2Units.forEach((unit) => emitirUnidad(unit, backV0, F.fondo));
+    } else if (F.fondo - backV0 > 0.05) {
+      simplificadoFrente = true; // ninguna unidad declaró banda 2: comportamiento de siempre
       piezas.push({
         id: "banda-2-void", role: "void", name: "vacío", unitRef: null, unitProgram: null,
         pts: [F.toWorld(0, backV0), F.toWorld(F.frente, backV0), F.toWorld(F.frente, F.fondo), F.toWorld(0, F.fondo)],
@@ -219,7 +239,8 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     assumptions: [...assumptions],
     tradeoffs: [
       ...tradeoffs,
-      ...(doble ? ["crujía doble simplificada: unidades solo en la banda del frente, la banda del fondo queda como vacío de servicio"] : []),
+      ...(simplificadoFrente ? ["crujía doble simplificada: unidades solo en la banda del frente, la banda del fondo queda como vacío de servicio"] : []),
+      ...(simplificadoFondo ? ["crujía doble simplificada: unidades solo en la banda del fondo, la banda del frente queda como vacío de servicio"] : []),
       ...(dropped.length ? [`${dropped.length} pieza(s) descartada(s) al recortar contra la huella`] : []),
       ...(split ? [`${split} pieza(s) partida(s) por la huella: se conservó el fragmento mayor`] : []),
     ],
