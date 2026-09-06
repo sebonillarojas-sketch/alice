@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Component, Fragment } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Component } from "react";
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
-  Magnet, Ruler, Maximize2, Sparkles, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, MessageCircle, Box, GitBranch, StickyNote,
+  Magnet, Ruler, Maximize2, Plus, RotateCw, X,
+  Upload, Crosshair, RefreshCw, Box, GitBranch, StickyNote,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
@@ -11,8 +11,7 @@ import {
 } from "./geometry.js";
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
-import { generarDistribuciones, amoblarParti, esDeposito } from "./plantas.js";
-import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, layout as feydLayout, layoutProfundo as feydLayoutProfundo } from "./distribucion.js";
+import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt } from "./distribucion.js";
 
 // Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
 // Reusa el motor de amoblado (amoblar*) + el catálogo. Cada uno respeta holguras Neufert.
@@ -107,128 +106,6 @@ function RepoAmbientesPanel({ onAdd, onClose }) {
   );
 }
 
-// Configurador por tipología: elegís el programa con botones y ensambla la planta desde la librería.
-function ConfigTipologiaPanel({ onArmar, onClose }) {
-  const DEF = { dorms: 2, banos: 2, visita: false, closet: true, cocinaCerrada: true, lavanderia: true };
-  const LABELS = ["A", "B", "C"];
-  const [slots, setSlots] = useState([{ ...DEF }, { ...DEF }, { ...DEF }]);
-  const [active, setActive] = useState(0);
-  const p = slots[active];
-  const upd = (k, v) => setSlots((arr) => arr.map((sl, i) => (i === active ? { ...sl, [k]: v } : sl)));
-  const row = { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "7px 0", fontSize: 12, color: "#0A0B0F" };
-  const step = { width: 24, height: 24, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", fontWeight: 700, color: "#0A0B0F", lineHeight: "20px" };
-  const Counter = ({ k, min = 0, max = 6 }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <button style={step} onClick={() => upd(k, Math.max(min, p[k] - 1))}>−</button>
-      <span style={{ minWidth: 16, textAlign: "center", fontWeight: 700 }}>{p[k]}</span>
-      <button style={step} onClick={() => upd(k, Math.min(max, p[k] + 1))}>+</button>
-    </div>
-  );
-  const Tog = ({ k, on = "Sí", off = "No" }) => (
-    <button onClick={() => upd(k, !p[k])} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: p[k] ? "#1E2A4A" : "#F4F1EA", color: p[k] ? "#fff" : "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>{p[k] ? on : off}</button>
-  );
-  return (
-    <div style={{ position: "absolute", right: 12, top: 60, width: 252, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Configurar tipologías</span>
-        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
-      </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        {LABELS.map((L, i) => (
-          <button key={L} onClick={() => setActive(i)} style={{ flex: 1, padding: "6px 0", fontSize: 11, fontWeight: 700, border: "1px solid #d9d5cd", borderRadius: 4, background: i === active ? "#1E2A4A" : "#F4F1EA", color: i === active ? "#fff" : "#0A0B0F", cursor: "pointer" }}>Tipo {L}</button>
-        ))}
-      </div>
-      <div style={row}><span>Habitaciones</span><Counter k="dorms" min={1} max={5} /></div>
-      <div style={row}><span>Baños</span><Counter k="banos" min={1} max={4} /></div>
-      <div style={row}><span>Baño de visita</span><Tog k="visita" /></div>
-      <div style={row}><span>Clóset (walk-in)</span><Tog k="closet" /></div>
-      <div style={row}><span>Lavandería</span><Tog k="lavanderia" /></div>
-      <div style={row}><span>Cocina</span><button onClick={() => upd("cocinaCerrada", !p.cocinaCerrada)} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", color: "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>{p.cocinaCerrada ? "Cerrada" : "Abierta"}</button></div>
-      <button onClick={() => onArmar(p, "Tipo " + LABELS[active])} style={{ width: "100%", marginTop: 10, padding: "9px 0", background: "#F7643B", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Armar Tipo {LABELS[active]}</button>
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Configurá A/B/C una por una y armá cada tipología: se agrega al lienzo etiquetada (Tipo A/B/C), debajo de la anterior. Después las movés y ajustás a mano.</div>
-    </div>
-  );
-}
-
-// ── Visor de Tipologías Nexo: Feyd redibuja las tipologías del mercado (TIPOLOGIAS de tipologias.js,
-// derivadas del scraping de Nexo) con su motor layout(), identificando ambientes (nombre + tamaño). ──
-const _areaPoly = (pts) => { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a.x * b.y - b.x * a.y; } return Math.abs(s) / 2; };
-const _ZC = { social: "#3D52D5", intima: "#A89BD9", servicio: "#C2A45A", baño: "#C2A45A" };
-function MiniPlano({ L, W, D }) {
-  if (!L || !L.rooms?.length) return <div style={{ fontSize: 10, color: "#6B6863", padding: "12px 0", textAlign: "center" }}>sin distribución</div>;
-  const S = Math.min(232 / W, 168 / D);
-  const w = W * S, h = D * S;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: "auto", background: "#fff", border: "1px solid #d9d5cd", borderRadius: 4 }}>
-      {L.rooms.map((r, i) => {
-        const pts = r.pts.map((p) => `${p.x * S},${p.y * S}`).join(" ");
-        const cx = r.pts.reduce((a, p) => a + p.x, 0) / r.pts.length * S;
-        const cy = r.pts.reduce((a, p) => a + p.y, 0) / r.pts.length * S;
-        const ar = _areaPoly(r.pts);
-        const col = _ZC[r.zona || r.tipo] || "#C2A45A";
-        const nm = (r.name || "").replace("dormitorio", "dorm.").replace(" principal", " ppal");
-        return (
-          <g key={i}>
-            <polygon points={pts} fill={col + "22"} stroke={col} strokeWidth="0.7" />
-            <text x={cx} y={cy - 1} textAnchor="middle" fontSize="6.4" fontWeight="600" fill="#0A0B0F">{nm}</text>
-            <text x={cx} y={cy + 7} textAnchor="middle" fontSize="5.4" fill="#6B6863">{ar.toFixed(1)} m²</text>
-          </g>
-        );
-      })}
-      {/* mobiliario + puertas → muestra la distribución real, no solo cajas */}
-      {(L.items || []).map((it2, i) => {
-        const esPuerta = /puerta|vano/.test(it2.ref || "");
-        const w = (it2.w || 0.6) * S, d = (it2.d || 0.6) * S;
-        const x = it2.x * S, y = it2.y * S;
-        if (esPuerta) return <circle key={"i" + i} cx={x} cy={y} r={1.6} fill="#5F8A6A" />;
-        return <rect key={"i" + i} x={-w / 2} y={-d / 2} width={w} height={d} rx={0.8} fill="#0A0B0F" opacity="0.14" transform={`translate(${x} ${y}) rotate(${it2.rot || 0})`} />;
-      })}
-    </svg>
-  );
-}
-function TipologiasNexoPanel({ onInsert, onClose }) {
-  const cards = useMemo(() => TIPOLOGIAS.map((t) => {
-    const aIdeal = t.area[1];
-    const W = Math.max(t.frenteMin, 6);
-    const D = Math.max(4, Math.round((aIdeal / W) * 10) / 10);
-    const opts = { visita: t.banos >= 3 };
-    let L = null;
-    try { L = feydLayout(W, D, t.dorms, t.banos, opts); } catch { L = null; }
-    if (!L || !L.rooms?.length) { try { L = feydLayoutProfundo(W, D, t.dorms, t.banos, opts); } catch { L = null; } } // fallback si el motor plano no arma
-    return { t, L, W, D };
-  }), []);
-  return (
-    <div style={{ position: "absolute", right: 12, top: 60, bottom: 12, width: 288, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 40, padding: 12, overflowY: "auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipologías</span>
-        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
-      </div>
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 10, lineHeight: 1.4 }}>{cards.length} tipologías de TODOS los tamaños (22–210 m²), redibujadas por Feyd. Click para insertarla en el lienzo.</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {cards.map(({ t, L, W, D }, idx) => (
-          <Fragment key={t.id}>
-          {(idx === 0 || cards[idx - 1].t.dorms !== t.dorms) && (
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1E2A4A", marginTop: idx ? 6 : 0, borderBottom: "1px solid #d9d5cd", paddingBottom: 3 }}>
-              {t.dorms === 1 ? "Studios / 1 dormitorio" : `${t.dorms} dormitorios`}
-            </div>
-          )}
-          <div style={{ border: "1px solid #d9d5cd", borderRadius: 5, padding: 8, background: "#F4F1EA" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#0A0B0F" }}>{t.nombre}</span>
-              <span style={{ fontSize: 9, color: "#6B6863" }}>{t.peso}% mdo</span>
-            </div>
-            <MiniPlano L={L} W={W} D={D} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-              <span style={{ fontSize: 9.5, color: "#6B6863", fontFamily: "ui-monospace, monospace" }}>{t.dorms}D · {t.banos}B · {t.area[1]} m²</span>
-              <button onClick={() => onInsert(L, t)} disabled={!L} style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", border: "none", borderRadius: 3, background: L ? "#F7643B" : "#ccc", color: "#fff", cursor: L ? "pointer" : "default" }}>Insertar</button>
-            </div>
-          </div>
-          </Fragment>
-        ))}
-      </div>
-    </div>
-  );
-}
 import { validarPlan } from "./validacion.js";
 
 const Vista3D = lazy(() => import("./Vista3D.jsx"));
@@ -240,10 +117,8 @@ class Vista3DBoundary extends Component {
     return this.props.children;
   }
 }
-import { tipologiasCandidatas, porTipologia, TIPOLOGIAS } from "./tipologias.js";
 import { laminaSVG } from "./lamina.js";
 import { BamLogo } from "./marca.jsx";
-import { aliciaAnalyze } from "../../lib/alicia.js";
 import { isRoomEditable, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, preserveLockedRooms, resolveArchitectureProgram, roomsALayout, splitAcceptedFloor } from "./feyd.js";
 import {
   applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
@@ -318,28 +193,6 @@ function ToolMenu({ label, icon, children, width = 172 }) {
   );
 }
 
-// ── preview miniatura de una variante ─────────────────────────
-function VariantPreview({ v, W = 236, H = 170 }) {
-  const all = v.rooms.flatMap((r) => r.pts);
-  const b = bbox(all);
-  const w = Math.max(b.maxX - b.minX, 1), h = Math.max(b.maxY - b.minY, 1);
-  const k = Math.min((W - 18) / w, (H - 18) / h);
-  const tx = (W - w * k) / 2 - b.minX * k, ty = (H - h * k) / 2 - b.minY * k;
-  const T = (p) => ({ x: p.x * k + tx, y: p.y * k + ty });
-  return (
-    <svg width={W} height={H} style={{ display: "block", background: C.card, borderRadius: 2 }}>
-      {v.rooms.map((r, i) => (
-        <polygon key={r.id} points={r.pts.map(T).map((p) => `${p.x},${p.y}`).join(" ")}
-          fill={roomFill(r, i)} stroke={C.ink} strokeWidth={1.4} strokeLinejoin="round" />
-      ))}
-      {(v.items || []).map((t) => {
-        const s = T({ x: t.x, y: t.y });
-        return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={false} />;
-      })}
-    </svg>
-  );
-}
-
 // ── librería de mobiliario ────────────────────────────────────
 function LibPanel({ onAdd, onClose }) {
   return (
@@ -366,196 +219,6 @@ function LibPanel({ onAdd, onClose }) {
         </div>
       ))}
     </div>
-  );
-}
-
-// contenedor común de los modales de pasos
-function Modal({ children, onClose, maxWidth = 1180 }) {
-  return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(55,55,55,0.35)", zIndex: 50,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-        style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 3, maxWidth,
-          maxHeight: "92%", overflow: "auto", padding: "20px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-const inputStyle = { fontFamily: mono, fontSize: 12, fontWeight: 600, color: C.ink, width: 54, textAlign: "right", border: `1px solid ${C.line}`, borderRadius: 2, background: C.card, outline: "none", padding: "4px 6px" };
-const labelStyle = { display: "flex", alignItems: "baseline", gap: 5, fontFamily: mono, fontSize: 11, color: C.soft };
-
-// ── PASO 2 · distribución: elegir el parti de la planta (sin tipologías aún) ──
-function DistribModal({ partis, brief, setBrief, onUse, onRegen, onClose, loteInfo }) {
-  const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
-  return (
-    <Modal onClose={onClose}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>2</span>
-        <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
-          distribución de la planta
-        </h2>
-        <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>{loteInfo}</span>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
-          <X size={15} color={C.soft} />
-        </button>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 14 }}>
-        <label style={labelStyle}>uds/piso
-          <input type="number" value={brief.udsPiso} step={1} min={1} onChange={(e) => setB("udsPiso", parseInt(e.target.value) || 1)} style={inputStyle} /></label>
-        <label style={labelStyle}>área objetivo
-          <input type="number" value={brief.areaObjetivo} step={5} min={25} onChange={(e) => setB("areaObjetivo", parseInt(e.target.value) || 25)} style={inputStyle} /> m²</label>
-        <label style={labelStyle}>1D%
-          <input type="number" value={brief.pct1} step={5} min={0} max={100} onChange={(e) => setB("pct1", parseInt(e.target.value) || 0)} style={inputStyle} /></label>
-        <label style={labelStyle}>2D%
-          <input type="number" value={brief.pct2} step={5} min={0} max={100} onChange={(e) => setB("pct2", parseInt(e.target.value) || 0)} style={inputStyle} /></label>
-        <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>3D {Math.max(0, 100 - brief.pct1 - brief.pct2)}%</span>
-        <Btn onClick={onRegen} accent title="Regenerar distribuciones"><Sparkles size={13} /> regenerar</Btn>
-      </div>
-      {!partis.length && (
-        <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>
-          el footprint no admite unidades — revisa retiros/frente o reduce uds/piso
-        </div>
-      )}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-        {partis.map((v, i) => (
-          <div key={v.id} style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
-            <VariantPreview v={v} W={280} H={190} />
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
-              <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>{i + 1}</span>
-              <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, textTransform: "lowercase", color: C.ink }}>{v.nombre}</span>
-              <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>{v.stats.uds} uds</span>
-            </div>
-            {v.notas.slice(0, 3).map((n, j) => (
-              <div key={j} style={{ fontFamily: mono, fontSize: 9, color: C.soft, lineHeight: 1.5 }}>· {n}</div>
-            ))}
-            <button onClick={() => onUse(v)}
-              style={{ marginTop: 8, width: "100%", fontFamily: mono, fontSize: 11, color: C.card,
-                background: C.orange, border: "none", borderRadius: 2, padding: "7px 0", cursor: "pointer" }}>
-              elegir esta → 3 · tipologías
-            </button>
-          </div>
-        ))}
-      </div>
-    </Modal>
-  );
-}
-
-// ── PASO 3 · tipologías: elegir la tipología POR BLOQUE entre candidatas
-//    y hacerle tweaks (baños, NSE, terraza) con preview en vivo ──
-function TipoModal({ parti, brief, setBrief, onAplicar, onClose, loteInfo }) {
-  const setB = (k, v) => setBrief((b) => ({ ...b, [k]: v }));
-  const [alicia, setAlicia] = useState(null);
-  const [overrides, setOverrides] = useState({});   // { unitId: { tipologiaId, banos } }
-  const unidades = parti.res.units.filter((u) => !esDeposito(u));
-  // recortes chicos → solo cabe studio; cambiar dorms/½visita no hace nada aquí
-  const soloStudio = unidades.length > 0 && unidades.every((u) => u.areaReal < 42);
-  const setOv = (id, k, v) => setOverrides((o) => ({ ...o, [id]: { ...o[id], [k]: v } }));
-  // el amoblado se recalcula al cambiar tipología/baños/NSE/terraza
-  const amoblado = (() => { try { return amoblarParti(parti, brief, overrides); } catch { return null; } })();
-  const consultar = async () => {
-    if (!amoblado) return;
-    setAlicia("cargando");
-    try {
-      const text = await aliciaAnalyze({
-        system: "Sos Alicia, arquitecta senior de BAM (vivienda multifamiliar en Lima). Evaluás una planta típica amoblada con criterio de diseño, RNE A.010/A.020 y mercado limeño. Respondé en máx. 6 líneas: qué está bien, qué ajustarías y si el NSE/mix calza con la ubicación.",
-        prompt: `Lote: ${loteInfo}. Parti: ${parti.nombre}. NSE ${brief.nse}, terraza ${brief.terraza ? "sí" : "no"}.\nResultado: ${amoblado.notas.join(" | ")}`,
-        max_tokens: 500,
-      });
-      setAlicia(text || "sin respuesta");
-    } catch (e) { setAlicia(`no se pudo consultar: ${e.message}`); }
-  };
-  return (
-    <Modal onClose={onClose} maxWidth={860}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>3</span>
-        <h2 style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink, margin: 0 }}>
-          tipologías · {parti.nombre}
-        </h2>
-        <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>{loteInfo}</span>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
-          <X size={15} color={C.soft} />
-        </button>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 18px", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 14 }}>
-        <label style={labelStyle}>NSE
-          <select value={brief.nse} onChange={(e) => setB("nse", e.target.value)} style={{ ...inputStyle, width: 48, textAlign: "left" }}>
-            {["A", "B", "C", "D"].map((n) => <option key={n} value={n}>{n}</option>)}
-          </select></label>
-        <label style={{ ...labelStyle, cursor: "pointer" }}>
-          <input type="checkbox" checked={!!brief.terraza} onChange={(e) => setB("terraza", e.target.checked)} />
-          terraza + jardineras a fachada
-        </label>
-        <Btn onClick={consultar} disabled={alicia === "cargando"} title="Pedir opinión al agente (Alicia)">
-          <MessageCircle size={13} /> {alicia === "cargando" ? "consultando…" : "opinión de alicia"}
-        </Btn>
-      </div>
-      {soloStudio && (
-        <div style={{ fontFamily: mono, fontSize: 10.5, color: C.orange, background: "#FFF4F0", border: `1px solid ${C.orange}`,
-          borderRadius: 3, padding: "8px 10px", marginBottom: 12, lineHeight: 1.5 }}>
-          ▲ recortes de ~{Math.round(unidades[0]?.areaReal || 0)} m² → solo cabe studio. Cambiar dorms / ½ visita no hará efecto aquí.
-          Volvé al <b>paso 2 · distribución</b> y bajá <b>uds/piso</b> para depas más grandes (2–3 dorm).
-        </div>
-      )}
-
-      {/* tipología POR BLOQUE: candidatas ordenadas por calce + tweak de baños */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: "6px 18px", marginBottom: 14 }}>
-        {unidades.map((u, i) => {
-          const W = u.frame.ub - u.frame.ua;
-          const cands = tipologiasCandidatas(u.areaReal, W, 4);
-          const sel = overrides[u.id]?.tipologiaId || u.tipologia?.id || cands[0].id;
-          const tSel = porTipologia[sel] || cands[0];
-          return (
-            <div key={u.id} style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: mono, fontSize: 10.5, color: C.soft }}>
-              <span style={{ color: C.orange, fontWeight: 700 }}>{i + 1}</span>
-              <span style={{ minWidth: 92 }}>{fmt(W, 1)}×{fmt(u.frame.v1 - u.frame.v0, 1)} · {fmt(u.areaReal, 0)} m²</span>
-              <select value={sel} onChange={(e) => setOv(u.id, "tipologiaId", e.target.value)}
-                style={{ ...inputStyle, width: "auto", textAlign: "left" }}>
-                {cands.map((t) => (
-                  <option key={t.id} value={t.id}>{t.dorms}D · {t.nombre} · ~{t.area[1]} m²</option>
-                ))}
-                {!cands.some((t) => t.id === sel) && <option value={sel}>{sel}</option>}
-              </select>
-              <label style={{ display: "flex", alignItems: "baseline", gap: 3 }}>baños
-                <select value={overrides[u.id]?.banos ?? tSel.banos} onChange={(e) => setOv(u.id, "banos", parseInt(e.target.value))}
-                  style={{ ...inputStyle, width: 42, textAlign: "left" }}>
-                  {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
-                </select></label>
-              <label style={{ display: "flex", alignItems: "center", gap: 3, cursor: "pointer" }} title="Agregar medio baño de visita (inodoro + lavamanos, sin ducha)">
-                <input type="checkbox" checked={!!overrides[u.id]?.visita} onChange={(e) => setOv(u.id, "visita", e.target.checked)} />
-                ½ visita
-              </label>
-            </div>
-          );
-        })}
-      </div>
-      {typeof alicia === "string" && alicia !== "cargando" && (
-        <div style={{ fontFamily: mono, fontSize: 11, color: C.ink, background: C.card, border: `1px solid ${C.peri}`,
-          borderLeft: `3px solid ${C.peri}`, borderRadius: 3, padding: "10px 12px", marginBottom: 14, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
-          {alicia}
-        </div>
-      )}
-      {amoblado ? (
-        <>
-          <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 3, padding: 10 }}>
-            <VariantPreview v={amoblado} W={780} H={460} />
-          </div>
-          <div style={{ margin: "8px 2px" }}>
-            {amoblado.notas.slice(0, 6).map((n, j) => (
-              <div key={j} style={{ fontFamily: mono, fontSize: 9.5, color: C.soft, lineHeight: 1.6 }}>· {n}</div>
-            ))}
-          </div>
-          <button onClick={() => onAplicar(amoblado)}
-            style={{ width: "100%", fontFamily: mono, fontSize: 12, color: C.card,
-              background: C.orange, border: "none", borderRadius: 2, padding: "9px 0", cursor: "pointer" }}>
-            aplicar al plano →
-          </button>
-        </>
-      ) : (
-        <div style={{ fontFamily: mono, fontSize: 11, color: C.soft, padding: 20 }}>no se pudo amoblar este parti</div>
-      )}
-    </Modal>
   );
 }
 
@@ -611,245 +274,6 @@ export default function EditorPlanos({ navigate }) {
   );
 }
 
-// Panel lateral del paso 3: tocás un depto desnudo → variables → Feyd lo redibuja a ESE
-// footprint (con puertas) → insertás. Después cada ambiente se puede redimensionar a mano.
-function TipoUnitPanel({ W, D, busy, err, onAplicar, onClose }) {
-  const [prog, setProg] = useState({ dorms: 2, banos: 2, visita: false, closet: false, lavanderia: true, cocinaCerrada: false });
-  const L = useMemo(() => { try { return feydLayout(W, D, prog.dorms, prog.banos, { visita: prog.visita }); } catch { return null; } }, [prog]); // eslint-disable-line
-  const upd = (k, v) => setProg((s) => ({ ...s, [k]: v }));
-  const Tog = ({ k, on, off }) => (
-    <button onClick={() => upd(k, !prog[k])} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: prog[k] ? "#1E2A4A" : "#F4F1EA", color: prog[k] ? "#fff" : "#0A0B0F", fontSize: 11, padding: "4px 12px", cursor: "pointer", fontWeight: 600, minWidth: 58 }}>{prog[k] ? (on || "Sí") : (off || "No")}</button>
-  );
-  const step = { width: 24, height: 24, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", fontWeight: 700, color: "#0A0B0F", lineHeight: "20px" };
-  const row = { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "7px 0", fontSize: 12, color: "#0A0B0F" };
-  const Counter = ({ k, min, max }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <button style={step} onClick={() => upd(k, Math.max(min, prog[k] - 1))}>−</button>
-      <span style={{ minWidth: 16, textAlign: "center", fontWeight: 700 }}>{prog[k]}</span>
-      <button style={step} onClick={() => upd(k, Math.min(max, prog[k] + 1))}>+</button>
-    </div>
-  );
-  const areaU = W * D;
-  return (
-    <div style={{ position: "absolute", right: 12, top: 60, width: 272, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 41, padding: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863" }}>Tipología del depto</span>
-        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 13 }}>✕</button>
-      </div>
-      <div style={{ fontSize: 10.5, color: "#6B6863", fontFamily: "ui-monospace, monospace", marginBottom: 8 }}>{W.toFixed(1)} × {D.toFixed(1)} m · {areaU.toFixed(0)} m²</div>
-      <div style={row}><span>Dormitorios</span><Counter k="dorms" min={1} max={5} /></div>
-      <div style={row}><span>Baños</span><Counter k="banos" min={1} max={4} /></div>
-      <div style={row}><span>Baño de visita</span><Tog k="visita" /></div>
-      <div style={row}><span>Clóset (walk-in)</span><Tog k="closet" /></div>
-      <div style={row}><span>Lavandería</span><Tog k="lavanderia" /></div>
-      <div style={row}><span>Cocina</span><Tog k="cocinaCerrada" on="Cerrada" off="Abierta" /></div>
-      <div style={{ margin: "10px 0 6px", fontSize: 9.5, color: "#6B6863", letterSpacing: "0.06em", textTransform: "uppercase" }}>Borrador (previa rápida)</div>
-      <MiniPlano L={L} W={W} D={D} />
-      <button onClick={() => onAplicar(prog)} disabled={busy}
-        style={{ width: "100%", marginTop: 10, padding: "9px 0", background: busy ? "#c9a99c" : "#F7643B", color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, fontSize: 12, cursor: busy ? "wait" : "pointer" }}>
-        {busy ? "Feyd está adaptando a la forma…" : "Insertar con Feyd (adapta a la forma)"}
-      </button>
-      {err && <div style={{ fontSize: 10, color: "#A85B5B", marginTop: 7, lineHeight: 1.4 }}>{err}</div>}
-      <div style={{ fontSize: 9.5, color: "#6B6863", marginTop: 8, lineHeight: 1.4 }}>Feyd sigue la huella real (aunque sea irregular), ventila cada habitable, pone puertas y crece los ambientes en proporción. Después redimensionás cada uno arrastrando sus vértices.</div>
-    </div>
-  );
-}
-
-// VISOR del paso 3 (todo en una ventana grande):
-// 1) ponés variables (dorms/baños/visita) → filtran las tipologías redibujadas que sirven.
-// 2) elegís una → Feyd la ADAPTA lo mejor posible a la huella real del depto.
-// 3) la terminás de editar (mover, rotar, reshape de cada ambiente) → "Pasar al plano".
-function TipoStageModal({ stage, onConfirm, onCancel }) {
-  const { unit } = stage;
-  const xs = unit.pts.map((p) => p.x), ys = unit.pts.map((p) => p.y);
-  const ux0 = Math.min(...xs), uy0 = Math.min(...ys);
-  const W = Math.max(...xs) - ux0, D = Math.max(...ys) - uy0;
-  const areaDepto = W * D, frenteDepto = Math.min(W, D);
-  const foot = unit.pts.map((p) => ({ x: p.x - ux0, y: p.y - uy0 }));
-
-  const [prog, setProg] = useState({ dorms: 2, banos: 2, visita: false });
-  const [tipoId, setTipoId] = useState(null);
-  const [rms, setRms] = useState([]);
-  const [its, setIts] = useState([]);
-  const [sel, setSel] = useState(null);
-  const [tx, setTx] = useState(0), [ty, setTy] = useState(0), [rot, setRot] = useState(0);
-  const [aiErr, setAiErr] = useState("");
-  const drag = useRef(null), svgRef = useRef(null);
-
-  // adapta una tipología (programa) a la huella del depto con el motor determinístico (rápido, amueblado)
-  const adaptar = (t) => {
-    const opts = { visita: prog.visita || t.banos >= 3, nse: "C" };
-    let L = null; try { L = feydLayout(W, D, t.dorms, t.banos, opts); } catch { L = null; }
-    if (!L?.rooms?.length) { try { L = feydLayoutProfundo(W, D, t.dorms, t.banos, opts); } catch { L = null; } }
-    return L;
-  };
-  // candidatos: tipologías redibujadas que pasan el filtro de variables, más cercanas en área al depto
-  const cands = useMemo(() => TIPOLOGIAS
-    .filter((t) => t.dorms === prog.dorms && (prog.banos === 0 || t.banos === prog.banos))
-    .sort((a, b) => Math.abs(a.area[1] - areaDepto) - Math.abs(b.area[1] - areaDepto))
-    .slice(0, 8), [prog.dorms, prog.banos, areaDepto]);
-  const elegir = (t) => {
-    const L = adaptar(t);
-    if (!L?.rooms?.length) { setAiErr("esa tipología no entra en este depto"); return; }
-    setTipoId(t.id); setRms(L.rooms); setIts(L.items || []); setSel(null); setTx(0); setTy(0); setRot(0); setAiErr("");
-  };
-  const cx = W / 2, cy = D / 2;
-  const rad = (rot * Math.PI) / 180, cs = Math.cos(rad), sn = Math.sin(rad);
-  const tp = (p) => ({ x: cx + (p.x - cx) * cs - (p.y - cy) * sn + tx, y: cy + (p.x - cx) * sn + (p.y - cy) * cs + ty });
-  const CW = 640, CH = 500, P = 30;
-  const sc = Math.min((CW - 2 * P) / Math.max(W, 0.5), (CH - 2 * P) / Math.max(D, 0.5));
-  const S = (p) => ({ x: P + p.x * sc, y: P + p.y * sc });
-  const colOf = (r) => { const n = (r.name || r.tipo || "").toLowerCase(); if (/dorm/.test(n)) return "#A89BD9"; if (/baño|bano/.test(n)) return "#9BCBE3"; if (/cocina/.test(n)) return "#C2A45A"; if (/sala|social|comedor|estar|living/.test(n)) return "#5F8A6A"; if (/hall|pasillo|core/.test(n)) return "#D9D5CD"; return "#E5E1D6"; };
-  const invRotDelta = (dxs, dys) => ({ x: dxs * cs + dys * sn, y: -dxs * sn + dys * cs });
-  const onDownVertex = (e, ri, vi) => { e.stopPropagation(); drag.current = { kind: "vertex", ri, vi, sx: e.clientX, sy: e.clientY, orig: rms[ri].pts[vi] }; svgRef.current.setPointerCapture(e.pointerId); };
-  const onDown = (e) => { drag.current = { kind: "group", sx: e.clientX, sy: e.clientY, tx, ty }; e.currentTarget.setPointerCapture(e.pointerId); };
-  const onMove = (e) => {
-    const d = drag.current; if (!d) return;
-    if (d.kind === "group") { setTx(d.tx + (e.clientX - d.sx) / sc); setTy(d.ty + (e.clientY - d.sy) / sc); return; }
-    const dl = invRotDelta((e.clientX - d.sx) / sc, (e.clientY - d.sy) / sc);
-    setRms((rs) => rs.map((r, i) => i === d.ri ? { ...r, pts: r.pts.map((p, j) => j === d.vi ? { x: d.orig.x + dl.x, y: d.orig.y + dl.y } : p) } : r));
-  };
-  const onUp = () => { drag.current = null; };
-  const renameSel = (name) => setRms((rs) => rs.map((r, i) => i === sel ? { ...r, name } : r));
-  const delSel = () => { setRms((rs) => rs.filter((_, i) => i !== sel)); setSel(null); };
-  // redimensiona el ambiente seleccionado por tamaño (ancho o fondo), escalando desde su esquina sup-izq
-  const resizeSel = (dim, val) => {
-    if (!(val > 0.3)) return;
-    setRms((rs) => rs.map((r, i) => {
-      if (i !== sel) return r;
-      const xs = r.pts.map((p) => p.x), ys = r.pts.map((p) => p.y);
-      const x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
-      const sx = dim === "w" && w > 0.05 ? val / w : 1, sy = dim === "h" && h > 0.05 ? val / h : 1;
-      return { ...r, pts: r.pts.map((p) => ({ x: x0 + (p.x - x0) * sx, y: y0 + (p.y - y0) * sy })) };
-    }));
-  };
-  const bbWH = (pts) => { const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y); return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) }; };
-  const confirmar = () => {
-    const nr = rms.map((r) => ({ ...r, pts: r.pts.map((p) => tp(p)) }));
-    const ni = (its || []).map((t) => { const q = tp({ x: t.x, y: t.y }); return { ...t, x: q.x, y: q.y, rot: ((t.rot || 0) + rot) % 360 }; });
-    onConfirm(nr, ni);
-  };
-  const areaLocal = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p.x * q.y - q.x * p.y; } return Math.abs(a) / 2; };
-  const selRoom = sel != null ? rms[sel] : null;
-  const Btn2 = ({ onClick, children, accent, disabled }) => (
-    <button onClick={onClick} disabled={disabled} style={{ border: "1px solid " + (accent ? "#F7643B" : "#d9d5cd"), background: disabled ? "#eee" : accent ? "#F7643B" : "#fff", color: accent ? "#fff" : "#0A0B0F", borderRadius: 5, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1 }}>{children}</button>
-  );
-  const step = { width: 22, height: 22, border: "1px solid #d9d5cd", borderRadius: 4, background: "#F4F1EA", cursor: "pointer", fontWeight: 700, lineHeight: "18px" };
-  const Cnt = ({ k, min, max }) => (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      <button style={step} onClick={() => setProg((s) => ({ ...s, [k]: Math.max(min, s[k] - 1) }))}>−</button>
-      <b style={{ minWidth: 12, textAlign: "center" }}>{prog[k] || "·"}</b>
-      <button style={step} onClick={() => setProg((s) => ({ ...s, [k]: Math.min(max, s[k] + 1) }))}>+</button>
-    </span>
-  );
-
-  return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(10,11,15,0.55)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
-      <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", padding: 16, width: "100%", maxWidth: 980, display: "flex", gap: 14 }}>
-        {/* IZQUIERDA · variables (filtro) + tipologías redibujadas que sirven */}
-        <div style={{ width: 246, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: CH + 70 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B6863" }}>Paso 3 · tipología</div>
-          <div style={{ fontSize: 11, color: "#6B6863", margin: "3px 0 10px", fontFamily: "ui-monospace, monospace" }}>depto {W.toFixed(1)} × {D.toFixed(1)} m · {areaDepto.toFixed(0)} m²</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "3px 0", fontSize: 12 }}><span>Dormitorios</span><Cnt k="dorms" min={1} max={5} /></div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "3px 0", fontSize: 12 }}><span>Baños</span><Cnt k="banos" min={0} max={4} /></div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "3px 0 8px", fontSize: 12 }}><span>Baño de visita</span>
-            <button onClick={() => setProg((s) => ({ ...s, visita: !s.visita }))} style={{ border: "1px solid #d9d5cd", borderRadius: 4, background: prog.visita ? "#1E2A4A" : "#F4F1EA", color: prog.visita ? "#fff" : "#0A0B0F", fontSize: 11, padding: "3px 12px", cursor: "pointer", fontWeight: 600 }}>{prog.visita ? "Sí" : "No"}</button>
-          </div>
-          <div style={{ fontSize: 9.5, color: "#6B6863", letterSpacing: "0.06em", textTransform: "uppercase", borderTop: "1px solid #eee", paddingTop: 8, marginBottom: 6 }}>{cands.length} tipologías que sirven · elegí una</div>
-          <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
-            {cands.length === 0 && <div style={{ fontSize: 11, color: "#A85B5B" }}>No hay tipologías con ese programa. Cambiá las variables.</div>}
-            {cands.map((t) => {
-              const Wt = Math.max(t.frenteMin, 6), Dt = Math.max(4, Math.round((t.area[1] / Wt) * 10) / 10);
-              let Lp = null; try { Lp = feydLayout(Wt, Dt, t.dorms, t.banos, { visita: t.banos >= 3 }); } catch { }
-              if (!Lp?.rooms?.length) { try { Lp = feydLayoutProfundo(Wt, Dt, t.dorms, t.banos, { visita: t.banos >= 3 }); } catch { } }
-              const on = t.id === tipoId;
-              return (
-                <button key={t.id} onClick={() => elegir(t)} style={{ textAlign: "left", border: `1px solid ${on ? "#F7643B" : "#d9d5cd"}`, borderRadius: 5, padding: 7, background: on ? "#FFF3EE" : "#F4F1EA", cursor: "pointer" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: "#0A0B0F" }}>{t.nombre}</span>
-                    <span style={{ fontSize: 8.5, color: "#6B6863" }}>{t.seg}</span>
-                  </div>
-                  <MiniPlano L={Lp} W={Wt} D={Dt} />
-                  <div style={{ fontSize: 9, color: "#6B6863", fontFamily: "ui-monospace, monospace", marginTop: 4 }}>{t.dorms}D · {t.banos}B · {t.area[1]} m²</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* DERECHA · el depto con la tipología adaptada + edición */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontSize: 12, color: "#0A0B0F" }}>{tipoId ? `${rms.length} ambientes · editá arrastrando` : "Elegí una tipología de la izquierda"}</div>
-            <button onClick={onCancel} style={{ border: "none", background: "none", cursor: "pointer", color: "#6B6863", fontSize: 18 }}>✕</button>
-          </div>
-          <div style={{ position: "relative" }}>
-            <svg ref={svgRef} width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ background: "#F4F1EA", borderRadius: 6, touchAction: "none", cursor: drag.current?.kind === "group" ? "grabbing" : "default" }}
-              onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}>
-              <polygon points={foot.map((p) => { const q = S(p); return `${q.x},${q.y}`; }).join(" ")} fill="none" stroke="#1E2A4A" strokeWidth={2.5} strokeDasharray="6 4" />
-              {rms.map((r, i) => {
-                const pts = r.pts.map((p) => S(tp(p)));
-                const cxr = pts.reduce((a, p) => a + p.x, 0) / pts.length, cyr = pts.reduce((a, p) => a + p.y, 0) / pts.length;
-                const on = i === sel;
-                return (
-                  <g key={i}>
-                    <polygon points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill={colOf(r)} fillOpacity={on ? 0.6 : 0.4} stroke={on ? "#F7643B" : "none"} strokeWidth={on ? 2 : 0}
-                      style={{ cursor: "pointer" }} onPointerDown={(e) => { e.stopPropagation(); setSel(i); }} />
-                    <text x={cxr} y={cyr} fontSize={9} fill="#0A0B0F" textAnchor="middle" style={{ pointerEvents: "none" }}>{r.name}</text>
-                    <text x={cxr} y={cyr + 10} fontSize={7.5} fill="#6B6863" textAnchor="middle" style={{ pointerEvents: "none" }}>{areaLocal(r.pts).toFixed(1)} m²</text>
-                  </g>
-                );
-              })}
-              {/* mobiliario + aberturas reales (no cuadrados) · no captura el puntero (para seleccionar ambientes) */}
-              {(its || []).map((t, i) => { const q = S(tp({ x: t.x, y: t.y })); return <g key={i} style={{ pointerEvents: "none" }}><Simbolo it={{ ...t, rot: ((t.rot || 0) + rot) }} px={q.x} py={q.y} k={sc} selected={false} /></g>; })}
-              {/* muros deduplicados (una arista compartida = un solo muro) */}
-              {(() => {
-                const q = (n) => Math.round(n / 0.15) * 0.15, seen = new Set(), segs = [];
-                rms.forEach((r) => { const pts = r.pts; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; const ka = `${q(a.x)},${q(a.y)}`, kb = `${q(b.x)},${q(b.y)}`; const k = ka < kb ? ka + "|" + kb : kb + "|" + ka; if (seen.has(k)) continue; seen.add(k); segs.push([a, b]); } });
-                return segs.map(([a, b], i) => { const A = S(tp(a)), B = S(tp(b)); return <line key={i} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#0A0B0F" strokeWidth={1.8} strokeLinecap="square" style={{ pointerEvents: "none" }} />; });
-              })()}
-              {sel != null && rms[sel] && rms[sel].pts.map((p, j) => { const q = S(tp(p)); return <circle key={j} cx={q.x} cy={q.y} r={4.5} fill="#F7643B" stroke="#fff" strokeWidth={1.4} style={{ cursor: "grab" }} onPointerDown={(e) => onDownVertex(e, sel, j)} />; })}
-            </svg>
-            {selRoom && (
-              <div style={{ position: "absolute", right: 10, top: 10, width: 172, background: "#fff", border: "1px solid #d9d5cd", borderRadius: 6, boxShadow: "0 6px 18px rgba(0,0,0,0.14)", padding: 11 }}>
-                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B6863", marginBottom: 6 }}>Ambiente</div>
-                <input value={selRoom.name || ""} onChange={(e) => renameSel(e.target.value)} style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "5px 7px", fontSize: 12, marginBottom: 7, boxSizing: "border-box" }} />
-                <div style={{ display: "flex", gap: 6, marginBottom: 7 }}>
-                  <label style={{ flex: 1, fontSize: 9.5, color: "#6B6863" }}>ancho (m)
-                    <input type="number" step={0.1} min={0.5} value={bbWH(selRoom.pts).w.toFixed(2)} onChange={(e) => resizeSel("w", parseFloat(e.target.value))}
-                      style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "4px 6px", fontSize: 12, boxSizing: "border-box", fontFamily: "ui-monospace, monospace" }} />
-                  </label>
-                  <label style={{ flex: 1, fontSize: 9.5, color: "#6B6863" }}>fondo (m)
-                    <input type="number" step={0.1} min={0.5} value={bbWH(selRoom.pts).h.toFixed(2)} onChange={(e) => resizeSel("h", parseFloat(e.target.value))}
-                      style={{ width: "100%", border: "1px solid #d9d5cd", borderRadius: 4, padding: "4px 6px", fontSize: 12, boxSizing: "border-box", fontFamily: "ui-monospace, monospace" }} />
-                  </label>
-                </div>
-                <div style={{ fontSize: 10.5, color: "#6B6863", marginBottom: 8, fontFamily: "ui-monospace, monospace" }}>{areaLocal(selRoom.pts).toFixed(1)} m²</div>
-                <div style={{ fontSize: 9.5, color: "#6B6863", marginBottom: 8, lineHeight: 1.4 }}>Cambiá ancho/fondo, o arrastrá los puntos naranjas.</div>
-                <button onClick={delSel} style={{ width: "100%", border: "1px solid #A85B5B", color: "#A85B5B", background: "#fff", borderRadius: 4, padding: "6px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Eliminar ambiente</button>
-                <button onClick={() => setSel(null)} style={{ width: "100%", border: "none", color: "#6B6863", background: "none", padding: "6px 0 0", fontSize: 10.5, cursor: "pointer" }}>deseleccionar</button>
-              </div>
-            )}
-          </div>
-          {aiErr && <div style={{ fontSize: 10.5, color: "#A85B5B", marginTop: 6 }}>{aiErr}</div>}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-            <Btn2 onClick={() => setRot((r) => (r - 90 + 360) % 360)} disabled={!tipoId}>⟲</Btn2>
-            <Btn2 onClick={() => setRot((r) => (r + 90) % 360)} disabled={!tipoId}>⟳</Btn2>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#6B6863" }}>
-              <input type="range" min={0} max={359} step={1} value={((rot % 360) + 360) % 360} disabled={!tipoId} onChange={(e) => setRot(parseInt(e.target.value, 10))} style={{ width: 92 }} />
-              <input type="number" min={0} max={359} step={1} value={Math.round(((rot % 360) + 360) % 360)} disabled={!tipoId} onChange={(e) => setRot(((parseInt(e.target.value, 10) || 0) % 360 + 360) % 360)}
-                style={{ width: 48, border: "1px solid #d9d5cd", borderRadius: 4, padding: "5px 6px", fontSize: 12, fontFamily: "ui-monospace, monospace" }} />°
-            </label>
-            <Btn2 onClick={() => { setTx(0); setTy(0); setRot(0); }} disabled={!tipoId}>reset</Btn2>
-            <div style={{ flex: 1 }} />
-            <Btn2 onClick={confirmar} accent disabled={!tipoId || !rms.length}>Pasar al plano →</Btn2>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
@@ -895,17 +319,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const toggleMulti = (t, id) => setMultiSel((s) => s.some((m) => m.t === t && m.id === id) ? s.filter((m) => !(m.t === t && m.id === id)) : [...s, { t, id }]);
   const [showLib, setShowLib] = useState(false);
   const [showRepo, setShowRepo] = useState(false);   // repositorio de ambientes amueblados
-  const [showTipoCfg, setShowTipoCfg] = useState(false); // configurador por tipología (ensambla desde librería)
-  const [showTipoNexo, setShowTipoNexo] = useState(false); // visor de tipologías de mercado (Nexo) redibujadas por Feyd
   const [show3D, setShow3D] = useState(false);      // visor 3D vivo del plano
-  const [showDistrib, setShowDistrib] = useState(false); // paso 2
-  const [showTipo, setShowTipo] = useState(false);       // paso 3 = modo "asignar tipología" (click en depto)
-  const [tipoUnit, setTipoUnit] = useState(null);        // depto clickeado para asignarle tipología
-  const [tipoBusy, setTipoBusy] = useState(false);       // Feyd adaptando la tipología al footprint
-  const [tipoErr, setTipoErr] = useState("");
-  const [tipoStage, setTipoStage] = useState(null);      // { unit, rooms, items, W, D } → ventana grande de revisión antes de pasar al plano
-  const [partis, setPartis] = useState([]);
-  const [parti, setParti] = useState(null);              // distribución elegida (en memoria, no persiste)
   const [brief, setBrief] = useState({
     areaObjetivo: 60, pct1: 25, pct2: 40, udsPiso: 4,          // distribución en lote
     nse: "C", terraza: true,                                   // tipologías
@@ -1062,18 +476,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
 
   const cycleFront = () => lote && setFrontIdx((i) => (i + 1) % lote.pts.length);
 
-  // paso 2: genera las distribuciones (partis) dentro del footprint.
-  // uds/piso arranca DERIVADO del footprint ÷ área objetivo (para no dar studios por
-  // defecto); si el usuario ya lo tocó (≠4), se respeta su valor.
-  const abrirDistribuciones = useCallback(() => {
-    if (!footprint) { setLoteBar(true); return; }
-    const sugerido = Math.max(1, Math.min(8, Math.round(area(footprint) / Math.max(brief.areaObjetivo * 1.3, 30))));
-    const b = brief.udsPiso === 4 && sugerido !== 4 ? { ...brief, udsPiso: sugerido } : brief;
-    if (b !== brief) setBrief(b);
-    setPartis(generarDistribuciones(footprint, frontIdx, b));
-    setShowDistrib(true);
-  }, [footprint, frontIdx, brief]);
-
   // mueble bajo el puntero (el más reciente primero)
   const hitItem = useCallback((world) => {
     for (let i = items.length - 1; i >= 0; i--) {
@@ -1204,98 +606,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setSelId(roomObj.id); setSelItem(null); setTool("select"); setShowRepo(false);
   }, [rooms, items, commit, toWorldRaw]);
 
-  // Fase 2: ensambla la planta a partir del programa (contadores/toggles), tomando los
-  // ambientes de la librería y colocándolos en una grilla sin solape. Reemplaza rooms/items;
-  // el usuario los mueve y ajusta a mano (no regenera con Feyd).
-  const armarTipologia = useCallback((prog, label = "") => {
-    const byId = Object.fromEntries(AMBIENTES_LIB.map((a) => [a.id, a]));
-    const list = [];
-    // social (cocina abierta → sala-comedor-cocina más ancha con kitchenette; cerrada → cocina aparte)
-    if (prog.cocinaCerrada) {
-      list.push({ ...byId.sala });       // sala (estar)
-      list.push({ ...byId.comedor });    // comedor como ambiente propio
-      list.push({ ...byId.cocina });
-    } else {
-      // cocina abierta = concepto integrado sala-comedor-cocina (un solo ambiente)
-      list.push({ id: "sala", name: "sala-comedor-cocina", tipo: "social", w: 5.4, h: 4.6,
-        furnish: (R) => [...amoblarSocial({ ...R, w: R.w - 1.9 }, "C"), furnIt("cocina", R.x + R.w - 1.0, R.y + 1.0, 0, { w: 1.7 })] });
-    }
-    for (let i = 0; i < prog.dorms; i++) list.push({ ...byId.habitacion, name: i === 0 ? "dormitorio principal" : `dormitorio ${i + 1}` });
-    for (let i = 0; i < prog.banos; i++) list.push({ ...byId.bano, name: `baño ${i + 1}` });
-    if (prog.visita) list.push({ ...byId.bano, name: "baño visita", w: 1.1, h: 1.6, furnish: (R) => amoblarBano(R, false, { wall: "top" }) });
-    if (prog.closet) list.push({ ...byId.closet, name: "clóset" });
-    if (prog.lavanderia) list.push({ ...byId.lavanderia });
-
-    // Se AGREGA (no reemplaza): el nuevo grupo va debajo de lo que ya hay, con su etiqueta
-    // de tipología. Así conviven Tipo A / B / C en el lienzo y los movés a mano.
-    const gap = 0.4, maxW = 12;
-    const oy = rooms.length ? Math.max(...rooms.flatMap((r) => r.pts.map((p) => p.y))) + 1.2 : 0;
-    let x = 0, y = oy, rowH = 0;
-    const nr = [], ni = [];
-    for (const s of list) {
-      if (x > 0 && x + s.w > maxW) { x = 0; y += rowH + gap; rowH = 0; }
-      const R = { x, y, w: s.w, h: s.h };
-      const pts = [{ x: R.x, y: R.y }, { x: R.x + R.w, y: R.y }, { x: R.x + R.w, y: R.y + R.h }, { x: R.x, y: R.y + R.h }];
-      nr.push({ id: uid(), name: s.name, pts, tipo: s.tipo });
-      let its = []; try { its = (s.furnish(R) || []).map((t) => ({ ...t, id: uid() })); } catch { its = []; }
-      ni.push(...its);
-      x += s.w + gap; rowH = Math.max(rowH, s.h);
-    }
-    const allRooms = [...rooms, ...nr], allItems = [...items, ...ni];
-    commit(allRooms, allItems);
-    setSelId(null); setSelItem(null); setTool("select");
-    requestAnimationFrame(() => fitTo(allRooms));
-  }, [rooms, items, commit, fitTo]);
-
-  // Inserta una tipología Nexo ya redibujada por Feyd (layout()) al lienzo, offset debajo, etiquetada.
-  const insertTipologia = useCallback((L, t) => {
-    if (!L || !L.rooms?.length) return;
-    const oy = rooms.length ? Math.max(...rooms.flatMap((r) => r.pts.map((p) => p.y))) + 1.2 : 0;
-    const nr = L.rooms.map((r) => ({ id: uid(), name: r.name, tipo: r.zona || r.tipo, pts: r.pts.map((p) => ({ x: p.x, y: p.y + oy })) }));
-    const ni = (L.items || []).map((t2) => ({ ...t2, id: uid(), y: t2.y + oy }));
-    const allRooms = [...rooms, ...nr];
-    commit(allRooms, [...items, ...ni]);
-    setShowTipoNexo(false); setSelId(null); setSelItem(null); setTool("select");
-    requestAnimationFrame(() => fitTo(allRooms));
-  }, [rooms, items, commit, fitTo]);
-
-  const useVariant = useCallback((v) => {
-    const nr = v.rooms.map((r) => ({ id: r.id, name: r.name, pts: r.pts, tipo: r.tipo, unidad: r.unidad }));
-    const locked = acceptedFloorProposal?.floor
-      ? splitAcceptedFloor(acceptedFloorProposal.floor).lockedRooms
-      : rooms.filter((room) => !isRoomEditable(room));
-    const nextRooms = preserveLockedRooms(locked, nr.filter((room) => isRoomEditable(room)
-      && (!acceptedFloorProposal?.floor || !["core", "pasillo", "circulacion", "void"].includes(room.tipo || room.role))));
-    commit(nextRooms, (v.items || []).map((t) => ({ ...t })));
-    setShowDistrib(false); setShowTipo(false);
-    setSelId(null); setSelItem(null); setDraft([]);
-    requestAnimationFrame(() => fitTo(nextRooms));
-  }, [acceptedFloorProposal, rooms, commit, fitTo]);
-
-  // paso 2 → elegir un parti: bloques al lienzo y habilita el paso 3
-  const usarParti = useCallback((p) => {
-    setParti(p);
-    useVariant(p);
-  }, [useVariant]);
-
-  // paso 3 → aplicar la tipología que Feyd redibujó (L) al depto clickeado (unit):
-  // se reemplaza el bloque desnudo por los ambientes generados (con puertas), reposicionados
-  // al footprint del depto. Después cada ambiente se redimensiona arrastrando sus vértices.
-  const aplicarTipoAUnit = useCallback((unit, L) => {
-    if (!unit || !L || !L.rooms?.length) return;
-    const xs = unit.pts.map((p) => p.x), ys = unit.pts.map((p) => p.y);
-    const ux0 = Math.min(...xs), uy0 = Math.min(...ys);
-    const nr = L.rooms.map((r) => ({
-      id: uid(), name: r.name, tipo: r.zona || r.tipo || "amb",
-      pts: (r.pts || []).map((p) => ({ x: p.x + ux0, y: p.y + uy0 })),
-    }));
-    const ni = (L.items || []).map((t) => ({ ...t, id: uid(), x: t.x + ux0, y: t.y + uy0 }));
-    const otras = rooms.filter((r) => r.id !== unit.id);
-    const otrosItems = items.filter((t) => !pointInPolygon({ x: t.x, y: t.y }, unit.pts));
-    commit([...otras, ...nr], [...otrosItems, ...ni]);
-    setTipoUnit(null); setSelId(null); setSelItem(null);
-  }, [rooms, items, commit]);
-
   // ── punteros ──────────────────────────────────────────────
   // arrastre grupal: junta las salas seleccionadas (+ sus muebles contenidos) y los items sueltos
   const buildMultiDrag = (world) => {
@@ -1346,13 +656,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         ts.forEach((tr, i) => tr.pts.forEach((p) => { const dd = Math.hypot(p.x - world.x, p.y - world.y); if (dd < bd) { bd = dd; bi = i; } }));
         return bi >= 0 ? ts.filter((_, i) => i !== bi) : ts;
       });
-      return;
-    }
-
-    // modo tipología (paso 3): click en un depto → abre el VISOR grande (variables + tipologías + editar)
-    if (showTipo) {
-      const insideT = rooms.findIndex((r) => isRoomEditable(r) && r.tipo === "unidad" && pointInPolygon(world, r.pts));
-      if (insideT >= 0) { const r = rooms[insideT]; setTipoStage({ unit: r }); setSelId(r.id); setSelItem(null); }
       return;
     }
 
@@ -1788,17 +1091,9 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           <BamLogo height={15} />
           <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "lowercase", color: C.ink }}>editor de planos</span>
         </span>
-        {/* flujo: 1 lote (medianera/esquina + retiros) → 2 distribución → 3 tipologías */}
-        <Btn active={loteBar} onClick={() => setLoteBar((s) => !s)} title="Paso 1 · lote: medianera/esquina, retiros, calcar terreno">
+        {/* flujo: la planta llega resuelta desde Cabida (paso 1 · lote sigue acá para trazarlo a mano) */}
+        <Btn active={loteBar} onClick={() => setLoteBar((s) => !s)} title="Lote: medianera/esquina, retiros, calcar terreno">
           <b style={{ color: loteBar ? C.card : lote ? C.peri : C.orange }}>1</b> lote {lote ? "✓" : ""}
-        </Btn>
-        <Btn onClick={abrirDistribuciones} disabled={!footprint}
-          title={footprint ? "Paso 2 · elegir la distribución de la planta (core, corredor, bloques)" : "Primero calca el lote (paso 1)"}>
-          <b style={{ color: footprint ? C.orange : C.line }}>2</b> distribución {parti ? "✓" : ""}
-        </Btn>
-        <Btn accent active={showTipo} onClick={() => { setShowTipo((s) => !s); setTipoUnit(null); }} disabled={!parti}
-          title={parti ? "Paso 3 · tocá un depto para asignarle su tipología (Feyd la redibuja a su medida)" : "Primero elige una distribución (paso 2)"}>
-          <Sparkles size={13} /> <b>3</b> tipologías
         </Btn>
         <div style={{ width: 1, height: 22, background: C.line }} />
         <Btn active={tool === "select"} onClick={() => setTool("select")} title="Seleccionar / mover (V)"><MousePointer2 size={13} /> mover</Btn>
@@ -1807,8 +1102,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <ToolMenu label="insertar" icon={<Plus size={13} style={{ marginRight: 4 }} />} width={210}>
           <Btn active={showLib} onClick={() => setShowLib((s) => !s)} title="Librería de mobiliario"><Plus size={13} /> mueble</Btn>
           <Btn active={showRepo} onClick={() => setShowRepo((s) => !s)} title="Repositorio de ambientes amueblados"><Plus size={13} /> ambiente</Btn>
-          <Btn active={showTipoCfg} onClick={() => setShowTipoCfg((s) => !s)} title="Armar una tipología por programa (habitaciones, baños, cocina…)"><Plus size={13} /> tipología (armar)</Btn>
-          <Btn active={showTipoNexo} onClick={() => setShowTipoNexo((s) => !s)} title="Biblioteca de tipologías (todos los tamaños) redibujadas por Feyd"><Plus size={13} /> biblioteca de tipologías</Btn>
         </ToolMenu>
 
         <ToolMenu label="vista" icon={<Box size={13} style={{ marginRight: 4 }} />} width={210}>
@@ -1929,7 +1222,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             <Btn onClick={cycleFront} disabled={!lote} title="Rotar el borde-frente (hacia la calle); en esquina, la calle lateral es el borde siguiente"><RefreshCw size={12} /> frente</Btn>
             {fr && <span style={{ fontFamily: mono, fontSize: 10, color: C.soft }}>footprint {fmt(area(footprint), 0)} m² · {fmt(fr.frente, 1)}×{fmt(fr.fondo, 1)} m{isConvex(footprint) ? "" : " · no convexo"}</span>}
             {lote && !footprint && <span style={{ fontFamily: mono, fontSize: 10, color: C.orange }}>▲ los retiros dejan el lote sin área construible</span>}
-            {footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>listo → 2 · distribución</span>}
+            {footprint && <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.peri, fontWeight: 700 }}>footprint listo</span>}
           </div>
         );
       })()}
@@ -2155,9 +1448,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         {!rooms.length && !draft.length && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <div style={{ textAlign: "center", fontFamily: mono, fontSize: 12, color: C.soft, lineHeight: 1.9 }}>
-              <b style={{ color: C.orange }}>1 lote</b> elige medianera/esquina, retiros y calca el terreno ·{" "}
-              <b style={{ color: C.orange }}>2 distribución</b> elige el parti de la planta<br />
-              <b style={{ color: C.orange }}>3 tipologías</b> asigna y amuebla según NSE, con terraza y jardineras<br />
+              <b style={{ color: C.orange }}>1 lote</b> elige medianera/esquina, retiros y calca el terreno<br />
+              {!acceptedFloorProposal && <span style={{ fontSize: 10.5 }}>la planta se resuelve en Cabida y se acepta desde ahí — acá se edita.<br /></span>}
               <span style={{ fontSize: 10.5 }}>también puedes dibujar a mano con <b style={{ color: C.ink }}>muro</b> · R = rotar mueble · rueda = zoom · alt+arrastrar = paneo · ⌘Z = deshacer</span>
             </div>
           </div>
@@ -2165,8 +1457,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
 
         {showLib && <LibPanel onAdd={addItem} onClose={() => setShowLib(false)} />}
         {showRepo && <RepoAmbientesPanel onAdd={insertAmbiente} onClose={() => setShowRepo(false)} />}
-        {showTipoCfg && <ConfigTipologiaPanel onArmar={armarTipologia} onClose={() => setShowTipoCfg(false)} />}
-        {showTipoNexo && <TipologiasNexoPanel onInsert={insertTipologia} onClose={() => setShowTipoNexo(false)} />}
         {showDibujo && <DibujoPalette tool={tool} setTool={setTool} penVariant={penVariant} setPenVariant={setPenVariant} penColor={penColor} setPenColor={setPenColor} onClear={() => setTrazos([])} onClose={() => { setShowDibujo(false); setTool("select"); }} hayTrazos={trazos.length > 0} />}
 
         {/* visor 3D vivo — flota abajo a la derecha, reacciona al plano en vivo */}
@@ -2215,27 +1505,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         </span>
       </div>
 
-      {showDistrib && (() => {
-        const fr = footprint ? orientedFrame(footprint, frontIdx) : null;
-        const info = fr ? `${tipoLote} · ${fmt(area(footprint), 0)} m² · ${fmt(fr.frente, 1)}×${fmt(fr.fondo, 1)} m` : "";
-        return (
-          <DistribModal partis={partis} brief={brief} setBrief={setBrief} loteInfo={info}
-            onUse={(p) => { usarParti(p); setShowTipo(true); }}
-            onRegen={() => setPartis(generarDistribuciones(footprint, frontIdx, brief))}
-            onClose={() => setShowDistrib(false)} />
-        );
-      })()}
-      {showTipo && !tipoUnit && !tipoStage && (
-        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", top: 60, zIndex: 40, background: "#1E2A4A", color: "#fff", padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, boxShadow: "0 4px 14px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
-          Paso 3 · tocá un depto para asignarle su tipología
-          <button onClick={() => setShowTipo(false)} style={{ border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", cursor: "pointer", borderRadius: 10, width: 18, height: 18, lineHeight: "16px", fontSize: 11 }}>✕</button>
-        </div>
-      )}
-      {tipoStage && (
-        <TipoStageModal stage={tipoStage}
-          onConfirm={(nr, ni) => { aplicarTipoAUnit(tipoStage.unit, { rooms: nr, items: ni }); setTipoStage(null); }}
-          onCancel={() => { setTipoStage(null); setSelId(null); }} />
-      )}
       {showFicha && <FichaModal ficha={ficha} setFicha={setFicha} onClose={() => setShowFicha(false)} />}
     </div>
   );
