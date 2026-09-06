@@ -10,9 +10,16 @@ import { ALICIA_URL } from "../../lib/brain.js";
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
-export const isRoomEditable = (room) => room?.locked !== true;
+// Un ambiente que no existe NO es editable. Devolver true para nullish hacía que el
+// editor entrara a dibujar los vértices del ambiente seleccionado sin haber ninguno
+// seleccionado y se cayera la pantalla entera con "Cannot read properties of undefined
+// (reading 'pts')". Estaba latente: el modal del paso 2 tapaba ese lienzo hasta que se
+// retiraron los pasos.
+export const isRoomEditable = (room) => !!room && room.locked !== true;
+// El filtro descarta nullish por su cuenta: apoyarse en !isRoomEditable() los daría por
+// bloqueados y los clonaría dentro del plano.
 export const preserveLockedRooms = (current = [], replacement = []) => [
-  ...current.filter((room) => !isRoomEditable(room)).map((room) => structuredClone(room)),
+  ...current.filter((room) => room && !isRoomEditable(room)).map((room) => structuredClone(room)),
   ...replacement.map((room) => structuredClone(room)),
 ];
 

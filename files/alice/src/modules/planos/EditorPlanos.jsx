@@ -1410,7 +1410,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           })}
 
           {/* vértices del ambiente seleccionado */}
-          {tool === "select" && isRoomEditable(sel) && sel.pts.map(toScreen).map((p, pi) => (
+          {tool === "select" && sel && isRoomEditable(sel) && sel.pts.map(toScreen).map((p, pi) => (
             <rect key={pi} x={p.x - 4} y={p.y - 4} width={8} height={8} fill={C.card} stroke={C.orange} strokeWidth={1.5} />
           ))}
 
