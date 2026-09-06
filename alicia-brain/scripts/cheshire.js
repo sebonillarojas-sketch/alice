@@ -48,6 +48,32 @@ const CHESHIRE_ALICE_ID = (process.env.CHESHIRE_ALICE_ID || "cx").trim();
 const SHOTS = join(homedir(), "Library/Logs/cheshire");
 mkdirSync(SHOTS, { recursive: true });
 
+// ── Ruido conocido ───────────────────────────────────────────────────────────
+// Errores de consola que aparecen SIEMPRE y no significan nada roto. Si entraran
+// como hallazgos, Cheshire reportaría "issues" en cada corrida, y un tester que
+// grita todo el tiempo se vuelve un tester que nadie mira — que es exactamente
+// como perdió su utilidad la primera versión, por otra vía.
+//
+// La lista es CORTA y EXPLÍCITA a propósito: cada patrón se agrega sabiendo qué
+// es y por qué es inofensivo. Nada de comodines que se traguen errores nuevos.
+// Lo filtrado NO desaparece: queda en `actions`, visible para quien lo busque.
+const RUIDO_CONOCIDO = [
+  // Supabase devuelve 406 cuando un .single() no encuentra fila. loadStored()
+  // pide claves de app_state que todavía no existen para ese usuario.
+  { re: /status of 406/i, porque: "406 de Supabase: .single() sin fila en app_state (clave aún no creada)" },
+];
+
+function esRuido(msg) {
+  return RUIDO_CONOCIDO.find((r) => r.re.test(String(msg || "")));
+}
+
+// Separa una tanda de errores en los que importan y los que son ruido conocido.
+function tamizar(errores) {
+  const reales = [], ruido = [];
+  for (const e of errores) (esRuido(e) ? ruido : reales).push(e);
+  return { reales, ruido };
+}
+
 const findings = [];
 const actions = [];
 const note = (ok, label, detail = "") => {
@@ -234,18 +260,21 @@ async function runChecksInner(browser, stamp) {
         // 5a) Errores de consola ADENTRO. v1 solo veía los del login; los de acá son
         // los que rompen el trabajo real y nadie estaba mirando.
         await app.waitForTimeout(4000);
-        note(appErrors.length === 0, "Consola sin errores dentro del ERP", appErrors[0]?.slice(0, 90) || "");
-        if (appErrors.length) findings.push({ severity: "major", category: "js-errors-app", detail: `Consola con ${appErrors.length} error(es) DENTRO del ERP: ${appErrors.slice(0, 3).join(" | ").slice(0, 300)}` });
+        const tamiz = tamizar(appErrors);
+        if (tamiz.ruido.length) note(true, `Ruido conocido ignorado (dentro del ERP): ${tamiz.ruido.length}`, esRuido(tamiz.ruido[0])?.porque || "");
+        note(tamiz.reales.length === 0, "Consola sin errores dentro del ERP", tamiz.reales[0]?.slice(0, 90) || "");
+        if (tamiz.reales.length) findings.push({ severity: "major", category: "js-errors-app", detail: `Consola con ${tamiz.reales.length} error(es) DENTRO del ERP: ${tamiz.reales.slice(0, 3).join(" | ").slice(0, 300)}` });
 
         // 5b) Navegación por el router de fragmento, que es contrato estable
         // (HyggeOS.jsx) y no un selector que un rediseño mueva de lugar.
         for (const sp of ["hq", "mistareas", "notifications"]) {
-          const antes = appErrors.length;
+          const antes = tamizar(appErrors).reales.length;
           await app.goto(`${ERP_URL}/#/space/${sp}`, { waitUntil: "networkidle", timeout: 20000 });
           await app.waitForTimeout(1500);
-          const rompio = appErrors.length > antes;
-          note(!rompio, `Space "${sp}" abre sin errores`, rompio ? appErrors[appErrors.length - 1]?.slice(0, 80) : "");
-          if (rompio) findings.push({ severity: "major", category: "space-roto", detail: `Abrir el space "${sp}" produjo errores de consola: ${appErrors[appErrors.length - 1]?.slice(0, 200)}` });
+          const realesAhora = tamizar(appErrors).reales;
+          const rompio = realesAhora.length > antes;
+          note(!rompio, `Space "${sp}" abre sin errores`, rompio ? realesAhora[realesAhora.length - 1]?.slice(0, 80) : "");
+          if (rompio) findings.push({ severity: "major", category: "space-roto", detail: `Abrir el space "${sp}" produjo errores de consola: ${realesAhora[realesAhora.length - 1]?.slice(0, 200)}` });
         }
 
         // 5c) Responsive DE VERDAD. v1 medía overflow en el login, que es una
@@ -389,7 +418,10 @@ async function runChecksInner(browser, stamp) {
     }
   }
 
-  if (consoleErrors.length) {
+  const tamizPublico = tamizar(consoleErrors);
+  if (tamizPublico.ruido.length) note(true, `Ruido conocido ignorado (superficie pública): ${tamizPublico.ruido.length}`, esRuido(tamizPublico.ruido[0])?.porque || "");
+  if (tamizPublico.reales.length) {
+    const consoleErrors = tamizPublico.reales;   // solo los reales llegan al finding
     findings.push({ severity: "major", category: "js-errors", detail: `Consola con ${consoleErrors.length} error(es): ${consoleErrors.slice(0, 3).join(" | ").slice(0, 300)}` });
     note(false, "Consola sin errores", consoleErrors[0]?.slice(0, 80));
   } else { note(true, "Consola sin errores JS"); }
