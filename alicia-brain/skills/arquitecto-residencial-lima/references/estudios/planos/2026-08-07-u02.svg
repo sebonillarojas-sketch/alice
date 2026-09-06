@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1870 1980" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1870" height="1980" fill="#ffffff"/>
+<polygon points="100.0,180.0 590.0,180.0 590.0,400.0 320.0,400.0 320.0,670.0 100.0,670.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="620.0,180.0 1010.0,180.0 1010.0,1120.0 100.0,1120.0 100.0,700.0 350.0,700.0 350.0,430.0 620.0,430.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="1040.0,180.0 1650.0,180.0 1650.0,780.0 1040.0,780.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1040.0,810.0 1650.0,810.0 1650.0,1120.0 1360.0,1120.0 1040.0,1120.0" fill="#eef2ea" stroke="none"/>
+<polygon points="100.0,1150.0 800.0,1150.0 800.0,1860.0 100.0,1860.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="830.0,1150.0 1010.0,1150.0 1010.0,1860.0 830.0,1860.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1040.0,1150.0 1340.0,1150.0 1340.0,1490.0 1040.0,1490.0" fill="#eef2ea" stroke="none"/>
+<polygon points="1040.0,1520.0 1340.0,1520.0 1340.0,1860.0 1040.0,1860.0" fill="#eef2ea" stroke="none"/>
+<polygon points="1370.0,1150.0 1650.0,1150.0 1650.0,1860.0 1370.0,1860.0" fill="#eef2ea" stroke="none"/>
+<rect x="565.0" y="155.0" width="1110.0" height="50.0" fill="#2b2b2b"/>
+<rect x="75.0" y="645.0" width="50.0" height="1240.0" fill="#2b2b2b"/>
+<rect x="75.0" y="1835.0" width="1600.0" height="50.0" fill="#2b2b2b"/>
+<rect x="1625.0" y="155.0" width="50.0" height="1730.0" fill="#2b2b2b"/>
+<rect x="85.0" y="165.0" width="520.0" height="30.0" fill="#2b2b2b"/>
+<rect x="85.0" y="165.0" width="30.0" height="520.0" fill="#2b2b2b"/>
+<rect x="591.0" y="165.0" width="30.0" height="266.0" fill="#2b2b2b"/>
+<rect x="321.0" y="401.0" width="300.0" height="30.0" fill="#2b2b2b"/>
+<rect x="321.0" y="401.0" width="30.0" height="300.0" fill="#2b2b2b"/>
+<rect x="85.0" y="671.0" width="266.0" height="30.0" fill="#2b2b2b"/>
+<rect x="1011.0" y="165.0" width="30.0" height="986.0" fill="#2b2b2b"/>
+<rect x="1025.0" y="781.0" width="640.0" height="30.0" fill="#2b2b2b"/>
+<rect x="85.0" y="1121.0" width="1580.0" height="30.0" fill="#2b2b2b"/>
+<rect x="801.0" y="1135.0" width="30.0" height="740.0" fill="#2b2b2b"/>
+<rect x="1011.0" y="1135.0" width="30.0" height="740.0" fill="#2b2b2b"/>
+<rect x="1341.0" y="1135.0" width="30.0" height="740.0" fill="#2b2b2b"/>
+<rect x="1025.0" y="1491.0" width="330.0" height="30.0" fill="#2b2b2b"/>
+<rect x="465.0" y="171.0" width="180.0" height="18" fill="#ffffff"/>
+<rect x="1001.0" y="845.0" width="18" height="240.0" fill="#ffffff"/>
+<rect x="1001.0" y="400.0" width="18" height="160.0" fill="#ffffff"/>
+<rect x="370.0" y="1111.0" width="160.0" height="18" fill="#ffffff"/>
+<rect x="791.0" y="1425.0" width="18" height="160.0" fill="#ffffff"/>
+<rect x="1001.0" y="1250.0" width="18" height="140.0" fill="#ffffff"/>
+<rect x="1430.0" y="1111.0" width="160.0" height="18" fill="#ffffff"/>
+<rect x="1361.0" y="1620.0" width="18" height="140.0" fill="#ffffff"/>
+<line x1="375.0" y1="180.0" x2="735.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<line x1="415.0" y1="180.0" x2="695.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<line x1="1195.0" y1="180.0" x2="1495.0" y2="180.0" stroke="#2b6cb0" stroke-width="5"/>
+<line x1="290.0" y1="1860.0" x2="610.0" y2="1860.0" stroke="#2b6cb0" stroke-width="5"/>
+<text x="345.0" y="421.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">terraza</text>
+<text x="345.0" y="437.0" font-size="11" fill="#444" text-anchor="middle">4.2 m²</text>
+<text x="555.0" y="646.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">sala-comedor</text>
+<text x="555.0" y="662.0" font-size="11" fill="#444" text-anchor="middle">16.4 m²</text>
+<text x="1345.0" y="476.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio 2</text>
+<text x="1345.0" y="492.0" font-size="11" fill="#444" text-anchor="middle">9.1 m²</text>
+<text x="1345.0" y="961.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">cocina</text>
+<text x="1345.0" y="977.0" font-size="11" fill="#444" text-anchor="middle">4.7 m²</text>
+<text x="450.0" y="1501.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio principal</text>
+<text x="450.0" y="1517.0" font-size="11" fill="#444" text-anchor="middle">12.4 m²</text>
+<text x="920.0" y="1501.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">vestidor</text>
+<text x="920.0" y="1517.0" font-size="11" fill="#444" text-anchor="middle">3.2 m²</text>
+<text x="1190.0" y="1316.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 1</text>
+<text x="1190.0" y="1332.0" font-size="11" fill="#444" text-anchor="middle">2.5 m²</text>
+<text x="1190.0" y="1686.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 2</text>
+<text x="1190.0" y="1702.0" font-size="11" fill="#444" text-anchor="middle">2.6 m²</text>
+<text x="1510.0" y="1501.0" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="600">lavandería</text>
+<text x="1510.0" y="1517.0" font-size="11" fill="#444" text-anchor="middle">5.0 m²</text>
+<line x1="100.0" y1="1892.0" x2="1650.0" y2="1892.0" stroke="#888" stroke-width="1"/>
+<text x="875.0" y="1908.0" font-size="13" fill="#555" text-anchor="middle">frente 7.75 m</text>
+<line x1="1670.0" y1="160.0" x2="1670.0" y2="1860.0" stroke="#888" stroke-width="1"/>
+<text x="1688.0" y="1020.0" font-size="13" fill="#555" text-anchor="middle" transform="rotate(90 1688.0 1020.0)">fondo 8.40 m</text>
+<text x="90" y="26" font-size="15" fill="#111" font-weight="700">2026-08-07-u02 — 62.0 m² — 2D/2B esquina con terraza en el vértice — Surquillo, Lima Moderna</text>
+<text x="90" y="46" font-size="12" fill="#555">BRIEF TERRENO: lote esquinero, dos aristas corridas reales, frente 7.75 m (Norte) × fondo 8.40 m (Oeste-fachada lateral). Los otros dos lados son medianeros.</text>
+<text x="90" y="66" font-size="12" fill="#555">Corner dual-aspect: sala-comedor en L abraza la terraza en el vértice, tomando luz de ambos frentes; dormitorio principal y dormitorio 2 ocupan cada uno un frente distinto.</text>
+<text x="90" y="86" font-size="12" fill="#555">Orientación: frente Norte (luz difusa) + lateral Oeste con sol de tarde en dormitorio principal. Retiro frontal 0 m (Lima Moderna, alineamiento a vereda); retiros de medianero 0 m.</text>
+<text x="90" y="106" font-size="12" fill="#555">Segmento: 2D/2B (34.7% del mercado), 62.0 m², adaptado de la tipología T05 con dormitorio principal en suite + vestidor y baño 2 de visita/dormitorio 2.</text>
+</svg>

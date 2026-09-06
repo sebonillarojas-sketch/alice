@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1940 2100" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1940" height="2100" fill="#ffffff"/>
+<polygon points="160.0,240.0 540.0,240.0 540.0,550.0 160.0,550.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="570.0,240.0 1090.0,240.0 1090.0,880.0 1700.0,880.0 1700.0,1120.0 160.0,1120.0 160.0,580.0 570.0,580.0" fill="#fdf3e7" stroke="none"/>
+<polygon points="1120.0,240.0 1700.0,240.0 1700.0,850.0 1120.0,850.0" fill="#eef2ea" stroke="none"/>
+<polygon points="160.0,1150.0 730.0,1150.0 730.0,1580.0 1090.0,1580.0 1090.0,1940.0 160.0,1940.0" fill="#eef2ea" stroke="none"/>
+<polygon points="760.0,1150.0 1090.0,1150.0 1090.0,1550.0 760.0,1550.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1120.0,1150.0 1700.0,1150.0 1700.0,1430.0 1120.0,1430.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1120.0,1460.0 1700.0,1460.0 1700.0,1720.0 1120.0,1720.0" fill="#e8f1fb" stroke="none"/>
+<polygon points="1120.0,1750.0 1700.0,1750.0 1700.0,1940.0 1120.0,1940.0" fill="#e8f1fb" stroke="none"/>
+<rect x="110.0" y="165.0" width="1640.0" height="50.0" fill="#2b2b2b"/>
+<rect x="85.0" y="190.0" width="50.0" height="1800.0" fill="#2b2b2b"/>
+<rect x="1725.0" y="190.0" width="50.0" height="1800.0" fill="#2b2b2b"/>
+<rect x="110.0" y="1965.0" width="1640.0" height="50.0" fill="#2b2b2b"/>
+<rect x="1090.0" y="240.0" width="30.0" height="1700.0" fill="#2b2b2b"/>
+<rect x="160.0" y="1120.0" width="1540.0" height="30.0" fill="#2b2b2b"/>
+<rect x="1120.0" y="850.0" width="580.0" height="30.0" fill="#2b2b2b"/>
+<rect x="540.0" y="240.0" width="30.0" height="325.0" fill="#2b2b2b"/>
+<rect x="160.0" y="550.0" width="395.0" height="30.0" fill="#2b2b2b"/>
+<rect x="730.0" y="1150.0" width="30.0" height="415.0" fill="#2b2b2b"/>
+<rect x="745.0" y="1550.0" width="345.0" height="30.0" fill="#2b2b2b"/>
+<rect x="1120.0" y="1430.0" width="580.0" height="30.0" fill="#2b2b2b"/>
+<rect x="1120.0" y="1720.0" width="580.0" height="30.0" fill="#2b2b2b"/>
+<rect x="101.0" y="760.0" width="18" height="180.0" fill="#ffffff"/>
+<path d="M 110.0 760.0 A 180.0 180.0 0 0 1 290.0 940.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="110.0" y1="760.0" x2="290.0" y2="760.0" stroke="#555" stroke-width="2"/>
+<rect x="200.0" y="556.0" width="300.0" height="18" fill="#ffffff"/>
+<path d="M 200.0 565.0 A 300.0 300.0 0 0 1 500.0 865.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="200.0" y1="565.0" x2="200.0" y2="865.0" stroke="#555" stroke-width="2"/>
+<rect x="1096.0" y="465.0" width="18" height="160.0" fill="#ffffff"/>
+<path d="M 1105.0 465.0 A 160.0 160.0 0 0 1 1265.0 625.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="1105.0" y1="465.0" x2="1265.0" y2="465.0" stroke="#555" stroke-width="2"/>
+<rect x="1290.0" y="1126.0" width="240.0" height="18" fill="#ffffff"/>
+<path d="M 1290.0 1135.0 A 240.0 240.0 0 0 1 1530.0 1375.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="1290.0" y1="1135.0" x2="1290.0" y2="1375.0" stroke="#555" stroke-width="2"/>
+<rect x="365.0" y="1126.0" width="160.0" height="18" fill="#ffffff"/>
+<path d="M 365.0 1135.0 A 160.0 160.0 0 0 1 525.0 1295.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="365.0" y1="1135.0" x2="365.0" y2="1295.0" stroke="#555" stroke-width="2"/>
+<rect x="736.0" y="1280.0" width="18" height="140.0" fill="#ffffff"/>
+<path d="M 745.0 1280.0 A 140.0 140.0 0 0 1 885.0 1420.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="745.0" y1="1280.0" x2="885.0" y2="1280.0" stroke="#555" stroke-width="2"/>
+<rect x="1340.0" y="1436.0" width="140.0" height="18" fill="#ffffff"/>
+<path d="M 1340.0 1445.0 A 140.0 140.0 0 0 1 1480.0 1585.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="1340.0" y1="1445.0" x2="1340.0" y2="1585.0" stroke="#555" stroke-width="2"/>
+<rect x="1330.0" y="1726.0" width="160.0" height="18" fill="#ffffff"/>
+<path d="M 1330.0 1735.0 A 160.0 160.0 0 0 1 1490.0 1895.0" fill="none" stroke="#8a8a8a" stroke-width="1.4" stroke-dasharray="3,3"/>
+<line x1="1330.0" y1="1735.0" x2="1330.0" y2="1895.0" stroke="#555" stroke-width="2"/>
+<rect x="103.0" y="630.0" width="14" height="440.0" fill="#ffffff"/>
+<line x1="107.5" y1="630.0" x2="107.5" y2="1070.0" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="112.5" y1="630.0" x2="112.5" y2="1070.0" stroke="#6699cc" stroke-width="1.5"/>
+<rect x="103.0" y="690.0" width="14" height="320.0" fill="#ffffff"/>
+<line x1="107.5" y1="690.0" x2="107.5" y2="1010.0" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="112.5" y1="690.0" x2="112.5" y2="1010.0" stroke="#6699cc" stroke-width="1.5"/>
+<rect x="1743.0" y="365.0" width="14" height="360.0" fill="#ffffff"/>
+<line x1="1747.5" y1="365.0" x2="1747.5" y2="725.0" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="1752.5" y1="365.0" x2="1752.5" y2="725.0" stroke="#6699cc" stroke-width="1.5"/>
+<rect x="445.0" y="1983.0" width="360.0" height="14" fill="#ffffff"/>
+<line x1="445.0" y1="1987.5" x2="805.0" y2="1987.5" stroke="#6699cc" stroke-width="1.5"/>
+<line x1="445.0" y1="1992.5" x2="805.0" y2="1992.5" stroke="#6699cc" stroke-width="1.5"/>
+<text x="350.0" y="391.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">terraza</text>
+<text x="350.0" y="408.0" font-size="12" fill="#444" text-anchor="middle">2.94 m²</text>
+<text x="930.0" y="676.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">sala-comedor</text>
+<text x="930.0" y="693.0" font-size="12" fill="#444" text-anchor="middle">20.64 m²</text>
+<text x="1410.0" y="541.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio 2</text>
+<text x="1410.0" y="558.0" font-size="12" fill="#444" text-anchor="middle">8.85 m²</text>
+<text x="625.0" y="1541.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">dormitorio principal</text>
+<text x="625.0" y="1558.0" font-size="12" fill="#444" text-anchor="middle">14.50 m²</text>
+<text x="925.0" y="1346.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 1</text>
+<text x="925.0" y="1363.0" font-size="12" fill="#444" text-anchor="middle">3.30 m²</text>
+<text x="1410.0" y="1286.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">cocina</text>
+<text x="1410.0" y="1303.0" font-size="12" fill="#444" text-anchor="middle">4.06 m²</text>
+<text x="1410.0" y="1586.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">baño 2</text>
+<text x="1410.0" y="1603.0" font-size="12" fill="#444" text-anchor="middle">3.77 m²</text>
+<text x="1410.0" y="1841.0" font-size="13" fill="#1a1a1a" text-anchor="middle" font-weight="600">lavandería</text>
+<text x="1410.0" y="1858.0" font-size="12" fill="#444" text-anchor="middle">2.76 m²</text>
+<line x1="110.0" y1="2010.0" x2="1750.0" y2="2010.0" stroke="#888" stroke-width="1"/>
+<text x="930.0" y="2028.0" font-size="13" fill="#555" text-anchor="middle">frente 8.20 m</text>
+<line x1="1770.0" y1="190.0" x2="1770.0" y2="1990.0" stroke="#888" stroke-width="1"/>
+<text x="1788.0" y="1090.0" font-size="13" fill="#555" text-anchor="middle" transform="rotate(90 1788.0 1090.0)">fondo 9.00 m</text>
+<text x="90" y="26" font-size="15" fill="#111" font-weight="700">2026-08-07-u02 (D3) — 73.80 m² — 2D/2B esquina, sala en L distribuidora sin pasillo — Jesus Maria, Lima Moderna</text>
+<text x="90" y="46" font-size="12" fill="#555">BRIEF TERRENO: lote esquinero, dos aristas corridas reales (Norte y Oeste), medianero en los otros dos lados. Frente 8.20 m (Norte) x fondo 9.00 m (Oeste).</text>
+<text x="90" y="66" font-size="12" fill="#555">Parti: matriz de adyacencia resuelta ANTES del parti — sala en L abraza la terraza en el vertice y linda directo con dormitorio2, dormitorio principal y cocina: cero pasillo.</text>
+<text x="90" y="86" font-size="12" fill="#555">Eje humedo unico (espina vertical) apila bano1+cocina+bano2+lavanderia de punta a punta — baño principal en suite, baño2 accesible sin cruzar dormitorios.</text>
+<text x="90" y="106" font-size="12" fill="#555">Segmento: 2D/2B amplio Lima Top, retiro frontal 0 m (alineado a vereda), retiros de medianero 0 m.</text>
+</svg>

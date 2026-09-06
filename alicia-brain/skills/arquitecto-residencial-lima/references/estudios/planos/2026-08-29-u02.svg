@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="936" height="776" viewBox="0 0 936 776" font-family="Arial, sans-serif">
+<rect width="936" height="776" fill="white"/>
+<text x="90" y="22" font-size="15" font-weight="bold" fill="#111">2026-08-29 (u02) — 108.36 m² — 2D/2B esquina de pasaje (vértice interior de una quinta) — Jesús María, Lima Moderna</text>
+<text x="90" y="37" font-size="10.5" font-weight="normal" fill="#111">BRIEF: unidad en el vértice donde el pasaje principal de la quinta remata contra un segundo tramo lateral: dos fachadas reales (x=0 el corredor de acceso, x=frente el remate del pasaje), ninguna da a la calle pública. Frente 11.60 x fondo 8.60.</text>
+<text x="90" y="49" font-size="10.5" font-weight="normal" fill="#111">Parti: dormitorio principal (suite+vestidor) y sala-comedor ganan la fachada del corredor; terraza y dormitorio 2 ganan la fachada del remate (esquina real dentro de la quinta). Cocina+lavandería pegadas y accesibles desde la sala; baño 2 vía hall sin cruzar dormitorios.</text>
+<text x="90" y="61" font-size="10.5" font-weight="normal" fill="#111">Segmento: 2D/2B, Lima Top dentro de una quinta consolidada.</text>
+<rect x="105.0" y="145.0" width="196.5" height="238.5" fill="#e7ecec" stroke="none"/>
+<text x="203.2" y="260.2" font-size="11" text-anchor="middle" fill="#222">dormitorio principal</text>
+<text x="203.2" y="274.2" font-size="9.5" text-anchor="middle" fill="#555">13.02 m²</text>
+<rect x="310.5" y="145.0" width="417.0" height="238.5" fill="#fdebd8" stroke="none"/>
+<text x="519.0" y="260.2" font-size="11" text-anchor="middle" fill="#222">sala-comedor</text>
+<text x="519.0" y="274.2" font-size="9.5" text-anchor="middle" fill="#555">27.63 m²</text>
+<rect x="736.5" y="145.0" width="94.5" height="238.5" fill="#fdebd8" stroke="none"/>
+<text x="783.8" y="260.2" font-size="11" text-anchor="middle" fill="#222">terraza</text>
+<text x="783.8" y="274.2" font-size="9.5" text-anchor="middle" fill="#555">6.26 m²</text>
+<rect x="105.0" y="392.5" width="88.5" height="238.5" fill="#dbe6f5" stroke="none"/>
+<text x="149.2" y="507.8" font-size="11" text-anchor="middle" fill="#222">vestidor</text>
+<text x="149.2" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">5.86 m²</text>
+<rect x="202.5" y="392.5" width="99.0" height="238.5" fill="#dbe6f5" stroke="none"/>
+<text x="252.0" y="507.8" font-size="11" text-anchor="middle" fill="#222">baño principal</text>
+<text x="252.0" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">6.56 m²</text>
+<rect x="310.5" y="392.5" width="87.0" height="238.5" fill="#dbe6f5" stroke="none"/>
+<text x="354.0" y="507.8" font-size="11" text-anchor="middle" fill="#222">cocina</text>
+<text x="354.0" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">5.76 m²</text>
+<rect x="406.5" y="392.5" width="78.0" height="238.5" fill="#dbe6f5" stroke="none"/>
+<text x="445.5" y="507.8" font-size="11" text-anchor="middle" fill="#222">lavandería</text>
+<text x="445.5" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">5.17 m²</text>
+<rect x="493.5" y="392.5" width="99.0" height="238.5" fill="#dbe6f5" stroke="none"/>
+<text x="543.0" y="507.8" font-size="11" text-anchor="middle" fill="#222">baño 2</text>
+<text x="543.0" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">6.56 m²</text>
+<rect x="601.5" y="392.5" width="60.0" height="238.5" fill="#dbe6f5" stroke="none"/>
+<text x="631.5" y="507.8" font-size="11" text-anchor="middle" fill="#222">hall</text>
+<text x="631.5" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">3.97 m²</text>
+<rect x="670.5" y="392.5" width="160.5" height="238.5" fill="#e7ecec" stroke="none"/>
+<text x="750.8" y="507.8" font-size="11" text-anchor="middle" fill="#222">dormitorio 2</text>
+<text x="750.8" y="521.8" font-size="9.5" text-anchor="middle" fill="#555">10.63 m²</text>
+<rect x="82.5" y="122.5" width="771.0" height="15.0" fill="#2b2b2b"/>
+<rect x="82.5" y="638.5" width="771.0" height="15.0" fill="#2b2b2b"/>
+<rect x="82.5" y="122.5" width="15.0" height="531.0" fill="#2b2b2b"/>
+<rect x="838.5" y="122.5" width="15.0" height="531.0" fill="#2b2b2b"/>
+<rect x="301.5" y="125.5" width="9.0" height="525.0" fill="#2b2b2b"/>
+<rect x="727.5" y="125.5" width="9.0" height="267.0" fill="#2b2b2b"/>
+<rect x="193.5" y="383.5" width="9.0" height="267.0" fill="#2b2b2b"/>
+<rect x="397.5" y="383.5" width="9.0" height="267.0" fill="#2b2b2b"/>
+<rect x="484.5" y="383.5" width="9.0" height="267.0" fill="#2b2b2b"/>
+<rect x="592.5" y="383.5" width="9.0" height="267.0" fill="#2b2b2b"/>
+<rect x="661.5" y="383.5" width="9.0" height="267.0" fill="#2b2b2b"/>
+<rect x="85.5" y="383.5" width="765.0" height="9.0" fill="#2b2b2b"/>
+<rect x="492.0" y="127.0" width="54.0" height="6" fill="white"/>
+<path d="M 492.0 130.0 A 54.0 54.0 0 0 1 492.0 184.0" fill="none" stroke="#888" stroke-dasharray="2,2"/>
+<rect x="302.0" y="240.2" width="8" height="48.0" fill="white"/>
+<path d="M 306.0 240.2 L 258.0 240.2 A 48.0 48.0 0 0 1 306.0 288.2" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="728.0" y="210.2" width="8" height="108.0" fill="white"/>
+<path d="M 732.0 210.2 L 840.0 210.2 A 108.0 108.0 0 0 0 732.0 318.2" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="330.0" y="384.0" width="48.0" height="8" fill="white"/>
+<path d="M 330.0 388.0 L 330.0 436.0 A 48.0 48.0 0 0 0 378.0 388.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="398.0" y="487.7" width="8" height="48.0" fill="white"/>
+<path d="M 402.0 487.7 L 450.0 487.7 A 48.0 48.0 0 0 0 402.0 535.8" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="607.5" y="384.0" width="48.0" height="8" fill="white"/>
+<path d="M 607.5 388.0 L 607.5 436.0 A 48.0 48.0 0 0 0 655.5 388.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="593.0" y="490.8" width="8" height="42.0" fill="white"/>
+<path d="M 597.0 490.8 L 555.0 490.8 A 42.0 42.0 0 0 1 597.0 532.8" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="662.0" y="487.7" width="8" height="48.0" fill="white"/>
+<path d="M 666.0 487.7 L 714.0 487.7 A 48.0 48.0 0 0 0 666.0 535.8" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="125.2" y="384.0" width="48.0" height="8" fill="white"/>
+<path d="M 125.2 388.0 L 125.2 436.0 A 48.0 48.0 0 0 0 173.2 388.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="194.0" y="490.8" width="8" height="42.0" fill="white"/>
+<path d="M 198.0 490.8 L 240.0 490.8 A 42.0 42.0 0 0 0 198.0 532.8" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<rect x="149.2" y="126.5" width="108.0" height="7" fill="#4a90d9"/>
+<rect x="435.0" y="126.5" width="168.0" height="7" fill="#4a90d9"/>
+<rect x="842.5" y="457.7" width="7" height="108.0" fill="#4a90d9"/>
+<text x="468.0" y="676.0" font-size="11" text-anchor="middle" fill="#333">frente 12.60 m</text>
+<text x="881.0" y="388.0" font-size="11" text-anchor="middle" fill="#333" transform="rotate(90 881.0 388.0)">fondo 8.60 m</text>
+</svg>
