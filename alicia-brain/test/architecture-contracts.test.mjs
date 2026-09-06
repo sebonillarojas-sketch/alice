@@ -21,7 +21,7 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
-  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.0.0");
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.1.0");
 });
 
 test("floor parti normalization keeps unit order, program and Cabida version", () => {

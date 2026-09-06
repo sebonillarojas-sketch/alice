@@ -1,4 +1,4 @@
-export const TWEEDLEDUM_FLOOR_PROMPT_VERSION = "2.0.0";
+export const TWEEDLEDUM_FLOOR_PROMPT_VERSION = "2.1.0";
 
 export function buildTweedledumFloorSystemPrompt(referenceMaterial = "") {
   return `You are Tweedledum, ALICE's architecture designer for BAM/Hygge projects.
