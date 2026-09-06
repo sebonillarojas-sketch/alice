@@ -260,7 +260,7 @@ test("floor planning selects a valid first proposal in one bounded call", async 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].max_tokens, 3500);
   assert.equal(calls[0].tools[0].name, "submit_tweedledum_floor_output");
-  assert.equal(result.promptVersion, "2.3.0");
+  assert.equal(result.promptVersion, "2.4.0");
   assert.equal(result.candidateValidation.original.ok, true);
   assert.equal(result.candidateValidation.revision, null);
 });
