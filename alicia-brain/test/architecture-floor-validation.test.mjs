@@ -134,10 +134,86 @@ test("unit count, bedroom mix, and average area use explicit tolerances", () => 
   assert.ok(result.findings.some((finding) => finding.code === "unit_area_out_of_tolerance"));
 });
 
+test("cada unidad cumple la tolerancia de área aunque el promedio del piso coincida", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1").polygon = rect(0, 0, 4, 2);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 2, 4, 3);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-left").polygon = rect(0, 3, 4, 10);
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-2-part-1").polygon = rect(6, 0, 10, 6);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-right").polygon = rect(6, 6, 10, 7);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-right").polygon = rect(6, 7, 10, 10);
+
+  const result = validateFloorProposal(proposal, { ...options, enforceIndividualUnitArea: true });
+
+  assert.equal(result.stats.averageUnitArea, 16);
+  assert.ok(result.findings.some((finding) => finding.code === "individual_unit_area_out_of_tolerance" && finding.unitRefs.includes("unit-1")));
+  assert.ok(result.findings.some((finding) => finding.code === "individual_unit_area_out_of_tolerance" && finding.unitRefs.includes("unit-2")));
+});
+
+test("las áreas individuales se comparan con la tipología de Cabida", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1").polygon = rect(0, 0, 4, 2);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 2, 4, 3);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-left").polygon = rect(0, 3, 4, 10);
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-2-part-1").polygon = rect(6, 0, 10, 6);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-right").polygon = rect(6, 6, 10, 7);
+  proposal.floor.polygons.find((item) => item.polygonId === "void-right").polygon = rect(6, 7, 10, 10);
+
+  const result = validateFloorProposal(proposal, {
+    ...options,
+    enforceIndividualUnitArea: true,
+    targetAreaByBedrooms: { dormitorios1: 8, dormitorios2: 24, dormitorios3: 30 },
+  });
+
+  assert.equal(result.findings.some((finding) => finding.code === "individual_unit_area_out_of_tolerance"), false);
+});
+
+test("una unidad sin frente exterior se rechaza como producto no vendible", () => {
+  const proposal = validProposal();
+  proposal.floor.polygons.find((item) => item.polygonId === "unit-1-part-1").polygon = rect(1, 1, 3, 3);
+  proposal.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 3, 4, 4);
+
+  const result = validateFloorProposal(proposal, { ...options, requireExteriorFrontage: true });
+
+  assert.ok(result.findings.some((finding) => finding.code === "unit_without_exterior_frontage" && finding.unitRefs.includes("unit-1")));
+});
+
 test("a floor requires both core and circulation roles", () => {
   const proposal = validProposal();
   proposal.floor.polygons = proposal.floor.polygons.filter((item) => !["core", "circulacion"].includes(item.role));
   const codes = validateFloorProposal(proposal, options).findings.map((finding) => finding.code);
   assert.ok(codes.includes("missing_core"));
   assert.ok(codes.includes("missing_circulation"));
+});
+
+// ── tolerancia constructiva ───────────────────────────────────────────────────
+// El validador exigia EPS = 1e-7 m (0.1 micrones) para la contencion. Un vertice
+// medio milimetro afuera —ruido de redondeo de packFloor o de un modelo que escribe
+// coordenadas con 3 decimales— hacia rechazar la unidad entera, y con ella la planta.
+// En obra, un centimetro no es un error de diseno: es la precision del replanteo.
+test("un desborde de medio milimetro NO es salirse de la huella", () => {
+  const huella = rect(0, 0, 20, 10);
+  const res = validateFloorProposal({
+    floor: { sourceCabidaVersionId: "V", polygons: [
+      polygon("a", "core", [[0, 0], [10, 0], [10, 10], [0, 10]]),
+      // 0.0005 m afuera en el borde derecho: ruido, no error
+      polygon("b", "unidad", [[10, 0], [20.0005, 0], [20.0005, 10], [10, 10]],
+        { unitRef: "u1", unitProgram: { dormitorios: 2, banos: 2 } }),
+    ] },
+  }, { buildableFootprint: huella, sourceCabidaVersionId: "V" });
+  const codigos = res.findings.map((f) => f.code);
+  assert.ok(!codigos.includes("outside_buildable_footprint"),
+    `medio milimetro no debe rechazarse: ${JSON.stringify(res.findings)}`);
+});
+
+test("medio metro afuera SI se rechaza", () => {
+  const huella = rect(0, 0, 20, 10);
+  const res = validateFloorProposal({
+    floor: { sourceCabidaVersionId: "V", polygons: [
+      polygon("b", "unidad", [[10, 0], [20.5, 0], [20.5, 10], [10, 10]],
+        { unitRef: "u1", unitProgram: { dormitorios: 2, banos: 2 } }),
+    ] },
+  }, { buildableFootprint: huella, sourceCabidaVersionId: "V" });
+  assert.ok(res.findings.map((f) => f.code).includes("outside_buildable_footprint"),
+    "medio metro afuera es un error real y debe marcarse");
 });

@@ -61,20 +61,20 @@ test("malformed model output maps to 502", async () => {
 });
 
 test("floor-plan endpoint returns the selected valid source", async () => {
-  const selected = { summary: "Floor", floor: { sourceCabidaVersionId: "cabida_v1", polygons: [] }, assumptions: [], tradeoffs: [] };
+  const selected = { summary: "Floor", parti: { sourceCabidaVersionId: "cabida_v1", crujias: 1, corredorProfundidad: 1.6, core: { posicion: 8, ancho: 2 }, units: [] }, assumptions: [], tradeoffs: [] };
   const service = { planFloor: async () => ({ originalProposal: selected, revision: null, validation: { ok: true, findings: [] }, selected, source: "tweedledum", promptVersion: "1.0.0" }) };
   await withServer(createArchitectureRouter({ service }), async (base) => {
     const response = await fetch(`${base}/tweedledum/floor-plan`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ any: "payload" }) });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.source, "tweedledum");
-    assert.equal(body.selected.floor.sourceCabidaVersionId, "cabida_v1");
+    assert.equal(body.selected.parti.sourceCabidaVersionId, "cabida_v1");
   });
 });
 
-test("floor-plan route preserves Cabida version and maps invalid candidates to polygon IDs", async () => {
+test("floor-plan route preserves Cabida version and falls back when the parti's program does not match Cabida", async () => {
   const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-  const valid = {
+  const validFallback = {
     summary: "Floor", assumptions: [], tradeoffs: [],
     floor: { sourceCabidaVersionId: "cabida_p1_v7", polygons: [
       { polygonId: "core", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: rect(4, 0, 6, 10) },
@@ -86,24 +86,31 @@ test("floor-plan route preserves Cabida version and maps invalid candidates to p
       { polygonId: "void-right", role: "void", name: "vacío", unitRef: null, unitProgram: null, polygon: rect(6, 5, 10, 10) },
     ] },
   };
-  const invalid = structuredClone(valid);
-  invalid.floor.polygons.find((item) => item.polygonId === "hall-left").polygon = rect(0, 3.5, 4, 5);
-  const client = { messages: { create: async () => ({ content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: invalid }] }) } };
+  // el modelo entrega un parti válido en forma pero con solo 1 unidad (Cabida pide 2): el
+  // ciclo de revisión no alcanza (sigue devolviendo 1 unidad) y el servicio cae al respaldo.
+  const invalidParti = {
+    summary: "Floor", assumptions: [], tradeoffs: [],
+    parti: { sourceCabidaVersionId: "cabida_p1_v7", crujias: 1, corredorProfundidad: 1.6, core: { posicion: 8, ancho: 2 }, units: [
+      { unitRef: "unit-1", orden: 1, ancho: 16, dormitorios: 1, banos: 1 },
+    ] },
+  };
+  const client = { messages: { create: async () => ({ content: [{ type: "tool_use", name: "submit_tweedledum_floor_output", input: invalidParti }] }) } };
   const service = createArchitectureService({ client, model: "test-model" });
   await withServer(createArchitectureRouter({ service }), async (base) => {
     const response = await fetch(`${base}/tweedledum/floor-plan`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({
         context: { project: { id: "p1", name: "DC01" }, sourceCabidaVersionId: "cabida_p1_v7", site: { buildableFootprint: rect(0, 0, 10, 10) } },
-        floorBrief: { unitsPerFloor: 2, bedroomMix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 }, targetAverageArea: 16 },
-        deterministicFallback: valid,
+        floorBrief: { unitsPerFloor: 2, bedroomMix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 } },
+        deterministicFallback: validFallback,
       }),
     });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.source, "deterministic_fallback");
     assert.equal(body.selected.floor.sourceCabidaVersionId, "cabida_p1_v7");
-    assert.deepEqual(body.candidateValidation.original.findings.find((finding) => finding.code === "polygon_overlap").polygonIds.sort(), ["hall-left", "unit-1"]);
+    assert.ok(body.candidateValidation.original.findings.some((finding) => finding.code === "unit_count_mismatch"));
+    assert.ok(body.candidateValidation.revision.findings.some((finding) => finding.code === "unit_count_mismatch"));
     assert.doesNotMatch(JSON.stringify(body), /You are Tweedledum/);
   });
 });

@@ -9,7 +9,7 @@
 // Ambas vistas leen y escriben el MISMO proyecto activo → nada se borra al saltar.
 import { useSyncExternalStore } from "react";
 import { db } from "../../lib/supabase.js";
-import { acceptFloorProposalRecord, appendFloorProposalRecord } from "./floorProposal.js";
+import { acceptFloorProposalRecord, appendFloorProposalRecord, discardFloorProposalRecord } from "./floorProposal.js";
 
 const K_PROY = "hygge:cabidaProyectos";       // array de proyectos (sincronizado)
 const K_ACT = "hygge:cabidaProyectoActivo";   // id activo (local por dispositivo)
@@ -180,6 +180,12 @@ export const proyectosStore = {
       return { ...appended.project, updatedAt: now() };
     }));
     return record;
+  },
+
+  discardFloorProposal(id, proposalId, motivo = "") {
+    commit(_proyectos.map((project) => (project.id === id
+      ? { ...discardFloorProposalRecord(project, proposalId, motivo), updatedAt: now() }
+      : project)));
   },
 
   acceptFloorProposal(id, proposalId) {

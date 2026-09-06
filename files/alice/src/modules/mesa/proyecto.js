@@ -5,7 +5,6 @@ export const K = {
   cabida: "hygge:cabidaState",
   lote: "hygge:loteCabida",
   editor: "hygge:editorPlanos",
-  brief: "hygge:planBrief",
   concepto: "hygge:mesaTrabajo",
   terrenos: "hygge:terrenos",
 };
@@ -97,7 +96,6 @@ export function saveProyecto(nombre, meta = {}) {
       cabida: loadLS(K.cabida),
       lote: loadLS(K.lote),
       editor: loadLS(K.editor),
-      brief: loadLS(K.brief),
       concepto: loadLS(K.concepto),
     },
   };
@@ -109,7 +107,7 @@ export function saveProyecto(nombre, meta = {}) {
 export function cargarProyecto(nombre) {
   const p = loadProyectos()[nombre];
   if (!p) return null;
-  Object.entries({ [K.cabida]: p.data?.cabida, [K.lote]: p.data?.lote, [K.editor]: p.data?.editor, [K.brief]: p.data?.brief, [K.concepto]: p.data?.concepto })
+  Object.entries({ [K.cabida]: p.data?.cabida, [K.lote]: p.data?.lote, [K.editor]: p.data?.editor, [K.concepto]: p.data?.concepto })
     .forEach(([k, v]) => { if (v != null) saveLS(k, v); });
   return p;
 }

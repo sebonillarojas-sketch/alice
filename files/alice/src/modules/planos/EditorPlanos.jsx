@@ -273,8 +273,6 @@ const C = {
 const mono = "'JetBrains Mono', 'SF Mono', Menlo, monospace";
 const sans = "'Hanken Grotesk', 'Helvetica Neue', sans-serif";
 const STORE = "hygge:editorPlanos";
-const BRIEF_KEY = "hygge:planBrief";
-
 const fmt = (n, d = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -961,20 +959,6 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             : 0);
     return offsetEdges(lote.pts, dists);
   })();
-
-  // El estado inicial ya salió del proyecto activo (P). Acá solo consumimos el
-  // puente cabida→plano (one-shot) para pre-cargar el brief en proyectos nuevos.
-  useEffect(() => {
-    try {
-      const b = localStorage.getItem(BRIEF_KEY);
-      if (b) {
-        const parsed = JSON.parse(b);
-        setBrief((prev) => ({ ...prev, ...parsed }));
-        localStorage.removeItem(BRIEF_KEY);
-        setLoteBar(true);
-      }
-    } catch { /* brief inválido */ }
-  }, []);
 
   // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
   // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.

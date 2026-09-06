@@ -2,7 +2,6 @@ const SEVERITIES = new Set(["critical", "major", "minor", "info"]);
 const SEVERITY_RANK = Object.freeze({ critical: 0, major: 1, minor: 2, info: 3 });
 const CATEGORIES = new Set(["circulation", "furnishability", "daylight", "privacy", "structure", "mep", "buildability", "commercial", "regulatory", "other"]);
 const REGULATORY = new Set(["not_applicable", "advisory", "verification_required", "verified"]);
-const FLOOR_ROLES = new Set(["unidad", "core", "circulacion", "void"]);
 
 export class ArchitectureValidationError extends Error {
   constructor(message, details = []) {
@@ -25,13 +24,6 @@ const requireContext = (context = {}) => {
 };
 
 const stringArray = (value) => Array.isArray(value) ? value.map(String) : [];
-
-const normalizePolygon = (value, field) => {
-  const valid = Array.isArray(value) && value.length >= 3 && value.every((point) =>
-    Array.isArray(point) && point.length === 2 && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1])));
-  if (!valid) throw new ArchitectureValidationError(`${field} requires drawable polygon geometry`, [field]);
-  return value.map(([x, y]) => [Number(x), Number(y)]);
-};
 
 export function validateDesignRequest(input = {}) {
   requireContext(input.context);
@@ -67,53 +59,127 @@ export function validateFloorPlanRequest(input = {}) {
   return input;
 }
 
+// El contrato de floor-plan devuelve una DECISIÓN (parti), no un dibujo: números
+// aproximados que el motor determinista de ALICE (files/alice) prorratea y tesela
+// exacto. Por eso esta normalización es deliberadamente tolerante en magnitudes
+// (anchos, posiciones) y estricta solo en forma (tipos, unicidad de unitRef,
+// rango de dormitorios/baños): lo aproximado se corrige aguas abajo, lo mal
+// tipado no se puede corregir y hay que rechazarlo temprano.
 export function normalizeFloorPlanOutput(input = {}) {
   if (!input || typeof input !== "object") throw new ArchitectureValidationError("Tweedledum floor output must be an object");
-  const sourceCabidaVersionId = requiredText(input.floor?.sourceCabidaVersionId, "floor.sourceCabidaVersionId");
-  if (!Array.isArray(input.floor?.polygons) || input.floor.polygons.length === 0) {
-    throw new ArchitectureValidationError("floor.polygons requires drawable geometry", ["floor.polygons"]);
+  const parti = input.parti;
+  if (!parti || typeof parti !== "object") throw new ArchitectureValidationError("parti is required", ["parti"]);
+  const sourceCabidaVersionId = requiredText(parti.sourceCabidaVersionId, "parti.sourceCabidaVersionId");
+
+  const crujiasRaw = Number(parti.crujias);
+  const crujias = crujiasRaw === 1 || crujiasRaw === 2 ? crujiasRaw : null;
+
+  const corredorProfundidadRaw = Number(parti.corredorProfundidad);
+  const corredorProfundidad = Number.isFinite(corredorProfundidadRaw) && corredorProfundidadRaw > 0 ? corredorProfundidadRaw : null;
+
+  const corePosicion = Number(parti.core?.posicion);
+  const coreAncho = Number(parti.core?.ancho);
+  if (!Number.isFinite(corePosicion) || !Number.isFinite(coreAncho)) {
+    throw new ArchitectureValidationError("parti.core requires numeric posicion and ancho", ["parti.core"]);
   }
-  const polygonIds = new Set();
-  const unitPrograms = new Map();
-  const polygons = input.floor.polygons.map((polygon, index) => {
-    const field = `floor.polygons[${index}]`;
-    const polygonId = requiredText(polygon?.polygonId, `${field}.polygonId`);
-    if (polygonIds.has(polygonId)) throw new ArchitectureValidationError(`Floor polygons require a unique polygonId: ${polygonId}`, [`${field}.polygonId`]);
-    polygonIds.add(polygonId);
-    const role = String(polygon?.role || "");
-    if (!FLOOR_ROLES.has(role)) throw new ArchitectureValidationError(`${field}.role is invalid`, [`${field}.role`]);
-    const unitRef = polygon?.unitRef == null ? null : requiredText(polygon.unitRef, `${field}.unitRef`);
-    if (role === "unidad" && !unitRef) throw new ArchitectureValidationError(`${field}.unitRef is required for unidad`, [`${field}.unitRef`]);
-    if (role !== "unidad" && unitRef !== null) throw new ArchitectureValidationError(`${field}.unitRef must be null for ${role}`, [`${field}.unitRef`]);
-    let unitProgram = null;
-    if (role === "unidad") {
-      const dormitorios = Number(polygon.unitProgram?.dormitorios);
-      const banos = Number(polygon.unitProgram?.banos);
-      if (!Number.isInteger(dormitorios) || dormitorios < 1 || dormitorios > 3 || !Number.isInteger(banos) || banos < 1) {
-        throw new ArchitectureValidationError(`${field}.unitProgram requires 1-3 dormitorios and at least one baño`, [`${field}.unitProgram`]);
-      }
-      unitProgram = { dormitorios, banos };
-      const prior = unitPrograms.get(unitRef);
-      if (prior) throw new ArchitectureValidationError(`Each unitRef requires exactly one polygon: ${unitRef}`, [`${field}.unitRef`]);
-      unitPrograms.set(unitRef, unitProgram);
-    } else if (polygon?.unitProgram != null) {
-      throw new ArchitectureValidationError(`${field}.unitProgram must be null for ${role}`, [`${field}.unitProgram`]);
+
+  // longitud: penetración aproximada del núcleo desde el frente hacia el fondo (metros).
+  // Opcional y, como todo en este contrato, aproximada. Acá solo se filtra lo mal
+  // tipado (igual que corredorProfundidad arriba); si falta o es absurda (<=0, o mayor
+  // que el fondo disponible) normalizarParti (files/alice) aplica el default acotado —
+  // esta capa nunca rechaza el parti por una longitud ausente o rara.
+  const coreLongitudRaw = Number(parti.core?.longitud);
+  const coreLongitud = Number.isFinite(coreLongitudRaw) && coreLongitudRaw > 0 ? coreLongitudRaw : null;
+
+  // distanciaAlFrente: metros desde el frente (v=0, la fachada a la calle) hasta donde
+  // empieza el núcleo. Opcional y aproximada, igual que longitud. 0 (núcleo pegado al
+  // frente) es un valor válido, no un default a filtrar — solo lo negativo o mal tipado
+  // cae a null. Si falta o es absurda, normalizarParti (files/alice) aplica 0 como
+  // default SIN reportarlo como relleno silencioso: 0 es exactamente el comportamiento
+  // de siempre, no una decisión que el motor le esconda al agente.
+  const coreDistanciaAlFrenteRaw = Number(parti.core?.distanciaAlFrente);
+  const coreDistanciaAlFrente = Number.isFinite(coreDistanciaAlFrenteRaw) && coreDistanciaAlFrenteRaw >= 0 ? coreDistanciaAlFrenteRaw : null;
+
+  if (!Array.isArray(parti.units) || parti.units.length === 0) {
+    throw new ArchitectureValidationError("parti.units requires at least one unit", ["parti.units"]);
+  }
+  const unitRefs = new Set();
+  const units = parti.units.map((unit, index) => {
+    const field = `parti.units[${index}]`;
+    const unitRef = requiredText(unit?.unitRef, `${field}.unitRef`);
+    if (unitRefs.has(unitRef)) throw new ArchitectureValidationError(`parti.units requires a unique unitRef: ${unitRef}`, [`${field}.unitRef`]);
+    unitRefs.add(unitRef);
+    const orden = Number(unit?.orden);
+    if (!Number.isFinite(orden)) throw new ArchitectureValidationError(`${field}.orden must be a number`, [`${field}.orden`]);
+    const ancho = Number(unit?.ancho);
+    if (!Number.isFinite(ancho)) throw new ArchitectureValidationError(`${field}.ancho must be a number`, [`${field}.ancho`]);
+    const dormitorios = Number(unit?.dormitorios);
+    if (!Number.isInteger(dormitorios) || dormitorios < 1 || dormitorios > 3) {
+      throw new ArchitectureValidationError(`${field}.dormitorios requires 1-3`, [`${field}.dormitorios`]);
     }
-    return {
-      polygonId,
-      role,
-      name: requiredText(polygon?.name, `${field}.name`),
-      unitRef,
-      unitProgram,
-      polygon: normalizePolygon(polygon?.polygon, `${field}.polygon`),
-    };
+    const banos = Number(unit?.banos);
+    if (!Number.isInteger(banos) || banos < 1) {
+      throw new ArchitectureValidationError(`${field}.banos requires at least one baño`, [`${field}.banos`]);
+    }
+    // banda: 1 = banda del frente (a la calle), 2 = banda del fondo. Solo importa cuando
+    // crujias es 2 (con crujía simple se ignora aguas abajo); cualquier valor ausente o
+    // inválido cae a 1, así un parti sin banda se comporta exactamente como antes.
+    const bandaRaw = Number(unit?.banda);
+    const banda = bandaRaw === 1 || bandaRaw === 2 ? bandaRaw : 1;
+    return { unitRef, orden, ancho, dormitorios, banos, banda };
   });
+
   return {
     summary: String(input.summary || ""),
-    floor: { sourceCabidaVersionId, polygons },
+    parti: {
+      sourceCabidaVersionId,
+      crujias,
+      corredorProfundidad,
+      core: { posicion: corePosicion, ancho: coreAncho, longitud: coreLongitud, distanciaAlFrente: coreDistanciaAlFrente },
+      units,
+    },
     assumptions: stringArray(input.assumptions),
     tradeoffs: stringArray(input.tradeoffs),
   };
+}
+
+// Validación de PROGRAMA (no de geometría: ya no hay polígonos que Tweedledum
+// entregue). "findings" siguen el mismo shape liviano {code, severity, message,
+// unitRefs} que consumía el ciclo de revisión, para que revise_floor reciba el
+// mismo tipo de correcciones puntuales que antes.
+export function validateFloorProgram(parti = {}, options = {}) {
+  const findings = [];
+  const units = Array.isArray(parti?.units) ? parti.units : [];
+
+  if (options.sourceCabidaVersionId && parti?.sourceCabidaVersionId !== options.sourceCabidaVersionId) {
+    findings.push({ code: "source_version_mismatch", severity: "major", unitRefs: [], message: "El parti no corresponde a la versión actual de Cabida" });
+  }
+
+  const expectedUnits = Number(options.unitsPerFloor);
+  if (Number.isFinite(expectedUnits) && units.length !== expectedUnits) {
+    findings.push({ code: "unit_count_mismatch", severity: "major", unitRefs: [], message: `El parti contiene ${units.length} unidades y Cabida solicita ${expectedUnits}` });
+  }
+
+  if (options.mix && typeof options.mix === "object") {
+    const actual = { dormitorios1: 0, dormitorios2: 0, dormitorios3: 0 };
+    for (const unit of units) {
+      const bedrooms = Number(unit?.dormitorios);
+      if (bedrooms >= 1 && bedrooms <= 3) actual[`dormitorios${bedrooms}`] += 1;
+    }
+    const mismatch = [1, 2, 3].some((bedrooms) => actual[`dormitorios${bedrooms}`] !== Number(options.mix[`dormitorios${bedrooms}`] || 0));
+    if (mismatch) {
+      findings.push({ code: "unit_mix_mismatch", severity: "major", unitRefs: units.map((unit) => String(unit?.unitRef || "")), message: "La mezcla de dormitorios no coincide con Cabida" });
+    }
+  }
+
+  units.forEach((unit, index) => {
+    const ancho = Number(unit?.ancho);
+    if (!Number.isFinite(ancho) || ancho <= 0) {
+      findings.push({ code: "invalid_unit_width", severity: "major", unitRefs: [String(unit?.unitRef || `unit-${index + 1}`)], message: `${unit?.unitRef || `unidad ${index + 1}`} tiene un ancho no positivo` });
+    }
+  });
+
+  return { ok: findings.length === 0, findings };
 }
 
 export function normalizeDesignOutput(input = {}) {
@@ -233,41 +299,37 @@ export const CRITIQUE_OUTPUT_SCHEMA = {
 export const FLOOR_PLAN_OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["summary", "floor", "assumptions", "tradeoffs"],
+  required: ["summary", "parti", "assumptions", "tradeoffs"],
   properties: {
     summary: { type: "string" },
-    floor: {
+    parti: {
       type: "object",
       additionalProperties: false,
-      required: ["sourceCabidaVersionId", "polygons"],
+      required: ["sourceCabidaVersionId", "crujias", "corredorProfundidad", "core", "units"],
       properties: {
         sourceCabidaVersionId: { type: "string", minLength: 1 },
-        polygons: {
+        crujias: { type: "integer", enum: [1, 2] },
+        corredorProfundidad: { type: "number" },
+        core: {
+          type: "object",
+          additionalProperties: false,
+          required: ["posicion", "ancho"],
+          properties: { posicion: { type: "number" }, ancho: { type: "number" }, longitud: { type: "number" }, distanciaAlFrente: { type: "number" } },
+        },
+        units: {
           type: "array", minItems: 1,
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["polygonId", "role", "name", "unitRef", "unitProgram", "polygon"],
+            required: ["unitRef", "orden", "ancho", "dormitorios", "banos"],
             properties: {
-              polygonId: { type: "string", minLength: 1 },
-              role: { enum: ["unidad", "core", "circulacion", "void"] },
-              name: { type: "string", minLength: 1 },
-              unitRef: { type: ["string", "null"] },
-              unitProgram: {
-                anyOf: [
-                  { type: "null" },
-                  { type: "object", additionalProperties: false, required: ["dormitorios", "banos"], properties: { dormitorios: { type: "integer", minimum: 1, maximum: 3 }, banos: { type: "integer", minimum: 1 } } },
-                ],
-              },
-              polygon: { type: "array", minItems: 3, items: { type: "array", minItems: 2, maxItems: 2, items: { type: "number" } } },
+              unitRef: { type: "string", minLength: 1 },
+              orden: { type: "integer", minimum: 1 },
+              ancho: { type: "number" },
+              dormitorios: { type: "integer", minimum: 1, maximum: 3 },
+              banos: { type: "integer", minimum: 1 },
+              banda: { type: "integer", enum: [1, 2] },
             },
-            allOf: [
-              {
-                if: { properties: { role: { const: "unidad" } } },
-                then: { properties: { unitRef: { type: "string", minLength: 1 }, unitProgram: { type: "object" } } },
-                else: { properties: { unitRef: { type: "null" }, unitProgram: { type: "null" } } },
-              },
-            ],
           },
         },
       },

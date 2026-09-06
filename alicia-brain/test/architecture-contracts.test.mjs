@@ -9,6 +9,7 @@ import {
   validateCritiqueRequest,
   validateDesignRequest,
   validateFloorPlanRequest,
+  validateFloorProgram,
 } from "../src/architecture/schemas.js";
 import { publicAgentRegistry } from "../src/architecture/registry.js";
 
@@ -20,48 +21,164 @@ test("public registry exposes versions and schemas without prompt text", () => {
     tweedledee: "1.1.0",
   });
   assert.ok(agents.every((agent) => agent.outputSchema && !("prompt" in agent)));
-  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "1.1.0");
+  assert.equal(agents.find((agent) => agent.key === "tweedledum").floorPromptVersion, "2.4.0");
 });
 
-test("floor proposals preserve exclusive roles and stable unit references", () => {
+test("floor parti normalization keeps unit order, program and Cabida version", () => {
   const output = normalizeFloorPlanOutput({
     summary: "Two-unit floor",
-    floor: {
+    parti: {
       sourceCabidaVersionId: "cabida_p1_v3",
-      polygons: [
-        { polygonId: "core-1", role: "core", name: "core", unitRef: null, unitProgram: null, polygon: [[4, 0], [6, 0], [6, 8], [4, 8]] },
-        { polygonId: "unit-1-part-1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: [[0, 0], [4, 0], [4, 8], [0, 8]] },
-        { polygonId: "unit-2-part-1", role: "unidad", name: "Tipo 2", unitRef: "unit-2", unitProgram: { dormitorios: 2, banos: 2 }, polygon: [[6, 0], [10, 0], [10, 8], [6, 8]] },
+      crujias: 1,
+      corredorProfundidad: 1.6,
+      core: { posicion: 8.4, ancho: 5.2 },
+      units: [
+        { unitRef: "unit-1", orden: 1, ancho: 7.4, dormitorios: 3, banos: 2 },
+        { unitRef: "unit-2", orden: 2, ancho: 6.6, dormitorios: 2, banos: 2 },
       ],
     },
     assumptions: [],
     tradeoffs: [],
   });
-  assert.equal(output.floor.polygons[1].unitRef, "unit-1");
-  assert.deepEqual(output.floor.polygons[1].polygon[0], [0, 0]);
+  assert.equal(output.parti.sourceCabidaVersionId, "cabida_p1_v3");
+  assert.equal(output.parti.units[1].unitRef, "unit-2");
+  assert.equal(output.parti.units[1].orden, 2);
+  assert.equal(output.parti.units[1].dormitorios, 2);
+  // banda ausente en ninguna unidad → default 1 en las dos (comportamiento de siempre).
+  assert.equal(output.parti.units[0].banda, 1);
+  assert.equal(output.parti.units[1].banda, 1);
 });
 
-test("floor proposal contract rejects ambiguous roles and references", () => {
+test("floor parti normalization accepts core.longitud and filters out invalid values", () => {
   const base = {
-    floor: {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    units: [{ unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 1, banos: 1 }],
+  };
+  const conLongitud = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, longitud: 4.5 } } });
+  assert.equal(conLongitud.parti.core.longitud, 4.5);
+
+  // ausente, o un tipo/valor que no es un número positivo: se deja en null (normalizarParti,
+  // en files/alice, es quien decide el default) — nunca rechaza el parti por esto.
+  const sinLongitud = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5 } } });
+  assert.equal(sinLongitud.parti.core.longitud, null);
+
+  const longitudAbsurda = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, longitud: -3 } } });
+  assert.equal(longitudAbsurda.parti.core.longitud, null);
+});
+
+test("floor parti normalization accepts core.distanciaAlFrente and filters out invalid values", () => {
+  const base = {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    units: [{ unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 1, banos: 1 }],
+  };
+  const conDistancia = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, distanciaAlFrente: 4 } } });
+  assert.equal(conDistancia.parti.core.distanciaAlFrente, 4);
+
+  // 0 es un valor válido (núcleo pegado al frente, el comportamiento de siempre) — no se
+  // filtra a null como si fuera una ausencia.
+  const cero = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, distanciaAlFrente: 0 } } });
+  assert.equal(cero.parti.core.distanciaAlFrente, 0);
+
+  // ausente: se deja en null (normalizarParti, en files/alice, aplica 0 como default) —
+  // nunca rechaza el parti por esto.
+  const sinDistancia = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5 } } });
+  assert.equal(sinDistancia.parti.core.distanciaAlFrente, null);
+
+  const distanciaAbsurda = normalizeFloorPlanOutput({ parti: { ...base, core: { posicion: 8, ancho: 5, distanciaAlFrente: -2 } } });
+  assert.equal(distanciaAbsurda.parti.core.distanciaAlFrente, null);
+});
+
+test("floor parti normalization accepts and normalizes banda per unit", () => {
+  const base = {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    crujias: 2,
+    corredorProfundidad: 1.5,
+    core: { posicion: 8, ancho: 5 },
+  };
+  const output = normalizeFloorPlanOutput({
+    parti: {
+      ...base,
+      units: [
+        { unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 1 },
+        { unitRef: "unit-2", orden: 2, ancho: 6, dormitorios: 1, banos: 1, banda: 2 },
+      ],
+    },
+  });
+  assert.equal(output.parti.units[0].banda, 1);
+  assert.equal(output.parti.units[1].banda, 2);
+
+  // cualquier valor fuera de {1,2} (o ausente) cae a 1: no rompe, no descarta la unidad.
+  const tolerant = normalizeFloorPlanOutput({
+    parti: {
+      ...base,
+      units: [
+        { unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 2, banos: 1, banda: 3 },
+        { unitRef: "unit-2", orden: 2, ancho: 6, dormitorios: 1, banos: 1 },
+      ],
+    },
+  });
+  assert.equal(tolerant.parti.units[0].banda, 1);
+  assert.equal(tolerant.parti.units[1].banda, 1);
+});
+
+test("floor parti contract rejects malformed shapes but tolerates numbers that do not close", () => {
+  const base = {
+    parti: {
       sourceCabidaVersionId: "cabida_p1_v3",
-      polygons: [{ polygonId: "p1", role: "unidad", name: "Tipo 1", unitRef: "unit-1", unitProgram: { dormitorios: 1, banos: 1 }, polygon: [[0, 0], [4, 0], [4, 4], [0, 4]] }],
+      crujias: 1,
+      corredorProfundidad: 1.6,
+      core: { posicion: 8, ancho: 5 },
+      units: [{ unitRef: "unit-1", orden: 1, ancho: 7, dormitorios: 1, banos: 1 }],
     },
   };
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "terraza" }] } }), /role/i);
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], unitRef: null }] } }), /unitRef/i);
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [base.floor.polygons[0], { ...base.floor.polygons[0] }] } }), /unique polygonId/i);
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [base.floor.polygons[0], { ...base.floor.polygons[0], polygonId: "p2" }] } }), /exactly one polygon/i);
-  assert.throws(() => normalizeFloorPlanOutput({ floor: { polygons: base.floor.polygons } }), /sourceCabidaVersionId/i);
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "core" }] } }), /unitRef/i);
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], unitProgram: { dormitorios: 0, banos: 1 } }] } }), /unitProgram/i);
-  assert.throws(() => normalizeFloorPlanOutput({ ...base, floor: { ...base.floor, polygons: [{ ...base.floor.polygons[0], role: "core", unitRef: null, unitProgram: { dormitorios: 1, banos: 1 } }] } }), /unitProgram/i);
+  // números aproximados que no cierran (ancho de unidad no coincide con frente-core): tolerado, no es un error de forma.
+  assert.doesNotThrow(() => normalizeFloorPlanOutput({ ...base, parti: { ...base.parti, units: [{ ...base.parti.units[0], ancho: 19.4 }] } }));
+  // crujías fuera de {1,2} se tolera (se resuelve aguas abajo según el fondo, como packFloor).
+  const tolerant = normalizeFloorPlanOutput({ ...base, parti: { ...base.parti, crujias: 7 } });
+  assert.equal(tolerant.parti.crujias, null);
+
+  assert.throws(() => normalizeFloorPlanOutput({}), /parti is required/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, sourceCabidaVersionId: "" } }), /sourceCabidaVersionId/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, core: { posicion: "x", ancho: 5 } } }), /core/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, units: [] } }), /units/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, units: [{ ...base.parti.units[0] }, { ...base.parti.units[0] }] } }), /unique unitRef/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, units: [{ ...base.parti.units[0], dormitorios: 0 }] } }), /dormitorios/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, units: [{ ...base.parti.units[0], banos: 0 }] } }), /banos/i);
+  assert.throws(() => normalizeFloorPlanOutput({ parti: { ...base.parti, units: [{ ...base.parti.units[0], unitRef: "" }] } }), /unitRef/i);
 });
 
 test("floor planning requires exact project and Cabida version context", () => {
   const deterministicFallback = { floor: { sourceCabidaVersionId: "cabida_p1_v3", polygons: [] } };
   assert.throws(() => validateFloorPlanRequest({ context: { project: { id: "p1", name: "DC01" } }, floorBrief: {}, deterministicFallback }), /sourceCabidaVersionId/i);
   assert.equal(validateFloorPlanRequest({ context: { project: { id: "p1", name: "DC01" }, sourceCabidaVersionId: "cabida_p1_v3" }, floorBrief: {}, deterministicFallback }).floorBrief instanceof Object, true);
+});
+
+test("validateFloorProgram checks unit count, bedroom mix, version and positive widths — not geometry", () => {
+  const parti = {
+    sourceCabidaVersionId: "cabida_p1_v3",
+    units: [
+      { unitRef: "unit-1", ancho: 7, dormitorios: 1, banos: 1 },
+      { unitRef: "unit-2", ancho: 6, dormitorios: 2, banos: 2 },
+    ],
+  };
+  const options = { sourceCabidaVersionId: "cabida_p1_v3", unitsPerFloor: 2, mix: { dormitorios1: 1, dormitorios2: 1, dormitorios3: 0 } };
+  assert.equal(validateFloorProgram(parti, options).ok, true);
+
+  const wrongVersion = validateFloorProgram({ ...parti, sourceCabidaVersionId: "cabida_old" }, options);
+  assert.ok(wrongVersion.findings.some((f) => f.code === "source_version_mismatch"));
+
+  const wrongCount = validateFloorProgram({ ...parti, units: parti.units.slice(0, 1) }, options);
+  assert.ok(wrongCount.findings.some((f) => f.code === "unit_count_mismatch"));
+
+  const wrongMix = validateFloorProgram({ ...parti, units: [parti.units[0], { ...parti.units[1], dormitorios: 3 }] }, options);
+  assert.ok(wrongMix.findings.some((f) => f.code === "unit_mix_mismatch"));
+
+  const badWidth = validateFloorProgram({ ...parti, units: [{ ...parti.units[0], ancho: -1 }, parti.units[1]] }, options);
+  assert.ok(badWidth.findings.some((f) => f.code === "invalid_unit_width" && f.unitRefs.includes("unit-1")));
 });
 
 test("Tweedledum rooms require stable references and preserve supported metadata", () => {

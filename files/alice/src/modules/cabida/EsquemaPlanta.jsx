@@ -4,7 +4,7 @@ import { footprintReal } from "./loteReal.js";
 import { generarDistribuciones } from "../planos/plantas.js";
 import { bbox as polyBbox, centroid, dist, area as polyArea } from "../planos/geometry.js";
 import { planFloorWithTweedledum } from "../planos/architecture.js";
-import { cabidaVersionId, fallbackFloorProposal, proposalToParti } from "./floorProposal.js";
+import { cabidaVersionId, fallbackFloorProposal, materializeFloorProposal, proposalToParti } from "./floorProposal.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -277,10 +277,10 @@ export default function EsquemaPlanta({
   terreno, huella, pisos, dptos, mix1, mix2, areaDpto, circulacion, pisosSot, azoteaTechada,
   frente, tipoLote, retiros, lotePoly, cadInfo,
   frenteIdxOverride = null, onFrente, partiIdx = 0, onParti, movs = {}, onMovs, onFrenteReal,
-  project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor,
+  project = null, floorProposals = [], activeFloorProposalId = null, onProposalGenerated, onAcceptFloor, onDiscardFloor,
+  commercialBrief = {},
   soloPlanta = false,
 }) {
-  const [briefSent, setBriefSent] = useState(null);
   const [show3D, setShow3D] = useState(false);
   const [floorBusy, setFloorBusy] = useState(false);
   const [floorError, setFloorError] = useState("");
@@ -318,11 +318,18 @@ export default function EsquemaPlanta({
   }, [lotePoly, terreno, frente, frenteIdx, tipoLote, retiros, e.uPorPiso, mix1, mix2, areaDpto]);
   const totalUnits = Math.max(1, Math.round(e.uPorPiso));
   const bedroomMix = { dormitorios1: e.n1, dormitorios2: e.n2, dormitorios3: e.n3 };
+  const targetAreaByBedrooms = { dormitorios1: e.areaTip["1D"], dormitorios2: e.areaTip["2D"], dormitorios3: e.areaTip["3D"] };
   const compactFootprint = real?.footprint?.map((point) => [Number(point.x), Number(point.y)]) || [];
-  const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto };
+  const versionInputs = { footprint: compactFootprint, frontIdx: frenteIdx, tipoLote, unitsPerFloor: totalUnits, bedroomMix, targetAverageArea: areaDpto, targetAreaByBedrooms, commercialBrief };
   const currentCabidaVersionId = cabidaVersionId(project?.id || "cabida", versionInputs);
-  const currentResult = floorResult?.selected?.floor?.sourceCabidaVersionId === currentCabidaVersionId ? floorResult : null;
-  const latestRecord = [...floorProposals].reverse().find((record) => record.sourceCabidaVersionId === currentCabidaVersionId) || null;
+  // una propuesta descartada deja de mostrarse, pero sigue en floorProposals: su motivo es
+  // la retroalimentación con la que Tweedledum aprende.
+  const descartada = (record) => Boolean(record?.descartada
+    || floorProposals.find((item) => item.id === record?.id)?.descartada);
+  const resultBruto = floorResult?.selected?.floor?.sourceCabidaVersionId === currentCabidaVersionId ? floorResult : null;
+  const currentResult = descartada(resultBruto?.record) ? null : resultBruto;
+  const latestRecord = [...floorProposals].reverse().find((record) =>
+    record.sourceCabidaVersionId === currentCabidaVersionId && !record.descartada) || null;
   const displayedRecord = currentResult?.record || latestRecord;
   const displayedProposal = currentResult?.selected || (displayedRecord ? {
     summary: displayedRecord.summary,
@@ -356,11 +363,31 @@ export default function EsquemaPlanta({
           lockedElements: [],
           verifiedEvidence: [],
         },
-        floorBrief: { unitsPerFloor: total, bedroomMix, targetAverageArea: areaDpto, areaTolerance: 0.2 },
+        floorBrief: { unitsPerFloor: total, bedroomMix, targetAverageArea: areaDpto, targetAreaByBedrooms, areaTolerance: 0.2, commercialBrief },
         deterministicFallback,
       });
-      const record = onProposalGenerated?.(result) || null;
-      setFloorResult({ ...result, record });
+      // Tweedledum ahora devuelve un parti aproximado, no polígonos: el motor lo normaliza
+      // y tesela acá. El respaldo determinístico ya viene con `floor.polygons`, así que solo
+      // materializamos cuando hay parti. Sin esto, la propuesta del agente nunca se dibuja.
+      const conParti = result?.selected?.parti
+        ? {
+          ...result,
+          selected: {
+            ...result.selected,
+            ...materializeFloorProposal({
+              parti: result.selected.parti,
+              footprint: real.footprint,
+              frontIdx: frenteIdx,
+              sourceCabidaVersionId,
+              summary: result.selected.summary,
+              assumptions: result.selected.assumptions || [],
+              tradeoffs: result.selected.tradeoffs || [],
+            }),
+          },
+        }
+        : result;
+      const record = onProposalGenerated?.(conParti) || null;
+      setFloorResult({ ...conParti, record });
       setAcceptedFloorId(null);
     } catch (error) {
       setFloorError(error?.message || "No se pudo proponer la planta");
@@ -374,9 +401,38 @@ export default function EsquemaPlanta({
     setAcceptedFloorId(proposalId);
   };
 
+  // Descartar no borra: guarda el motivo y vuelve a mostrar los partis deterministas.
+  const discardFloor = () => {
+    const proposalId = displayedRecord?.id;
+    if (!proposalId) return;
+    const respuesta = window.prompt("¿Por qué no sirve esta planta? (opcional — le sirve a Tweedledum para aprender)");
+    if (respuesta === null) return; // canceló el prompt: se arrepiente, no se descarta nada
+    const motivo = respuesta.trim(); // confirmar con el campo vacío sí descarta, con motivo ""
+    onDiscardFloor?.(proposalId, motivo);
+    setFloorResult(null);
+    setAcceptedFloorId(null);
+  };
+
   const sourceLabel = currentResult?.source === "revision" ? "revisión de Tweedledum"
     : currentResult?.source === "deterministic_fallback" ? "respaldo determinístico"
       : currentResult?.source === "tweedledum" ? "Tweedledum" : displayedRecord?.source || null;
+
+  // Cuando el servicio cae al respaldo, la planta que se dibuja es la determinística —
+  // visualmente idéntica a la que ya estabas viendo. Sin esto, apretar el botón parece
+  // "no hacer nada". Mostramos por qué se descartó lo de Tweedledum y con qué hallazgos.
+  const fuente = currentResult?.source || displayedRecord?.source || null;
+  const cayoAlRespaldo = fuente === "deterministic_fallback";
+  const motivoRespaldo = currentResult?.fallbackReason || displayedRecord?.fallbackReason || null;
+  const hallazgosDescartados = (() => {
+    const cand = currentResult?.candidateValidation || displayedRecord?.candidateValidation || null;
+    const lista = cand?.revision?.findings?.length ? cand.revision.findings : cand?.original?.findings;
+    return Array.isArray(lista) ? lista.slice(0, 4) : [];
+  })();
+  const commercialEvaluation = currentResult?.evaluation || displayedRecord?.evaluation || null;
+  const fallbackEvaluation = currentResult?.candidateEvaluation?.fallback || displayedRecord?.candidateEvaluation?.fallback || null;
+  const profitDelta = commercialEvaluation && fallbackEvaluation
+    ? commercialEvaluation.projectedNetProfit - fallbackEvaluation.projectedNetProfit
+    : null;
 
   useEffect(() => { setAcceptedFloorId(activeFloorProposalId); }, [activeFloorProposalId]);
 
@@ -384,20 +440,6 @@ export default function EsquemaPlanta({
   const elegirFrente = (i) => {
     onFrente?.(i);
     if (real?.lote) { const q = real.lote[(i + 1) % real.lote.length], p = real.lote[i]; onFrenteReal?.(Math.round(dist(p, q))); }
-  };
-
-  // envía la tipología como brief al generador del Editor de Planos
-  const enviarBrief = (tip) => {
-    const depth = e.filas[0]?.depth || 4.5;
-    const brief = {
-      area: +e.areaTip[tip].toFixed(1),
-      frente: +(e.areaTip[tip] / depth).toFixed(2),
-      dormitorios: parseInt(tip, 10) || 1,
-      banos: tip === "1D" ? 1 : 2,
-    };
-    try { localStorage.setItem("hygge:planBrief", JSON.stringify(brief)); } catch { /* cuota */ }
-    setBriefSent(tip);
-    setTimeout(() => setBriefSent(null), 3200);
   };
 
   const descargar = () => {
@@ -492,8 +534,33 @@ export default function EsquemaPlanta({
                     {acceptedFloorId === displayedRecord.id ? "✓ aceptada para Planos" : "Aceptar y enviar a Planos"}
                   </button>
                 )}
+                {displayedRecord && (
+                  <button onClick={discardFloor} title="oculta esta propuesta y vuelve a los partis deterministas; queda guardada con tu motivo"
+                    style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: "pointer", color: C.soft, background: C.card, border: `1px solid ${C.line}` }}>
+                    Descartar propuesta
+                  </button>
+                )}
                 {sourceLabel && <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>origen: {sourceLabel}</span>}
               </div>
+              {cayoAlRespaldo && (
+                <div style={{ fontFamily: mono, fontSize: 10.5, marginTop: 10, padding: "9px 11px", lineHeight: 1.55,
+                  background: "#FFF6F0", border: `1px solid ${C.orange}`, borderRadius: 2, color: C.ink }}>
+                  <b>Tweedledum no logró una planta válida.</b> Lo que ves es el respaldo determinístico —
+                  por eso el dibujo no cambió.
+                  {motivoRespaldo && <div style={{ color: C.soft, marginTop: 4 }}>{motivoRespaldo}</div>}
+                  {hallazgosDescartados.length > 0 && (
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 16, color: C.soft }}>
+                      {hallazgosDescartados.map((f, i) => <li key={i}>{f.message || f.code}</li>)}
+                    </ul>
+                  )}
+                </div>
+              )}
+              {commercialEvaluation && (
+                <div style={{ fontFamily: mono, fontSize: 10, color: C.ink, marginTop: 8, lineHeight: 1.55 }}>
+                  vendible {fmt(commercialEvaluation.sellableAreaPerFloor, 1)} m²/piso · eficiencia {fmt(commercialEvaluation.efficiencyPct, 1)}% · utilidad proyectada ${fmt(commercialEvaluation.projectedNetProfit)}
+                  {profitDelta !== null && ` · ${profitDelta >= 0 ? "+" : ""}$${fmt(profitDelta)} vs. respaldo`}
+                </div>
+              )}
               {floorError && <div style={{ fontFamily: mono, fontSize: 10.5, color: "#A85B5B", marginTop: 8, lineHeight: 1.5 }}>{floorError}</div>}
             </>
           ) : (
@@ -542,12 +609,6 @@ export default function EsquemaPlanta({
           <span key={t} style={{ fontFamily: mono, fontSize: 10.5, color: C.ink, display: "inline-flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 10, height: 10, background: TIP_COLOR[t], display: "inline-block", borderRadius: 1 }} />
             {t} · {fmt(e.areaTip[t])} m² · {t === "1D" ? e.n1 : t === "2D" ? e.n2 : e.n3}/piso
-            <button onClick={() => enviarBrief(t)} title="generar distribución de esta tipología en el Editor de Planos"
-              style={{ fontFamily: mono, fontSize: 9.5, color: briefSent === t ? C.card : C.orange,
-                background: briefSent === t ? C.orange : "transparent", border: `1px solid ${C.orange}`,
-                borderRadius: 2, padding: "2px 7px", cursor: "pointer" }}>
-              {briefSent === t ? "brief listo ✓" : "→ plano"}
-            </button>
           </span>
         ))}
         <span style={{ fontFamily: mono, fontSize: 10.5, color: C.soft, marginLeft: "auto" }}>

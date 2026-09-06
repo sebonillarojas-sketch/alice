@@ -2007,6 +2007,22 @@ app.get("/api/calendar/events", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Estado real de la conexión con Google Calendar, para el onboarding del ERP.
+// Antes el ERP solo confiaba en un flag de localStorage (se borra con la caché,
+// el navegador o el modo incógnito) y si ese flag se perdía la compuerta de
+// onboarding quedaba pidiendo reconectar sin salida — así se bloqueó al CEO.
+// El brain SÍ sabe la verdad (tiene o no tiene el refresh token), así que el
+// ERP puede preguntarle antes de forzar el onboarding. Mismo gate que el resto
+// de las rutas por :userId (identidadOk): cada quien ve su propio estado, el
+// CEO puede ver el de cualquiera. No se expone el token, solo el booleano.
+app.get("/api/google/status/:userId", async (req, res) => {
+  if (!identidadOk(req, res, req.params.userId)) return;
+  try {
+    const { googleAvailable } = await import("./integrations/google.js");
+    res.json({ connected: googleAvailable(req.params.userId) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Pantalla de inicio del cuerpo ───────────────────────────────────────────
 // Un solo agregado para el launcher de Alicia (assets/home): la agenda de hoy, las
 // tareas y las stats en una llamada, para no hacer tres fetch con tres chequeos de

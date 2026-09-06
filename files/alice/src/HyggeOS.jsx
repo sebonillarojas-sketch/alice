@@ -1452,7 +1452,7 @@ function UserDetailModal({ userId, users, onlineUserIds, tasks, allSpaces, space
 }
 
 // ═══ TOP BAR ═════════════════════════════════════════════════════════════
-function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, onMenu, onRightPanel }) {
+function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, notifCount = 0, onMenu, onRightPanel, onNotifications }) {
   const flat = [...allSpaces, ...allSpaces.flatMap(s => s.children || [])];
   const tool = TOOLS.find(t => t.id === space);
   const spaceObj = tool ? { id: tool.id, name: tool.label, dot: tool.dot, isTool: true } : flat.find(s => s.id === space);
@@ -1478,13 +1478,17 @@ function TopBar({ allSpaces, space, onCmd, onAskHygge, unreadCount, onMenu, onRi
         <button onClick={onAskHygge} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] hover:opacity-90" style={{ backgroundColor: C.ink, color: C.bg, borderRadius: 2, fontWeight: 500 }}>
           <Sparkles size={11} /> <span className="hidden sm:inline">Ask Alice</span><span className="sm:hidden">AI</span>
         </button>
-        <button onClick={onRightPanel} className="lg:hidden relative p-1.5 hover:opacity-70">
+        <button onClick={onRightPanel} aria-label="Abrir panel" className="lg:hidden relative p-1.5 hover:opacity-70">
           <Bell size={16} style={{ color: C.inkSoft }} />
-          {unreadCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
+          {notifCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
         </button>
-        <button className="hidden lg:block relative p-2 hover:opacity-70">
+        {/* Este botón NO tenía onClick: se veía clicable, tenía hover y badge, y
+            no hacía absolutamente nada. Y su badge contaba MENSAJES sin leer
+            (`unreadCount`), no notificaciones — una campana avisando de otra cosa.
+            Ahora lleva al space de Notificaciones y cuenta lo que corresponde. */}
+        <button onClick={onNotifications} title="Notificaciones" aria-label="Ir a Notificaciones" className="hidden lg:block relative p-2 hover:opacity-70">
           <Bell size={15} style={{ color: C.inkSoft }} />
-          {unreadCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
+          {notifCount > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.brick }} />}
         </button>
       </div>
     </header>
@@ -15128,6 +15132,69 @@ function SpaceAccessRow({ space, users, access, onChange }) {
   );
 }
 
+// ═══ ERROR BOUNDARY DE MÓDULO/APP ═══════════════════════════════════════
+// 30 ago 2026: EsquemaPlanta.jsx usaba useEffect sin importarlo. Al abrir
+// Cabida, React tiró ReferenceError al MONTAR el componente y, al no haber
+// ningún boundary por ENCIMA de él, se llevó puesta la app entera (el árbol
+// de React pasó de 918 nodos a 2 — pantalla en blanco, sin sidebar).
+//
+// Por qué este boundary vive acá y no dentro de cada módulo: un error
+// boundary sólo puede atrapar errores de sus DESCENDIENTES, nunca los
+// propios. Los tres boundaries que ya existían (EsquemaPlanta.jsx:13,
+// EditorPlanos.jsx:237, laminas.jsx:18) están DENTRO del módulo que puede
+// fallar — si el módulo revienta al montarse, como pasó hoy, ese boundary
+// interno todavía no existe para atraparlo. Por eso siguen ahí (son útiles
+// para fallas internas más profundas, p.ej. la vista 3D) pero no alcanzan:
+// hace falta un boundary un nivel ARRIBA, en el punto donde HyggeOS decide
+// qué módulo montar, para que CUALQUIER módulo que explote al montarse
+// quede contenido sin tumbar sidebar, navegación ni el resto del ERP.
+//
+// La key={moduleKey} en el punto de uso fuerza a React a desmontar y crear
+// una instancia NUEVA de este boundary cada vez que cambia el módulo — así
+// un boundary que quedó en estado de error nunca se arrastra al siguiente
+// módulo que la persona abra.
+class ModuleErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    // Rastro completo en consola para quien depure — al usuario solo le
+    // mostramos el nombre del error, nunca el stack trace.
+    console.error(`[ModuleErrorBoundary] "${this.props.moduleName}" falló al renderizar:`, error, info?.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, height: "calc(100vh - 108px)", padding: 24, textAlign: "center" }}>
+          <AlertTriangle size={28} style={{ color: C.brick }} />
+          <div>
+            <Eyebrow color={C.brick}>Módulo con error</Eyebrow>
+            <div style={{ fontSize: 15, fontWeight: 600, color: C.ink, marginTop: 4 }}>
+              "{this.props.moduleName}" no pudo cargar
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 6, maxWidth: 440, fontFamily: "monospace" }}>
+              {String(this.state.error?.message || this.state.error)}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button onClick={() => this.setState({ error: null })} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "8px 14px", borderRadius: 4, border: `1px solid ${C.line}`, background: C.surface, color: C.ink, cursor: "pointer" }}>
+              <RefreshCw size={12} /> Reintentar
+            </button>
+            <button onClick={() => this.props.onExit?.()} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "8px 14px", borderRadius: 4, border: "none", background: C.cobalt, color: "#fff", cursor: "pointer" }}>
+              <ArrowLeft size={12} /> Volver
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ═══ MAIN APP ════════════════════════════════════════════════════════════
 export default function HyggeOS({ authUser } = {}) {
   const [currentSpace, setCurrentSpace] = useState("hq");
@@ -16254,17 +16321,24 @@ REGLAS:
       return <InboxView tasks={visibleTasks} allSpaces={allSpaces} users={users} onUpdate={updateTask} onDelete={deleteTaskCascade} onToggle={toggleTask} openDetail={openDetail} onCreate={createFromSmartCapture} />;
     }
     // ─── Apps embebidas (Radar externo + apps nativas como Diagramatic) ───
+    // Cada app nativa queda envuelta en ModuleErrorBoundary (definido arriba,
+    // antes de "MAIN APP"): si el módulo revienta al montarse — el bug de hoy
+    // fue justo eso, useEffect sin importar en EsquemaPlanta/Cabida — el resto
+    // de ALICE (sidebar, navegación, otros spaces) sigue vivo. La key={app.id}
+    // asegura que al cambiar de app se cree una instancia nueva del boundary,
+    // así el estado de error nunca se arrastra al siguiente módulo.
     if (isAppId(currentSpace)) {
       const app = APPS.find(a => a.id === currentSpace);
+      let appContent = null;
       if (app && app.native) {
-        if (app.id === "app-diagramatic") return <AppWhiteboardView app={app} />;
-        if (app.id === "app-velocity") return <MercadoView />;
-        if (app.id === "app-cotizacion") return <CotizacionView />;
-        if (app.id === "app-cabida")   return <CabidaView />;
-        if (app.id === "app-editor")   return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos navigate={navigate} /></div>;
-        if (app.id === "app-taller-bammy") return <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><TallerBammy /></div>;
-        if (app.id === "app-mesa")     return <MesaDeTrabajo />;
-        return (
+        if (app.id === "app-diagramatic") appContent = <AppWhiteboardView app={app} />;
+        else if (app.id === "app-velocity") appContent = <MercadoView />;
+        else if (app.id === "app-cotizacion") appContent = <CotizacionView />;
+        else if (app.id === "app-cabida")   appContent = <CabidaView />;
+        else if (app.id === "app-editor")   appContent = <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><EditorPlanos navigate={navigate} /></div>;
+        else if (app.id === "app-taller-bammy") appContent = <div style={{ width: "100%", height: "calc(100vh - 108px)" }}><TallerBammy /></div>;
+        else if (app.id === "app-mesa")     appContent = <MesaDeTrabajo />;
+        else appContent = (
           <div style={{ position: "relative", width: "100%", height: "calc(100vh - 108px)" }}>
             <iframe
               src={app.url}
@@ -16274,8 +16348,16 @@ REGLAS:
             />
           </div>
         );
+      } else if (app) {
+        appContent = <AppEmbedView app={app} currentUser={currentUser} currentSpace={currentSpace} />;
       }
-      if (app) return <AppEmbedView app={app} currentUser={currentUser} currentSpace={currentSpace} />;
+      if (appContent) {
+        return (
+          <ModuleErrorBoundary key={app.id} moduleName={app.label} onExit={() => navigate("hq")}>
+            {appContent}
+          </ModuleErrorBoundary>
+        );
+      }
     }
     if (currentSpace === "alicia") {
       return (
@@ -16457,8 +16539,8 @@ REGLAS:
           onOpenSettings={() => setSettingsOpen(true)}
           tasks={tasks} />
         <div className="flex-1 flex flex-col min-w-0">
-          <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount}
-            onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} />
+          <TopBar allSpaces={allSpaces} space={currentSpace} onCmd={() => setCmdOpen(true)} onAskHygge={() => setChatOpen(true)} unreadCount={unreadCount} notifCount={notifCount}
+            onMenu={() => setMobileSidebarOpen(true)} onRightPanel={() => setMobileRightPanelOpen(true)} onNotifications={() => navigate("notifications")} />
           <SmartCapture onCreate={createFromSmartCapture} detectedPatterns={detectedPatterns} savedSmartViews={smartViews} onSaveSmartView={saveSmartView} currentSpaceContext={currentSpace} users={users} currentUserId={currentUser?.id} />
           {activeSmartView && (
             <div className="px-4 lg:px-7 py-2 flex items-center gap-2 flex-wrap" style={{ backgroundColor: C.paper, borderBottom: `1px solid ${C.lineSoft}` }}>

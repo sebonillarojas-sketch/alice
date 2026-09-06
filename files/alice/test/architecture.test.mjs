@@ -8,6 +8,7 @@ import {
   mapFindingLocation,
   serializeValidation,
 } from "../src/modules/planos/architecture.js";
+import { discardFloorProposalRecord } from "../src/modules/cabida/floorProposal.js";
 import * as interior from "../src/modules/planos/feyd.js";
 import * as architectureApi from "../src/modules/planos/architecture.js";
 import { acceptFloorProposalRecord, appendFloorProposalRecord, cabidaVersionId, fallbackFloorProposal, proposalToParti } from "../src/modules/cabida/floorProposal.js";
@@ -293,13 +294,15 @@ test("floor planning client calls the dedicated architecture endpoint", async ()
 test("floor proposal records append immutably and acceptance bridges to Planos", () => {
   const project = { id: "p1", nombre: "DC01", cabida: {}, plano: { rooms: [{ id: "old" }] } };
   const selected = fallbackFloorProposal({ footprint: square(0, 0, 14, 12), frontIdx: 0, brief: { udsPiso: 2, pct1: 50, pct2: 50, areaObjetivo: 36 }, sourceCabidaVersionId: "cabida_p1_a" });
-  const first = appendFloorProposalRecord(project, { source: "tweedledum", selected, validation: { ok: true, findings: [] }, candidateValidation: { original: { ok: true, findings: [] }, revision: null }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:00:00.000Z" });
+  const first = appendFloorProposalRecord(project, { source: "tweedledum", selected, validation: { ok: true, findings: [] }, candidateValidation: { original: { ok: true, findings: [] }, revision: null }, evaluation: { sellableAreaPerFloor: 72, projectedNetProfit: 450000 }, candidateEvaluation: { original: { sellableAreaPerFloor: 72 }, fallback: { sellableAreaPerFloor: 68 }, revision: null }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:00:00.000Z" });
   const second = appendFloorProposalRecord(first.project, { source: "revision", selected, validation: { ok: true, findings: [] }, promptVersion: "1.0.0", model: "test" }, { now: "2026-09-04T12:01:00.000Z" });
   assert.equal(project.cabida.floorProposals, undefined);
   assert.equal(second.record.version, 2);
   assert.equal(second.record.parentProposalId, first.record.id);
   assert.equal(second.project.cabida.floorProposals.length, 2);
   assert.deepEqual(first.record.candidateValidation, { original: { ok: true, findings: [] }, revision: null });
+  assert.deepEqual(first.record.evaluation, { sellableAreaPerFloor: 72, projectedNetProfit: 450000 });
+  assert.deepEqual(first.record.candidateEvaluation, { original: { sellableAreaPerFloor: 72 }, fallback: { sellableAreaPerFloor: 68 }, revision: null });
 
   const accepted = acceptFloorProposalRecord(second.project, first.record.id);
   assert.equal(accepted.cabida.activeFloorProposalId, first.record.id);
@@ -386,4 +389,39 @@ test("locked infrastructure survives clear and replacement operations", () => {
   assert.equal(interior.isRoomEditable(editable), true);
   assert.deepEqual(interior.preserveLockedRooms([locked, editable], []), [locked]);
   assert.deepEqual(interior.preserveLockedRooms([locked, editable], [replacement]), [locked, replacement]);
+});
+
+// ── descarte de propuestas de piso ────────────────────────────────────────────
+// Descartar OCULTA pero nunca borra: el historial de propuestas rechazadas, con su
+// motivo, es la señal de retroalimentación con la que Tweedledum aprende.
+test("descartar marca la propuesta sin sacarla del historial", () => {
+  const base = appendFloorProposalRecord({ id: "p1", cabida: {} },
+    { selected: { summary: "v1", floor: { sourceCabidaVersionId: "V", polygons: [] } } });
+  const out = discardFloorProposalRecord(base.project, base.record.id, "la terraza no sirve");
+  const guardadas = out.cabida.floorProposals;
+  assert.equal(guardadas.length, 1, "no debe borrarse del historial");
+  assert.equal(guardadas[0].descartada, true);
+  assert.equal(guardadas[0].motivoDescarte, "la terraza no sirve");
+  assert.ok(guardadas[0].descartadaAt, "debe registrar cuándo");
+  assert.equal(guardadas[0].summary, "v1", "conserva el resto del registro");
+});
+
+test("descartar sin motivo es válido y deja el motivo vacío", () => {
+  const base = appendFloorProposalRecord({ id: "p1", cabida: {} },
+    { selected: { summary: "v1", floor: { sourceCabidaVersionId: "V", polygons: [] } } });
+  const out = discardFloorProposalRecord(base.project, base.record.id);
+  assert.equal(out.cabida.floorProposals[0].descartada, true);
+  assert.equal(out.cabida.floorProposals[0].motivoDescarte, "");
+});
+
+test("descartar una propuesta inexistente falla fuerte", () => {
+  assert.throws(() => discardFloorProposalRecord({ id: "p1", cabida: {} }, "nope"), /not found/);
+});
+
+test("descartar no muta el proyecto de entrada", () => {
+  const base = appendFloorProposalRecord({ id: "p1", cabida: {} },
+    { selected: { summary: "v1", floor: { sourceCabidaVersionId: "V", polygons: [] } } });
+  const antes = JSON.stringify(base.project);
+  discardFloorProposalRecord(base.project, base.record.id, "x");
+  assert.equal(JSON.stringify(base.project), antes);
 });
