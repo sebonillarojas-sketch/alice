@@ -11,13 +11,13 @@ test("los endpoints de Feyd ya no existen", () => {
 });
 
 test("el frontend ya no llama a Feyd", () => {
-  const feyd = read("../../files/alice/src/modules/planos/feyd.js");
+  const feyd = read("../../files/alice/src/modules/planos/materialize.js");
   assert.ok(!feyd.includes("disenarConFeyd"));
   assert.ok(!feyd.includes("corregirConFeyd"));
 });
 
 test("la capa de materializacion sigue intacta", () => {
-  const feyd = read("../../files/alice/src/modules/planos/feyd.js");
+  const feyd = read("../../files/alice/src/modules/planos/materialize.js");
   for (const fn of ["preserveLockedRooms", "splitAcceptedFloor", "materializeUnitInteriors",
                     "materializeWithOneRevision", "validateGeneratedInterior", "resolveArchitectureProgram",
                     "planALayout", "roomsALayout", "layoutARooms", "isRoomEditable", "reanclarItems"]) {

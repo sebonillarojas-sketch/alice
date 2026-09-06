@@ -9,7 +9,7 @@ import {
   serializeValidation,
 } from "../src/modules/planos/architecture.js";
 import { discardFloorProposalRecord } from "../src/modules/cabida/floorProposal.js";
-import * as interior from "../src/modules/planos/feyd.js";
+import * as interior from "../src/modules/planos/materialize.js";
 import * as architectureApi from "../src/modules/planos/architecture.js";
 import { acceptFloorProposalRecord, appendFloorProposalRecord, cabidaVersionId, fallbackFloorProposal, proposalToParti } from "../src/modules/cabida/floorProposal.js";
 import { validateFloorProposal } from "../../../alicia-brain/src/architecture/floor-validation.js";

@@ -288,8 +288,8 @@ export async function materializeUnitInteriors({ floor, designUnit, reviseUnit =
   return { rooms, items, unitResults };
 }
 
-// F1 · Feyd deja de vaciar/desincronizar el mobiliario.
-// Feyd audita SOLO los ambientes (roomsALayout no le manda muebles), y su
+// El revisor deja de vaciar/desincronizar el mobiliario.
+// Quien corrige audita SOLO los ambientes (roomsALayout no le manda muebles), y su
 // corrección reescribe los polígonos. Antes, al aplicar, los muebles quedaban
 // en las coordenadas viejas → flotando fuera de los muros ("vacías"/desincronizado).
 // Acá cada mueble viaja con su ambiente: se lo reancla por el desplazamiento del
@@ -299,7 +299,7 @@ export async function materializeUnitInteriors({ floor, designUnit, reviseUnit =
 export function reanclarItems(items, roomsPrev, roomsNew) {
   if (!items?.length || !roomsPrev?.length || !roomsNew?.length) return items || [];
   const cNew = roomsNew.map((r) => centroid(r.pts));
-  // por cada ambiente previo, su corregido más cercano (Feyd ajusta, no reordena).
+  // por cada ambiente previo, su corregido más cercano (la corrección ajusta, no reordena).
   // cap 6 m: si el match más cercano está lejísimo, no reanclar (evita saltos absurdos).
   const delta = roomsPrev.map((r) => {
     const c = centroid(r.pts);
