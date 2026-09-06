@@ -12,6 +12,122 @@ const safeId = (value) => String(value || "project").replace(/[^a-zA-Z0-9_-]/g, 
 // tuvo que rellenar o acotar el motor porque Tweedledum no mandó una decisión utilizable
 // — a texto legible para `tradeoffs`. Nada de defaults silenciosos: si el motor decidió
 // algo en lugar del agente, tiene que quedar escrito acá.
+// Despiece del núcleo de circulación vertical: Tweedledum decide dónde va el núcleo y
+// qué tamaño aproximado tiene (core.posicion/ancho/longitud/distanciaAlFrente, en
+// normalizarParti ya convertido a números exactos) — lo que va ADENTRO no es una
+// decisión de diseño, son medidas normadas, y las dibuja este motor de forma
+// determinista. Mínimos (m): escalera en U, ascensor (ducto), hall (descanso +
+// distribución, "el resto").
+const NUCLEO_ESCALERA_ANCHO = 2.40;
+const NUCLEO_ESCALERA_LARGO = 4.20;
+const NUCLEO_ASCENSOR_ANCHO = 1.60;
+const NUCLEO_ASCENSOR_LARGO = 1.80;
+// escalera + ascensor lado a lado ocupan, juntos, este ancho combinado ("pack")...
+const NUCLEO_PACK = NUCLEO_ESCALERA_ANCHO + NUCLEO_ASCENSOR_ANCHO; // 4.00 m
+// ...sobre una banda compartida tan profunda como la escalera (que siempre manda,
+// 4.20 > 1.80): el ascensor se dibuja ocupando esa banda entera en vez de solo sus
+// 1.80 m mínimos — sigue cumpliendo su mínimo (>=), y evita que quede una tira angosta
+// sin asignar al lado del ascensor que obligaría a un cuarto polígono.
+const NUCLEO_BANDA = NUCLEO_ESCALERA_LARGO; // 4.20 m
+// clipPieces (clipFootprint.js) descarta en silencio cualquier pieza cuya área, tras
+// recortar contra la huella real, quede por debajo de su `minArea` (1.0 m² por
+// default) — es la misma protección que evita esquirlas numéricas, pero significa que
+// un hall calculado con precisión geométrica perfecta puede desaparecer sin dejar
+// rastro si da, por ejemplo, 0.8 m². Eso SÍ sería el bug de suelo sin asignar que este
+// módulo existe para evitar. Con margen sobre ese 1.0 m²: por debajo de esto, el hall
+// no se dibuja como pieza propia — ver `construirPiezasNucleo`.
+const NUCLEO_HALL_AREA_SEGURA = 1.5;
+
+// Área (shoelace) de un polígono en coordenadas locales [[u,v],...].
+function areaLocal(pts) {
+  return Math.abs(pts.reduce((sum, [x1, y1], i) => {
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    return sum + (x1 * y2 - x2 * y1);
+  }, 0)) / 2;
+}
+
+// Recorta, del rectángulo [0,packTotal]x[0,bandaTotal], el rectángulo de escalera+ascensor
+// ya colocado en la esquina (0,0)-(packUsado,bandaUsada), y devuelve el polígono del hall
+// (lo que queda) en las mismas coordenadas locales (pack, banda). Como escalera+ascensor
+// juntos SON un rectángulo (el ascensor ocupa toda `bandaUsada`, no solo su mínimo), el
+// resto es siempre un único polígono simple — rectángulo si sobra en un solo eje, en "L"
+// si sobra en ambos — nunca hace falta partirlo en más de una pieza.
+function hallLocalDelNucleo(packTotal, bandaTotal, packUsado, bandaUsada) {
+  const packSobra = packTotal - packUsado > 1e-9;
+  const bandaSobra = bandaTotal - bandaUsada > 1e-9;
+  if (!packSobra && !bandaSobra) return null; // núcleo justo al mínimo: sin resto dibujable
+  if (!packSobra) return [[0, bandaUsada], [packTotal, bandaUsada], [packTotal, bandaTotal], [0, bandaTotal]];
+  if (!bandaSobra) return [[packUsado, 0], [packTotal, 0], [packTotal, bandaTotal], [packUsado, bandaTotal]];
+  return [
+    [0, bandaUsada], [packUsado, bandaUsada], [packUsado, 0],
+    [packTotal, 0], [packTotal, bandaTotal], [0, bandaTotal],
+  ];
+}
+
+// Construye escalera + ascensor + (opcionalmente) hall, en coordenadas locales
+// (pack, banda), dado cuánto espacio hay realmente disponible en cada eje.
+// Si el resto que le tocaría al hall es demasiado chico para sobrevivir el recorte
+// contra la huella (NUCLEO_HALL_AREA_SEGURA), no se lo deja como pieza aparte: se
+// estira el ascensor (y, si hace falta, la escalera) para que entre los dos cubran el
+// rectángulo completo sin dejar ningún resto — nunca una pieza que el recorte
+// descarte en silencio.
+function construirPiezasNucleo(packDisponible, bandaDisponible) {
+  const x1 = NUCLEO_ESCALERA_ANCHO;
+  const x2 = NUCLEO_PACK;
+  const hallLocalPB = hallLocalDelNucleo(packDisponible, bandaDisponible, x2, NUCLEO_BANDA);
+  const areaHall = hallLocalPB ? areaLocal(hallLocalPB) : 0;
+  if (!hallLocalPB || areaHall < NUCLEO_HALL_AREA_SEGURA) {
+    // sin hall: escalera y ascensor se reparten TODO el rectángulo disponible en dos
+    // columnas de ancho fijo (x1 y packDisponible-x1) y profundidad completa
+    // (bandaDisponible) — tesela exacto, sin resto, cumpliendo de sobra sus mínimos.
+    return [
+      { name: "escalera", localPB: [[0, 0], [x1, 0], [x1, bandaDisponible], [0, bandaDisponible]] },
+      { name: "ascensor", localPB: [[x1, 0], [packDisponible, 0], [packDisponible, bandaDisponible], [x1, bandaDisponible]] },
+    ];
+  }
+  return [
+    { name: "escalera", localPB: [[0, 0], [x1, 0], [x1, NUCLEO_BANDA], [0, NUCLEO_BANDA]] },
+    { name: "ascensor", localPB: [[x1, 0], [x2, 0], [x2, NUCLEO_BANDA], [x1, NUCLEO_BANDA]] },
+    { name: "hall núcleo", localPB: hallLocalPB },
+  ];
+}
+
+// Decide si el rectángulo del núcleo (ancho × longitud, en metros) admite escalera +
+// ascensor en alguna orientación y, si sí, devuelve sus tres piezas en coordenadas
+// LOCALES (u,v) relativas a la esquina (0,0) del propio rectángulo del núcleo — el
+// llamador solo tiene que sumarles el offset del núcleo y proyectarlas a mundo.
+//
+// Orientación: "lo natural" es escalera+ascensor lado a lado contra el ancho del
+// núcleo (lo de siempre); pero si el núcleo es más ancho que profundo, esa banda de
+// 4.20 m ya no entra en la longitud y conviene la disposición transversal (girada
+// 90°: la banda de 4.20 se apoya contra el ancho, que es el eje que sobra). Regla
+// determinista simple: comparar ancho vs longitud, sin intentar ambas y elegir la
+// que ajuste — la orientación elegida siempre reparte los requisitos de la forma más
+// favorable posible (el requisito más chico, 4.00 m, cae siempre sobre el eje más
+// corto), así que si ESA no entra, la otra tampoco.
+export function partirNucleo(ancho, longitud) {
+  const anchoNum = Number(ancho) || 0;
+  const longitudNum = Number(longitud) || 0;
+  const transversal = anchoNum > longitudNum;
+  const packDisponible = transversal ? longitudNum : anchoNum;
+  const bandaDisponible = transversal ? anchoNum : longitudNum;
+  if (packDisponible < NUCLEO_PACK - 1e-9 || bandaDisponible < NUCLEO_BANDA - 1e-9) {
+    return {
+      piezas: null,
+      tradeoff: `núcleo de ${anchoNum.toFixed(2)} × ${longitudNum.toFixed(2)} m: no admite escalera `
+        + `(${NUCLEO_ESCALERA_ANCHO.toFixed(2)} × ${NUCLEO_ESCALERA_LARGO.toFixed(2)}) más ascensor `
+        + `(${NUCLEO_ASCENSOR_ANCHO.toFixed(2)} × ${NUCLEO_ASCENSOR_LARGO.toFixed(2)}); se dibuja como bloque único`,
+    };
+  }
+
+  // (pack,banda) → (u,v): en el layout natural pack=u y banda=v; en el transversal
+  // (rotado 90°) pack=v y banda=u.
+  const alUV = ([pack, banda]) => (transversal ? [banda, pack] : [pack, banda]);
+  const piezas = construirPiezasNucleo(packDisponible, bandaDisponible)
+    .map((pieza) => ({ name: pieza.name, localUV: pieza.localPB.map(alUV) }));
+  return { piezas, tradeoff: null };
+}
+
 const AVISO_CORE_TEXTOS = {
   "longitud:ausente": (valor) => `profundidad del núcleo no especificada por el agente: se usó ${valor.toFixed(2)} m por defecto`,
   "longitud:invalida": (valor) => `profundidad del núcleo inválida en lo que mandó el agente: se usó ${valor.toFixed(2)} m por defecto`,
@@ -190,10 +306,27 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
   // son solo una red de seguridad.)
   const coreV0 = Math.max(0, Math.min(distanciaAlFrente, F.fondo));
   const coreV1 = Math.min(coreV0 + coreLongitud, F.fondo);
-  piezas.push({
-    id: "core", role: "core", name: "core", unitRef: null, unitProgram: null,
-    pts: [F.toWorld(coreU0, coreV0), F.toWorld(coreU1, coreV0), F.toWorld(coreU1, coreV1), F.toWorld(coreU0, coreV1)],
-  });
+
+  // El núcleo ya no se emite como una única caja opaca: se despieza en escalera +
+  // ascensor + hall (partirNucleo, arriba), que teselan exactamente este mismo
+  // rectángulo. Si el rectángulo no da para los mínimos normados, se cae al bloque
+  // único de siempre y queda escrito en `tradeoffs` — nunca se dibuja algo imposible.
+  const nucleoTradeoffs = [];
+  const nucleo = partirNucleo(coreU1 - coreU0, coreV1 - coreV0);
+  if (nucleo.piezas) {
+    nucleo.piezas.forEach((pieza, index) => {
+      piezas.push({
+        id: `core-${index + 1}`, role: "core", name: pieza.name, unitRef: null, unitProgram: null,
+        pts: pieza.localUV.map(([u, v]) => F.toWorld(coreU0 + u, coreV0 + v)),
+      });
+    });
+  } else {
+    piezas.push({
+      id: "core", role: "core", name: "core", unitRef: null, unitProgram: null,
+      pts: [F.toWorld(coreU0, coreV0), F.toWorld(coreU1, coreV0), F.toWorld(coreU1, coreV1), F.toWorld(coreU0, coreV1)],
+    });
+    nucleoTradeoffs.push(nucleo.tradeoff);
+  }
 
   const corridorV0 = bandDepth;
   const corridorV1 = Math.min(bandDepth + normalizado.corredorProfundidad, F.fondo);
@@ -340,6 +473,7 @@ export function materializeFloorProposal({ parti, footprint, frontIdx = 0, sourc
     assumptions: [...assumptions],
     tradeoffs: [
       ...tradeoffs,
+      ...nucleoTradeoffs,
       ...describirAvisosCore(normalizado.core.avisos),
       ...(simplificadoFrente ? ["crujía doble simplificada: unidades solo en la banda del frente, la banda del fondo queda como vacío de servicio"] : []),
       ...(simplificadoFondo ? ["crujía doble simplificada: unidades solo en la banda del fondo, la banda del frente queda como vacío de servicio"] : []),

@@ -177,9 +177,11 @@ test("el core respeta su longitud: no atraviesa el bloque entero (22 m), y detr�
   };
   const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
 
-  const core = propuesta.floor.polygons.find((p) => p.role === "core");
-  assert.ok(core, "debe emitir un core");
-  const areaCore = area(core.polygon);
+  // el núcleo ya no es una única caja: se despieza en escalera/ascensor/hall (todas
+  // role:"core") que teselan exactamente el mismo rectángulo — se suma su área.
+  const coreParts = propuesta.floor.polygons.filter((p) => p.role === "core");
+  assert.ok(coreParts.length > 0, "debe emitir al menos una pieza de core");
+  const areaCore = coreParts.reduce((sum, p) => sum + area(p.polygon), 0);
   // core.ancho no se prorratea (solo las unidades): sigue siendo 4 m exactos.
   assert.ok(Math.abs(areaCore - 4 * 5) < 1e-6, `el core debe medir 5 m de fondo (área 20), dio ${areaCore}`);
   assert.ok(areaCore < 4 * 22 - 1e-6, "el core NO debe atravesar el bloque entero (22 m de fondo)");
@@ -210,8 +212,7 @@ test("sin longitud declarada, el core cae al default acotado a la banda del fren
     ],
   };
   const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
-  const core = propuesta.floor.polygons.find((p) => p.role === "core");
-  const areaCore = area(core.polygon);
+  const areaCore = propuesta.floor.polygons.filter((p) => p.role === "core").reduce((sum, p) => sum + area(p.polygon), 0);
   assert.ok(
     Math.abs(areaCore - 4 * CORE_LONGITUD_DEFAULT) < 1e-6,
     `el default de longitud debe ser ${CORE_LONGITUD_DEFAULT} m (ancho 4 → área ${4 * CORE_LONGITUD_DEFAULT}), dio ${areaCore}`,
@@ -226,8 +227,7 @@ test("sin longitud declarada, el core cae al default acotado a la banda del fren
   const rectAngosto = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 6 }, { x: 0, y: 6 }];
   const partiAngosto = { ...parti };
   const propuestaAngosta = materializeFloorProposal({ parti: partiAngosto, footprint: rectAngosto, frontIdx: 0, sourceCabidaVersionId: VERSION });
-  const coreAngosto = propuestaAngosta.floor.polygons.find((p) => p.role === "core");
-  const areaCoreAngosto = area(coreAngosto.polygon);
+  const areaCoreAngosto = propuestaAngosta.floor.polygons.filter((p) => p.role === "core").reduce((sum, p) => sum + area(p.polygon), 0);
   const bandDepthAngosta = 6 - 1.6; // 4.4
   assert.ok(
     Math.abs(areaCoreAngosto - 4 * bandDepthAngosta) < 1e-6,
@@ -289,13 +289,14 @@ test("el núcleo retirado (distanciaAlFrente:4) empieza a 4 m del frente y mide 
   };
   const propuesta = materializeFloorProposal({ parti, footprint: rect, frontIdx: 0, sourceCabidaVersionId: VERSION });
 
-  const core = propuesta.floor.polygons.find((p) => p.role === "core");
-  assert.ok(core, "debe emitir un core");
-  const areaCore = area(core.polygon);
+  const coreParts = propuesta.floor.polygons.filter((p) => p.role === "core");
+  assert.ok(coreParts.length > 0, "debe emitir al menos una pieza de core");
+  const areaCore = coreParts.reduce((sum, p) => sum + area(p.polygon), 0);
   assert.ok(Math.abs(areaCore - 4 * 5) < 1e-6, `el core debe medir 4×5 (área 20), dio ${areaCore}`);
-  // el core arranca a 4 m del frente: el punto más cercano al frente de su polígono
-  // (menor "y", porque frontIdx:0 en este rectángulo mapea v directo a y) está en 4, no en 0.
-  const vMinCore = Math.min(...core.polygon.map(([, y]) => y));
+  // el core arranca a 4 m del frente: el punto más cercano al frente de CUALQUIER pieza
+  // de core (menor "y", porque frontIdx:0 en este rectángulo mapea v directo a y) está
+  // en 4, no en 0.
+  const vMinCore = Math.min(...coreParts.flatMap((p) => p.polygon.map(([, y]) => y)));
   assert.ok(Math.abs(vMinCore - 4) < 1e-6, `el core debe empezar a 4 m del frente, arrancó en ${vMinCore}`);
 
   // el tramo de los primeros 4 m, en el ancho del núcleo, tiene que estar asignado — no
@@ -385,6 +386,88 @@ test("crujía doble: el núcleo penetra ambas bandas y una sola unidad en banda 
 
   const resultado = rectValidar(propuesta, rect);
   assert.deepEqual(resultado.findings.filter((f) => f.code === "incomplete_partition"), [], "el hueco detrás del core tiene que estar siempre asignado");
+  const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
+  assert.deepEqual(geometricos, [], `cero hallazgos geométricos: ${JSON.stringify(geometricos)}`);
+});
+
+// --- Núcleo de circulación vertical: escalera + ascensor + hall ----------------------
+// El núcleo ya no sale como una única caja negra sin nada adentro: se despieza en sus
+// componentes normados (escalera en U, ascensor/ducto, hall de descanso y distribución),
+// que teselan exactamente el mismo rectángulo que antes ocupaba el bloque único. Sobre la
+// misma huella irregular que fallback-clipped.test.mjs usa para el camino determinístico.
+
+test("un núcleo holgado (5×5) se despieza en escalera + ascensor + hall núcleo, sin solape ni hueco", () => {
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 9, ancho: 5, longitud: 5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 13, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 13, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const nucleo = propuesta.floor.polygons.filter((p) => p.role === "core");
+  assert.deepEqual(nucleo.map((p) => p.name).sort(), ["ascensor", "escalera", "hall núcleo"],
+    `debe despiezarse en escalera + ascensor + hall núcleo, dio ${JSON.stringify(nucleo.map((p) => p.name))}`);
+  nucleo.forEach((p) => {
+    assert.equal(p.unitRef, null);
+    assert.equal(p.unitProgram, null);
+  });
+
+  const areaNucleo = nucleo.reduce((sum, p) => sum + area(p.polygon), 0);
+  assert.ok(Math.abs(areaNucleo - 5 * 5) < 1e-6, `las 3 piezas deben sumar exactamente el área del núcleo (25), dio ${areaNucleo}`);
+
+  const escalera = nucleo.find((p) => p.name === "escalera");
+  const ascensor = nucleo.find((p) => p.name === "ascensor");
+  const bbox = (polygon) => {
+    const xs = polygon.map(([x]) => x), ys = polygon.map(([, y]) => y);
+    return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+  };
+  const bEsc = bbox(escalera.polygon), bAsc = bbox(ascensor.polygon);
+  assert.ok(Math.min(bEsc.w, bEsc.h) >= 2.40 - 1e-6 && Math.max(bEsc.w, bEsc.h) >= 4.20 - 1e-6,
+    `la escalera debe medir al menos 2.40 × 4.20, dio ${JSON.stringify(bEsc)}`);
+  assert.ok(Math.min(bAsc.w, bAsc.h) >= 1.60 - 1e-6 && Math.max(bAsc.w, bAsc.h) >= 1.80 - 1e-6,
+    `el ascensor debe medir al menos 1.60 × 1.80, dio ${JSON.stringify(bAsc)}`);
+
+  const resultado = validar(propuesta);
+  assert.deepEqual(resultado.findings.filter((f) => f.code === "polygon_overlap"), [], "las piezas del núcleo no pueden solaparse entre sí ni con el resto");
+  assert.deepEqual(resultado.findings.filter((f) => f.code === "incomplete_partition"), [], "el núcleo no puede dejar área sin asignar");
+  const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
+  assert.deepEqual(geometricos, [], `cero hallazgos geométricos: ${JSON.stringify(geometricos)}`);
+});
+
+test("un núcleo chico (3×3.5) no se despieza: sale un único core y tradeoffs explica por qué con los números", () => {
+  const parti = {
+    sourceCabidaVersionId: VERSION,
+    crujias: 1,
+    corredorProfundidad: 1.6,
+    core: { posicion: 9, ancho: 3, longitud: 3.5 },
+    units: [
+      { unitRef: "u1", orden: 1, ancho: 13, dormitorios: 2, banos: 1 },
+      { unitRef: "u2", orden: 2, ancho: 13, dormitorios: 1, banos: 1 },
+    ],
+  };
+  const propuesta = materializeFloorProposal({ parti, footprint: HUELLA, frontIdx: 0, sourceCabidaVersionId: VERSION });
+
+  const nucleo = propuesta.floor.polygons.filter((p) => p.role === "core");
+  assert.deepEqual(nucleo.map((p) => p.name), ["core"], "un núcleo que no da para los mínimos debe salir como bloque único, sin despiezar");
+  assert.ok(Math.abs(area(nucleo[0].polygon) - 3 * 3.5) < 1e-6);
+
+  assert.ok(
+    propuesta.tradeoffs.some((t) => t.includes("3.00")
+      && t.includes("3.50")
+      && t.includes("no admite escalera")
+      && t.includes("2.40")
+      && t.includes("4.20")
+      && t.includes("1.60")
+      && t.includes("1.80")),
+    `tradeoffs debe explicar con números por qué no entra: ${JSON.stringify(propuesta.tradeoffs)}`,
+  );
+
+  const resultado = validar(propuesta);
   const geometricos = resultado.findings.filter((f) => GEOMETRIC_CODES.has(f.code));
   assert.deepEqual(geometricos, [], `cero hallazgos geométricos: ${JSON.stringify(geometricos)}`);
 });
