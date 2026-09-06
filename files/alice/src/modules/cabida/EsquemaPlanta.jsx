@@ -52,8 +52,12 @@ function PlantaReal({ lote, footprint, parti, frenteIdx, partiIdx, movs, onFrent
   const P = (pts) => pts.map(T).map((p) => `${p.x},${p.y}`).join(" ");
   const n = lote.length;
   const cx = PAD + w * s / 2, cy = PAD + h * s / 2;
-  const fillFor = (r) => r.tipo === "core" ? C.ink : r.tipo === "pasillo" ? C.paper
-    : TIP_COLOR[r.name?.split(" ")[0]] || "#E4E2DC";
+  // el núcleo llega despiezado (escalera · ascensor · hall): se distinguen para poder
+  // verificar de un vistazo que la circulación vertical entra en el núcleo propuesto.
+  const CORE_FILL = { escalera: "#2E2E33", ascensor: "#4A4A50", "hall núcleo": "#8C8A85" };
+  const fillFor = (r) => r.tipo === "core" ? (CORE_FILL[r.name] || C.ink)
+    : r.tipo === "pasillo" ? C.paper
+      : TIP_COLOR[r.name?.split(" ")[0]] || "#E4E2DC";
   const key = (i) => `${partiIdx}:${i}`;
   const shift = (pts, i) => { const m = movs[key(i)]; return m ? pts.map((p) => ({ x: p.x + m.dx, y: p.y + m.dy })) : pts; };
 
@@ -112,8 +116,10 @@ function PlantaReal({ lote, footprint, parti, frenteIdx, partiIdx, movs, onFrent
                 <tspan x={c.x} dy="11" fontSize="8" fontWeight="400">{r.name.split(" · ")[1] || ""}</tspan>
               </text>
             )}
-            {r.tipo === "core" && a * s * s > 400 && (
-              <text x={c.x} y={c.y + 3} fontSize="8" fill={C.paper} textAnchor="middle" pointerEvents="none">core</text>
+            {r.tipo === "core" && a * s * s > 320 && (
+              <text x={c.x} y={c.y + 3} fontSize="7.5" fill={C.paper} textAnchor="middle" pointerEvents="none">
+                {r.name === "hall núcleo" ? "hall" : (r.name || "core")}
+              </text>
             )}
           </g>
         );
