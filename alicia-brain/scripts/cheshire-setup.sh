@@ -28,7 +28,12 @@ cp "$ENV_FILE" "$BACKUP"
 echo "✅ Backup: $BACKUP"
 echo
 
-read -r -p "CHESHIRE_SPACE (id del space de QA, Enter para omitir): " SPACE
+# El space de QA ya existe en el ERP; su id se precarga para que acá sea un Enter.
+# Si algún día se recrea el space, el id cambia (es "custom_" + timestamp de creación)
+# y hay que pasarlo a mano — por eso se puede sobrescribir.
+SPACE_DEFAULT="custom_1788675158094"   # "Cheshire" · creado el 6 sep 2026
+read -r -p "CHESHIRE_SPACE [$SPACE_DEFAULT]: " SPACE
+SPACE="${SPACE:-$SPACE_DEFAULT}"
 read -r -s -p "CHESHIRE_PASSWORD (no se muestra): " PASS; echo
 if [ -z "$PASS" ]; then echo "❌ Sin contraseña no hay nada que configurar."; exit 1; fi
 
