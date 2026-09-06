@@ -2,9 +2,18 @@
 
 _30 ago 2026 · rama `docs/desktop-notificaciones`_
 
-Fase 1 completa y revisada, pero **nada de esto se ha ejecutado nunca**: el SQL no se corrió
-contra Supabase, la app de Electron no se abrió, y no hay nada firmado ni publicado. Este
-documento es lo que falta para que funcione, en orden.
+**Estado al 6 sep 2026: el sistema de notificaciones FUNCIONA de punta a punta en producción.**
+El SQL está corrido, el trigger genera, Realtime entrega, RLS filtra por destinatario, y el
+panel del ERP las muestra con su badge de no leídas. Verificado con notificaciones reales de
+tareas asignadas por el equipo.
+
+Lo que queda pendiente es solo la **app de escritorio**: el código está listo y mergeado, pero
+nadie la ha ejecutado ni firmado. Los pasos 1 y 2 de abajo ya están hechos; empezá por el 3.
+
+Una lección que costó días y conviene no repetir: durante un tiempo el sistema **funcionaba y
+era invisible**, porque solo disparaba un banner transitorio del sistema operativo. Sin una
+lista dentro de la app, "no llegó nada" y "llegó y me lo perdí" se ven idénticos. Por eso el
+panel no es un adorno: es lo que hace observable al sistema.
 
 Diseño y decisiones: `docs/superpowers/specs/2026-08-30-alice-desktop-notificaciones-design.md`
 
