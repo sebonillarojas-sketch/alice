@@ -26,6 +26,14 @@ const normTxt = (s) =>
 
 const CIRC_TIPOS = new Set(["pasillo", "corredor", "core", "nucleo", "circulacion"]);
 const esCirculacionONucleo = (room) => CIRC_TIPOS.has(normTxt(room?.tipo)) || CIRC_TIPOS.has(normTxt(room?.role));
+// Distinción fina dentro de la circulación: el núcleo (escalera, ascensor, hall) tiene
+// muros REALES entre sus piezas — son cajas de escalera y ductos de ascensor. Dos tramos
+// de pasillo, en cambio, son el MISMO espacio continuo partido en polígonos por cómo se
+// tesela la planta: poner un muro ahí dibuja una pared cruzando el corredor.
+const NUCLEO_TIPOS = new Set(["core", "nucleo"]);
+const PASILLO_TIPOS = new Set(["pasillo", "corredor", "circulacion"]);
+const esNucleo = (room) => NUCLEO_TIPOS.has(normTxt(room?.tipo)) || NUCLEO_TIPOS.has(normTxt(room?.role));
+const esPasillo = (room) => PASILLO_TIPOS.has(normTxt(room?.tipo)) || PASILLO_TIPOS.has(normTxt(room?.role));
 // Cualquier ambiente "void" cuenta para fachada_patio, no solo el nombrado
 // literalmente "patio": materialize.js usa "void" también para ductos/shafts/luz
 // cenital (tipoDe(), ~línea 81), y todos existen por la misma razón — dar luz a
@@ -75,6 +83,13 @@ function clasificarDosAmbientes(ra, rb) {
   }
   const aCirc = esCirculacionONucleo(ra), bCirc = esCirculacionONucleo(rb);
   if ((aUnidad && bCirc) || (bUnidad && aCirc)) return { clase: "a_corredor" };
+  // Dos tramos de pasillo son el mismo espacio: NO hay muro. Se emite igual para poder
+  // inspeccionarlo, pero el dibujo lo omite y ningún vano puede colgar de él.
+  if (esPasillo(ra) && esPasillo(rb)) return { clase: "sin_muro" };
+  // Entre piezas del núcleo sí hay muro: caja de escalera contra ducto de ascensor.
+  if (esNucleo(ra) && esNucleo(rb)) return { clase: "nucleo" };
+  // Donde el corredor entra al núcleo: es la puerta de la escalera o del ascensor.
+  if ((esNucleo(ra) && esPasillo(rb)) || (esNucleo(rb) && esPasillo(ra))) return { clase: "a_nucleo" };
   return {
     clase: "interior",
     aviso: `sin regla clara de clasificación entre "${ra.id}" y "${rb.id}" (ninguno es unidad+circulación/núcleo reconocible); se asume interior`,
