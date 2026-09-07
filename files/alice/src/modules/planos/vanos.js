@@ -1,0 +1,313 @@
+// Vanos derivados sobre el grafo de muros (§7-8 de
+// docs/superpowers/specs/2026-09-07-muros-vanos-design.md).
+//
+// Puertas: la regla de conectividad ataca los espacios inaccesibles POR CONSTRUCCIÓN,
+// no detectándolos. Cada unidad recibe una entrada y un árbol de recubrimiento sobre
+// sus muros "interior" garantiza que todo ambiente de la unidad tiene camino real
+// (con puerta) hacia esa entrada. El núcleo (escalera/ascensor/hall núcleo) NO es una
+// unidad — no tiene unitRef — y se resuelve aparte, con sus propias reglas (§7, nota
+// final): puerta desde el corredor en todo muro `a_nucleo`, puerta hall→pieza en los
+// `nucleo` que tocan el hall, nada entre escalera y ascensor.
+//
+// Ventanas: el ancho sale del catálogo existente (mobiliario.js) aproximado por área
+// del ambiente — es un SUPUESTO declarado (se registra como aviso), nunca una
+// afirmación de cumplimiento normativo. No hay evidencia verificada de RNE acá y el
+// sistema tiene prohibido declarar conformidad sin ella.
+//
+// Módulo puro: sin React, sin estado, sin I/O.
+import { area as polygonArea } from "./geometry.js";
+import { porId as CATALOGO_POR_ID } from "./mobiliario.js";
+
+// Holgura mínima del §7.5: 0.15 m contra cada extremo del muro.
+const HOLGURA_MIN = 0.15;
+const EPS = 1e-6;
+
+const round3 = (n) => Math.round(n * 1000) / 1000;
+
+const normTxt = (s) =>
+  (s || "").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+
+const textoDe = (room) => `${normTxt(room?.tipo)} ${normTxt(room?.name)}`;
+
+// §7.4: ancho de puerta por ambiente de DESTINO. Match por palabra clave sobre
+// tipo+nombre, no por igualdad estricta de `tipo`: los datos reales traen
+// "sala-comedor" con tipo "social" para el living, "pasillo" para el hall interior de
+// la unidad, etc. — una igualdad estricta contra "dormitorio"/"baño"/... se queda muda
+// justo en los ambientes que más puertas reciben. Ver distribucion.js/reglas.js.
+function anchoPuertaPorDestino(room) {
+  const s = textoDe(room);
+  if (/ba[nñ]o/.test(s)) return 0.80;
+  if (/dorm/.test(s)) return 0.80;
+  if (/cocina/.test(s)) return 0.90;
+  if (/sala|comedor|estar|social/.test(s)) return 1.00;
+  return 0.80; // "lo que no reconozcas, 0.80" (pliego §7.4)
+}
+
+// §8: qué ambientes piden luz.
+//
+// CORRECCIÓN sobre el pliego (anotada para el reporte): el pliego enumera "sala,
+// comedor, estar" como si fueran ambientes propios, pero el generador real
+// (distribucion.js `room("sala-comedor", "social", ...)`, `room("studio", "social",
+// ...)`) nunca produce un ambiente con tipo/nombre "sala" o "comedor" sueltos — el
+// living siempre sale como un único ambiente combinado con tipo "social". Matchear
+// literal esas tres palabras habría dejado el living real sin pedir ventana jamás, que
+// es exactamente el síntoma que este módulo existe para evitar. Se agrega "social" al
+// patrón de luz.
+const NO_PIDE_LUZ = /ba[nñ]o|clo?set|lavand|pasillo|corredor|dep[oó]sito|deposito|hall/;
+const PIDE_LUZ = /dorm|sala|comedor|estar|cocina|estudio|social/;
+function pideLuz(room) {
+  const s = textoDe(room);
+  if (NO_PIDE_LUZ.test(s)) return false;
+  return PIDE_LUZ.test(s);
+}
+
+const esVoid = (room) => normTxt(room?.tipo) === "void";
+const esUnidad = (room) => room?.unitRef != null;
+
+// ¿admite `ancho` con 0.15 m de holgura a cada lado, centrado?
+function cabeEnMuro(largoMuro, ancho) {
+  return largoMuro - ancho >= 2 * HOLGURA_MIN - EPS;
+}
+
+// de una lista de muros que ya se sabe conectan el par correcto, el de mayor largo
+// que admite `ancho` con la holgura del §7.5 (o null si ninguno sirve).
+function elegirMuro(candidatos, ancho) {
+  const ordenados = [...candidatos].sort((a, b) => b.largo - a.largo);
+  return ordenados.find((m) => cabeEnMuro(m.largo, ancho)) || null;
+}
+
+function nuevoVano(id, muro, ancho, tipo, entre) {
+  return { id: `vano_${id}`, muroId: muro.id, t: round3(muro.largo / 2), ancho, tipo, entre };
+}
+
+// §8: ancho de ventana del catálogo existente por área. Aproximación DECLARADA, no una
+// verificación normativa — ver nota de módulo. El umbral (12 m²) es un criterio propio
+// de este módulo, no una cita de norma.
+function ventanaPorArea(areaRoom) {
+  return areaRoom >= 12 ? CATALOGO_POR_ID["ventana-180"] : CATALOGO_POR_ID["ventana-120"];
+}
+
+/**
+ * Deriva puertas y ventanas del grafo de muros (§7-8 del spec).
+ * @param {Array} muros - salida de construirMuros(rooms, contexto).muros
+ * @param {Array} rooms - los mismos ambientes pasados a construirMuros
+ * @param {Object} contexto - no lo usa hoy; se acepta por simetría con construirMuros
+ * @returns {{ vanos: Array, hallazgos: Array, avisos: string[] }}
+ */
+export function construirVanos(muros = [], rooms = [], contexto = {}) {
+  const avisos = [];
+  const hallazgos = [];
+  const vanos = [];
+  let autoId = 1;
+
+  const roomsById = new Map((rooms || []).filter((r) => r?.id != null).map((r) => [r.id, r]));
+  const realRooms = (rooms || []).filter((r) => Array.isArray(r?.pts) && r.pts.length >= 3 && !esVoid(r));
+
+  const agregarVano = (muro, ancho, tipo, entre) => vanos.push(nuevoVano(autoId++, muro, ancho, tipo, entre));
+
+  // ================= §7: puertas dentro de cada unidad =================
+  const unidades = new Map(); // unitRef -> Set(roomId)
+  for (const r of realRooms) {
+    if (!esUnidad(r)) continue;
+    if (!unidades.has(r.unitRef)) unidades.set(r.unitRef, new Set());
+    unidades.get(r.unitRef).add(r.id);
+  }
+
+  for (const [unitRef, roomIds] of unidades) {
+    // 1. la entrada: el muro a_corredor más largo de la unidad, con ancho por el
+    // ambiente al que da del lado de la unidad.
+    const aCorredor = muros.filter((m) => m.clase === "a_corredor" && m.lados.some((id) => roomIds.has(id)));
+    if (aCorredor.length === 0) {
+      hallazgos.push({
+        codigo: "unidad_sin_acceso",
+        mensaje: `unidad "${unitRef}": ningún muro a_corredor — no tiene por dónde entrar, no se inventa una entrada contra una medianera`,
+        roomId: unitRef,
+      });
+      continue;
+    }
+
+    const candidatosEntrada = [...aCorredor].sort((a, b) => b.largo - a.largo);
+    let muroEntrada = null, roomEntrada = null, corredorRoomId = null, anchoEntrada = null;
+    for (const m of candidatosEntrada) {
+      const ladoUnidad = m.lados.find((id) => roomIds.has(id));
+      const ladoOtro = m.lados.find((id) => id !== ladoUnidad);
+      const ancho = anchoPuertaPorDestino(roomsById.get(ladoUnidad));
+      if (cabeEnMuro(m.largo, ancho)) {
+        muroEntrada = m; roomEntrada = ladoUnidad; corredorRoomId = ladoOtro; anchoEntrada = ancho;
+        break;
+      }
+    }
+    if (!muroEntrada) {
+      const mayor = candidatosEntrada[0];
+      const ladoUnidad = mayor.lados.find((id) => roomIds.has(id));
+      const ladoOtro = mayor.lados.find((id) => id !== ladoUnidad);
+      hallazgos.push({
+        codigo: "sin_muro_para_puerta",
+        mensaje: `unidad "${unitRef}": ningún muro a_corredor admite una puerta (mejor candidato "${ladoUnidad}"–"${ladoOtro}", ${mayor.largo} m disponibles)`,
+        roomId: ladoUnidad,
+      });
+      continue;
+    }
+    agregarVano(muroEntrada, anchoEntrada, "puerta", [roomEntrada, corredorRoomId]);
+    avisos.push(`unidad "${unitRef}": entrada por muro ${muroEntrada.id} (${muroEntrada.largo} m) hacia "${roomEntrada}"`);
+
+    // 2. grafo de adyacencia interior de la unidad: se arma sobre TODOS los muros
+    // "interior" que conectan dos ambientes de esta unidad, sin filtrar por si el vano
+    // cabe — eso se decide recién al plantar la puerta, en el paso 4.
+    const vecinos = new Map();
+    const paresInteriores = new Map(); // "a|b" (ids ordenados) -> muros[]
+    for (const id of roomIds) vecinos.set(id, new Set());
+    for (const m of muros) {
+      if (m.clase !== "interior" || m.lados.length !== 2) continue;
+      const [a, b] = m.lados;
+      if (!roomIds.has(a) || !roomIds.has(b)) continue;
+      vecinos.get(a).add(b);
+      vecinos.get(b).add(a);
+      const key = [a, b].sort().join("|");
+      if (!paresInteriores.has(key)) paresInteriores.set(key, []);
+      paresInteriores.get(key).push(m);
+    }
+
+    // 3. alcance TOPOLÓGICO desde la entrada (BFS que ignora si el vano cabe): separa
+    // "no toca nada" de "toca algo pero ningún muro admite la puerta" — son dos
+    // hallazgos distintos (§7.6 vs. §7.5) y conviene no confundirlos.
+    const topo = new Set([roomEntrada]);
+    {
+      const colaTopo = [roomEntrada];
+      while (colaTopo.length) {
+        const actual = colaTopo.shift();
+        for (const vecino of vecinos.get(actual) || []) {
+          if (!topo.has(vecino)) { topo.add(vecino); colaTopo.push(vecino); }
+        }
+      }
+    }
+
+    // 4. árbol de recubrimiento CON reintento: si la puerta no cabe en el muro entre
+    // el nodo que se está expandiendo y un vecino sin visitar, el vecino NO se
+    // abandona — puede llegar más tarde por otro ambiente ya (o todavía no) visitado
+    // que también lo toque. Solo si NINGÚN vecino logra plantarle una puerta queda de
+    // verdad sin alcance real. Sin este reintento, un ambiente con dos paredes
+    // compartidas —una angosta, una que sí admite la puerta— podía reportarse como
+    // inaccesible solo por el orden en que el recorrido lo visitó primero.
+    const visitado = new Set([roomEntrada]);
+    const cola = [roomEntrada];
+    const mejorFallo = new Map(); // roomId sin puerta -> { ancho, largo, origen }
+    while (cola.length) {
+      const actual = cola.shift();
+      for (const vecino of vecinos.get(actual) || []) {
+        if (visitado.has(vecino)) continue;
+        const key = [actual, vecino].sort().join("|");
+        const candidatos = paresInteriores.get(key) || [];
+        const ancho = anchoPuertaPorDestino(roomsById.get(vecino));
+        const muro = elegirMuro(candidatos, ancho);
+        if (muro) {
+          visitado.add(vecino);
+          cola.push(vecino);
+          agregarVano(muro, ancho, "puerta", [actual, vecino]);
+          continue;
+        }
+        const masLargo = [...candidatos].sort((a, b) => b.largo - a.largo)[0];
+        const largoIntento = masLargo ? masLargo.largo : 0;
+        const previo = mejorFallo.get(vecino);
+        if (!previo || largoIntento > previo.largo) mejorFallo.set(vecino, { ancho, largo: largoIntento, origen: actual });
+      }
+    }
+
+    for (const roomId of roomIds) {
+      if (visitado.has(roomId)) continue;
+      if (!topo.has(roomId)) {
+        hallazgos.push({
+          codigo: "ambiente_inaccesible",
+          mensaje: `"${roomId}" (unidad "${unitRef}"): no toca ningún ambiente de la unidad por un muro interior`,
+          roomId,
+        });
+        continue;
+      }
+      const info = mejorFallo.get(roomId);
+      hallazgos.push({
+        codigo: "sin_muro_para_puerta",
+        mensaje: `"${info?.origen}"–"${roomId}": ningún muro interior admite una puerta de ${info?.ancho} m (mejor candidato ${info?.largo ?? 0} m disponibles)`,
+        roomId,
+      });
+    }
+  }
+
+  // ================= §7 (nota final): el núcleo, que NO es una unidad =================
+  // Escalera, ascensor y hall núcleo no tienen unitRef: si el bucle de arriba fuera lo
+  // único, el núcleo se queda sin puertas y la escalera sin acceso. Regla explícita,
+  // no un árbol de recubrimiento: puerta en todo muro a_nucleo (el corredor entra al
+  // núcleo); puerta en todo muro `nucleo` que toque el hall (hall→escalera,
+  // hall→ascensor); nada entre escalera y ascensor.
+  const esNucleoRoom = (id) => /\bcore\b|nucleo/.test(`${normTxt(roomsById.get(id)?.tipo)} ${normTxt(roomsById.get(id)?.role)}`);
+  const esHall = (id) => /hall/.test(normTxt(roomsById.get(id)?.name));
+
+  const paresNucleo = new Map(); // "clase|a|b" -> muros[]
+  for (const m of muros) {
+    if ((m.clase !== "a_nucleo" && m.clase !== "nucleo") || m.lados.length !== 2) continue;
+    const [a, b] = [...m.lados].sort();
+    const key = `${m.clase}|${a}|${b}`;
+    if (!paresNucleo.has(key)) paresNucleo.set(key, []);
+    paresNucleo.get(key).push(m);
+  }
+
+  let nucleoEvaluados = 0;
+  for (const [key, candidatos] of paresNucleo) {
+    const [clase, a, b] = key.split("|");
+    let destino;
+    if (clase === "nucleo") {
+      if (!(esHall(a) || esHall(b))) continue; // escalera contra ascensor: sin puerta, a propósito
+      destino = esHall(a) ? b : a;
+    } else {
+      destino = esNucleoRoom(a) ? a : b;
+    }
+    const origen = destino === a ? b : a;
+    nucleoEvaluados++;
+    const ancho = anchoPuertaPorDestino(roomsById.get(destino));
+    const muro = elegirMuro(candidatos, ancho);
+    if (!muro) {
+      hallazgos.push({
+        codigo: "sin_muro_para_puerta",
+        mensaje: `"${origen}"–"${destino}" (núcleo): ningún muro admite una puerta de ${ancho} m`,
+        roomId: destino,
+      });
+      continue;
+    }
+    agregarVano(muro, ancho, "puerta", [origen, destino]);
+  }
+  if (nucleoEvaluados > 0) avisos.push(`núcleo: ${nucleoEvaluados} muro(s) de acceso evaluados (a_nucleo + nucleo→hall)`);
+
+  // ================= §8: ventanas =================
+  for (const room of realRooms) {
+    if (!pideLuz(room)) continue;
+    const candidatos = muros.filter((m) => m.lados.length === 1 && m.lados[0] === room.id && (m.clase === "fachada" || m.clase === "fachada_patio"));
+    if (candidatos.length === 0) {
+      hallazgos.push({
+        codigo: "ambiente_sin_luz",
+        mensaje: `"${room.id}": pide luz y no tiene ningún muro de fachada (ni fachada_patio)`,
+        roomId: room.id,
+      });
+      continue;
+    }
+    const muroFachada = [...candidatos].sort((a, b) => b.largo - a.largo)[0];
+    const areaRoom = round3(polygonArea(room.pts));
+    const elegido = ventanaPorArea(areaRoom);
+    const chica = CATALOGO_POR_ID["ventana-120"];
+
+    let anchoFinal = null;
+    if (cabeEnMuro(muroFachada.largo, elegido.w)) anchoFinal = elegido.w;
+    else if (elegido.id !== chica.id && cabeEnMuro(muroFachada.largo, chica.w)) anchoFinal = chica.w;
+
+    if (anchoFinal == null) {
+      hallazgos.push({
+        codigo: "ventana_no_cabe",
+        mensaje: `"${room.id}": el muro de fachada más largo (${muroFachada.largo} m) no admite ni la ventana más chica del catálogo (${chica.w} m con holgura)`,
+        roomId: room.id,
+      });
+      continue;
+    }
+    agregarVano(muroFachada, anchoFinal, "ventana", [room.id, null]);
+    avisos.push(`ventana de "${room.id}": ${anchoFinal} m elegido por área (${areaRoom} m²) del catálogo existente — aproximación declarada, sin evidencia normativa verificada`);
+  }
+
+  return { vanos, hallazgos, avisos };
+}
