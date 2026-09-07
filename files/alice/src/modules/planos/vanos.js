@@ -114,6 +114,23 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
   }
 
   for (const [unitRef, roomIds] of unidades) {
+  // Preferencia arquitectónica de un paso entre dos ambientes. Menor es mejor.
+  // Sin esto el árbol conecta por adyacencia y sale una vivienda que nadie construiría:
+  // se entra al departamento por un dormitorio y se pasa de un dormitorio al otro.
+  const zonaDe = (room) => {
+    const t = (room?.tipo || "").toLowerCase();
+    if (t === "social" || t === "pasillo" || t === "circulacion" || t === "corredor") return "estar";
+    if (t === "intima") return "intima";
+    return "servicio";
+  };
+  const costoPaso = (ra, rb) => {
+    const za = zonaDe(ra), zb = zonaDe(rb);
+    if (za === "estar" || zb === "estar") return 0;   // por el estar se pasa a todo
+    if (za === "intima" && zb === "intima") return 5; // dormitorio a dormitorio: casi nunca
+    if (za === "intima" || zb === "intima") return 1; // baño en suite: aceptable
+    return 2;                                          // servicio con servicio
+  };
+
     // 1. la entrada: el muro a_corredor más largo de la unidad, con ancho por el
     // ambiente al que da del lado de la unidad.
     const aCorredor = muros.filter((m) => m.clase === "a_corredor" && m.lados.some((id) => roomIds.has(id)));
@@ -126,7 +143,12 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
       continue;
     }
 
-    const candidatosEntrada = [...aCorredor].sort((a, b) => b.largo - a.largo);
+    // Se entra por donde entraría una persona: primero un ambiente de estar, después
+    // servicio, y solo si no queda otra por un dormitorio. A igual zona, el muro más largo.
+    const zonaEntrada = (m) => zonaDe(roomsById.get(m.lados.find((id) => roomIds.has(id))));
+    const rankZona = { estar: 0, servicio: 1, intima: 2 };
+    const candidatosEntrada = [...aCorredor].sort((a, b) =>
+      (rankZona[zonaEntrada(a)] - rankZona[zonaEntrada(b)]) || (b.largo - a.largo));
     let muroEntrada = null, roomEntrada = null, corredorRoomId = null, anchoEntrada = null;
     for (const m of candidatosEntrada) {
       const ladoUnidad = m.lados.find((id) => roomIds.has(id));
@@ -150,6 +172,16 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
     }
     agregarVano(muroEntrada, anchoEntrada, "puerta", [roomEntrada, corredorRoomId]);
     avisos.push(`unidad "${unitRef}": entrada por muro ${muroEntrada.id} (${muroEntrada.largo} m) hacia "${roomEntrada}"`);
+    // Si la única forma de entrar es por un dormitorio, el reparto de la unidad está mal:
+    // ningún ambiente de estar llega al corredor. El motor no puede arreglarlo desde acá
+    // —es una decisión de volumen, no de interior— pero callarlo sería dibujar el error.
+    if (zonaDe(roomsById.get(roomEntrada)) === "intima") {
+      hallazgos.push({
+        codigo: "entrada_por_dormitorio",
+        mensaje: `unidad "${unitRef}": se entra por "${roomEntrada}", que es un dormitorio — ningún ambiente de estar llega al corredor`,
+        roomId: roomEntrada,
+      });
+    }
 
     // 2. grafo de adyacencia interior de la unidad: se arma sobre TODOS los muros
     // "interior" que conectan dos ambientes de esta unidad, sin filtrar por si el vano
@@ -194,7 +226,11 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
     const mejorFallo = new Map(); // roomId sin puerta -> { ancho, largo, origen }
     while (cola.length) {
       const actual = cola.shift();
-      for (const vecino of vecinos.get(actual) || []) {
+      // orden de expansión por plausibilidad: si un ambiente se puede alcanzar por el
+      // estar o por otro dormitorio, gana el estar.
+      const porPreferencia = [...(vecinos.get(actual) || [])].sort((x, y) =>
+        costoPaso(roomsById.get(actual), roomsById.get(x)) - costoPaso(roomsById.get(actual), roomsById.get(y)));
+      for (const vecino of porPreferencia) {
         if (visitado.has(vecino)) continue;
         const key = [actual, vecino].sort().join("|");
         const candidatos = paresInteriores.get(key) || [];
@@ -202,8 +238,20 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
         const muro = elegirMuro(candidatos, ancho);
         if (muro) {
           visitado.add(vecino);
+          // mejor-primero: se expanden antes los ambientes de estar, así son ellos los
+          // que reparten las puertas al resto en vez de encadenarse cuarto tras cuarto.
           cola.push(vecino);
+          cola.sort((x, y) => rankZona[zonaDe(roomsById.get(x))] - rankZona[zonaDe(roomsById.get(y))]);
           agregarVano(muro, ancho, "puerta", [actual, vecino]);
+          // Un dormitorio que solo se alcanza atravesando otro dormitorio no es una
+          // vivienda vendible. Se dibuja igual —hay que poder verlo— pero se reporta.
+          if (zonaDe(roomsById.get(actual)) === "intima" && zonaDe(roomsById.get(vecino)) === "intima") {
+            hallazgos.push({
+              codigo: "paso_entre_dormitorios",
+              mensaje: `"${vecino}" solo se alcanza atravesando "${actual}": dormitorio a dormitorio, sin pasar por un ambiente de estar`,
+              roomId: vecino,
+            });
+          }
           continue;
         }
         const masLargo = [...candidatos].sort((a, b) => b.largo - a.largo)[0];
