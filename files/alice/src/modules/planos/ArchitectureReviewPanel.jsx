@@ -23,6 +23,7 @@ export default function ArchitectureReviewPanel({
   versions,
   program,
   onProgramChange,
+  unitPrograms = null,
   onDesign,
   onCritique,
   onCycle,
@@ -47,16 +48,29 @@ export default function ArchitectureReviewPanel({
       <div style={{ padding: 12, overflowY: "auto", flex: 1 }}>
         <div style={{ marginBottom: 9, padding: "8px 10px", display: "flex", alignItems: "center", gap: 10, background: C.card, border: `1px solid ${C.line}` }}>
           <span style={{ fontFamily: sans, fontSize: 9.5, fontWeight: 800, color: C.soft, textTransform: "uppercase", letterSpacing: "0.07em" }}>interior</span>
-          <label style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.ink }}>dorm.
-            <select value={program?.dormitorios ?? 2} disabled={busy} onChange={(event) => onProgramChange?.({ ...program, dormitorios: Number(event.target.value) })} style={{ marginLeft: 4, border: `1px solid ${C.line}`, background: C.card, fontFamily: mono, fontSize: 9.5 }}>
-              {[0, 1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </label>
-          <label style={{ fontFamily: mono, fontSize: 9.5, color: C.ink }}>baños
-            <select value={program?.banos ?? 2} disabled={busy} onChange={(event) => onProgramChange?.({ ...program, banos: Number(event.target.value) })} style={{ marginLeft: 4, border: `1px solid ${C.line}`, background: C.card, fontFamily: mono, fontSize: 9.5 }}>
-              {[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </label>
+          {unitPrograms?.length ? (
+            // Con planta aceptada cada unidad trae SU programa desde el parti de Cabida:
+            // estos selectores no se usan. Mostrarlos editables decía que el piso entero
+            // es "2 dorm, 2 baños" cuando tiene un 1D, dos 2D y un 3D.
+            <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.soft, textAlign: "right", lineHeight: 1.4 }}>
+              {unitPrograms.map((u) => `${u.dormitorios ?? "?"}D`).join(" · ")}
+              <br />
+              <span style={{ fontSize: 8.5 }}>cada unidad trae su programa de Cabida</span>
+            </span>
+          ) : (
+            <>
+              <label style={{ marginLeft: "auto", fontFamily: mono, fontSize: 9.5, color: C.ink }}>dorm.
+                <select value={program?.dormitorios ?? 2} disabled={busy} onChange={(event) => onProgramChange?.({ ...program, dormitorios: Number(event.target.value) })} style={{ marginLeft: 4, border: `1px solid ${C.line}`, background: C.card, fontFamily: mono, fontSize: 9.5 }}>
+                  {[0, 1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label style={{ fontFamily: mono, fontSize: 9.5, color: C.ink }}>baños
+                <select value={program?.banos ?? 2} disabled={busy} onChange={(event) => onProgramChange?.({ ...program, banos: Number(event.target.value) })} style={{ marginLeft: 4, border: `1px solid ${C.line}`, background: C.card, fontFamily: mono, fontSize: 9.5 }}>
+                  {[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+            </>
+          )}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
           <Action icon={<Sparkles size={13} color={C.blue} />} title="Tweedledum" copy="Distribuye y amuebla el interior." onClick={onDesign} disabled={busy} accent="#B8C3EE" />

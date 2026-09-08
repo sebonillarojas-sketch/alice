@@ -45,10 +45,17 @@ export function buildArchitectureContext({
   lockedElements = [],
   sourcePlanVersionId = null,
   program = {},
+  unitPrograms = null,
 } = {}) {
   return {
     project: { id: String(project?.id || ""), name: String(project?.name || "Proyecto BAM") },
-    brief: { ...brief, program: structuredClone(program) },
+    // Un piso con varias tipologías NO tiene un programa único, y afirmar uno hace daño
+    // real: el crítico lee "2 dormitorios, 2 baños", mira un 1D y un 3D, y los reporta
+    // como defecto — cuando son exactamente el producto que se pidió. Esa crítica después
+    // alimenta la revisión. Cuando vienen `unitPrograms`, el programa global no se declara.
+    brief: unitPrograms
+      ? { ...brief, program: null, unitPrograms: structuredClone(unitPrograms) }
+      : { ...brief, program: structuredClone(program) },
     site: {
       ...site,
       lotBoundary: lotBoundary ? structuredClone(lotBoundary) : null,

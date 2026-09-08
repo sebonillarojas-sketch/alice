@@ -933,6 +933,28 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     lockedElements: rooms.filter((room) => room.tipo === "core").map((room) => ({ type: "room", id: room.id })),
     sourcePlanVersionId,
   });
+  // Contexto de PISO para la crítica: lleva la tabla de programas por unidad, no un
+  // programa único. Sin esto Tweedledee juzga el 1D y el 3D contra el selector global
+  // del panel ("2 dorm, 2 baños") y reporta como defecto el producto pedido.
+  const contextForFloor = (sourcePlanVersionId) => {
+    const { units } = splitAcceptedFloor(acceptedFloorProposal?.floor || {});
+    return buildArchitectureContext({
+      project: { id: proyecto.id, name: proyecto.nombre || "Proyecto BAM" },
+      brief,
+      program: { nse: architectureProgram.nse },
+      unitPrograms: units.map((u) => ({
+        unitRef: u.unitRef,
+        dormitorios: u.program?.dormitorios ?? null,
+        banos: u.program?.banos ?? null,
+      })),
+      lotBoundary: lote?.pts || null,
+      designBoundary,
+      site: { lotType: tipoLote, boundary: designBoundary, frontEdgeIndex: frontIdx, sourceCabidaVersionId: acceptedFloorProposal?.sourceCabidaVersionId || null },
+      constraints: { setbacks: { front: retiro, side: retiroLat, rear: retiroPost }, wallThickness: muro, clearHeight: altura },
+      lockedElements: rooms.filter((room) => room.locked).map((room) => ({ type: "room", id: room.id })),
+      sourcePlanVersionId,
+    });
+  };
   const contextForUnit = (sourcePlanVersionId, unit) => buildArchitectureContext({
     project: { id: proyecto.id, name: proyecto.nombre || "Proyecto BAM" },
     brief,
@@ -1033,7 +1055,11 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     setArchitectureBusy("Tweedledee"); setArchitectureError("");
     try {
       const { source } = ensureSourceVersion();
-      const outputRaw = await critiqueWithTweedledee({ context: contextFor(source.id), planVersion: { id: source.id, layout: planALayout(source.snapshot.rooms, source.snapshot.items, architectureBrief) }, deterministicValidation: serializeValidation(val), designObjective: "complete furnished residential interior" });
+      // Misma corrección que en el ciclo: con planta aceptada el piso tiene varias
+      // tipologías y no hay un programa único que declarar.
+      const critiqueContext = acceptedFloorProposal?.floor ? contextForFloor(source.id) : contextFor(source.id);
+      const critiqueBrief = acceptedFloorProposal?.floor ? brief : architectureBrief;
+      const outputRaw = await critiqueWithTweedledee({ context: critiqueContext, planVersion: { id: source.id, layout: planALayout(source.snapshot.rooms, source.snapshot.items, critiqueBrief) }, deterministicValidation: serializeValidation(val), designObjective: "complete furnished residential interior" });
       const output = mappedCritique(outputRaw, source.snapshot.rooms, source.snapshot.items);
       recordArchitectureRun({ mode: "critique", sourceVersionId: source.id, agents: [{ key: output.agent.key, promptVersion: output.promptVersion }], findings: output.findings });
       setArchitectureResult({ mode: "critique", output, critique: output });
@@ -1054,8 +1080,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         setArchitectureVersions(proposal.history);
         const deterministicValidation = serializeValidation(validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null }));
         const critiqueRaw = await critiqueWithTweedledee({
-          context: contextFor(proposal.version.id),
-          planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, architectureBrief) },
+          context: contextForFloor(proposal.version.id),
+          planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, brief) },
           deterministicValidation,
           designObjective: "review accepted Cabida floor and completed residential interiors without changing locked infrastructure",
         });
@@ -1217,6 +1243,10 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         versions={architectureVersions}
         currentVersion={architectureVersions.find((version) => version.id === activeArchitectureVersionId)}
         program={architectureProgram}
+        unitPrograms={acceptedFloorProposal?.floor
+          ? splitAcceptedFloor(acceptedFloorProposal.floor).units.map((u) => ({
+              unitRef: u.unitRef, dormitorios: u.program?.dormitorios ?? null, banos: u.program?.banos ?? null }))
+          : null}
         onProgramChange={(next) => setBrief((current) => ({
           ...current,
           architectureDormitorios: next.dormitorios,
