@@ -147,6 +147,7 @@ const C = {
   card: "#FFFFFF",
   line: "#E4E2DC",
   soft: "#9B998F",
+  red: "#A85B5B",
 };
 const mono = "'JetBrains Mono', 'SF Mono', Menlo, monospace";
 const sans = "'Hanken Grotesk', 'Helvetica Neue', sans-serif";
@@ -898,6 +899,11 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     return { muros, vanos, hallazgos, avisosMuros, avisosVanos };
   }, [roomsForWalls, contexto]);
   const murosById = useMemo(() => new Map(estructura.muros.map((m) => [m.id, m])), [estructura.muros]);
+  // Los hallazgos del grafo (unidad sin acceso, ambiente sin luz, se entra por un
+  // dormitorio, se pasa de un dormitorio a otro) son el producto más útil de la cadena:
+  // errores de diseño que antes se dibujaban callados. Calcularlos y no mostrarlos sería
+  // dejarlos invisibles, así que van a la barra de estado, desplegables.
+  const [verHallazgos, setVerHallazgos] = useState(false);
   const architectureProgram = resolveArchitectureProgram(brief, rooms);
   const architectureBrief = { ...brief, program: architectureProgram };
 
@@ -1525,6 +1531,19 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         )}
       </div>
 
+      {/* Hallazgos de diseño del grafo de muros/vanos: lo que el motor detectó y NO puede
+          resolver desde el interior porque es una decisión de reparto. Se dibuja igual —hay
+          que poder verlo— pero acá queda dicho. */}
+      {verHallazgos && estructura.hallazgos.length > 0 && (
+        <div style={{ maxHeight: 132, overflowY: "auto", padding: "8px 16px", borderTop: `1px solid ${C.line}`, background: C.paper }}>
+          {estructura.hallazgos.map((h, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, fontFamily: mono, fontSize: 10.5, lineHeight: 1.5, color: C.ink }}>
+              <span style={{ color: C.red, flexShrink: 0 }}>{h.codigo}</span>
+              <span style={{ color: C.soft }}>{h.mensaje}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {/* barra de estado */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "9px 16px", borderTop: `1px solid ${C.line}`, flexWrap: "wrap" }}>
         <span style={{ fontFamily: mono, fontSize: 11, color: C.ink }}>
@@ -1533,6 +1552,13 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         <span style={{ fontFamily: mono, fontSize: 11, color: C.ink }}>
           área <b style={{ color: C.orange }}>{fmt(totalArea, 1)}</b> <span style={{ color: C.soft }}>m²</span>
         </span>
+        {estructura.hallazgos.length > 0 && (
+          <button onClick={() => setVerHallazgos((v) => !v)}
+            title="Errores de diseño que el motor detectó y no puede resolver solo"
+            style={{ fontFamily: mono, fontSize: 11, color: C.red, background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline dotted" }}>
+            {estructura.hallazgos.length} {estructura.hallazgos.length === 1 ? "hallazgo" : "hallazgos"} de diseño
+          </button>
+        )}
         {sel && !selItem && (
           <span style={{ fontFamily: mono, fontSize: 11, color: C.soft }}>
             {sel.name} · {fmt(area(sel.pts), 1)} m² · perím {fmt(perimeter(sel.pts), 1)} m
