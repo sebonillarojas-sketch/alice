@@ -12,6 +12,9 @@ import {
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt } from "./distribucion.js";
+import { construirMuros } from "./muros.js";
+import { construirVanos } from "./vanos.js";
+import { muroEsVisible, grosorDeMuro, simboloDeVano } from "./muroDibujo.js";
 
 // Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
 // Reusa el motor de amoblado (amoblar*) + el catálogo. Cada uno respeta holguras Neufert.
@@ -362,7 +365,11 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   //  · laterales→ solo la calle lateral en esquina; en medianera son colindantes (0)
   // Se clasifica cada borde por su normal (clasificarBordes) para que ande también
   // en lotes irregulares, no solo rectángulos.
-  const footprint = (() => {
+  // Memoizado: antes era una IIFE que corría (y devolvía un array NUEVO) en cada
+  // render. Eso es intrascendente por sí solo, pero cualquier useMemo que dependiera de
+  // `footprint` (como el grafo de muros derivados, más abajo) quedaba invalidado en
+  // cada render igual — memo roto por una dependencia que nunca es ===. Se corrige acá.
+  const footprint = useMemo(() => {
     if (!lote || lote.pts.length < 3) return null;
     const n = lote.pts.length;
     const clases = clasificarBordes(lote.pts, frontIdx);
@@ -372,7 +379,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           : (tipoLote === "esquina" && i === (frontIdx + 1) % n) ? retiroLat
             : 0);
     return offsetEdges(lote.pts, dists);
-  })();
+  }, [lote, frontIdx, retiro, retiroPost, retiroLat, tipoLote]);
 
   // persiste el plano en el proyecto activo (instantáneo local + sync a la nube).
   // No guardamos la imagen base de calco (puede ser enorme): es solo apoyo de trazado.
@@ -663,7 +670,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const t = hitItem(world);
     if (t) {
       if (e.shiftKey) { toggleMulti("item", t.id); setSelItem(t.id); setSelId(null); return; }
-      if (inMulti("item", t.id) && multiSel.length > 1) { drag.current = buildMultiDrag(world); svgRef.current.setPointerCapture(e.pointerId); return; }
+      if (inMulti("item", t.id) && multiSel.length > 1) { drag.current = buildMultiDrag(world); setDraggingGeom(true); svgRef.current.setPointerCapture(e.pointerId); return; }
       setMultiSel([]); setSelItem(t.id); setSelId(null);
       drag.current = { kind: "item", id: t.id, grab: { x: world.x - t.x, y: world.y - t.y }, before: snapshot() };
       svgRef.current.setPointerCapture(e.pointerId);
@@ -675,6 +682,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       const roomIdx = editableRoomIndexes[vHit.roomIdx];
       setSelId(rooms[roomIdx].id); setSelItem(null);
       drag.current = { kind: "vertex", roomIdx, ptIdx: vHit.ptIdx, before: snapshot() };
+      setDraggingGeom(true);
       svgRef.current.setPointerCapture(e.pointerId);
       return;
     }
@@ -682,7 +690,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     if (inside >= 0) {
       const r = rooms[inside];
       if (e.shiftKey) { toggleMulti("room", r.id); setSelId(r.id); setSelItem(null); return; }
-      if (inMulti("room", r.id) && multiSel.length > 1) { drag.current = buildMultiDrag(world); svgRef.current.setPointerCapture(e.pointerId); return; }
+      if (inMulti("room", r.id) && multiSel.length > 1) { drag.current = buildMultiDrag(world); setDraggingGeom(true); svgRef.current.setPointerCapture(e.pointerId); return; }
       setMultiSel([]);
       setSelId(r.id); setSelItem(null);
       const contained = items.map((tt, i) => (pointInPolygon({ x: tt.x, y: tt.y }, r.pts) ? i : -1)).filter((i) => i >= 0);
@@ -691,6 +699,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         contained, origItems: contained.map((i) => ({ x: items[i].x, y: items[i].y })),
         before: snapshot(),
       };
+      setDraggingGeom(true);
       svgRef.current.setPointerCapture(e.pointerId);
       return;
     }
@@ -748,6 +757,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const onUp = (e) => {
     const d = drag.current;
     drag.current = null;
+    setDraggingGeom(false); // fin del arrastre: el grafo de muros se pone al día con la posición final
     try { svgRef.current.releasePointerCapture(e.pointerId); } catch { /* sin captura */ }
     if (d && d.kind === "draw") {
       const c = curTrazo;
@@ -861,9 +871,33 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     ? { a: draft[draft.length - 1], b: cursor } : null;
   const k = view.scale;
   const wallPx = Math.max(muro * k, 1.5);
-  const aberturas = items.filter((t) => porId[t.ref]?.cat === "abertura");
+  // §10: los items de categoría "abertura" quedan obsoletos — los vanos ahora se
+  // derivan del grafo de muros. El mobiliario NO se toca (siguen en `items`, no se
+  // borran), pero ya no se dibujan por su cuenta: ver `estructura.vanos` más abajo.
+  const aberturasObsoletas = items.filter((t) => porId[t.ref]?.cat === "abertura");
   const muebles = items.filter((t) => porId[t.ref]?.cat !== "abertura");
   const designBoundary = footprint || lote?.pts || null;
+
+  // Grafo de muros y vanos derivado de los ambientes (§9). construirMuros/construirVanos
+  // son puros pero no baratos, así que:
+  //   1. `contexto` se memoiza aparte para no invalidar el memo de abajo con un objeto
+  //      literal nuevo en cada render (footprint ya está memoizado más arriba).
+  //   2. El recálculo se hace sobre `roomsForWalls`, NO sobre `rooms` directamente.
+  //      Mientras se arrastra un vértice/ambiente/multi-selección, `rooms` cambia en
+  //      cada cuadro; si el grafo se recalculara con cada cuadro, el arrastre se
+  //      trabaría. `roomsForWalls` se congela al entrar en ese tipo de arrastre (ver
+  //      onDown/onUp) y se pone al día recién cuando termina — se difiere, no se
+  //      recalcula sobre una copia vieja de antes del arrastre.
+  const contexto = useMemo(() => ({ footprint: footprint || [], frontIdx, lotType: tipoLote }), [footprint, frontIdx, tipoLote]);
+  const [draggingGeom, setDraggingGeom] = useState(false);
+  const [roomsForWalls, setRoomsForWalls] = useState(rooms);
+  useEffect(() => { if (!draggingGeom) setRoomsForWalls(rooms); }, [rooms, draggingGeom]);
+  const estructura = useMemo(() => {
+    const { muros, avisos: avisosMuros } = construirMuros(roomsForWalls, contexto);
+    const { vanos, hallazgos, avisos: avisosVanos } = construirVanos(muros, roomsForWalls, contexto);
+    return { muros, vanos, hallazgos, avisosMuros, avisosVanos };
+  }, [roomsForWalls, contexto]);
+  const murosById = useMemo(() => new Map(estructura.muros.map((m) => [m.id, m])), [estructura.muros]);
   const architectureProgram = resolveArchitectureProgram(brief, rooms);
   const architectureBrief = { ...brief, program: architectureProgram };
 
@@ -1149,6 +1183,15 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
                 border: `1px solid ${C.line}`, borderRadius: 2, padding: "5px 8px", outline: "none" }} />
           )}
           {(selItem || (selId && isRoomEditable(sel))) && <Btn onClick={deleteSel} title="Eliminar (Supr)"><Trash2 size={13} /></Btn>}
+          {/* §10: aviso sobrio de migración — los vanos ahora se derivan del grafo de
+              muros; estos items quedan obsoletos pero no se borran (el mobiliario no se
+              toca). */}
+          {aberturasObsoletas.length > 0 && (
+            <span title="puertas/ventanas/vanos sueltos de una versión anterior — ya no se dibujan, los vanos se derivan del grafo de muros"
+              style={{ fontFamily: mono, fontSize: 10, color: C.soft, whiteSpace: "nowrap" }}>
+              {aberturasObsoletas.length} abertura{aberturasObsoletas.length === 1 ? "" : "s"} obsoleta{aberturasObsoletas.length === 1 ? "" : "s"} (no se dibujan)
+            </span>
+          )}
           {(rooms.length > 0 || items.length > 0) && (
             <span title={val.ok ? "cumple las reglas: nada fuera del lote · nada sin piso · flujos efectivos" : val.mensajes.join(" · ")}
               style={{ fontFamily: mono, fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 2, whiteSpace: "nowrap",
@@ -1301,23 +1344,17 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
                 strokeDasharray={terraza ? "6 4" : undefined} strokeLinejoin="miter" />
             );
           })}
-          {/* muros: aristas deduplicadas (una arista compartida = un solo muro; sin terrazas) */}
+          {/* muros derivados (§9): la colección de construirMuros, no el contorno de cada
+              ambiente — un tramo compartido es un muro y se dibuja una sola vez.
+              "sin_muro" (dos tramos del mismo pasillo) se omite: dibujarlo pondría una
+              pared cruzando el corredor. Jerarquía de línea: grueso = perimetral/
+              estructural, delgado = tabique (muroDibujo.js). */}
           <g pointerEvents="none">
-            {(() => {
-              const q = (n) => Math.round(n / 0.1) * 0.1, seen = new Set(), segs = [];
-              rooms.forEach((r) => {
-                if (r.tipo === "terraza" || !r.pts?.length) return;
-                const p = r.pts;
-                for (let i = 0; i < p.length; i++) {
-                  const a = p[i], b = p[(i + 1) % p.length];
-                  const ka = `${q(a.x)},${q(a.y)}`, kb = `${q(b.x)},${q(b.y)}`;
-                  const key = ka < kb ? ka + "|" + kb : kb + "|" + ka;
-                  if (seen.has(key)) continue;
-                  seen.add(key); segs.push([a, b]);
-                }
-              });
-              return segs.map(([a, b], idx) => { const A = toScreen(a), B = toScreen(b); return <line key={idx} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke={C.ink} strokeWidth={wallPx} strokeLinecap="square" />; });
-            })()}
+            {estructura.muros.filter(muroEsVisible).map((m) => {
+              const A = toScreen(m.a), B = toScreen(m.b);
+              const grosorPx = Math.max(grosorDeMuro(m.clase, muro) * k, 1.2);
+              return <line key={m.id} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke={C.ink} strokeWidth={grosorPx} strokeLinecap="square" />;
+            })}
           </g>
           {/* resalte del ambiente seleccionado (encima de los muros) */}
           {rooms.map((r) => ((r.id === selId || inMulti("room", r.id)) && r.tipo !== "terraza") ? (
@@ -1325,10 +1362,16 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
               fill="none" stroke={C.orange} strokeWidth={wallPx + 1.5} strokeLinejoin="miter" pointerEvents="none" />
           ) : null)}
 
-          {/* aberturas (cortan el muro) */}
-          {aberturas.map((t) => {
-            const s = toScreen({ x: t.x, y: t.y });
-            return <Simbolo key={t.id} it={{ ...t, d: Math.max(t.d, muro) }} px={s.x} py={s.y} k={k} selected={t.id === selItem || inMulti("item", t.id)} />;
+          {/* vanos derivados (§9): interrupción del trazo del muro (el fondo blanco del
+              símbolo la produce) + el símbolo de simbolos.jsx. Posición y ángulo salen
+              SIEMPRE de resolverVano vía simboloDeVano — nunca se calculan acá. */}
+          {estructura.vanos.map((v) => {
+            const m = murosById.get(v.muroId);
+            if (!m) return null; // grafo inconsistente entre corridas — no debería pasar, pero no se cae
+            const s = simboloDeVano(v, m, muro);
+            if (!s) return null;
+            const p = toScreen(s.centro);
+            return <Simbolo key={v.id} it={{ ref: s.ref, w: s.w, d: s.d, rot: s.rot }} px={p.x} py={p.y} k={k} selected={false} />;
           })}
 
           {/* mobiliario */}
