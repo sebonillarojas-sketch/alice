@@ -359,3 +359,33 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
 
   return { vanos, hallazgos, avisos };
 }
+
+// ── Resolución geométrica de un vano ──────────────────────────────────────────────
+// Un vano guarda `muroId` y `t` (metros desde el extremo `a`), nunca coordenadas propias.
+// Esta función es la ÚNICA manera de obtener su posición en el plano, y la deriva del muro.
+// Es a propósito: si el renderer calculara la posición por su cuenta, una puerta podría
+// quedar desalineada del muro que dice ocupar, que es justo el defecto que veníamos de
+// arreglar. Acá eso no puede pasar — la puerta no tiene posición propia que desalinear.
+//
+// Devuelve las coordenadas del mundo, no de pantalla: `angulo` en grados con la convención
+// atan2(dy, dx). El mapeo a pantalla es del renderer.
+export function resolverVano(vano, muro) {
+  if (!vano || !muro) return null;
+  const dx = muro.b.x - muro.a.x, dy = muro.b.y - muro.a.y;
+  const largo = Math.hypot(dx, dy);
+  if (!(largo > 0)) return null;
+  const ux = dx / largo, uy = dy / largo;             // unitario a lo largo del muro
+  const mitad = vano.ancho / 2;
+  // se acota contra los extremos: aunque la colocación ya respeta la holgura, resolver
+  // nunca debe devolver un vano que se salga del muro.
+  const t = Math.min(Math.max(vano.t, mitad), largo - mitad);
+  const cx = muro.a.x + ux * t, cy = muro.a.y + uy * t;
+  return {
+    centro: { x: cx, y: cy },
+    p1: { x: cx - ux * mitad, y: cy - uy * mitad },
+    p2: { x: cx + ux * mitad, y: cy + uy * mitad },
+    angulo: Math.atan2(dy, dx) * 180 / Math.PI,
+    ancho: vano.ancho,
+    recortado: Math.abs(t - vano.t) > 1e-9,
+  };
+}
