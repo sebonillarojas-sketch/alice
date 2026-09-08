@@ -4,7 +4,7 @@ import { footprintReal } from "./loteReal.js";
 import { generarDistribuciones } from "../planos/plantas.js";
 import { bbox as polyBbox, centroid, dist, area as polyArea } from "../planos/geometry.js";
 import { planFloorWithTweedledum } from "../planos/architecture.js";
-import { cabidaVersionId, fallbackFloorProposal, materializeFloorProposal, proposalToParti } from "./floorProposal.js";
+import { cabidaVersionId, fallbackFloorProposal, materializeFloorProposal, partiDeterministaAPropuesta, proposalToParti } from "./floorProposal.js";
 
 const Masa3D = lazy(() => import("./Masa3D.jsx"));
 
@@ -418,6 +418,37 @@ export default function EsquemaPlanta({
     } finally { setFloorBusy(false); }
   };
 
+  // Llevar al editor el parti determinístico que el usuario está mirando. Sin esto, el
+  // único camino a Planos era aceptar una propuesta de Tweedledum: los partis A/B/C se
+  // podían elegir y no se podían usar. Se convierten a la MISMA forma de propuesta, así
+  // que de acá para abajo el flujo es idéntico —se registra, se acepta y siembra el editor.
+  const usarPartiDeterminista = () => {
+    if (proposedParti || !parti || floorBusy) return;
+    setFloorError("");
+    try {
+      const propuesta = partiDeterministaAPropuesta(parti, {
+        footprint: real.footprint,
+        sourceCabidaVersionId: currentCabidaVersionId,
+        tradeoffs: ["Distribución del motor determinístico, elegida a mano"],
+      });
+      // source honesto: este registro NO salió de Tweedledum, y appendFloorProposalRecord
+      // asume "tweedledum" por defecto. La validación queda explícitamente sin correr —
+      // el validador vive en alicia-brain y el frontend no lo ejecuta— en vez de guardar
+      // un ok:false que se leería como "falló".
+      const record = onProposalGenerated?.({
+        selected: propuesta,
+        source: "deterministico",
+        validation: { ok: null, findings: [], nota: "sin validar: distribución determinística llevada a mano" },
+      }) || null;
+      if (!record?.id) { setFloorError("No se pudo registrar la planta determinística"); return; }
+      setFloorResult({ selected: propuesta, record });
+      onAcceptFloor?.(record.id);
+      setAcceptedFloorId(record.id);
+    } catch (error) {
+      setFloorError(error?.message || "Esta distribución no se pudo llevar al editor");
+    }
+  };
+
   const acceptFloor = () => {
     const proposalId = floorResult?.record?.id || displayedRecord?.id;
     if (!proposalId) return;
@@ -552,6 +583,13 @@ export default function EsquemaPlanta({
                   style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: floorBusy ? "wait" : "pointer", color: C.card, background: floorBusy ? C.soft : C.ink, border: `1px solid ${floorBusy ? C.soft : C.ink}` }}>
                   {floorBusy ? "Diseñando planta…" : "Proponer planta con Tweedledum"}
                 </button>
+                {!proposedParti && parti && (
+                  <button onClick={usarPartiDeterminista} disabled={floorBusy}
+                    title="lleva esta distribución del motor determinístico al Editor de Planos, sin pasar por Tweedledum"
+                    style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: floorBusy ? "wait" : "pointer", color: C.ink, background: C.card, border: `1px solid ${C.ink}` }}>
+                    Usar esta planta en Planos
+                  </button>
+                )}
                 {displayedRecord && (
                   <button onClick={acceptFloor} disabled={acceptedFloorId === displayedRecord.id}
                     style={{ fontFamily: mono, fontSize: 10.5, padding: "7px 12px", borderRadius: 2, cursor: acceptedFloorId === displayedRecord.id ? "default" : "pointer", color: acceptedFloorId === displayedRecord.id ? C.soft : C.orange, background: C.card, border: `1px solid ${acceptedFloorId === displayedRecord.id ? C.line : C.orange}` }}>

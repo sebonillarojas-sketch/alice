@@ -247,12 +247,11 @@ export function discardFloorProposalRecord(project = {}, proposalId, motivo = ""
   return base;
 }
 
-export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sourceCabidaVersionId }) {
-  const candidates = generarDistribuciones(footprint, frontIdx, brief);
-  const parti = candidates.find((candidate) => {
-    const refs = (candidate.res?.units || []).map((unit) => unit.unitRef);
-    return refs.length === new Set(refs).size;
-  }) || candidates[0];
+// Convierte UN parti determinístico (el de generarDistribuciones: { rooms, res, nombre })
+// en una propuesta de piso con la misma forma que devuelve Tweedledum. Se extrajo de
+// fallbackFloorProposal porque Cabida necesita poder llevar al editor EL parti que el
+// usuario está mirando —el A, el B o el C—, no el que el respaldo elija por su cuenta.
+export function partiDeterministaAPropuesta(parti, { footprint, sourceCabidaVersionId, summary, tradeoffs = [] } = {}) {
   if (!parti?.res) throw new Error("La huella no admite una distribución determinística");
   const { core, corridors = [], corridor, units = [] } = parti.res;
   const halls = corridors.length ? corridors : (corridor ? [corridor] : []);
@@ -288,17 +287,45 @@ export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sou
     unitProgram: pieza.unitProgram,
     polygon: toPolygon(pieza.pts),
   }));
+  // Una unidad que quedó en varias piezas no la puede diseñar el editor: splitAcceptedFloor
+  // le da boundary null y Tweedledum la saltea con "multi_piece_boundary". Es la causa de
+  // que una planta se resuelva "a medias". Se avisa acá, antes de llevarla, en vez de que
+  // aparezca como unidades sin diseñar más tarde.
+  const piezasPorUnidad = new Map();
+  for (const p of polygons) {
+    if (p.role !== "unidad" || !p.unitRef) continue;
+    piezasPorUnidad.set(p.unitRef, (piezasPorUnidad.get(p.unitRef) || 0) + 1);
+  }
+  const partidas = [...piezasPorUnidad.entries()].filter(([, n]) => n > 1);
+
   return {
-    summary: "Respaldo determinístico de packFloor",
+    summary: summary || `Distribución determinística · ${parti.nombre || "sin nombre"}`,
     floor: { sourceCabidaVersionId: String(sourceCabidaVersionId || ""), polygons },
     assumptions: [],
     tradeoffs: [
-      "Distribución determinística utilizada como respaldo",
+      ...(partidas.length
+        ? [`${partidas.length} unidad(es) quedaron partidas en varias piezas (${partidas.map(([ref, n]) => `${ref}: ${n}`).join(", ")}): el editor no puede diseñarles el interior`]
+        : []),
+      ...tradeoffs,
       // que un recorte con pérdida sea visible y no se coma piezas en silencio
       ...(dropped.length ? [`${dropped.length} pieza(s) descartada(s) al recortar contra la huella`] : []),
       ...(split ? [`${split} pieza(s) partida(s) por la huella: se conservó el fragmento mayor`] : []),
     ],
   };
+}
+
+export function fallbackFloorProposal({ footprint, frontIdx = 0, brief = {}, sourceCabidaVersionId }) {
+  const candidates = generarDistribuciones(footprint, frontIdx, brief);
+  const parti = candidates.find((candidate) => {
+    const refs = (candidate.res?.units || []).map((unit) => unit.unitRef);
+    return refs.length === new Set(refs).size;
+  }) || candidates[0];
+  return partiDeterministaAPropuesta(parti, {
+    footprint,
+    sourceCabidaVersionId,
+    summary: "Respaldo determinístico de packFloor",
+    tradeoffs: ["Distribución determinística utilizada como respaldo"],
+  });
 }
 
 // Tweedledum ya no dibuja: devuelve un "parti" (decisión aproximada de
