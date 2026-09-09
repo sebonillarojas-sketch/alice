@@ -177,8 +177,9 @@ function DistrictMap({ selectedId, onSelect }) {
   <script>
     const map = L.map("map", { zoomControl: true, scrollWheelZoom: true })
       .setView([-12.08, -77.03], 12);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19, subdomains: "abcd"
+    // Ver nota en HyggeOS.jsx: CARTO pasó a estampar "API KEY REQUIRED" en el tile.
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19, maxNativeZoom: 16
     }).addTo(map);
     ${markersJs}
     window.addEventListener("message", e => {

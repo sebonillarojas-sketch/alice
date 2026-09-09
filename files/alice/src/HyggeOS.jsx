@@ -4981,7 +4981,14 @@ const LEAFLET_IFRAME_HTML = `<!DOCTYPE html>
   if (typeof L === 'undefined') { console.error('Leaflet failed to load'); return; }
   const send = (type, payload) => parent.postMessage({ source: 'hygge-map', type, payload: payload || {} }, '*');
   const map = L.map('map', { center: [-12.105, -77.030], zoom: 13, attributionControl: false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+  // Tiles: Esri World Light Gray. Se dejó CARTO (basemaps.cartocdn.com) el 9 sep 2026
+  // porque empezaron a exigir cuenta y servían los tiles con "API KEY REQUIRED"
+  // ESTAMPADO EN LA IMAGEN — respondían 200 y un PNG válido, así que ningún chequeo
+  // de red lo detectaba: solo se veía mirando el mapa.
+  // Ojo con dos diferencias respecto de CARTO: el orden es {z}/{y}/{x} (no {z}/{x}/{y}),
+  // y no hay subdominios {s} ni retina {r}.
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16 }).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16 }).addTo(map);
   let markers = {};
   let statuses = {};
   let interactive = true;
@@ -5088,7 +5095,7 @@ function LeafletMap({ terrenos, onSelect, selectedId, onMapClick, onMarkerDrag, 
         <div className="p-4" style={{ backgroundColor: `${C.ochre}15`, borderBottom: `1px solid ${C.ochre}40` }}>
           <div className="text-[11px]" style={{ color: C.ink, fontWeight: 600 }}>⚠ Mapa no cargó · vista fallback</div>
           <div className="text-[10px] mt-1" style={{ color: C.inkSoft, lineHeight: 1.6 }}>
-            Probable causa: el CSP del iframe del artifact bloquea Leaflet desde unpkg.com o las tiles de carto CDN.
+            Probable causa: el CSP del iframe del artifact bloquea Leaflet desde unpkg.com o las tiles de Esri.
             En producción (deploy a dominio propio) esto va a funcionar. Mientras tanto: lista de terrenos abajo con coordenadas.
           </div>
           <div className="text-[10px] mt-1.5" style={{ color: C.muted }}>
@@ -5872,7 +5879,7 @@ function TerrenoOpportunidad({ terreno }) {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${terrenoLat},${terrenoLng}],12);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16}).addTo(map);
 ${markersJs}${compJs}
 var icon=L.divIcon({html:'<div style="width:16px;height:16px;border-radius:50%;background:#0A0B0F;border:3px solid #F4F1EA;box-shadow:0 2px 8px rgba(0,0,0,0.5)"></div>',className:'',iconSize:[16,16],iconAnchor:[8,8]});
 L.marker([${terrenoLat},${terrenoLng}],{icon}).bindTooltip('<b>${(terreno.name||"Terreno").replace(/'/g,"\\'")}</b>',{permanent:true,direction:'top',offset:[0,-10]}).addTo(map);
@@ -11734,7 +11741,7 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
     const tests = [
       { id: "leaflet-js", label: "Leaflet.js (unpkg.com)", url: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" },
       { id: "leaflet-css", label: "Leaflet CSS (unpkg.com)", url: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
-      { id: "carto-tile", label: "Map tiles (basemaps.cartocdn.com)", url: "https://a.basemaps.cartocdn.com/light_all/13/2336/3759.png", isImage: true },
+      { id: "esri-tile", label: "Map tiles (Esri Light Gray)", url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/13/3759/2336", isImage: true },
       { id: "openstreetmap", label: "OSM tiles (tile.openstreetmap.org)", url: "https://tile.openstreetmap.org/13/2336/3759.png", isImage: true },
       { id: "alicia-brain", label: "Alicia backend (aliceai.bam.pe)", url: `${ALICIA_URL}/health` },
       { id: "google-fonts", label: "Google Fonts (fonts.googleapis.com)", url: "https://fonts.googleapis.com/css2?family=DM+Sans" },
@@ -11840,7 +11847,7 @@ function WhiteRabbitPanel({ customViews, setCustomViews, allSpaces, tasks, terre
               </div>
               {diagnostics.find(d => d.id === "map-iframe" && !d.ok) && (
                 <div className="px-4 py-3 text-[10px]" style={{ backgroundColor: `${C.ochre}10`, color: C.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${C.lineSoft}` }}>
-                  <strong style={{ color: C.ink }}>Diagnóstico del mapa:</strong> el iframe del mapa no carga. Si Leaflet.js falla arriba → CSP del artifact bloquea unpkg.com. Si Leaflet OK pero tiles fallan → CSP bloquea carto CDN (las tiles del mapa). En producción (deploy a un dominio propio con CSP propio) esto va a funcionar. Por ahora hay un fallback con lista de terrenos y coordenadas.
+                  <strong style={{ color: C.ink }}>Diagnóstico del mapa:</strong> el iframe del mapa no carga. Si Leaflet.js falla arriba → CSP del artifact bloquea unpkg.com. Si Leaflet OK pero tiles fallan → CSP bloquea server.arcgisonline.com (las tiles del mapa). En producción (deploy a un dominio propio con CSP propio) esto va a funcionar. Por ahora hay un fallback con lista de terrenos y coordenadas.
                 </div>
               )}
             </div>
