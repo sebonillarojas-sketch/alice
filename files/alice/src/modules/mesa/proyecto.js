@@ -196,7 +196,7 @@ export function mapaMinimalHTML({ lat, lng, nombre, district, mode = "lote", zoo
         return `L.circleMarker([${dd.lat},${dd.lng}],{radius:${r},color:"${col}",fillColor:"${col}",fillOpacity:${sel ? 0.55 : 0.22},weight:${sel ? 2.5 : 1}}).bindTooltip('<div style="font:600 11px monospace;padding:2px 6px">${name} · ${dd.base} u/mes</div>').addTo(map);`;
       }).join("\n")
     : "";
-  const tiles = mode === "sector" ? "light_nolabels" : "light_all";
+  const conEtiquetas = mode !== "sector";   // el modo sector va limpio, sin nombres
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>*{margin:0;padding:0}body,html{height:100%;background:#E3E1DE}.leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
 .leaflet-tile-pane{filter:grayscale(1) contrast(0.92) brightness(1.04)}</style></head>
@@ -204,7 +204,9 @@ export function mapaMinimalHTML({ lat, lng, nombre, district, mode = "lote", zoo
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var map=L.map('map',{zoomControl:false,attributionControl:false,scrollWheelZoom:false}).setView([${lat},${lng}],${zoom ?? (mode === "sector" ? 12 : 15)});
-L.tileLayer('https://{s}.basemaps.cartocdn.com/${tiles}/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+// Ver nota en HyggeOS.jsx: CARTO pasó a estampar "API KEY REQUIRED" en el tile.
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16}).addTo(map);
+${conEtiquetas ? `L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16}).addTo(map);` : ''}
 ${markers}
 var icon=L.divIcon({html:'<div style="width:16px;height:16px;background:#000;border:3px solid #E3E1DE;box-shadow:0 2px 8px rgba(0,0,0,.45)"></div>',className:'',iconSize:[16,16],iconAnchor:[8,8]});
 L.marker([${lat},${lng}],{icon:icon}).bindTooltip('<b style="font:600 11px monospace">${(nombre || "Terreno").replace(/'/g, "\\'")}</b>',{permanent:true,direction:'top',offset:[0,-10]}).addTo(map);
