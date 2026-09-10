@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="470" height="640" viewBox="0 0 470 640" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="470" height="640" fill="#faf8f4"/>
+<path d="M 346.0,138.0 L 375.0,138.0 L 402.8,65.0 L 346.0,65.0 Z" fill="#fdf1d8" stroke="none"/>
+<path d="M 339.2,232.0 L 372.7,144.0 L 340.0,144.0 L 340.0,65.0 L 179.0,65.0 L 179.0,232.0 Z" fill="#fdf1d8" stroke="none"/>
+<path d="M 173.0,232.0 L 173.0,65.0 L 65.0,65.0 L 65.0,232.0 Z" fill="#dbe9f6" stroke="none"/>
+<path d="M 118.0,297.0 L 118.0,238.0 L 65.0,238.0 L 65.0,297.0 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 124.0,238.0 L 124.0,297.0 L 195.0,297.0 L 195.0,238.0 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 201.0,238.0 L 201.0,297.0 L 314.4,297.0 L 336.9,238.0 Z" fill="#fdf1d8" stroke="none"/>
+<path d="M 276.0,339.0 L 276.0,303.0 L 65.0,303.0 L 65.0,339.0 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 124.0,511.0 L 124.0,345.0 L 65.0,345.0 L 65.0,511.0 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 130.0,345.0 L 130.0,449.0 L 178.0,449.0 L 178.0,345.0 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 130.0,455.0 L 130.0,511.0 L 178.0,511.0 L 178.0,455.0 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 184.0,345.0 L 184.0,511.0 L 232.9,511.0 L 296.1,345.0 Z" fill="#dbe9f6" stroke="none"/>
+<path d="M 60.0,65.0 L 410.0,65.0 L 410.0,55.0 L 60.0,55.0 Z" fill="#3a3a3a" stroke="none"/>
+<path d="M 405.3,58.2 L 207.3,578.2 L 216.7,581.8 L 414.7,61.8 Z" fill="#3a3a3a" stroke="none"/>
+<path d="M 212.0,575.0 L 60.0,575.0 L 60.0,585.0 L 212.0,585.0 Z" fill="#3a3a3a" stroke="none"/>
+<path d="M 65.0,580.0 L 65.0,60.0 L 55.0,60.0 L 55.0,580.0 Z" fill="#3a3a3a" stroke="none"/>
+<path d="M 173.0,60.0 L 173.0,235.0 L 179.0,235.0 L 179.0,60.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 340.0,60.0 L 340.0,141.0 L 346.0,141.0 L 346.0,60.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 343.0,144.0 L 374.0,144.0 L 374.0,138.0 L 343.0,138.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 60.0,238.0 L 338.0,238.0 L 338.0,232.0 L 60.0,232.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 118.0,235.0 L 118.0,300.0 L 124.0,300.0 L 124.0,235.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 195.0,235.0 L 195.0,300.0 L 201.0,300.0 L 201.0,235.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 60.0,303.0 L 338.0,303.0 L 338.0,297.0 L 60.0,297.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 60.0,345.0 L 296.0,345.0 L 296.0,339.0 L 60.0,339.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 124.0,342.0 L 124.0,514.0 L 130.0,514.0 L 130.0,342.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 178.0,342.0 L 178.0,514.0 L 184.0,514.0 L 184.0,342.0 Z" fill="#8a8a8a" stroke="none"/>
+<path d="M 130.0,455.0 L 178.0,455.0 L 178.0,449.0 L 130.0,449.0 Z" fill="#8a8a8a" stroke="none"/>
+<line x1="392.4" y1="65.0" x2="356.4" y2="65.0" stroke="#fff" stroke-width="4"/>
+<line x1="346.0" y1="83.5" x2="346.0" y2="119.5" stroke="#fff" stroke-width="4"/>
+<path d="M 346.0,119.5 A 36.0 36.0 0 0 1 310.0,83.5" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="346.0" y1="83.5" x2="310.0" y2="83.5" stroke="#999" stroke-width="1.5"/>
+<line x1="179.0" y1="132.5" x2="179.0" y2="164.5" stroke="#fff" stroke-width="4"/>
+<path d="M 179.0,164.5 A 32.0 32.0 0 0 1 147.0,132.5" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="179.0" y1="132.5" x2="147.0" y2="132.5" stroke="#999" stroke-width="1.5"/>
+<line x1="232.9" y1="232.0" x2="304.9" y2="232.0" stroke="#fff" stroke-width="4"/>
+<path d="M 304.9,232.0 A 72.0 72.0 0 0 1 232.9,304.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="232.9" y1="232.0" x2="232.9" y2="304.0" stroke="#999" stroke-width="1.5"/>
+<line x1="75.5" y1="232.0" x2="107.5" y2="232.0" stroke="#fff" stroke-width="4"/>
+<path d="M 107.5,232.0 A 32.0 32.0 0 0 1 75.5,264.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="75.5" y1="232.0" x2="75.5" y2="264.0" stroke="#999" stroke-width="1.5"/>
+<line x1="118.0" y1="281.5" x2="118.0" y2="253.5" stroke="#fff" stroke-width="4"/>
+<path d="M 118.0,253.5 A 28.0 28.0 0 0 1 146.0,281.5" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="118.0" y1="281.5" x2="146.0" y2="281.5" stroke="#999" stroke-width="1.5"/>
+<line x1="201.0" y1="253.5" x2="201.0" y2="281.5" stroke="#fff" stroke-width="4"/>
+<path d="M 201.0,281.5 A 28.0 28.0 0 0 1 173.0,253.5" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="201.0" y1="253.5" x2="173.0" y2="253.5" stroke="#999" stroke-width="1.5"/>
+<line x1="222.5" y1="297.0" x2="254.5" y2="297.0" stroke="#fff" stroke-width="4"/>
+<path d="M 254.5,297.0 A 32.0 32.0 0 0 1 222.5,329.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="222.5" y1="297.0" x2="222.5" y2="329.0" stroke="#999" stroke-width="1.5"/>
+<line x1="78.5" y1="339.0" x2="110.5" y2="339.0" stroke="#fff" stroke-width="4"/>
+<path d="M 110.5,339.0 A 32.0 32.0 0 0 1 78.5,371.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="78.5" y1="339.0" x2="78.5" y2="371.0" stroke="#999" stroke-width="1.5"/>
+<line x1="214.0" y1="339.0" x2="246.0" y2="339.0" stroke="#fff" stroke-width="4"/>
+<path d="M 246.0,339.0 A 32.0 32.0 0 0 1 214.0,371.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="214.0" y1="339.0" x2="214.0" y2="371.0" stroke="#999" stroke-width="1.5"/>
+<line x1="124.0" y1="411.0" x2="124.0" y2="383.0" stroke="#fff" stroke-width="4"/>
+<path d="M 124.0,383.0 A 28.0 28.0 0 0 1 152.0,411.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="124.0" y1="411.0" x2="152.0" y2="411.0" stroke="#999" stroke-width="1.5"/>
+<line x1="184.0" y1="383.0" x2="184.0" y2="411.0" stroke="#fff" stroke-width="4"/>
+<path d="M 184.0,411.0 A 28.0 28.0 0 0 1 156.0,383.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="184.0" y1="383.0" x2="156.0" y2="383.0" stroke="#999" stroke-width="1.5"/>
+<line x1="124.0" y1="499.0" x2="124.0" y2="467.0" stroke="#fff" stroke-width="4"/>
+<path d="M 124.0,467.0 A 32.0 32.0 0 0 1 156.0,499.0" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="124.0" y1="499.0" x2="156.0" y2="499.0" stroke="#999" stroke-width="1.5"/>
+<line x1="381.7" y1="120.2" x2="396.0" y2="82.8" stroke="#2b7bd1" stroke-width="5"/>
+<line x1="303.5" y1="65.0" x2="215.5" y2="65.0" stroke="#2b7bd1" stroke-width="5"/>
+<line x1="367.3" y1="158.1" x2="344.5" y2="217.9" stroke="#2b7bd1" stroke-width="5"/>
+<line x1="65.0" y1="112.5" x2="65.0" y2="184.5" stroke="#2b7bd1" stroke-width="5"/>
+<line x1="275.9" y1="398.1" x2="253.1" y2="457.9" stroke="#2b7bd1" stroke-width="5"/>
+<text x="368.2" y="91.6" font-size="12" text-anchor="middle" fill="#222">hall</text>
+<text x="368.2" y="107.6" font-size="11" text-anchor="middle" fill="#555">2.0 m²</text>
+<text x="264.0" y="143.7" font-size="12" text-anchor="middle" fill="#222">sala-comedor</text>
+<text x="264.0" y="159.7" font-size="11" text-anchor="middle" fill="#555">17.7 m²</text>
+<text x="119.0" y="142.5" font-size="12" text-anchor="middle" fill="#222">dormitorio principal</text>
+<text x="119.0" y="158.5" font-size="11" text-anchor="middle" fill="#555">11.3 m²</text>
+<text x="91.5" y="261.5" font-size="12" text-anchor="middle" fill="#222">vestidor</text>
+<text x="91.5" y="277.5" font-size="11" text-anchor="middle" fill="#555">2.0 m²</text>
+<text x="159.5" y="261.5" font-size="12" text-anchor="middle" fill="#222">baño principal</text>
+<text x="159.5" y="277.5" font-size="11" text-anchor="middle" fill="#555">2.6 m²</text>
+<text x="263.5" y="260.6" font-size="12" text-anchor="middle" fill="#222">terraza</text>
+<text x="263.5" y="276.6" font-size="11" text-anchor="middle" fill="#555">4.6 m²</text>
+<text x="170.5" y="315.0" font-size="12" text-anchor="middle" fill="#222">pasillo</text>
+<text x="170.5" y="331.0" font-size="11" text-anchor="middle" fill="#555">4.7 m²</text>
+<text x="94.5" y="422.0" font-size="12" text-anchor="middle" fill="#222">cocina</text>
+<text x="94.5" y="438.0" font-size="11" text-anchor="middle" fill="#555">6.1 m²</text>
+<text x="154.0" y="391.0" font-size="12" text-anchor="middle" fill="#222">baño 2</text>
+<text x="154.0" y="407.0" font-size="11" text-anchor="middle" fill="#555">3.1 m²</text>
+<text x="154.0" y="477.0" font-size="12" text-anchor="middle" fill="#222">lavandería</text>
+<text x="154.0" y="493.0" font-size="11" text-anchor="middle" fill="#555">1.7 m²</text>
+<text x="226.3" y="411.1" font-size="12" text-anchor="middle" fill="#222">dormitorio 2</text>
+<text x="226.3" y="427.1" font-size="11" text-anchor="middle" fill="#555">8.4 m²</text>
+<text x="60" y="45" font-size="12" fill="#333">frente 8.75 m</text>
+<text x="15" y="80" font-size="12" fill="#333" transform="rotate(-90 15 80)">fondo 13.00 m</text>
+<text x="60" y="625.0" font-size="13" fill="#111" font-weight="bold">2D/2B esquina real de avenidas oblicuas (69°)</text>
+</svg>
