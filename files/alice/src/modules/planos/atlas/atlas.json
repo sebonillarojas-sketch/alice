@@ -457,15 +457,16 @@
    "izquierda"
   ],
   "entrada": {
-   "arista": "derecha",
-   "t": 3.2
+   "arista": "abajo",
+   "t": 10.25
   },
   "confianza": "baja",
   "notas": [
    "DESCARTAR ÁREA: no se encontró ningún número de área impreso en la lámina; no se inventó, area.declarada queda null.",
    "El nombre de archivo dice '2D-55' pero la planta muestra claramente 1 solo dormitorio: bucket no confiable, confirmado.",
    "Planta alargada tipo loft con un quiebre (jog) en el fondo cerca del baño; geometría de esa zona es la más incierta de la lámina.",
-   "Sin nombre de proyecto ni distrito visibles."
+   "Sin nombre de proyecto ni distrito visibles.",
+   "entrada recolocada a \"circulacion\" (abajo): no desembocaba en ningún ambiente"
   ]
  },
  {
@@ -560,14 +561,15 @@
   ],
   "entrada": {
    "arista": "abajo",
-   "t": 4.31
+   "t": 5.03
   },
   "confianza": "media",
   "notas": [
    "Rotulada 'PLANTA DPTO. TIPO 7', 'AREA TECHADA DPTO: 51.80 m²', 'AREA LIBRE: 0.00 m²', 'AREA OCUPADA: 51.80 m²' — se usó el valor techada (igual a ocupada).",
    "Sin nombre de proyecto; calles 'Luis Saenz' y 'Avenida San Felipe' visibles en el diagrama de ubicación, pero ningún distrito administrativo está escrito, así que se dejó vacío.",
    "1 solo baño identificado (un inodoro visible); 2 dormitorios por las dos camas dibujadas.",
-   "escala normalizada ×0.958 para que el sobre valga el área declarada (51.8 m²)"
+   "escala normalizada ×0.958 para que el sobre valga el área declarada (51.8 m²)",
+   "entrada recolocada a \"comedor\" (abajo): desembocaba en \"baño\""
   ]
  },
  {
@@ -756,8 +758,8 @@
    "abajo"
   ],
   "entrada": {
-   "arista": "derecha",
-   "t": 1.77
+   "arista": "izquierda",
+   "t": 1.95
   },
   "confianza": "media",
   "notas": [
@@ -767,7 +769,9 @@
    "2 baños inferidos de los dos módulos con inodoro+lavatorio apilados en la franja central; uno de ellos tiene además un termotanque.",
    "Sin distrito explícito en la lámina (solo 'Jr. Salaverry', calle que cruza varios distritos); se dejó vacío.",
    "Fachada y posición de entrada son la parte menos segura de esta lectura: no se identificó flecha de ingreso clara.",
-   "escala normalizada ×0.884 para que el sobre valga el área declarada (67.59 m²)"
+   "escala normalizada ×0.884 para que el sobre valga el área declarada (67.59 m²)",
+   "entrada recolocada a \"dormitorio 2\" (izquierda): no desembocaba en ningún ambiente",
+   "se entra por un dormitorio: ningún ambiente de estar llega a un borde de acceso — defecto del reparto, no de la lectura"
   ]
  },
  {
@@ -885,8 +889,8 @@
    "izquierda"
   ],
   "entrada": {
-   "arista": "arriba",
-   "t": 2.82
+   "arista": "abajo",
+   "t": 3.06
   },
   "confianza": "media",
   "notas": [
@@ -894,7 +898,8 @@
    "Etiqueta 'Vista Calle' junto al área total (68.81 m²); se usó ese valor sin poder confirmar si incluye balcón.",
    "Distrito no está escrito en la lámina (solo 'Jr. Caracas'); el nombre 'Vive Olivar' sugiere cercanía a El Olivar (San Isidro) pero eso es una inferencia, no un dato de la lámina, así que se dejó vacío.",
    "La planta real tiene un quiebre/pasadizo en L que se simplificó a un sobre rectangular; el área sin asignar queda como muro/circulación.",
-   "escala normalizada ×0.94 para que el sobre valga el área declarada (68.81 m²)"
+   "escala normalizada ×0.94 para que el sobre valga el área declarada (68.81 m²)",
+   "entrada recolocada a \"comedor\" (abajo): no desembocaba en ningún ambiente"
   ]
  },
  {
@@ -1082,15 +1087,17 @@
    "derecha"
   ],
   "entrada": {
-   "arista": "derecha",
-   "t": 3.3
+   "arista": "abajo",
+   "t": 5.48
   },
   "confianza": "media",
   "notas": [
    "Proyecto y distrito confirmados por texto explícito en la lámina: 'Torre Nápoles, Jesús María' y dirección 'Av. 28 de Julio 232, 15072 - Jesús María, Lima'.",
    "Programa (2 dorms, 2 baños) y área (57.06 m²) confirmados por iconos/texto explícitos; la geometría interna sí es estimada de un render girado en diagonal.",
    "El nombre de archivo dice '1D-40' pero la lámina indica explícitamente 2 dormitorios: bucket no confiable, confirmado de nuevo.",
-   "escala normalizada ×0.944 para que el sobre valga el área declarada (57.06 m²)"
+   "escala normalizada ×0.944 para que el sobre valga el área declarada (57.06 m²)",
+   "entrada recolocada a \"dormitorio principal\" (abajo): desembocaba en \"closet 2\"",
+   "se entra por un dormitorio: ningún ambiente de estar llega a un borde de acceso — defecto del reparto, no de la lectura"
   ]
  },
  {
@@ -1327,13 +1334,14 @@
   ],
   "entrada": {
    "arista": "arriba",
-   "t": 3.59
+   "t": 1.56
   },
   "confianza": "media",
   "notas": [
    "Render de marketing sin cotas; el bullet dice '3 Ambientes' pero solo se identifican con certeza 2 camas (twin y queen) mas un nicho con escritorio y ropero que se interpreto como un tercer dormitorio pequeno para cuadrar el conteo.",
    "Sobre y ambientes estimados por proporcion visual, escalados para que la suma coincida con el area declarada (68.52 m2).",
-   "escala normalizada ×0.945 para que el sobre valga el área declarada (68.52 m²)"
+   "escala normalizada ×0.945 para que el sobre valga el área declarada (68.52 m²)",
+   "entrada recolocada a \"cocina\" (arriba): desembocaba en \"lavanderia\""
   ]
  },
  {
@@ -1419,14 +1427,16 @@
    "derecha"
   ],
   "entrada": {
-   "arista": "derecha",
-   "t": 7.19
+   "arista": "abajo",
+   "t": 4.48
   },
   "confianza": "media",
   "notas": [
    "Render amoblado sin cotas, muros claros. Area total 71 m2 y 3 dormitorios / 2 banos explicitos en el rotulo. Proyecto ATIVA (Cosapi + Gerpal), Av. El Derby, sin distrito explicito en la lamina.",
    "El dormitorio 3 (esquina inferior derecha) no toca ninguna fachada asignada; probablemente recibe luz de un pozo interior no representable en un sobre rectangular.",
-   "escala normalizada ×0.934 para que el sobre valga el área declarada (71 m²)"
+   "escala normalizada ×0.934 para que el sobre valga el área declarada (71 m²)",
+   "entrada recolocada a \"dormitorio 3\" (abajo): no desembocaba en ningún ambiente",
+   "se entra por un dormitorio: ningún ambiente de estar llega a un borde de acceso — defecto del reparto, no de la lectura"
   ]
  },
  {
@@ -1510,14 +1520,16 @@
    "arriba"
   ],
   "entrada": {
-   "arista": "abajo",
-   "t": 3.14
+   "arista": "derecha",
+   "t": 5.64
   },
   "confianza": "media",
   "notas": [
    "Lamina 'Tipologias Los Lirios' (Checor), Lince, sobre Av. Petit Thouars. Rotulada 'vista interior': se asumio que las ventanas dan a un patio interior por el lado 'arriba', igual contando como fachada.",
    "Planta con jog inferior (cocina/lavanderia en un cuerpo saliente); el sobre rectangular no captura todos los muros exteriores reales, por lo que dormitorio 1 y sala pueden marcar aviso de falta de luz que no reflejan la planta real.",
-   "escala NO normalizada: ocupación 0.74 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+   "escala NO normalizada: ocupación 0.74 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas",
+   "entrada recolocada a \"dormitorio 2\" (derecha): desembocaba en \"lavanderia\"",
+   "se entra por un dormitorio: ningún ambiente de estar llega a un borde de acceso — defecto del reparto, no de la lectura"
   ]
  },
  {
@@ -1610,15 +1622,16 @@
    "izquierda"
   ],
   "entrada": {
-   "arista": "abajo",
-   "t": 3.85
+   "arista": "derecha",
+   "t": 4.55
   },
   "confianza": "alta",
   "notas": [
    "Lamina tecnica (Qantua Centro Capital / Grupo Lar, unidad 2-B, tipo 2D, vista interior) con cotas reales impresas: 2.70/2.45/3.10 (ancho), 2.37/3.31/1.49 (columna izquierda), 2.30/1.20/1.45/3.05 (fila inferior). Area techada 54.69, libre 1.88, total 56.57.",
    "El sobre rectangular simplifica una planta con escalonamientos reales (la terraza real es angosta, no ocupa toda la columna); el ancho de closets y del pasillo de ingreso no se modelo como ambiente propio, queda como holgura de circulacion.",
    "Sin distrito explicito en la lamina (solo Jr. Lampa, Jr. Aljovin, Jr. Azangaro, Av. Franklin Roosevelt); no se infirio.",
-   "escala normalizada ×0.962 para que el sobre valga el área declarada (54.69 m²)"
+   "escala normalizada ×0.962 para que el sobre valga el área declarada (54.69 m²)",
+   "entrada recolocada a \"sala comedor\" (derecha): desembocaba en \"baño 1\""
   ]
  },
  {
@@ -2155,14 +2168,15 @@
   ],
   "entrada": {
    "arista": "derecha",
-   "t": 7.4
+   "t": 1.27
   },
   "confianza": "media",
   "notas": [
    "Render 'PRADA Exclusiva Residencial' (Maxx Grupo Inmobiliario), Jr. Tizon y Bueno 639, Jesus Maria, Tipo 3 Piso 11, unidad 1103, '87 m2 area total vendida aprox.', '3 Dormitorios'; incluye sala-comedor, cocina, lavanderia, balcon, flecha de ENTRADA. Sin cotas.",
    "La suma de ambientes (~66 m2) queda ~24% por debajo de los 87 m2 declarados, en el limite de tolerancia (25%). Se sospecha que el area 'vendida' incluye deposito y/o estacionamiento que no aparecen en esta lamina; no se fuerzo la geometria para cuadrar mas.",
    "Balcon mencionado en el rotulo no se identifico con claridad en la imagen y no se modelo como ambiente propio.",
-   "escala NO normalizada: ocupación 0.7 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+   "escala NO normalizada: ocupación 0.7 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas",
+   "entrada recolocada a \"sala\" (derecha): no desembocaba en ningún ambiente"
   ]
  },
  {
@@ -2255,13 +2269,14 @@
   ],
   "entrada": {
    "arista": "abajo",
-   "t": 3.54
+   "t": 7.79
   },
   "confianza": "media",
   "notas": [
    "Render 'Urbalima', Departamento 305 Piso 3, Av. 2 de Mayo, area total 71.25 m2, '2 dormitorios / 2 banos / sala comedor / kitchenette / lavanderia / terraza', flecha de INGRESO. Sin cotas ni distrito explicito.",
    "La sala-comedor no toca la fachada asignada (arriba); en la lamina recibe luz indirecta desde la terraza contigua, que si se modelo como exterior.",
-   "escala NO normalizada: ocupación 0.78 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+   "escala NO normalizada: ocupación 0.78 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas",
+   "entrada recolocada a \"cocina\" (abajo): no desembocaba en ningún ambiente"
   ]
  },
  {
@@ -2708,15 +2723,16 @@
    "arriba"
   ],
   "entrada": {
-   "arista": "derecha",
-   "t": 3.85
+   "arista": "abajo",
+   "t": 2.12
   },
   "confianza": "alta",
   "notas": [
    "El nombre del archivo (2D-60) no coincide: es Tipo 04, 2 dormitorios / 2 baños, área total 53.36 m².",
    "Lámina técnica con rótulos propios ('DORMITORIO PRINCIPAL', 'DORMITORIO SECUNDARIO', 'COCINA').",
    "Proyecto y distrito no aparecen en la lámina (solo \"EEinmobiliaria\" y \"Av. Velasco Astete\"); se dejan vacíos.",
-   "escala normalizada ×0.962 para que el sobre valga el área declarada (53.36 m²)"
+   "escala normalizada ×0.962 para que el sobre valga el área declarada (53.36 m²)",
+   "entrada recolocada a \"sala comedor\" (abajo): no desembocaba en ningún ambiente"
   ]
  },
  {
@@ -3095,8 +3111,8 @@
    "abajo"
   ],
   "entrada": {
-   "arista": "derecha",
-   "t": 13
+   "arista": "izquierda",
+   "t": 8.7
   },
   "confianza": "baja",
   "notas": [
@@ -3104,7 +3120,8 @@
    "Programa (3 dormitorios, 2 baños) contado por mobiliario e iconos de sanitarios, no por texto.",
    "Área no declarada en la lámina: no se inventó una cifra; escala estimada a partir del tamaño típico de una cama de 1.5x2.0 m visible en los dormitorios.",
    "Planta en L muy alargada (corredor largo); sobre y proporciones son una aproximación gruesa.",
-   "escala NO normalizada: ocupación 0.62 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+   "escala NO normalizada: ocupación 0.62 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas",
+   "entrada recolocada a \"sala\" (izquierda): no desembocaba en ningún ambiente"
   ]
  },
  {

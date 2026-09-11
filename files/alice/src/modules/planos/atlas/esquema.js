@@ -127,6 +127,16 @@ export function validarEntrada(entrada = {}) {
     if (entrada.confianza === "alta") errores.push('sin área declarada no se puede sostener confianza "alta"');
   }
 
+  // ¿Dónde desemboca la puerta de calle? Es el chequeo que más lecturas malas atrapa: la
+  // flecha de entrada en las láminas es chica y a veces ni está, y el resultado es un
+  // departamento al que se entra por el clóset. 14 de las primeras 36 la tenían mal.
+  if (ARISTAS.includes(entrada.entrada?.arista) && ambientes.length && ancho > 0 && fondo > 0) {
+    const dest = ambienteDeEntrada(entrada);
+    if (!dest) errores.push("la entrada no desemboca en ningún ambiente");
+    else if (AMBIENTE_IMPOSIBLE.test(dest.nombre || "")) errores.push(`se entra por "${dest.nombre}": una puerta de calle no puede desembocar ahí`);
+    else if (dest.tipo === "intima") avisos.push(`se entra por "${dest.nombre}", que es un dormitorio: ningún ambiente de estar llega al borde de acceso`);
+  }
+
   if (!["alta", "media", "baja"].includes(entrada.confianza)) {
     errores.push('confianza tiene que ser "alta", "media" o "baja"');
   }
@@ -190,6 +200,86 @@ export function normalizarEscala(entrada = {}) {
         ...(entrada.notas || []),
         `escala normalizada ×${Math.round(factor * 1000) / 1000} para que el sobre valga el área declarada (${declarada} m²)`,
       ],
+    },
+  };
+}
+
+// ── La entrada ────────────────────────────────────────────────────────────────────
+// Los ambientes donde una puerta de calle NO puede desembocar. La lectura por visión se
+// equivoca seguido acá —la flecha de la lámina es chica y a veces ni está— y el resultado
+// es un departamento al que se entra por el clóset. Medido: 6 de las primeras 36.
+const AMBIENTE_IMPOSIBLE = /cl[oó]set|ba[ñn]o|ss\.?hh|lavander|dep[oó]sito|ducha|walk|closet/i;
+
+/** En qué ambiente desemboca la entrada, o null si no cae en ninguno. */
+export function ambienteDeEntrada(entrada = {}) {
+  const { arista, t } = entrada.entrada || {};
+  const W = Number(entrada.sobre?.ancho), D = Number(entrada.sobre?.fondo);
+  if (!(W > 0) || !(D > 0) || !Number.isFinite(Number(t))) return null;
+  const p = Number(t), tol = 0.25;
+  return (entrada.ambientes || []).find((m) => {
+    if (arista === "abajo") return m.y <= tol && p >= m.x - tol && p <= m.x + m.w + tol;
+    if (arista === "arriba") return m.y + m.h >= D - tol && p >= m.x - tol && p <= m.x + m.w + tol;
+    if (arista === "izquierda") return m.x <= tol && p >= m.y - tol && p <= m.y + m.h + tol;
+    if (arista === "derecha") return m.x + m.w >= W - tol && p >= m.y - tol && p <= m.y + m.h + tol;
+    return false;
+  }) || null;
+}
+
+/**
+ * Corrige una entrada incoherente colocándola donde una puerta de calle puede ir.
+ *
+ * No adivina de la nada: usa lo que la propia tipología ya dice. Una puerta de calle va en
+ * un borde que NO es fachada —si lo fuera daría a la calle o al vacío— y desemboca en un
+ * ambiente de estar o de circulación. Entre los candidatos gana el ambiente de estar más
+ * ancho sobre ese borde, que es donde estaría el hall.
+ *
+ * Devuelve la entrada intacta si ya era coherente.
+ */
+export function corregirEntrada(entrada = {}) {
+  const actual = ambienteDeEntrada(entrada);
+  if (actual && !AMBIENTE_IMPOSIBLE.test(actual.nombre || "")) {
+    return { entrada, corregida: false, motivo: null };
+  }
+  const W = Number(entrada.sobre?.ancho), D = Number(entrada.sobre?.fondo);
+  if (!(W > 0) || !(D > 0)) return { entrada, corregida: false, motivo: "sobre inválido" };
+
+  const fachadas = new Set(entrada.fachadas || []);
+  const tol = 0.25;
+  const sobreArista = (m, lado) => {
+    if (lado === "abajo") return m.y <= tol ? [m.x, m.x + m.w] : null;
+    if (lado === "arriba") return m.y + m.h >= D - tol ? [m.x, m.x + m.w] : null;
+    if (lado === "izquierda") return m.x <= tol ? [m.y, m.y + m.h] : null;
+    if (lado === "derecha") return m.x + m.w >= W - tol ? [m.y, m.y + m.h] : null;
+    return null;
+  };
+  // El dormitorio es último recurso, no exclusión: una puerta que desemboca en un dormitorio
+  // es un defecto del REPARTO —ningún ambiente de estar llega al borde de acceso— y hay que
+  // poder verlo dibujado. Descartarlo dejaba la entrada rota, que es peor y más silencioso.
+  const prioridad = (m) => (m.tipo === "circulacion" ? 0 : m.tipo === "social" ? 1
+    : m.tipo === "servicio" ? 3 : m.tipo === "intima" ? 5 : 9);
+
+  let mejor = null;
+  for (const lado of ARISTAS) {
+    if (fachadas.has(lado)) continue;                    // una puerta de calle no va en fachada
+    for (const m of entrada.ambientes || []) {
+      if (AMBIENTE_IMPOSIBLE.test(m.nombre || "")) continue;
+      if (prioridad(m) > 5) continue;
+      const seg = sobreArista(m, lado);
+      if (!seg || seg[1] - seg[0] < 1.0) continue;       // sin frente para una puerta
+      const cand = { lado, t: r2((seg[0] + seg[1]) / 2), prio: prioridad(m), largo: seg[1] - seg[0], nombre: m.nombre };
+      if (!mejor || cand.prio < mejor.prio || (cand.prio === mejor.prio && cand.largo > mejor.largo)) mejor = cand;
+    }
+  }
+  if (!mejor) return { entrada, corregida: false, motivo: "ningún borde admite una entrada" };
+  return {
+    corregida: true,
+    motivo: actual ? `desembocaba en "${actual.nombre}"` : "no desembocaba en ningún ambiente",
+    entrada: {
+      ...entrada,
+      entrada: { arista: mejor.lado, t: mejor.t },
+      notas: [...(entrada.notas || []),
+        `entrada recolocada a "${mejor.nombre}" (${mejor.lado}): ${actual ? `desembocaba en "${actual.nombre}"` : "no desembocaba en ningún ambiente"}`,
+        ...(mejor.prio === 5 ? [`se entra por un dormitorio: ningún ambiente de estar llega a un borde de acceso — defecto del reparto, no de la lectura`] : [])],
     },
   };
 }
