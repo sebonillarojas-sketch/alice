@@ -53,7 +53,12 @@ export function generarPuertas(rooms) {
 // por ambiente sobre cada polígono, ventila cada habitable a fachada y usa UN solo sistema
 // de puertas (descarta las que trae cada amoblado y las regenera con generarPuertas → sin
 // puertas dobles). W,D = frente/fondo del layout (para detectar qué borde da a fachada).
-export function amoblarDesdeLayout(rooms, W, D, nse = "C") {
+// `aberturas: false` omite puertas y ventanas del resultado. Desde que muros.js funde el
+// grafo de muros y vanos.js abre los vanos donde la circulación y la luz los exigen, este
+// motor ya no es la autoridad sobre dónde va una puerta: emitirlas acá deja DOS verdades
+// distintas sobre el mismo vano, una puesta por el amoblador y otra derivada del muro.
+// El mobiliario, en cambio, sigue siendo suyo.
+export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true } = {}) {
   if (!rooms?.length) return [];
   const items = [];
   const E = 0.35;
@@ -100,6 +105,7 @@ export function amoblarDesdeLayout(rooms, W, D, nse = "C") {
     else if (sx1 > W - E) items.push(it("puerta-90", sx1, (sy0 + sy1) / 2, 270));
   }
   items.push(...generarPuertas(rooms));
+  if (!aberturas) return items.filter((t) => !/^(puerta|ventana|vano)-/.test(t.ref || ""));
   return items;
 }
 

@@ -119,10 +119,13 @@ test("materialized Tweedledum layouts contain native interior assets", () => {
     program: { dormitorios: 1, banos: 1, nse: "C" },
   });
   assert.equal(result.validation.ok, true, result.validation.messages?.join(" · "));
-  assert.ok(result.items.some((item) => item.ref.startsWith("puerta-")));
-  assert.ok(result.items.some((item) => item.ref.startsWith("ventana-")));
   assert.ok(result.items.some((item) => item.ref.startsWith("cama-")));
   assert.ok(result.items.some((item) => item.ref === "inodoro"));
+  // Las aberturas YA NO son items del plano: vanos.js las deriva del grafo de muros con
+  // criterio de circulación y de luz. Este test afirmaba el contrato viejo — guardarlas
+  // acá dejaba dos puertas distintas para el mismo paso, una en los datos y otra al dibujar.
+  assert.deepEqual(result.items.filter((item) => /^(puerta|ventana|vano)-/.test(item.ref)), [],
+    "el mobiliario no puede volver a traer aberturas");
 });
 
 test("generated interiors reject incomplete residential programs", () => {

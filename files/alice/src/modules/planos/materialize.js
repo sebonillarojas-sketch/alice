@@ -158,7 +158,10 @@ export function materializeInteriorLayout(layout, { boundary = null, program = {
   const width = Math.max(0, extent.maxX - extent.minX);
   const depth = Math.max(0, extent.maxY - extent.minY);
   const localRooms = rooms.filter((room) => room.tipo !== "void").map((room) => ({ ...room, pts: room.pts.map((point) => ({ x: point.x - extent.minX, y: point.y - extent.minY })) }));
-  const items = amoblarDesdeLayout(localRooms, width, depth, program.nse || "C")
+  // sin aberturas: los vanos ya no se guardan como items, los deriva vanos.js del grafo de
+  // muros con criterio de circulación y de luz. Guardarlos acá además dejaba dos puertas
+  // distintas para el mismo paso, una en los datos del plano y otra calculada al dibujar.
+  const items = amoblarDesdeLayout(localRooms, width, depth, program.nse || "C", { aberturas: false })
     .map((item) => ({ ...item, x: r2(item.x + extent.minX), y: r2(item.y + extent.minY) }));
   return { rooms, items, validation: validateGeneratedInterior({ rooms, items, boundary, program }) };
 }

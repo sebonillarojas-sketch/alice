@@ -1,0 +1,3623 @@
+[
+ {
+  "id": "atlas-000",
+  "fuente": {
+   "proyecto": "TOSCANA",
+   "distrito": "Lince",
+   "imagen": "000-2D-55.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 62.57,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 11,
+   "fondo": 7.2
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 4.6,
+    "w": 3.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.6,
+    "y": 4.6,
+    "w": 2.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 6.2,
+    "y": 4.6,
+    "w": 1.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 7.8,
+    "y": 4.6,
+    "w": 1.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 9.4,
+    "y": 4.6,
+    "w": 1.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 3.6,
+    "y": 0,
+    "w": 2.9,
+    "h": 4.6
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 6.5,
+    "y": 0,
+    "w": 2.2,
+    "h": 4.6
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 8.7,
+    "y": 0,
+    "w": 2.3,
+    "h": 4.6
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3.8
+  },
+  "confianza": "media",
+  "notas": [
+   "Planta en L: la esquina inferior-izquierda del sobre (x:0-3.6, y:0-4.6) queda vacía, no es parte del departamento (posible espacio de vecino o vacío de escalera).",
+   "Área techada = área ocupada según la lámina (62.57 m² ambos); se usó ese valor.",
+   "Conteo de 2 baños estimado de los dos módulos de inodoro+lavatorio visibles arriba a la derecha; no rotulados individualmente.",
+   "Fachadas y entrada estimadas de indicios visuales (líneas de vidrio, puerta cerca de la sala), no hay flecha explícita de ingreso.",
+   "escala NO normalizada: ocupación 0.79 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-001",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "001-2D-55.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 59.73,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 8.6,
+   "fondo": 6.95
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 3.29,
+    "w": 3.02,
+    "h": 2.93
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.02,
+    "y": 3.29,
+    "w": 1.28,
+    "h": 2.93
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.3,
+    "y": 3.29,
+    "w": 1.28,
+    "h": 2.93
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 5.58,
+    "y": 3.29,
+    "w": 3.02,
+    "h": 2.93
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 3.29,
+    "h": 3.29
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.29,
+    "y": 0,
+    "w": 2.65,
+    "h": 3.29
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.94,
+    "y": 0,
+    "w": 2.65,
+    "h": 3.29
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 5.94
+  },
+  "confianza": "media",
+  "notas": [
+   "No hay nombre de proyecto ni distrito visibles en la lámina, solo 'Calle Clovis' y el rango de pisos '201 al 901' con área 59.73 m2; se dejaron vacíos por instrucción del pliego.",
+   "Tipo de área no rotulado explícitamente (solo '59.73 m2'); se asumió 'techada' por convención.",
+   "El bucket del archivo (2D-55) coincide por casualidad con el conteo real de dormitorios, pero se leyó independientemente de la imagen, no del nombre.",
+   "Fachadas basadas en los balcones pequeños visibles junto a la sala y el dormitorio secundario, ambos hacia el mismo lado (izquierda) más un balcón al lado opuesto del dormitorio secundario (derecha).",
+   "escala normalizada ×0.914 para que el sobre valga el área declarada (59.73 m²)"
+  ]
+ },
+ {
+  "id": "atlas-002",
+  "fuente": {
+   "proyecto": "Castilla 334",
+   "distrito": "Surco",
+   "imagen": "002-2D-55.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 55.32,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.53,
+   "fondo": 7.34
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 4.33,
+    "w": 3.01,
+    "h": 2.26
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.01,
+    "y": 4.33,
+    "w": 2.26,
+    "h": 2.26
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 5.27,
+    "y": 4.33,
+    "w": 2.26,
+    "h": 2.26
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 2.45,
+    "h": 4.33
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 2.45,
+    "y": 0,
+    "w": 2.45,
+    "h": 4.33
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 4.9,
+    "y": 0,
+    "w": 2.64,
+    "h": 4.33
+   }
+  ],
+  "fachadas": [
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "izquierda",
+   "t": 5.18
+  },
+  "confianza": "media",
+  "notas": [
+   "Área techada (A.T = 55.32 m²) preferida sobre A.O.T = 56.99 m² (que probablemente incluye el área libre de 1.67 m²), según indica el pliego.",
+   "Distrito tomado del tag 'Surco' impreso en la lámina, tal cual (no se expandió a 'Santiago de Surco').",
+   "2 baños inferidos de los dos módulos con inodoro visibles arriba a la derecha (uno con piso hexagonal); no rotulados.",
+   "Entrada estimada de la flecha azul cerca de la cocina en la esquina superior izquierda.",
+   "escala normalizada ×0.942 para que el sobre valga el área declarada (55.32 m²)"
+  ]
+ },
+ {
+  "id": "atlas-003",
+  "fuente": {
+   "proyecto": "Girasol",
+   "distrito": "Jesús María",
+   "imagen": "003-2D-55.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 56.88,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.45,
+   "fondo": 7.64
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 0,
+    "y": 4.96,
+    "w": 2.86,
+    "h": 2.67
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 2.86,
+    "y": 4.96,
+    "w": 3.82,
+    "h": 2.67
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 2.48,
+    "w": 2.86,
+    "h": 2.48
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 2.86,
+    "y": 2.48,
+    "w": 1.72,
+    "h": 2.48
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 4.58,
+    "y": 2.48,
+    "w": 2.1,
+    "h": 2.48
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 0,
+    "w": 2.86,
+    "h": 2.48
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 2.86,
+    "y": 0,
+    "w": 1.72,
+    "h": 2.48
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 4.58,
+    "y": 0,
+    "w": 2.1,
+    "h": 2.48
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha",
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 5.25
+  },
+  "confianza": "media",
+  "notas": [
+   "El área varía por piso (56.25 a 57.65 m² según la tabla de la lámina); se usó el valor intermedio 56.88 m² (pisos 501-801) como representativo.",
+   "Etiqueta del programa dice '2 AMBIENTES', interpretado como 2 dormitorios contando las camas dibujadas (una habitación con 2 camas individuales y un dormitorio con cama doble).",
+   "2 baños inferidos de los dos módulos con inodoro y lavadora visibles a la derecha de la planta.",
+   "Distrito confirmado por el logo 'Girasol Jesús María' impreso en la lámina.",
+   "escala normalizada ×0.955 para que el sobre valga el área declarada (56.88 m²)"
+  ]
+ },
+ {
+  "id": "atlas-004",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "004-2D-55.jpg"
+  },
+  "programa": {
+   "dormitorios": 1,
+   "banos": 1
+  },
+  "area": {
+   "declarada": null,
+   "tipo": ""
+  },
+  "sobre": {
+   "ancho": 14.5,
+   "fondo": 3.6
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 3.4,
+    "h": 3.6
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 3.4,
+    "y": 0,
+    "w": 3.4,
+    "h": 3.6
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 6.8,
+    "y": 0,
+    "w": 2.2,
+    "h": 3.6
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 9,
+    "y": 0,
+    "w": 2.5,
+    "h": 3.6
+   },
+   {
+    "nombre": "baño",
+    "tipo": "servicio",
+    "x": 11.5,
+    "y": 0,
+    "w": 1.5,
+    "h": 1.8
+   },
+   {
+    "nombre": "closet",
+    "tipo": "servicio",
+    "x": 11.5,
+    "y": 1.8,
+    "w": 1.5,
+    "h": 1.8
+   }
+  ],
+  "fachadas": [
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 3.2
+  },
+  "confianza": "baja",
+  "notas": [
+   "DESCARTAR ÁREA: no se encontró ningún número de área impreso en la lámina; no se inventó, area.declarada queda null.",
+   "El nombre de archivo dice '2D-55' pero la planta muestra claramente 1 solo dormitorio: bucket no confiable, confirmado.",
+   "Planta alargada tipo loft con un quiebre (jog) en el fondo cerca del baño; geometría de esa zona es la más incierta de la lámina.",
+   "Sin nombre de proyecto ni distrito visibles."
+  ]
+ },
+ {
+  "id": "atlas-005",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "005-2D-55.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 1
+  },
+  "area": {
+   "declarada": 51.8,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.95,
+   "fondo": 6.51
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 0,
+    "y": 3.45,
+    "w": 2.49,
+    "h": 3.07
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 2.49,
+    "y": 3.45,
+    "w": 3.07,
+    "h": 3.07
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 5.56,
+    "y": 3.45,
+    "w": 1.63,
+    "h": 3.07
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.87,
+    "h": 3.45
+   },
+   {
+    "nombre": "baño",
+    "tipo": "servicio",
+    "x": 2.87,
+    "y": 0,
+    "w": 1.44,
+    "h": 1.72
+   },
+   {
+    "nombre": "pasadizo",
+    "tipo": "circulacion",
+    "x": 2.87,
+    "y": 1.72,
+    "w": 1.44,
+    "h": 1.72
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 4.31,
+    "y": 0,
+    "w": 1.44,
+    "h": 3.45
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.75,
+    "y": 0,
+    "w": 1.44,
+    "h": 3.45
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha",
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 4.31
+  },
+  "confianza": "media",
+  "notas": [
+   "Rotulada 'PLANTA DPTO. TIPO 7', 'AREA TECHADA DPTO: 51.80 m²', 'AREA LIBRE: 0.00 m²', 'AREA OCUPADA: 51.80 m²' — se usó el valor techada (igual a ocupada).",
+   "Sin nombre de proyecto; calles 'Luis Saenz' y 'Avenida San Felipe' visibles en el diagrama de ubicación, pero ningún distrito administrativo está escrito, así que se dejó vacío.",
+   "1 solo baño identificado (un inodoro visible); 2 dormitorios por las dos camas dibujadas.",
+   "escala normalizada ×0.958 para que el sobre valga el área declarada (51.8 m²)"
+  ]
+ },
+ {
+  "id": "atlas-006",
+  "fuente": {
+   "proyecto": "CAMPO MARTE",
+   "distrito": "",
+   "imagen": "006-1D-40.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 1
+  },
+  "area": {
+   "declarada": 53.34,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.49,
+   "fondo": 7.12
+  },
+  "ambientes": [
+   {
+    "nombre": "baño",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 3.93,
+    "w": 1.87,
+    "h": 1.87
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 1.87,
+    "y": 3.93,
+    "w": 2.81,
+    "h": 3.18
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 4.68,
+    "y": 3.93,
+    "w": 2.81,
+    "h": 3.18
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 0.37,
+    "w": 2.44,
+    "h": 3.56
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 2.44,
+    "y": 0.37,
+    "w": 2.53,
+    "h": 3.56
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 4.96,
+    "y": 0.37,
+    "w": 2.53,
+    "h": 3.56
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "izquierda",
+   "t": 3.28
+  },
+  "confianza": "media",
+  "notas": [
+   "Proyecto 'CAMPO MARTE' confirmado por el logo impreso en la lámina (no por el nombre de archivo).",
+   "El nombre de archivo dice '1D-40' pero la lámina muestra 2 camas en dos habitaciones separadas por closets, cada una con su propio ropero: se leyó como 2 dormitorios, no 1.",
+   "Solo se identificó 1 baño (esquina superior izquierda, con muro angulado de esquina de edificio); pudiera haber un segundo medio-baño no visible con claridad.",
+   "Área usada: 'ÁREA DE DPTO: 53.34 m²' (se prefirió sobre 'ÁREA TOTAL VENDIBLE: 55.99 m²' que suma balcón/terraza 2.65 m²).",
+   "Distrito no rotulado explícitamente en la lámina (solo calles Av. Arnaldo Márquez / Jr. Los Mogaburos); se dejó vacío.",
+   "escala normalizada ×0.937 para que el sobre valga el área declarada (53.34 m²)"
+  ]
+ },
+ {
+  "id": "atlas-007",
+  "fuente": {
+   "proyecto": "Villa Convivium 3",
+   "distrito": "",
+   "imagen": "007-1D-40.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 67.59,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 10.34,
+   "fondo": 6.54
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 3.89,
+    "w": 2.83,
+    "h": 2.65
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 2.83,
+    "y": 3.89,
+    "w": 1.59,
+    "h": 1.33
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 2.83,
+    "y": 5.21,
+    "w": 1.59,
+    "h": 1.33
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 4.42,
+    "y": 3.89,
+    "w": 2.3,
+    "h": 2.65
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 6.72,
+    "y": 3.89,
+    "w": 2.56,
+    "h": 2.65
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.56,
+    "h": 3.89
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 2.56,
+    "y": 0,
+    "w": 0.88,
+    "h": 3.89
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 3.45,
+    "y": 0,
+    "w": 2.56,
+    "h": 3.89
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 6.01,
+    "y": 0,
+    "w": 3.27,
+    "h": 3.89
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 1.77
+  },
+  "confianza": "media",
+  "notas": [
+   "Etiqueta explícita '3 Dormitorios' en la lámina; confirmado por 3 camas dibujadas.",
+   "El nombre de archivo dice '1D-40' (1 dormitorio, 40 m²): completamente equivocado frente a la lámina real (3 dormitorios, desde 67.59 m²). Confirma que el bucket del archivo no es confiable.",
+   "Área '67.59 m²' está rotulada como 'Desde', es decir un mínimo; el área real de esta unidad específica puede ser mayor. La suma de ambientes quedó ~15% por encima de ese mínimo, dentro de lo esperable si la unidad real es algo más grande.",
+   "2 baños inferidos de los dos módulos con inodoro+lavatorio apilados en la franja central; uno de ellos tiene además un termotanque.",
+   "Sin distrito explícito en la lámina (solo 'Jr. Salaverry', calle que cruza varios distritos); se dejó vacío.",
+   "Fachada y posición de entrada son la parte menos segura de esta lectura: no se identificó flecha de ingreso clara.",
+   "escala normalizada ×0.884 para que el sobre valga el área declarada (67.59 m²)"
+  ]
+ },
+ {
+  "id": "atlas-008",
+  "fuente": {
+   "proyecto": "Vive Olivar",
+   "distrito": "",
+   "imagen": "008-1D-40.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 68.81,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 11.09,
+   "fondo": 6.2
+  },
+  "ambientes": [
+   {
+    "nombre": "vestibulo",
+    "tipo": "circulacion",
+    "x": 0,
+    "y": 3.01,
+    "w": 3.01,
+    "h": 2.54
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.01,
+    "y": 3.01,
+    "w": 1.5,
+    "h": 2.54
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 4.51,
+    "y": 3.01,
+    "w": 1.41,
+    "h": 1.32
+   },
+   {
+    "nombre": "pasadizo",
+    "tipo": "circulacion",
+    "x": 4.51,
+    "y": 4.32,
+    "w": 1.41,
+    "h": 1.22
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 5.92,
+    "y": 3.01,
+    "w": 5.17,
+    "h": 2.54
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 1.88,
+    "h": 3.01
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 1.88,
+    "y": 0,
+    "w": 2.35,
+    "h": 3.01
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 4.23,
+    "y": 0,
+    "w": 2.26,
+    "h": 3.01
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 6.49,
+    "y": 0,
+    "w": 1.41,
+    "h": 1.5
+   },
+   {
+    "nombre": "estudio",
+    "tipo": "intima",
+    "x": 6.49,
+    "y": 1.5,
+    "w": 1.41,
+    "h": 1.5
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 7.9,
+    "y": 0,
+    "w": 3.2,
+    "h": 3.01
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha",
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 2.82
+  },
+  "confianza": "media",
+  "notas": [
+   "Programa confirmado por la lista explícita de la lámina: '2 dormitorios, 1 estudio, 2 baños, Sala comedor, Lavandería, Balcón, Cocina'. El estudio se modeló como ambiente separado (tipo intima) que no cuenta como dormitorio.",
+   "Etiqueta 'Vista Calle' junto al área total (68.81 m²); se usó ese valor sin poder confirmar si incluye balcón.",
+   "Distrito no está escrito en la lámina (solo 'Jr. Caracas'); el nombre 'Vive Olivar' sugiere cercanía a El Olivar (San Isidro) pero eso es una inferencia, no un dato de la lámina, así que se dejó vacío.",
+   "La planta real tiene un quiebre/pasadizo en L que se simplificó a un sobre rectangular; el área sin asignar queda como muro/circulación.",
+   "escala normalizada ×0.94 para que el sobre valga el área declarada (68.81 m²)"
+  ]
+ },
+ {
+  "id": "atlas-009",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "009-1D-40.jpg"
+  },
+  "programa": {
+   "dormitorios": 1,
+   "banos": 1
+  },
+  "area": {
+   "declarada": 31.79,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.6,
+   "fondo": 6.1
+  },
+  "ambientes": [
+   {
+    "nombre": "ss.hh",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 0,
+    "w": 2.2,
+    "h": 1.3
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.25,
+    "y": 0,
+    "w": 2.82,
+    "h": 2.67
+   },
+   {
+    "nombre": "kitchenette",
+    "tipo": "servicio",
+    "x": 6.07,
+    "y": 0,
+    "w": 1.52,
+    "h": 4.53
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 2.67,
+    "w": 3.25,
+    "h": 2.72
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 3.25,
+    "y": 2.67,
+    "w": 1.99,
+    "h": 2.85
+   },
+   {
+    "nombre": "balcon",
+    "tipo": "exterior",
+    "x": 3.25,
+    "y": 5.52,
+    "w": 1.99,
+    "h": 0.56
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 4
+  },
+  "confianza": "alta",
+  "notas": [
+   "Lámina técnica con cotas explícitas por ambiente: DORMITORIO PRINCIPAL 3.25x2.72, SALA 1.99x2.85, BALCON 0.56x2.85, SS.HH 2.20x1.30, COMEDOR 2.82x2.67, KITCHENETTE 4.53x1.52. Todas las medidas de esta entrada vienen directo de la lámina, no estimadas.",
+   "No hay un área total impresa como número único; area.declarada = 31.79 m² es la suma de los ambientes interiores rotulados (sin el balcón), calculada a partir de las cotas de la propia lámina, no inventada.",
+   "Sin nombre de proyecto legible (solo un logo triangular estilizado) ni distrito (la dirección 'Av. Arequipa 2364' cruza varios distritos); se dejaron vacíos.",
+   "La posición exacta de la entrada y qué arista es fachada sí son estimadas (no hay flecha de ingreso clara en la lámina), a diferencia de la geometría de los ambientes que es de alta confianza.",
+   "escala NO normalizada: ocupación 0.71 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-010",
+  "fuente": {
+   "proyecto": "Torre Nápoles",
+   "distrito": "Jesús María",
+   "imagen": "010-1D-40.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 57.06,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.55,
+   "fondo": 7.55
+  },
+  "ambientes": [
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 3.97,
+    "w": 3.02,
+    "h": 2.83
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.02,
+    "y": 3.97,
+    "w": 2.27,
+    "h": 2.83
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.29,
+    "y": 3.97,
+    "w": 2.27,
+    "h": 2.83
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 2.64,
+    "w": 1.89,
+    "h": 1.32
+   },
+   {
+    "nombre": "closet 1",
+    "tipo": "circulacion",
+    "x": 1.89,
+    "y": 2.64,
+    "w": 1.42,
+    "h": 1.32
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 3.3,
+    "y": 2.64,
+    "w": 1.89,
+    "h": 1.32
+   },
+   {
+    "nombre": "closet 2",
+    "tipo": "circulacion",
+    "x": 5.19,
+    "y": 2.64,
+    "w": 2.36,
+    "h": 1.32
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 3.4,
+    "h": 2.64
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 3.4,
+    "y": 0,
+    "w": 4.15,
+    "h": 2.64
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "izquierda",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 3.3
+  },
+  "confianza": "media",
+  "notas": [
+   "Proyecto y distrito confirmados por texto explícito en la lámina: 'Torre Nápoles, Jesús María' y dirección 'Av. 28 de Julio 232, 15072 - Jesús María, Lima'.",
+   "Programa (2 dorms, 2 baños) y área (57.06 m²) confirmados por iconos/texto explícitos; la geometría interna sí es estimada de un render girado en diagonal.",
+   "El nombre de archivo dice '1D-40' pero la lámina indica explícitamente 2 dormitorios: bucket no confiable, confirmado de nuevo.",
+   "escala normalizada ×0.944 para que el sobre valga el área declarada (57.06 m²)"
+  ]
+ },
+ {
+  "id": "atlas-011",
+  "fuente": {
+   "proyecto": "Portofino",
+   "distrito": "San Miguel",
+   "imagen": "011-1D-40.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 3
+  },
+  "area": {
+   "declarada": 58.35,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.78,
+   "fondo": 7.5
+  },
+  "ambientes": [
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 4.94,
+    "w": 3.04,
+    "h": 1.9
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.04,
+    "y": 4.94,
+    "w": 2.47,
+    "h": 1.9
+   },
+   {
+    "nombre": "baño visita",
+    "tipo": "servicio",
+    "x": 5.5,
+    "y": 4.94,
+    "w": 1.33,
+    "h": 1.23
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 6.83,
+    "y": 4.94,
+    "w": 0.95,
+    "h": 1.9
+   },
+   {
+    "nombre": "estudio",
+    "tipo": "intima",
+    "x": 0,
+    "y": 3.42,
+    "w": 3.04,
+    "h": 1.52
+   },
+   {
+    "nombre": "pasillo",
+    "tipo": "circulacion",
+    "x": 3.04,
+    "y": 3.42,
+    "w": 1.52,
+    "h": 1.52
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.56,
+    "y": 3.42,
+    "w": 1.61,
+    "h": 1.52
+   },
+   {
+    "nombre": "baño 3",
+    "tipo": "servicio",
+    "x": 6.17,
+    "y": 3.42,
+    "w": 1.61,
+    "h": 1.52
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 3.42,
+    "h": 3.42
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 3.42,
+    "y": 0,
+    "w": 0.95,
+    "h": 3.42
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 4.37,
+    "y": 0,
+    "w": 3.42,
+    "h": 3.42
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 5.88
+  },
+  "confianza": "baja",
+  "notas": [
+   "Proyecto y distrito confirmados por texto explícito: 'Portofino, San Miguel'.",
+   "La lámina rotula el programa como '3 ambientes', no '3 dormitorios'. Se interpretó como 2 dormitorios (los dos únicos con cama) + 1 estudio/nicho de escritorio sin cama, que no cuenta como dormitorio.",
+   "El conteo de 3 baños es la parte más insegura de esta lectura: se identificaron 3 grupos de inodoro+lavatorio (uno cerca del ingreso, dos más sirviendo cada dormitorio), pero podría ser un error de doble conteo y en realidad ser 2. Se prefirió declarar baja confianza antes que forzar un número.",
+   "Fachada y posición exacta del ingreso también estimadas: hay una flecha 'Ingreso' cerca de la esquina superior derecha pero no se identificaron con certeza los paños con ventana.",
+   "escala normalizada ×0.949 para que el sobre valga el área declarada (58.35 m²)"
+  ]
+ },
+ {
+  "id": "atlas-012",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "012-2D-50.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 68.52,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 9.93,
+   "fondo": 6.9
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 5.01,
+    "w": 3.12,
+    "h": 1.89
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 3.12,
+    "h": 5.01
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 3.12,
+    "y": 5.96,
+    "w": 1.13,
+    "h": 0.95
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 4.25,
+    "y": 5.39,
+    "w": 1.7,
+    "h": 1.51
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 7.56,
+    "y": 5.39,
+    "w": 2.36,
+    "h": 1.51
+   },
+   {
+    "nombre": "vestidor",
+    "tipo": "servicio",
+    "x": 7.56,
+    "y": 4.07,
+    "w": 2.36,
+    "h": 1.32
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 3.12,
+    "y": 0,
+    "w": 1.7,
+    "h": 3.21
+   },
+   {
+    "nombre": "pasillo",
+    "tipo": "circulacion",
+    "x": 3.12,
+    "y": 3.21,
+    "w": 1.7,
+    "h": 2.17
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 4.82,
+    "y": 0,
+    "w": 2.74,
+    "h": 4.07
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 7.56,
+    "y": 0,
+    "w": 2.36,
+    "h": 4.07
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "derecha",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 3.59
+  },
+  "confianza": "media",
+  "notas": [
+   "Render de marketing sin cotas; el bullet dice '3 Ambientes' pero solo se identifican con certeza 2 camas (twin y queen) mas un nicho con escritorio y ropero que se interpreto como un tercer dormitorio pequeno para cuadrar el conteo.",
+   "Sobre y ambientes estimados por proporcion visual, escalados para que la suma coincida con el area declarada (68.52 m2).",
+   "escala normalizada ×0.945 para que el sobre valga el área declarada (68.52 m²)"
+  ]
+ },
+ {
+  "id": "atlas-013",
+  "fuente": {
+   "proyecto": "ATIVA",
+   "distrito": "",
+   "imagen": "013-2D-50.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 71,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 9.16,
+   "fondo": 7.75
+  },
+  "ambientes": [
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 5.05,
+    "w": 6.24,
+    "h": 2.71
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 6.24,
+    "y": 1.4,
+    "w": 2.91,
+    "h": 5.05
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 4.36,
+    "y": 3.55,
+    "w": 1.88,
+    "h": 1.49
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.36,
+    "y": 2.24,
+    "w": 1.88,
+    "h": 0.84
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 2.8,
+    "w": 2.72,
+    "h": 2.24
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.72,
+    "h": 2.8
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 2.72,
+    "y": 0,
+    "w": 3.52,
+    "h": 2.24
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "izquierda",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 7.19
+  },
+  "confianza": "media",
+  "notas": [
+   "Render amoblado sin cotas, muros claros. Area total 71 m2 y 3 dormitorios / 2 banos explicitos en el rotulo. Proyecto ATIVA (Cosapi + Gerpal), Av. El Derby, sin distrito explicito en la lamina.",
+   "El dormitorio 3 (esquina inferior derecha) no toca ninguna fachada asignada; probablemente recibe luz de un pozo interior no representable en un sobre rectangular.",
+   "escala normalizada ×0.934 para que el sobre valga el área declarada (71 m²)"
+  ]
+ },
+ {
+  "id": "atlas-014",
+  "fuente": {
+   "proyecto": "Los Lirios",
+   "distrito": "Lince",
+   "imagen": "014-2D-50.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 46.74,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.5,
+   "fondo": 7.1
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 4.17,
+    "w": 2.52,
+    "h": 2.52
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 2.46,
+    "w": 2.52,
+    "h": 1.71
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 2.52,
+    "y": 2.46,
+    "w": 2.53,
+    "h": 4.23
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 5.05,
+    "y": 4.17,
+    "w": 2.45,
+    "h": 2.93
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 5.05,
+    "y": 2.46,
+    "w": 2.45,
+    "h": 1.71
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 3.68,
+    "y": 1.09,
+    "w": 1.37,
+    "h": 1.37
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 1.64,
+    "y": 0,
+    "w": 2.04,
+    "h": 2.46
+   }
+  ],
+  "fachadas": [
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3.14
+  },
+  "confianza": "media",
+  "notas": [
+   "Lamina 'Tipologias Los Lirios' (Checor), Lince, sobre Av. Petit Thouars. Rotulada 'vista interior': se asumio que las ventanas dan a un patio interior por el lado 'arriba', igual contando como fachada.",
+   "Planta con jog inferior (cocina/lavanderia en un cuerpo saliente); el sobre rectangular no captura todos los muros exteriores reales, por lo que dormitorio 1 y sala pueden marcar aviso de falta de luz que no reflejan la planta real.",
+   "escala NO normalizada: ocupación 0.74 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-015",
+  "fuente": {
+   "proyecto": "Qantua Centro Capital",
+   "distrito": "",
+   "imagen": "015-2D-50.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 54.69,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.93,
+   "fondo": 6.89
+  },
+  "ambientes": [
+   {
+    "nombre": "terraza",
+    "tipo": "exterior",
+    "x": 0,
+    "y": 5.09,
+    "w": 0.96,
+    "h": 1.81
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 1.43,
+    "w": 2.6,
+    "h": 3.18
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 0,
+    "w": 2.21,
+    "h": 1.43
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 2.6,
+    "y": 2.88,
+    "w": 2.36,
+    "h": 4.02
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 2.6,
+    "y": 0,
+    "w": 1.15,
+    "h": 1.43
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 3.75,
+    "y": 0,
+    "w": 1.2,
+    "h": 1.43
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 4.95,
+    "y": 2.21,
+    "w": 2.98,
+    "h": 4.68
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 4.95,
+    "y": 0,
+    "w": 2.98,
+    "h": 2.21
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3.85
+  },
+  "confianza": "alta",
+  "notas": [
+   "Lamina tecnica (Qantua Centro Capital / Grupo Lar, unidad 2-B, tipo 2D, vista interior) con cotas reales impresas: 2.70/2.45/3.10 (ancho), 2.37/3.31/1.49 (columna izquierda), 2.30/1.20/1.45/3.05 (fila inferior). Area techada 54.69, libre 1.88, total 56.57.",
+   "El sobre rectangular simplifica una planta con escalonamientos reales (la terraza real es angosta, no ocupa toda la columna); el ancho de closets y del pasillo de ingreso no se modelo como ambiente propio, queda como holgura de circulacion.",
+   "Sin distrito explicito en la lamina (solo Jr. Lampa, Jr. Aljovin, Jr. Azangaro, Av. Franklin Roosevelt); no se infirio.",
+   "escala normalizada ×0.962 para que el sobre valga el área declarada (54.69 m²)"
+  ]
+ },
+ {
+  "id": "atlas-016",
+  "fuente": {
+   "proyecto": "Centrium",
+   "distrito": "Santa Beatriz",
+   "imagen": "016-2D-50.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 69.85,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 9.5,
+   "fondo": 8.4
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 1.78,
+    "y": 4.84,
+    "w": 2.46,
+    "h": 3.56
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 4.24,
+    "y": 4.84,
+    "w": 2.46,
+    "h": 3.56
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 6.7,
+    "y": 3.73,
+    "w": 2.8,
+    "h": 4.67
+   },
+   {
+    "nombre": "deposito",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 5.6,
+    "w": 1.78,
+    "h": 1.36
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0.51,
+    "w": 3.22,
+    "h": 3.56
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.22,
+    "y": 1.19,
+    "w": 1.36,
+    "h": 2.54
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.58,
+    "y": 1.19,
+    "w": 1.36,
+    "h": 2.54
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.94,
+    "y": 0,
+    "w": 2.46,
+    "h": 3.73
+   },
+   {
+    "nombre": "terraza",
+    "tipo": "exterior",
+    "x": 8.4,
+    "y": 0,
+    "w": 1.1,
+    "h": 1.36
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 8.91
+  },
+  "confianza": "media",
+  "notas": [
+   "Render amoblado 'Centrium Santa Beatriz' (Grupo MG), DPTO 203-603, 69.85 m2, '3 ambs / 2 banos / sala-comedor / kitchenette-cocina / lavanderia / terraza'; sin cotas.",
+   "'Cocina' del modelo agrupa kitchenette y lavanderia (ambas contra la misma pared de servicio) porque no se distinguen con claridad en el render.",
+   "escala NO normalizada: ocupación 0.78 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-017",
+  "fuente": {
+   "proyecto": "DEPA AX01",
+   "distrito": "",
+   "imagen": "017-2D-50.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 54.81,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.26,
+   "fondo": 7.55
+  },
+  "ambientes": [
+   {
+    "nombre": "balcon",
+    "tipo": "exterior",
+    "x": 0,
+    "y": 4.68,
+    "w": 0.79,
+    "h": 2.87
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0.79,
+    "y": 4.68,
+    "w": 2.29,
+    "h": 2.87
+   },
+   {
+    "nombre": "cocina comedor",
+    "tipo": "social",
+    "x": 3.08,
+    "y": 4.68,
+    "w": 4.18,
+    "h": 2.87
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 2.52,
+    "w": 3.08,
+    "h": 2.16
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 3.08,
+    "y": 2.52,
+    "w": 1.85,
+    "h": 2.16
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 4.93,
+    "y": 2.52,
+    "w": 2.33,
+    "h": 2.16
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 3.08,
+    "h": 2.52
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.93,
+    "y": 0,
+    "w": 2.33,
+    "h": 2.52
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "izquierda"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 5.16
+  },
+  "confianza": "alta",
+  "notas": [
+   "Lamina 'DEPA AX01 (2 DORMITORIOS)', pisos 2 al 11, Av. Talara, con leyenda numerada clara (1.Sala 2.Cocina-comedor 3.Dorm.principal 4.Dorm.2 5.Lavanderia 6-7.Bano 8.Balcon) y flecha de INGRESO; area techada 54.81 m2, area libre 0.00. Sin cotas ni distrito explicito.",
+   "El closet intermedio entre dormitorio-principal y baño 2 no se modelo como ambiente propio; queda como holgura de circulacion (~5 m2).",
+   "escala normalizada ×0.955 para que el sobre valga el área declarada (54.81 m²)"
+  ]
+ },
+ {
+  "id": "atlas-018",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "018-3D-65.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 66.6,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 11.8,
+   "fondo": 6.5
+  },
+  "ambientes": [
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 3.22,
+    "w": 5.2,
+    "h": 3.28
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.2,
+    "y": 3.22,
+    "w": 2.16,
+    "h": 3.28
+   },
+   {
+    "nombre": "sala familiar",
+    "tipo": "social",
+    "x": 0,
+    "y": 1.83,
+    "w": 2.73,
+    "h": 1.39
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.99,
+    "y": 0,
+    "w": 2.29,
+    "h": 3.22
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 6.28,
+    "y": 0,
+    "w": 1.08,
+    "h": 3.22
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.73,
+    "h": 1.83
+   },
+   {
+    "nombre": "vestidor 1",
+    "tipo": "servicio",
+    "x": 2.73,
+    "y": 0,
+    "w": 1.26,
+    "h": 1.83
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 7.55,
+    "y": 0,
+    "w": 2.41,
+    "h": 2.59
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 9.96,
+    "y": 1.2,
+    "w": 1.84,
+    "h": 1.39
+   },
+   {
+    "nombre": "vestidor 2",
+    "tipo": "servicio",
+    "x": 9.96,
+    "y": 0,
+    "w": 1.84,
+    "h": 1.2
+   }
+  ],
+  "fachadas": [
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 0.7
+  },
+  "confianza": "media",
+  "notas": [
+   "Render 'Tipologia x03' (Jr. Mariano Arce 233, vista interna), 66.60-66.84 m2 segun piso (203/403/503/603), '3 ambientes / 2 banos / sala / comedor / cocina / lavanderia'. Se tomo 66.60 m2.",
+   "Solo se identifican con certeza 2 camas; el tercer 'ambiente' del rotulo se interpreto como la sala familiar (sofa sin cama) y no se conto como dormitorio. programa.dormitorios se dejo en 2 por la evidencia visual, en desacuerdo con el rotulo.",
+   "Planta en L (ala de dormitorio 2 mas baja que el cuerpo principal); el sobre rectangular no representa esa fachada propia del ala, por lo que dormitorio 2 y sala familiar pueden marcar aviso de falta de luz que la planta real probablemente no tiene.",
+   "escala NO normalizada: ocupación 0.74 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-019",
+  "fuente": {
+   "proyecto": "Fontana",
+   "distrito": "San Borja",
+   "imagen": "019-3D-65.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 55.8,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 12.7,
+   "fondo": 5
+  },
+  "ambientes": [
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 2.54,
+    "w": 3.12,
+    "h": 2.46
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.12,
+    "y": 2.54,
+    "w": 2.21,
+    "h": 2.46
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.33,
+    "y": 2.37,
+    "w": 1.94,
+    "h": 2.63
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 7.27,
+    "y": 1.5,
+    "w": 1.77,
+    "h": 0.87
+   },
+   {
+    "nombre": "dormitorio",
+    "tipo": "intima",
+    "x": 9.04,
+    "y": 0,
+    "w": 2.12,
+    "h": 5
+   },
+   {
+    "nombre": "terraza",
+    "tipo": "exterior",
+    "x": 11.16,
+    "y": 0,
+    "w": 1.54,
+    "h": 2.02
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 3.12,
+    "h": 2.37
+   },
+   {
+    "nombre": "ss.hh 1",
+    "tipo": "servicio",
+    "x": 3.12,
+    "y": 0,
+    "w": 1.41,
+    "h": 2.37
+   },
+   {
+    "nombre": "ss.hh 2",
+    "tipo": "servicio",
+    "x": 5.95,
+    "y": 0,
+    "w": 1.32,
+    "h": 2.37
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "arriba",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 6.9
+  },
+  "confianza": "alta",
+  "notas": [
+   "Lamina 'FONTANA San Borja', DPTO 102, con ambientes rotulados por texto directamente en la planta (SALA, COMEDOR, COCINA, DORMITORIO PRINCIPAL, SS.HH, LAV, DORMITORIO) y calle 'Av. San Borja Norte' identificada junto al lado izquierdo. Area techada 55.80 m2, area ocupada 58.86 m2. Sin cotas.",
+   "Pasillo/closets entre banos y dormitorio no se modelaron como ambiente propio; la suma queda ~15% por debajo del area techada, dentro de tolerancia.",
+   "escala NO normalizada: ocupación 0.75 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-020",
+  "fuente": {
+   "proyecto": "Prada Exclusiva Residencial",
+   "distrito": "Jesus Maria",
+   "imagen": "020-3D-65.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 87,
+   "tipo": "vendible"
+  },
+  "sobre": {
+   "ancho": 8.3,
+   "fondo": 11.7
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio a",
+    "tipo": "intima",
+    "x": 0,
+    "y": 8.02,
+    "w": 2.59,
+    "h": 3.68
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 6.62,
+    "w": 1.53,
+    "h": 1.4
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 4.68,
+    "w": 1.53,
+    "h": 1.4
+   },
+   {
+    "nombre": "pasillo",
+    "tipo": "circulacion",
+    "x": 2.59,
+    "y": 0.33,
+    "w": 0.6,
+    "h": 11.37
+   },
+   {
+    "nombre": "dormitorio b",
+    "tipo": "intima",
+    "x": 3.19,
+    "y": 7.55,
+    "w": 1.86,
+    "h": 3.21
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.05,
+    "y": 6.08,
+    "w": 2.19,
+    "h": 5.62
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.19,
+    "y": 2.54,
+    "w": 4.05,
+    "h": 2.14
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 3.19,
+    "y": 0,
+    "w": 5.11,
+    "h": 2.54
+   },
+   {
+    "nombre": "dormitorio c",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.59,
+    "h": 3.01
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "izquierda",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 7.4
+  },
+  "confianza": "media",
+  "notas": [
+   "Render 'PRADA Exclusiva Residencial' (Maxx Grupo Inmobiliario), Jr. Tizon y Bueno 639, Jesus Maria, Tipo 3 Piso 11, unidad 1103, '87 m2 area total vendida aprox.', '3 Dormitorios'; incluye sala-comedor, cocina, lavanderia, balcon, flecha de ENTRADA. Sin cotas.",
+   "La suma de ambientes (~66 m2) queda ~24% por debajo de los 87 m2 declarados, en el limite de tolerancia (25%). Se sospecha que el area 'vendida' incluye deposito y/o estacionamiento que no aparecen en esta lamina; no se fuerzo la geometria para cuadrar mas.",
+   "Balcon mencionado en el rotulo no se identifico con claridad en la imagen y no se modelo como ambiente propio.",
+   "escala NO normalizada: ocupación 0.7 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-021",
+  "fuente": {
+   "proyecto": "Urbalima",
+   "distrito": "",
+   "imagen": "021-3D-65.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 71.25,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 9.2,
+   "fondo": 8.7
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 3.338,
+    "w": 1.94,
+    "h": 5.362
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 0,
+    "w": 1.94,
+    "h": 2.399
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 1.94,
+    "y": 1.458,
+    "w": 4.43,
+    "h": 5.925
+   },
+   {
+    "nombre": "terraza",
+    "tipo": "exterior",
+    "x": 2.88,
+    "y": 7.383,
+    "w": 3.49,
+    "h": 1.317
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 6.37,
+    "y": 0,
+    "w": 2.83,
+    "h": 1.458
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 6.37,
+    "y": 1.458,
+    "w": 1.04,
+    "h": 2.163
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 6.37,
+    "y": 4.938,
+    "w": 2.17,
+    "h": 3.762
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 8.54,
+    "y": 1.458,
+    "w": 0.66,
+    "h": 3.291
+   }
+  ],
+  "fachadas": [
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3.54
+  },
+  "confianza": "media",
+  "notas": [
+   "Render 'Urbalima', Departamento 305 Piso 3, Av. 2 de Mayo, area total 71.25 m2, '2 dormitorios / 2 banos / sala comedor / kitchenette / lavanderia / terraza', flecha de INGRESO. Sin cotas ni distrito explicito.",
+   "La sala-comedor no toca la fachada asignada (arriba); en la lamina recibe luz indirecta desde la terraza contigua, que si se modelo como exterior.",
+   "escala NO normalizada: ocupación 0.78 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-022",
+  "fuente": {
+   "proyecto": "Cor Tower Santa Catalina",
+   "distrito": "",
+   "imagen": "022-3D-65.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 69.5,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 9.33,
+   "fondo": 7.45
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 5.36,
+    "w": 1.94,
+    "h": 2.08
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 2.22,
+    "y": 5.36,
+    "w": 1.48,
+    "h": 2.08
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 3.7,
+    "y": 5.36,
+    "w": 1.6,
+    "h": 2.08
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 2.82,
+    "w": 1.94,
+    "h": 2.55
+   },
+   {
+    "nombre": "baño-combinado",
+    "tipo": "servicio",
+    "x": 3.7,
+    "y": 0.14,
+    "w": 1.6,
+    "h": 4.55
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 5.3,
+    "y": 0,
+    "w": 4.03,
+    "h": 7.45
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 1.94,
+    "h": 1.88
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 6.71
+  },
+  "confianza": "media",
+  "notas": [
+   "Render 'COR TOWER Santa Catalina' (Quatro Inmobiliaria), Departamento 203-2203 tipo C, area total 69.50 m2, esquina entre Av. Jose de Rivadeneyra e Av. Nicolas Arriola (ambas explicitas en la lamina, usadas como fachadas). Sin cotas ni conteo explicito de dormitorios/banos en texto.",
+   "Se cuentan 3 camas (una superior, una doble/twin al medio, una inferior) y 2 agrupaciones de banos; el bano medio e inferior se fusionaron en un solo ambiente 'baño-combinado' por no poder separarlos con certeza en el render.",
+   "escala normalizada ×0.943 para que el sobre valga el área declarada (69.5 m²)"
+  ]
+ },
+ {
+  "id": "atlas-023",
+  "fuente": {
+   "proyecto": "VON - Bloque B",
+   "distrito": "",
+   "imagen": "023-3D-65.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 49.5,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.83,
+   "fondo": 6.32
+  },
+  "ambientes": [
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 4.38,
+    "w": 2.06,
+    "h": 1.94
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 2.06,
+    "y": 4.38,
+    "w": 0.98,
+    "h": 1.94
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 3.04,
+    "y": 3.6,
+    "w": 2.25,
+    "h": 2.72
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 5.28,
+    "y": 4.38,
+    "w": 1.47,
+    "h": 1.94
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.55,
+    "h": 3.89
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 2.74,
+    "y": 0,
+    "w": 2.55,
+    "h": 3.6
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 5.28,
+    "y": 0,
+    "w": 2.55,
+    "h": 3.89
+   }
+  ],
+  "fachadas": [
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 3.77
+  },
+  "confianza": "media",
+  "notas": [
+   "Render 'VON', Bloque B, Flat Tipico 02 (del B202 al B1702), Av. Villaran, area total 49.50 m2, '2 dorm / 2 banos / 4 personas'. Sin cotas ni distrito explicito ni flecha de ingreso visible; arista de entrada asumida por convencion (lado opuesto al balcon).",
+   "El comedor no toca la fachada asignada (abajo); recibe luz indirecta de la sala contigua, en la misma logica de planta abierta.",
+   "escala normalizada ×0.943 para que el sobre valga el área declarada (49.5 m²)"
+  ]
+ },
+ {
+  "id": "atlas-024",
+  "fuente": {
+   "proyecto": "LANDART",
+   "distrito": "",
+   "imagen": "024-2D-60.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 70.25,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 6.3,
+   "fondo": 12.4
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 9.4,
+    "w": 2.3,
+    "h": 3
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 2.3,
+    "y": 9.4,
+    "w": 2.3,
+    "h": 3
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 4.6,
+    "y": 9.4,
+    "w": 1.7,
+    "h": 3
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 0,
+    "y": 6,
+    "w": 0.9,
+    "h": 3.4
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0.9,
+    "y": 6,
+    "w": 3.1,
+    "h": 3.4
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4,
+    "y": 6,
+    "w": 1.3,
+    "h": 3.4
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 3.5,
+    "w": 2.6,
+    "h": 2.5
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 2.6,
+    "h": 3.5
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 2.6,
+    "y": 0,
+    "w": 2.4,
+    "h": 3.5
+   }
+  ],
+  "fachadas": [
+   "abajo",
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "izquierda",
+   "t": 9.5
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (2D-60) no coincide con la lámina real: es LANDART, 3 dormitorios / 2 baños, área total 70.25 m².",
+   "Rótulo de la lámina dice 'Área Total'; se mapeó a tipo techada.",
+   "Render amoblado sin rótulos por ambiente; geometría estimada por proporción.",
+   "Distrito no confirmado en la lámina (solo dirección Jr. 28 de Julio Nº 629); se deja vacío.",
+   "escala NO normalizada: ocupación 0.78 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-025",
+  "fuente": {
+   "proyecto": "NOA",
+   "distrito": "",
+   "imagen": "025-2D-60.jpg"
+  },
+  "programa": {
+   "dormitorios": 1,
+   "banos": 1
+  },
+  "area": {
+   "declarada": 39,
+   "tipo": "ocupada"
+  },
+  "sobre": {
+   "ancho": 4.9,
+   "fondo": 7.95
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0.95,
+    "y": 5.43,
+    "w": 2.48,
+    "h": 2.57
+   },
+   {
+    "nombre": "baño",
+    "tipo": "servicio",
+    "x": 3.43,
+    "y": 5.43,
+    "w": 1.52,
+    "h": 2.57
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0.95,
+    "y": 2.48,
+    "w": 3.62,
+    "h": 2.95
+   },
+   {
+    "nombre": "dormitorio",
+    "tipo": "intima",
+    "x": 0.95,
+    "y": 0,
+    "w": 3.33,
+    "h": 2.57
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 0,
+    "y": 1.37,
+    "w": 0.95,
+    "h": 6.58
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 0.76
+  },
+  "confianza": "alta",
+  "notas": [
+   "El nombre del archivo (2D-60) no coincide: es NOA Residencial T02A, flat de 1 dormitorio, 39.00 m² (área ocupada).",
+   "Lámina técnica con cotas explícitas por zona (6.91x1.00, 2.6x2.65, 1.55x1.85, 3.75x3.05, 3.45x2.65); se usaron para el sobre y los ambientes.",
+   "También declara 'Área Total: 38.25 m²' (menor a la ocupada); se prefirió Área Ocupada por ser la del departamento.",
+   "Distrito no confirmado en la lámina (solo calles Estados Unidos / Canevaro); se deja vacío.",
+   "escala normalizada ×0.952 para que el sobre valga el área declarada (39 m²)"
+  ]
+ },
+ {
+  "id": "atlas-026",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "026-2D-60.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 53.36,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 6.16,
+   "fondo": 8.66
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 5.58,
+    "w": 3.46,
+    "h": 3.08
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.46,
+    "y": 5.58,
+    "w": 1.92,
+    "h": 3.08
+   },
+   {
+    "nombre": "dormitorio secundario",
+    "tipo": "intima",
+    "x": 0,
+    "y": 3.08,
+    "w": 3.46,
+    "h": 2.5
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 3.46,
+    "y": 3.08,
+    "w": 1.92,
+    "h": 2.5
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 4.23,
+    "h": 3.08
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 4.23,
+    "y": 0,
+    "w": 1.83,
+    "h": 3.08
+   }
+  ],
+  "fachadas": [
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 3.85
+  },
+  "confianza": "alta",
+  "notas": [
+   "El nombre del archivo (2D-60) no coincide: es Tipo 04, 2 dormitorios / 2 baños, área total 53.36 m².",
+   "Lámina técnica con rótulos propios ('DORMITORIO PRINCIPAL', 'DORMITORIO SECUNDARIO', 'COCINA').",
+   "Proyecto y distrito no aparecen en la lámina (solo \"EEinmobiliaria\" y \"Av. Velasco Astete\"); se dejan vacíos.",
+   "escala normalizada ×0.962 para que el sobre valga el área declarada (53.36 m²)"
+  ]
+ },
+ {
+  "id": "atlas-027",
+  "fuente": {
+   "proyecto": "POLO Park",
+   "distrito": "",
+   "imagen": "027-2D-60.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 71.6,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 9.6,
+   "fondo": 7.46
+  },
+  "ambientes": [
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 0.2,
+    "y": 0.1,
+    "w": 1.43,
+    "h": 3.58
+   },
+   {
+    "nombre": "estudio",
+    "tipo": "social",
+    "x": 1.74,
+    "y": 0.1,
+    "w": 2.25,
+    "h": 3.58
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 4.09,
+    "y": 0.1,
+    "w": 5.21,
+    "h": 3.58
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0.1,
+    "y": 3.88,
+    "w": 2.35,
+    "h": 3.37
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 2.55,
+    "y": 3.88,
+    "w": 2.35,
+    "h": 3.37
+   },
+   {
+    "nombre": "baño",
+    "tipo": "servicio",
+    "x": 5.01,
+    "y": 3.88,
+    "w": 1.94,
+    "h": 3.37
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 7.05,
+    "y": 3.88,
+    "w": 2.25,
+    "h": 3.37
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 4.39
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (2D-60) no coincide: es Tipo 8, \"2 + Estudio\" habitaciones, 2 baños, área 71.60 m².",
+   "El estudio se modeló como ambiente social aparte (no cuenta como dormitorio en programa).",
+   "Render amoblado sin rótulos por ambiente (salvo \"Ingreso\"); distrito no confirmado (solo \"Ca. Collagate\"), se deja vacío.",
+   "Ocupación corregida: la primera lectura fijó el sobre exactamente igual a la suma de ambientes (8.7×6.8, ocupación 100%). El área declarada (71.60 m², techada) ya descuenta muros, así que el envolvente exterior real es mayor; se agrandó a 9.4×7.3 m dejando margen para muros y circulación entre ambientes (ocupación 0.86). Los ambientes no cambiaron de tamaño, solo se separaron y se corrió el sobre.",
+   "escala normalizada ×1.021 para que el sobre valga el área declarada (71.6 m²)"
+  ]
+ },
+ {
+  "id": "atlas-028",
+  "fuente": {
+   "proyecto": "Kárpathos",
+   "distrito": "",
+   "imagen": "028-2D-60.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 70,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.63,
+   "fondo": 9.18
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 6.7,
+    "w": 3.3,
+    "h": 2.47
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3.3,
+    "y": 6.7,
+    "w": 1.55,
+    "h": 2.47
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 4.85,
+    "y": 6.7,
+    "w": 2.47,
+    "h": 2.47
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 3.2,
+    "w": 4.43,
+    "h": 3.51
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.43,
+    "y": 3.2,
+    "w": 1.55,
+    "h": 3.51
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.89,
+    "h": 3.2
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 2.89,
+    "y": 0,
+    "w": 2.89,
+    "h": 3.2
+   }
+  ],
+  "fachadas": [
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 1.03
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (2D-60) no coincide: es Tipo 5, 3 dormitorios / 2 baños, área total ≈70 m² (rótulo redondeado, sin decimales).",
+   "Render amoblado sin rótulos por ambiente; distrito no confirmado (solo \"Inés Huaylas Yupanqui 123\"), se deja vacío.",
+   "escala normalizada ×1.031 para que el sobre valga el área declarada (70 m²)"
+  ]
+ },
+ {
+  "id": "atlas-029",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "029-2D-60.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": null,
+   "tipo": ""
+  },
+  "sobre": {
+   "ancho": 6.8,
+   "fondo": 7.6
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 5,
+    "w": 2.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 2.6,
+    "y": 5,
+    "w": 4.2,
+    "h": 2.6
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 2.6,
+    "w": 2.6,
+    "h": 2.4
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 2.6,
+    "y": 2.6,
+    "w": 1.5,
+    "h": 2.4
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 4.1,
+    "y": 2.6,
+    "w": 1.5,
+    "h": 2.4
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 2.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "estudio",
+    "tipo": "social",
+    "x": 2.6,
+    "y": 0,
+    "w": 1.5,
+    "h": 2.6
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 4.1,
+    "y": 0,
+    "w": 2.7,
+    "h": 2.6
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3
+  },
+  "confianza": "baja",
+  "notas": [
+   "El nombre del archivo (2D-60) no coincide con el contenido real; no hay ningún dato de área ni de proyecto/distrito impreso en la lámina.",
+   "Único rótulo de ambiente presente: \"ESTUDIO\". Dormitorios y baños contados por iconos de mobiliario, no por texto.",
+   "Área no declarada en la lámina: no se inventó una cifra; sobre y ambientes son proporciones estimadas por mobiliario.",
+   "Entrada no está marcada con flecha en la lámina; arista asumida por la disposición de la circulación interna."
+  ]
+ },
+ {
+  "id": "atlas-030",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "030-3D-70.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": null,
+   "tipo": ""
+  },
+  "sobre": {
+   "ancho": 4.6,
+   "fondo": 15.5
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 12.7,
+    "w": 2.2,
+    "h": 2.8
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 10.1,
+    "w": 2.4,
+    "h": 2.6
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 7.3,
+    "w": 2.6,
+    "h": 2.8
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 0,
+    "y": 4.7,
+    "w": 2.4,
+    "h": 2.6
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 2.4,
+    "y": 4.7,
+    "w": 1.4,
+    "h": 2.6
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 0,
+    "y": 2.3,
+    "w": 2.4,
+    "h": 2.4
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 2.4,
+    "y": 2.3,
+    "w": 1.4,
+    "h": 2.4
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 0,
+    "w": 2.4,
+    "h": 2.3
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "derecha",
+   "t": 13
+  },
+  "confianza": "baja",
+  "notas": [
+   "El nombre del archivo (3D-70) no se puede confirmar: la lámina es un recorte sin ningún texto (sin logo, sin área, sin rótulos).",
+   "Programa (3 dormitorios, 2 baños) contado por mobiliario e iconos de sanitarios, no por texto.",
+   "Área no declarada en la lámina: no se inventó una cifra; escala estimada a partir del tamaño típico de una cama de 1.5x2.0 m visible en los dormitorios.",
+   "Planta en L muy alargada (corredor largo); sobre y proporciones son una aproximación gruesa.",
+   "escala NO normalizada: ocupación 0.62 fuera de la banda sana — ambientes sub-leídos o área declarada con partidas no dibujadas"
+  ]
+ },
+ {
+  "id": "atlas-031",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "031-3D-70.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 71,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 6.6,
+   "fondo": 10.8
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 7.4,
+    "w": 3.2,
+    "h": 3.4
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 3.2,
+    "y": 7.4,
+    "w": 3.4,
+    "h": 3.4
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 4.8,
+    "w": 1.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 1.6,
+    "y": 4.8,
+    "w": 1.6,
+    "h": 2.6
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 3.2,
+    "y": 4.8,
+    "w": 3.4,
+    "h": 2.6
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 0.8,
+    "w": 4,
+    "h": 4
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 4,
+    "y": 0.8,
+    "w": 2.6,
+    "h": 4
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 3
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (3D-70) no coincide en área: la lámina declara \"ÁREA: 71.00 M2\" y \"03 DORMITORIOS\" directamente.",
+   "Baños (2) contados por iconos de sanitarios, no por texto explícito.",
+   "Sin rótulos de nombre por ambiente (solo iconos de mobiliario); proyecto y distrito no aparecen (solo \"Av. Sucre\"), se dejan vacíos."
+  ]
+ },
+ {
+  "id": "atlas-032",
+  "fuente": {
+   "proyecto": "Park Living",
+   "distrito": "Pueblo Libre",
+   "imagen": "032-3D-70.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 74,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.6,
+   "fondo": 9.73
+  },
+  "ambientes": [
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0.14,
+    "y": 6.95,
+    "w": 1.76,
+    "h": 2.69
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 1.99,
+    "y": 6.95,
+    "w": 1.76,
+    "h": 2.69
+   },
+   {
+    "nombre": "lavanderia",
+    "tipo": "servicio",
+    "x": 3.85,
+    "y": 6.95,
+    "w": 1.21,
+    "h": 2.69
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 5.15,
+    "y": 6.95,
+    "w": 2.32,
+    "h": 2.69
+   },
+   {
+    "nombre": "wc",
+    "tipo": "servicio",
+    "x": 0.19,
+    "y": 3.62,
+    "w": 1.3,
+    "h": 3.15
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 1.58,
+    "y": 3.62,
+    "w": 2.78,
+    "h": 3.15
+   },
+   {
+    "nombre": "sala comedor",
+    "tipo": "social",
+    "x": 4.45,
+    "y": 3.62,
+    "w": 2.97,
+    "h": 3.15
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0.23,
+    "y": 0.19,
+    "w": 4.08,
+    "h": 3.24
+   },
+   {
+    "nombre": "sala comedor 2",
+    "tipo": "social",
+    "x": 4.4,
+    "y": 0.19,
+    "w": 2.97,
+    "h": 3.24
+   }
+  ],
+  "fachadas": [
+   "arriba"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3.99
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (3D-70) no coincide: es Tipo 03, 2 dormitorios / 2 baños, área total 74.00 m².",
+   "Lámina técnica con rótulos propios ('DORM. PRINCIPAL', 'DORM. 2', 'BAÑO', 'BAÑO', 'W.C.', 'LAV.', 'COCINA', 'SALA COMEDOR').",
+   "Distrito \"Pueblo Libre\" tomado del logo/marca impreso en la propia lámina, no del índice.",
+   "'Sala comedor' partida en dos ambientes contiguos para respetar el rectángulo (espacio en L real).",
+   "Confianza bajada de 'alta' a 'media': la primera lectura fijó el sobre casi exactamente igual al área declarada (7.6×9.75=74.1 vs 74.00 m² declarados), dando ocupación 100.5%, no sostenible como planta construible. Además la lámina es una vista isométrica 3D (no una planta ortogonal), lo que suma incertidumbre a las medidas leídas por proporción. Sobre agrandado a 8.2×10.5 m (ocupación 0.87); los ambientes no cambiaron de tamaño, solo se separaron con margen de muro.",
+   "escala normalizada ×0.927 para que el sobre valga el área declarada (74 m²)"
+  ]
+ },
+ {
+  "id": "atlas-033",
+  "fuente": {
+   "proyecto": "",
+   "distrito": "",
+   "imagen": "033-3D-70.jpg"
+  },
+  "programa": {
+   "dormitorios": 2,
+   "banos": 1
+  },
+  "area": {
+   "declarada": 70.05,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 7.52,
+   "fondo": 9.31
+  },
+  "ambientes": [
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0.14,
+    "y": 5.55,
+    "w": 1.88,
+    "h": 3.39
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 2.12,
+    "y": 5.55,
+    "w": 1.88,
+    "h": 3.39
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 4.09,
+    "y": 5.55,
+    "w": 1.32,
+    "h": 3.39
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 5.5,
+    "y": 5.55,
+    "w": 1.88,
+    "h": 3.39
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0.09,
+    "y": 0.09,
+    "w": 3.2,
+    "h": 5.27
+   },
+   {
+    "nombre": "circulacion",
+    "tipo": "circulacion",
+    "x": 3.39,
+    "y": 0.09,
+    "w": 1.32,
+    "h": 5.27
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 4.8,
+    "y": 0.09,
+    "w": 2.45,
+    "h": 5.27
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "abajo"
+  ],
+  "entrada": {
+   "arista": "izquierda",
+   "t": 4.51
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (3D-70) no coincide en el detalle: la lámina declara \"ÁREA TECHADA INTERIOR: 70.05m²\" (también \"área libre 0.00\" y \"área ocupada 70.05\").",
+   "Dormitorios y baños no están en texto (solo \"PLANTA DPTO. TIPO 7\"); contados por iconos. Hay un segundo grupo de sanitarios cuya función no queda clara: se optó por declarar 1 baño y dejar la duda en esta nota.",
+   "Proyecto y distrito no aparecen en la lámina (solo \"Ca. Mariano Carranza\"); se dejan vacíos.",
+   "Ocupación corregida: la lámina declara 'ÁREA TECHADA INTERIOR: 70.05m²' y 'ÁREA OCUPADA: 70.05m²' (área libre 0.00) — es decir, el área declarada YA ES el área interior construida, así que el envolvente exterior (con espesor de muros) tiene que ser mayor. La primera lectura había fijado el sobre igual a esa suma (7.4×9.2, ocupación 100%); se agrandó a 8.0×9.9 m dejando margen de muro, cuidando que sala y dormitorio principal sigan tocando las fachadas izquierda/abajo (ocupación 0.86).",
+   "escala normalizada ×0.94 para que el sobre valga el área declarada (70.05 m²)"
+  ]
+ },
+ {
+  "id": "atlas-034",
+  "fuente": {
+   "proyecto": "Ascenza",
+   "distrito": "Pueblo Libre",
+   "imagen": "034-3D-70.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2
+  },
+  "area": {
+   "declarada": 77.69,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 8.1,
+   "fondo": 9.6
+  },
+  "ambientes": [
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 0,
+    "y": 6.5,
+    "w": 3,
+    "h": 3.1
+   },
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 3,
+    "y": 6.5,
+    "w": 1.6,
+    "h": 3.1
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 4.6,
+    "y": 6.5,
+    "w": 3,
+    "h": 3.1
+   },
+   {
+    "nombre": "walk-in closet",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 3.5,
+    "w": 1.1,
+    "h": 3
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 1.1,
+    "y": 3.5,
+    "w": 2.9,
+    "h": 3
+   },
+   {
+    "nombre": "dormitorio 3",
+    "tipo": "intima",
+    "x": 4,
+    "y": 3.5,
+    "w": 2.8,
+    "h": 3
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 0,
+    "y": 0,
+    "w": 3.4,
+    "h": 3.5
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 3.4,
+    "y": 0,
+    "w": 3.2,
+    "h": 3.5
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 6.6,
+    "y": 0,
+    "w": 1.4,
+    "h": 3.5
+   }
+  ],
+  "fachadas": [
+   "arriba",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "abajo",
+   "t": 3.5
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (3D-70) no coincide: es Tipo 03, 3 dormitorios / 2 baños, área total 77.69 m².",
+   "Distrito \"Pueblo Libre\" tomado del subtítulo impreso junto al logo (\"Ascenza — Departamentos Pueblo Libre\").",
+   "Render amoblado sin rótulos por ambiente (salvo \"Ingreso\" y \"Jardín Interno\" en el plano de ubicación); geometría estimada por proporción."
+  ]
+ },
+ {
+  "id": "atlas-035",
+  "fuente": {
+   "proyecto": "Luzzo",
+   "distrito": "Cerro Colorado",
+   "imagen": "035-3D-70.jpg"
+  },
+  "programa": {
+   "dormitorios": 3,
+   "banos": 2.5
+  },
+  "area": {
+   "declarada": 66.25,
+   "tipo": "techada"
+  },
+  "sobre": {
+   "ancho": 6.3,
+   "fondo": 10.5
+  },
+  "ambientes": [
+   {
+    "nombre": "baño 1",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 8.3,
+    "w": 2.2,
+    "h": 2.2
+   },
+   {
+    "nombre": "medio baño",
+    "tipo": "servicio",
+    "x": 2.2,
+    "y": 8.3,
+    "w": 1.4,
+    "h": 2.2
+   },
+   {
+    "nombre": "baño 2",
+    "tipo": "servicio",
+    "x": 3.6,
+    "y": 8.3,
+    "w": 1.6,
+    "h": 2.2
+   },
+   {
+    "nombre": "cocina",
+    "tipo": "servicio",
+    "x": 0,
+    "y": 4.7,
+    "w": 1.6,
+    "h": 3.6
+   },
+   {
+    "nombre": "comedor",
+    "tipo": "social",
+    "x": 1.6,
+    "y": 4.7,
+    "w": 2.3,
+    "h": 3.6
+   },
+   {
+    "nombre": "dormitorio 1",
+    "tipo": "intima",
+    "x": 3.9,
+    "y": 4.7,
+    "w": 2.4,
+    "h": 3.6
+   },
+   {
+    "nombre": "sala",
+    "tipo": "social",
+    "x": 0,
+    "y": 0.3,
+    "w": 2.2,
+    "h": 4.4
+   },
+   {
+    "nombre": "dormitorio 2",
+    "tipo": "intima",
+    "x": 2.2,
+    "y": 0.3,
+    "w": 1.9,
+    "h": 4.4
+   },
+   {
+    "nombre": "dormitorio principal",
+    "tipo": "intima",
+    "x": 4.1,
+    "y": 0.3,
+    "w": 2.2,
+    "h": 4.4
+   }
+  ],
+  "fachadas": [
+   "izquierda",
+   "derecha"
+  ],
+  "entrada": {
+   "arista": "arriba",
+   "t": 1
+  },
+  "confianza": "media",
+  "notas": [
+   "El nombre del archivo (3D-70) no coincide: es Tipo T6, 3 habitaciones, 2.5 baños, área 66.25 m².",
+   "Distrito \"Cerro Colorado\" tomado del logo impreso en la lámina (\"Luzzo — Cerro Colorado\"), es un distrito real de Arequipa.",
+   "Programa declara \"2.5 baños\" (medio baño incluido); se modeló como 2 baños completos + 1 medio baño, lo que puede generar un aviso de conteo contra el 2.5 declarado.",
+   "Planta con muros angulados (forma de lote esquinero); geometría muy simplificada a rectángulos."
+  ]
+ }
+]
