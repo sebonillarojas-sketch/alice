@@ -7,9 +7,24 @@ _Primer mensaje sugerido en la nueva sesión: "Lee HANDOFF.md y continúa donde 
 ## 1. QUÉ ES ESTO
 
 Dos productos, una regla:
-- **alice.bam.pe** — ERP/cockpit de Hygge Holding (React+Vite, carpeta `files/alice`). Deploy: **Netlify** (`npm run build && npx netlify deploy --prod --dir=dist`). NO conectado a git — deploy manual.
-- **aliceai.bam.pe** — Alicia, la IA standalone (Node/Express, carpeta `alicia-brain`). Deploy: **Railway**, push a `main` = deploy automático. Sirve `public/index.html` = panel de control de Alicia.
+- **alice.bam.pe** — ERP/cockpit de Hygge Holding (React+Vite, carpeta `files/alice`). Deploy: **Netlify,
+  automático con cada push a `main`** — sitio `monumental-toffee-7734de`, conectado a
+  `sebonillarojas-sketch/alice`, base `files/alice`, build `npm run build`, publish `dist`.
+  ⚠️ Hasta el 11 sep 2026 esta línea decía "NO conectado a git — deploy manual", que era cierto
+  en julio y dejó de serlo. Ese dato viejo desorientó a tres sesiones y una llegó a escribirlo en
+  su memoria persistente. Verificado el 11 sep 2026 contra el panel de Netlify: 6 de los últimos 8
+  deploys traen `commit_ref` (o sea, disparados por git). El comentario de `netlify.toml` en la raíz
+  lo confirma solo: habla de que "Netlify buildea desde la raíz", algo que únicamente pasa en
+  builds disparados por git. **Consecuencia práctica: un push a `main` publica el ERP, no hace
+  falta `npm run deploy`** — y si el cerebro y el ERP tienen que salir en orden, el push los
+  dispara a los dos a la vez.
+- **aliceai.bam.pe** — Alicia, la IA standalone (Node/Express, carpeta `alicia-brain`). Deploy: **Railway**, push a `main` = deploy automático (igual que el ERP: el MISMO push dispara ambos). Sirve `public/index.html` = panel de control de Alicia.
 - **REGLA**: features de Alicia-como-agente van en aliceai.bam.pe, NUNCA en el ERP.
+- **hygge-radar.netlify.app** — inteligencia de mercado de Lima, que el ERP embebe en un iframe
+  como la app "Radar". Hasta el 9 sep 2026 se desplegaba **a mano y sin repo**: su código vivía
+  solo en Netlify. Desde entonces está en `sebonillarojas-sketch/hygge-radar` (privado) con
+  auto-deploy desde `main`. Ojo: `hygge-intel`/`hygge-intel2` NO son ese sitio — quedaron en
+  junio 2026 y su `netlify.toml` trae `X-Frame-Options = DENY`, que rompería el embed.
 
 Repos git (dueño: sebonillarojas-sketch):
 - `alicia-brain` → repo `sebonillarojas-sketch/alice`, root directory `/alicia-brain` en Railway
