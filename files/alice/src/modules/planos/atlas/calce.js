@@ -125,3 +125,69 @@ export function calzar(atlas = [], objetivo = {}, { top = 5, scoreMin = 0.45 } =
   out.sort((a, b) => (b.score - a.score) || ((a.adaptacion?.adaptividad || 9) - (b.adaptacion?.adaptividad || 9)));
   return out.slice(0, top);
 }
+
+/**
+ * Cierra las juntas entre ambientes de una tipología adaptada.
+ *
+ * El atlas guarda los ambientes como se leen de la lámina: con el hueco del muro entre
+ * ellos (por eso la ocupación ronda 0.88, no 1). Pero el modelo de ALICE deriva los muros
+ * de las aristas COMPARTIDAS — dos ambientes separados por 12 cm no comparten nada, así
+ * que no hay muro, no hay adyacencia, y vanos.js no puede abrir una puerta entre ellos.
+ * Medido sobre la cadena completa: 8 ambientes inaccesibles y 10 sin muro para su puerta.
+ *
+ * La solución no es bajar la tolerancia de muros.js —eso fundiría muros que de verdad son
+ * distintos— sino alinear las coordenadas acá: se agrupan los valores cercanos de x y de y
+ * y cada uno se lleva al centro de su grupo. Los ambientes quedan tocándose, el muro pasa a
+ * ser la arista compartida, y el espesor se dibuja después.
+ *
+ * Lo mismo vale en el PERÍMETRO, y ahí duele más: un ambiente que no llega al borde del
+ * sobre no toca la fachada (se queda sin ventana) ni el corredor (la unidad se queda sin
+ * acceso). Por eso `sobre` no es opcional en la práctica — sin él quedaban 18 ambientes
+ * sin luz y 3 unidades sin entrada.
+ *
+ * @param ambientes  los de una tipología ya adaptada al sobre
+ * @param sobre      { ancho, fondo } del sobre objetivo; si viene, se pegan los extremos
+ * @param tol        separación máxima que se considera "la misma línea" (m)
+ */
+export function cerrarJuntas(ambientes = [], sobre = null, tol = 0.30) {
+  if (!ambientes.length) return ambientes;
+  // agrupa valores cercanos en una sola coordenada (el promedio del grupo)
+  const mapaDe = (valores) => {
+    const orden = [...new Set(valores.map((v) => r2(v)))].sort((a, b) => a - b);
+    const mapa = new Map();
+    let grupo = [orden[0]];
+    const cerrar = () => {
+      const centro = r2(grupo.reduce((s, v) => s + v, 0) / grupo.length);
+      for (const v of grupo) mapa.set(v, centro);
+    };
+    for (const v of orden.slice(1)) {
+      if (v - grupo[grupo.length - 1] <= tol) grupo.push(v);
+      else { cerrar(); grupo = [v]; }
+    }
+    cerrar();
+    return mapa;
+  };
+  const mx = mapaDe(ambientes.flatMap((a) => [a.x, a.x + a.w]));
+  const my = mapaDe(ambientes.flatMap((a) => [a.y, a.y + a.h]));
+  const g = (mapa, v) => mapa.get(r2(v)) ?? r2(v);
+
+  // pegar los extremos al sobre: el grupo más bajo va a 0, el más alto al borde
+  const W = num(sobre?.ancho), D = num(sobre?.fondo);
+  const pegar = (mapa, limite) => {
+    if (!(limite > 0)) return;
+    const centros = [...new Set(mapa.values())].sort((a, b) => a - b);
+    const min = centros[0], max = centros[centros.length - 1];
+    if (min > 0 && min <= tol) for (const [k, v] of mapa) if (v === min) mapa.set(k, 0);
+    if (max < limite && limite - max <= tol) for (const [k, v] of mapa) if (v === max) mapa.set(k, r2(limite));
+  };
+  pegar(mx, W); pegar(my, D);
+
+  return ambientes.map((a) => {
+    const x0 = g(mx, a.x), x1 = g(mx, a.x + a.w);
+    const y0 = g(my, a.y), y1 = g(my, a.y + a.h);
+    // un ambiente nunca se colapsa: si el ajuste lo dejaría sin ancho, se conserva el suyo
+    return { ...a, x: x0, y: y0,
+      w: x1 - x0 > 0.05 ? r2(x1 - x0) : a.w,
+      h: y1 - y0 > 0.05 ? r2(y1 - y0) : a.h };
+  });
+}

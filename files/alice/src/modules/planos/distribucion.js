@@ -58,7 +58,7 @@ export function generarPuertas(rooms) {
 // motor ya no es la autoridad sobre dónde va una puerta: emitirlas acá deja DOS verdades
 // distintas sobre el mismo vano, una puesta por el amoblador y otra derivada del muro.
 // El mobiliario, en cambio, sigue siendo suyo.
-export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true } = {}) {
+export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true, resolver = true } = {}) {
   if (!rooms?.length) return [];
   const items = [];
   const E = 0.35;
@@ -105,8 +105,11 @@ export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true } 
     else if (sx1 > W - E) items.push(it("puerta-90", sx1, (sy0 + sy1) / 2, 270));
   }
   items.push(...generarPuertas(rooms));
-  if (!aberturas) return items.filter((t) => !/^(puerta|ventana|vano)-/.test(t.ref || ""));
-  return items;
+  const salida = aberturas ? items : items.filter((t) => !/^(puerta|ventana|vano)-/.test(t.ref || ""));
+  // Las reglas de colocación asumen ambientes de tamaño típico. Con ambientes deformados
+  // —los que salen del atlas al adaptarlos a un sobre real— esas distancias chocan: 23
+  // pares superpuestos de 115 muebles en la primera corrida de la cadena completa.
+  return resolver ? resolverSuperposiciones(salida, rooms).items : salida;
 }
 
 // ── amueblado por ambiente (holguras reales) ───────────────
@@ -502,4 +505,136 @@ export function generarDistribuciones(brief) {
     });
   }
   return vs.slice(0, 4);
+}
+
+// ── Superposiciones de mobiliario ────────────────────────────────────────────────
+// El amoblador coloca a distancias fijas pensadas para un ambiente de tamaño típico. Con
+// ambientes que vienen deformados del atlas —más angostos o más cortos que el original—
+// esas distancias chocan: medido sobre la cadena completa, 23 pares superpuestos de 115
+// muebles, casi todos ducha contra inodoro y rack contra mesa de centro.
+//
+// Se resuelve corriendo el mueble menos esencial dentro de su propio ambiente. Y si no
+// entra en ninguna posición, SE SACA y se reporta: un ambiente que no admite su mobiliario
+// es un ambiente demasiado chico, y eso hay que decirlo, no taparlo encimando muebles.
+
+// Qué se conserva cuando dos no pueden convivir. Menor = más esencial.
+const PRIORIDAD = [
+  [/^cama/, 0], [/^inodoro/, 1], [/^lavamanos/, 2], [/^ducha|tina/, 3],
+  [/^cocina|refri|lavadero/, 4], [/^comedor|mesa-comedor/, 5], [/^sofa/, 6],
+  [/^closet|ropero/, 7], [/^escritorio/, 8], [/^rack-tv/, 9], [/^velador/, 10],
+  [/^mesa-centro/, 11], [/^maceta|jardinera|planta/, 12],
+];
+const prioridadDe = (ref) => (PRIORIDAD.find(([re]) => re.test(ref || ""))?.[1] ?? 9);
+
+const _caja = (t) => {
+  const rot = ((t.rot || 0) % 180 + 180) % 180, vert = rot > 45 && rot < 135;
+  const w = vert ? t.d : t.w, h = vert ? t.w : t.d;
+  return { x0: t.x - w / 2, y0: t.y - h / 2, x1: t.x + w / 2, y1: t.y + h / 2, w, h };
+};
+const _solape = (a, b) => {
+  const ox = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  return ox > 0.05 && oy > 0.05 ? { ox, oy } : null;
+};
+
+/**
+ * Corre o descarta los muebles que se pisan. Puro: no muta la lista que recibe.
+ * @returns {{ items, movidos, descartados }}
+ */
+export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05 } = {}) {
+  const out = items.map((t) => ({ ...t }));
+  const movidos = [], descartados = [];
+  // caja del ambiente que contiene a cada mueble, para no sacarlo de su cuarto al correrlo
+  const cajaAmbiente = (t) => {
+    for (const r of rooms) {
+      if (!r.pts?.length) continue;
+      const xs = r.pts.map((p) => p.x), ys = r.pts.map((p) => p.y);
+      const b = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+      if (t.x >= b.x0 && t.x <= b.x1 && t.y >= b.y0 && t.y <= b.y1) return b;
+    }
+    return null;
+  };
+
+  // primero: el que se salió de su ambiente vuelve adentro
+  for (const t of out) {
+    const amb = cajaAmbiente(t); if (!amb) continue;
+    const c = _caja(t);
+    const dx = Math.max(0, amb.x0 + c.w / 2 - t.x) + Math.min(0, amb.x1 - c.w / 2 - t.x);
+    const dy = Math.max(0, amb.y0 + c.h / 2 - t.y) + Math.min(0, amb.y1 - c.h / 2 - t.y);
+    if (Math.abs(dx) > 1e-6 || Math.abs(dy) > 1e-6) {
+      t.x = Math.round((t.x + dx) * 100) / 100; t.y = Math.round((t.y + dy) * 100) / 100;
+      movidos.push({ ref: t.ref, motivo: "se salía de su ambiente" });
+    }
+  }
+
+  // después: los pares que se pisan. Se mueve SIEMPRE el menos esencial.
+  const fuera = new Set();
+  for (let i = 0; i < out.length; i++) {
+    for (let j = i + 1; j < out.length; j++) {
+      if (fuera.has(i) || fuera.has(j)) continue;
+      const a = out[i], b = out[j];
+      const s = _solape(_caja(a), _caja(b)); if (!s) continue;
+      const [fijo, suelto, idxSuelto] = prioridadDe(a.ref) <= prioridadDe(b.ref) ? [a, b, j] : [b, a, i];
+      const amb = cajaAmbiente(suelto);
+      const cs = _caja(suelto), cf = _caja(fijo);
+      // Primero el desplazamiento más corto —correrse por el eje de menor solape— y si no,
+      // las esquinas del propio ambiente. Probar solo dos posiciones descartaba 13 duchas
+      // de 13 baños: el ambiente las admitía, pero no en el eje que se probaba.
+      const intentos = [];
+      const ejeCorto = s.ox <= s.oy
+        ? [{ x: cf.x1 + cs.w / 2 + holgura, y: suelto.y }, { x: cf.x0 - cs.w / 2 - holgura, y: suelto.y }]
+        : [{ x: suelto.x, y: cf.y1 + cs.h / 2 + holgura }, { x: suelto.x, y: cf.y0 - cs.h / 2 - holgura }];
+      const ejeLargo = s.ox <= s.oy
+        ? [{ x: suelto.x, y: cf.y1 + cs.h / 2 + holgura }, { x: suelto.x, y: cf.y0 - cs.h / 2 - holgura }]
+        : [{ x: cf.x1 + cs.w / 2 + holgura, y: suelto.y }, { x: cf.x0 - cs.w / 2 - holgura, y: suelto.y }];
+      intentos.push(...ejeCorto, ...ejeLargo);
+      if (amb) {
+        // las cuatro esquinas, que es donde va un aparato sanitario en un baño chico
+        for (const ex of [amb.x0 + cs.w / 2 + holgura, amb.x1 - cs.w / 2 - holgura])
+          for (const ey of [amb.y0 + cs.h / 2 + holgura, amb.y1 - cs.h / 2 - holgura])
+            intentos.push({ x: ex, y: ey });
+      }
+      const cabe = (p) => {
+        if (amb && (p.x - cs.w / 2 < amb.x0 - 1e-6 || p.x + cs.w / 2 > amb.x1 + 1e-6
+                 || p.y - cs.h / 2 < amb.y0 - 1e-6 || p.y + cs.h / 2 > amb.y1 + 1e-6)) return false;
+        const nc = { x0: p.x - cs.w / 2, y0: p.y - cs.h / 2, x1: p.x + cs.w / 2, y1: p.y + cs.h / 2 };
+        return !out.some((o, k) => k !== idxSuelto && !fuera.has(k) && _solape(nc, _caja(o)));
+      };
+      let ok = intentos.find(cabe);
+      if (ok) {
+        suelto.x = Math.round(ok.x * 100) / 100; suelto.y = Math.round(ok.y * 100) / 100;
+        movidos.push({ ref: suelto.ref, motivo: `se pisaba con ${fijo.ref}` });
+        continue;
+      }
+      // El menos esencial no tiene adónde ir: se intenta mover el OTRO antes de descartar.
+      // Pasa siempre en los baños: amoblarBano estira la ducha a todo el ancho como zona
+      // húmeda, y esa ducha de 2.06 m en un baño de 2.18 no se puede correr — pero el
+      // inodoro que le quedó encima sí. Mover solo el menos esencial sacaba 13 duchas de
+      // 13 baños que en realidad las admitían.
+      const idxFijo = fijo === a ? i : j;
+      const cf2 = _caja(suelto), amb2 = cajaAmbiente(fijo), cfi = _caja(fijo);
+      const alt = [];
+      const dsp = s.ox <= s.oy
+        ? [{ x: cf2.x1 + cfi.w / 2 + holgura, y: fijo.y }, { x: cf2.x0 - cfi.w / 2 - holgura, y: fijo.y }]
+        : [{ x: fijo.x, y: cf2.y1 + cfi.h / 2 + holgura }, { x: fijo.x, y: cf2.y0 - cfi.h / 2 - holgura }];
+      alt.push(...dsp);
+      if (amb2) for (const ex of [amb2.x0 + cfi.w / 2 + holgura, amb2.x1 - cfi.w / 2 - holgura])
+        for (const ey of [amb2.y0 + cfi.h / 2 + holgura, amb2.y1 - cfi.h / 2 - holgura]) alt.push({ x: ex, y: ey });
+      const cabeFijo = (p) => {
+        if (amb2 && (p.x - cfi.w / 2 < amb2.x0 - 1e-6 || p.x + cfi.w / 2 > amb2.x1 + 1e-6
+                 || p.y - cfi.h / 2 < amb2.y0 - 1e-6 || p.y + cfi.h / 2 > amb2.y1 + 1e-6)) return false;
+        const nc = { x0: p.x - cfi.w / 2, y0: p.y - cfi.h / 2, x1: p.x + cfi.w / 2, y1: p.y + cfi.h / 2 };
+        return !out.some((o, k) => k !== idxFijo && !fuera.has(k) && _solape(nc, _caja(o)));
+      };
+      const ok2 = alt.find(cabeFijo);
+      if (ok2) {
+        fijo.x = Math.round(ok2.x * 100) / 100; fijo.y = Math.round(ok2.y * 100) / 100;
+        movidos.push({ ref: fijo.ref, motivo: `se pisaba con ${suelto.ref}, que no tenía adónde correrse` });
+      } else {
+        fuera.add(idxSuelto);
+        descartados.push({ ref: suelto.ref, motivo: `no entra junto a ${fijo.ref}: el ambiente no admite su mobiliario` });
+      }
+    }
+  }
+  return { items: out.filter((_, k) => !fuera.has(k)), movidos, descartados };
 }
