@@ -13,7 +13,7 @@ import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, amoblarDesdeLayout } from "./distribucion.js";
 import { construirMuros } from "./muros.js";
-import { construirVanos } from "./vanos.js";
+import { construirVanos, resolverVano } from "./vanos.js";
 import { resolverConAtlas } from "./atlas/resolver.js";
 import { muroEsVisible, grosorDeMuro, simboloDeVano } from "./muroDibujo.js";
 
@@ -1025,8 +1025,18 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const rooms = [...(porAgente ? porAgente.rooms : lockedRooms.map((r) => ({ ...r }))), ...roomsAtlas];
     const xs = rooms.flatMap((r) => r.pts.map((q) => q.x));
     const ys = rooms.flatMap((r) => r.pts.map((q) => q.y));
+    // Se amuebla DESPUÉS de derivar los vanos y se le pasan: el amoblador coloca sin saber
+    // dónde van las puertas —se calculan del grafo de muros, después— así que sin esto
+    // quedan camas y sofás tapando el paso.
+    const ctxMuros = { footprint: huella, frontIdx, lotType: tipoLote };
+    const murosDerivados = rooms.length ? construirMuros(rooms, ctxMuros).muros : [];
+    const vanosDerivados = rooms.length ? construirVanos(murosDerivados, rooms, ctxMuros).vanos : [];
+    const porMuro = new Map(murosDerivados.map((m) => [m.id, m]));
+    const vanosGeom = vanosDerivados
+      .map((v) => ({ ...v, geom: resolverVano(v, porMuro.get(v.muroId)) })).filter((v) => v.geom);
     const items = rooms.length
-      ? amoblarDesdeLayout(rooms, Math.max(...xs), Math.max(...ys), architectureProgram.nse || "C", { aberturas: false })
+      ? amoblarDesdeLayout(rooms, Math.max(...xs), Math.max(...ys), architectureProgram.nse || "C",
+          { aberturas: false, vanos: vanosGeom })
       : [];
     return {
       rooms, items,

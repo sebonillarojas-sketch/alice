@@ -151,43 +151,118 @@ export function calzar(atlas = [], objetivo = {}, { top = 5, scoreMin = 0.45 } =
  */
 export function cerrarJuntas(ambientes = [], sobre = null, tol = 0.30) {
   if (!ambientes.length) return ambientes;
-  // agrupa valores cercanos en una sola coordenada (el promedio del grupo)
-  const mapaDe = (valores) => {
-    const orden = [...new Set(valores.map((v) => r2(v)))].sort((a, b) => a - b);
-    const mapa = new Map();
-    let grupo = [orden[0]];
-    const cerrar = () => {
-      const centro = r2(grupo.reduce((s, v) => s + v, 0) / grupo.length);
-      for (const v of grupo) mapa.set(v, centro);
-    };
-    for (const v of orden.slice(1)) {
-      if (v - grupo[grupo.length - 1] <= tol) grupo.push(v);
-      else { cerrar(); grupo = [v]; }
+  const W = num(sobre?.ancho), D = num(sobre?.fondo);
+
+  // Por eje: agrupar coordenadas cercanas, COLAPSAR los tramos que no cubre ningún
+  // ambiente, y estirar el resultado para que ocupe el sobre entero.
+  //
+  // Agrupar solo por tolerancia no alcanza: un hueco de 60 cm entre dos ambientes queda
+  // como queda, y sobre la planta completa eso fue 11% del piso sin asignar, con unidades
+  // al 26%. Ese hueco no es espesor de muro: es que la tipología no llena su sobre. Se
+  // colapsa el tramo vacío y después se reescala, así los muros quedan como aristas
+  // compartidas (que es de donde muros.js los deriva) y el espesor se dibuja al final.
+  const ejes = (lo, hi, limite) => {
+    const vals = [...new Set(ambientes.flatMap((a) => [r2(lo(a)), r2(hi(a))]))].sort((x, y) => x - y);
+    // 1. agrupar por tolerancia
+    const centro = new Map();
+    let grupo = [vals[0]];
+    const cerrar = () => { const c = r2(grupo.reduce((s, v) => s + v, 0) / grupo.length);
+      for (const v of grupo) centro.set(v, c); };
+    for (const v of vals.slice(1)) {
+      if (v - grupo[grupo.length - 1] <= tol) grupo.push(v); else { cerrar(); grupo = [v]; }
     }
     cerrar();
+    const cs = [...new Set(centro.values())].sort((x, y) => x - y);
+    // 2. un tramo entre dos coordenadas consecutivas es VACÍO si ningún ambiente lo cubre
+    const cubierto = (a, b) => ambientes.some((m) => {
+      const m0 = centro.get(r2(lo(m))) ?? r2(lo(m)), m1 = centro.get(r2(hi(m))) ?? r2(hi(m));
+      return m0 <= a + 1e-9 && m1 >= b - 1e-9;
+    });
+    // 3. acumular el desplazamiento: cada tramo vacío corre hacia atrás todo lo que sigue
+    const destino = new Map([[cs[0], 0]]);
+    let acumulado = 0;
+    for (let i = 1; i < cs.length; i++) {
+      const ancho = cs[i] - cs[i - 1];
+      if (cubierto(cs[i - 1], cs[i])) acumulado += ancho;
+      destino.set(cs[i], r2(acumulado));
+    }
+    // 4. estirar lo que quedó para que llene el sobre
+    const usado = acumulado;
+    const k = limite > 0 && usado > 0 ? limite / usado : 1;
+    const mapa = new Map();
+    for (const [v, c] of centro) mapa.set(v, r2((destino.get(c) ?? 0) * k));
     return mapa;
   };
-  const mx = mapaDe(ambientes.flatMap((a) => [a.x, a.x + a.w]));
-  const my = mapaDe(ambientes.flatMap((a) => [a.y, a.y + a.h]));
-  const g = (mapa, v) => mapa.get(r2(v)) ?? r2(v);
 
-  // pegar los extremos al sobre: el grupo más bajo va a 0, el más alto al borde
-  const W = num(sobre?.ancho), D = num(sobre?.fondo);
-  const pegar = (mapa, limite) => {
-    if (!(limite > 0)) return;
-    const centros = [...new Set(mapa.values())].sort((a, b) => a - b);
-    const min = centros[0], max = centros[centros.length - 1];
-    if (min > 0 && min <= tol) for (const [k, v] of mapa) if (v === min) mapa.set(k, 0);
-    if (max < limite && limite - max <= tol) for (const [k, v] of mapa) if (v === max) mapa.set(k, r2(limite));
-  };
-  pegar(mx, W); pegar(my, D);
+  const mx = ejes((a) => a.x, (a) => a.x + a.w, W);
+  const my = ejes((a) => a.y, (a) => a.y + a.h, D);
+  const g = (mapa, v) => mapa.get(r2(v)) ?? r2(v);
 
   return ambientes.map((a) => {
     const x0 = g(mx, a.x), x1 = g(mx, a.x + a.w);
     const y0 = g(my, a.y), y1 = g(my, a.y + a.h);
-    // un ambiente nunca se colapsa: si el ajuste lo dejaría sin ancho, se conserva el suyo
     return { ...a, x: x0, y: y0,
       w: x1 - x0 > 0.05 ? r2(x1 - x0) : a.w,
       h: y1 - y0 > 0.05 ? r2(y1 - y0) : a.h };
   });
+}
+
+/**
+ * Rellena los huecos que quedan dentro del sobre emitiéndolos como ambientes de circulación.
+ *
+ * Una tipología leída de una lámina casi nunca tesela su propio sobre: el lector rotula los
+ * cuartos y se saltea el hall, el pasadizo o el recibidor, que en el dibujo son el espacio
+ * entre medias. Sobre la planta completa eso fue 11% del piso en blanco, con unidades al 26%,
+ * y el hueco no está repartido como espesor de muro sino concentrado en un rincón.
+ *
+ * Dejarlo vacío rompe dos cosas: el dibujo muestra áreas residuales sin delimitar, y el grafo
+ * de muros no encuentra adyacencia a través del hueco, así que vanos.js no puede abrir la
+ * puerta que pasaría por ahí. Emitirlo como circulación es además lo más fiel a la lámina:
+ * ese espacio existe en la planta, solo que sin rótulo.
+ *
+ * Descompone los huecos en rectángulos máximos sobre la grilla que forman las propias
+ * coordenadas de los ambientes, así no inventa aristas nuevas.
+ */
+export function rellenarHuecos(ambientes = [], sobre = null, { minArea = 0.6 } = {}) {
+  const W = num(sobre?.ancho), D = num(sobre?.fondo);
+  if (!ambientes.length || !(W > 0) || !(D > 0)) return ambientes;
+
+  const ejes = (vals, limite) => {
+    const s = [...new Set([0, limite, ...vals.map(r2)])].filter((v) => v >= -1e-9 && v <= limite + 1e-9);
+    return s.sort((a, b) => a - b).filter((v, i, arr) => i === 0 || v - arr[i - 1] > 0.02);
+  };
+  const XS = ejes(ambientes.flatMap((a) => [a.x, a.x + a.w]), W);
+  const YS = ejes(ambientes.flatMap((a) => [a.y, a.y + a.h]), D);
+
+  // celdas libres de la grilla
+  const libre = [];
+  for (let i = 0; i < XS.length - 1; i++) {
+    libre[i] = [];
+    for (let j = 0; j < YS.length - 1; j++) {
+      const cx = (XS[i] + XS[i + 1]) / 2, cy = (YS[j] + YS[j + 1]) / 2;
+      libre[i][j] = !ambientes.some((a) => cx > a.x && cx < a.x + a.w && cy > a.y && cy < a.y + a.h);
+    }
+  }
+  // rectángulos máximos: se toma la celda libre de más abajo-izquierda y se crece
+  const nuevos = [];
+  for (let i = 0; i < XS.length - 1; i++) {
+    for (let j = 0; j < YS.length - 1; j++) {
+      if (!libre[i][j]) continue;
+      let hasta = j;
+      while (hasta + 1 < YS.length - 1 && libre[i][hasta + 1]) hasta++;
+      let ancho = i;
+      while (ancho + 1 < XS.length - 1) {
+        let todas = true;
+        for (let k = j; k <= hasta; k++) if (!libre[ancho + 1][k]) { todas = false; break; }
+        if (!todas) break;
+        ancho++;
+      }
+      for (let a = i; a <= ancho; a++) for (let k = j; k <= hasta; k++) libre[a][k] = false;
+      const x = XS[i], y = YS[j], w = r2(XS[ancho + 1] - x), h = r2(YS[hasta + 1] - y);
+      if (w * h >= minArea) nuevos.push({ nombre: "hall", tipo: "circulacion", x: r2(x), y: r2(y), w, h });
+    }
+  }
+  if (!nuevos.length) return ambientes;
+  // si hay más de uno se numeran, para que muros.js no los confunda entre sí
+  return [...ambientes, ...nuevos.map((n, k) => ({ ...n, nombre: nuevos.length > 1 ? `hall ${k + 1}` : "hall" }))];
 }

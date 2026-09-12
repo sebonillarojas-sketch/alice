@@ -5,7 +5,7 @@
 // primero, el generador solo como respaldo.
 //
 // Ver docs/investigacion/2026-09-10-finch3d-metodo.md
-import { calzar, cerrarJuntas } from "./calce.js";
+import { calzar, cerrarJuntas, rellenarHuecos } from "./calce.js";
 import ATLAS from "./atlas.json" with { type: "json" };
 
 // Por encima de esto la tipología elegida deja de ser la que se eligió, y conviene que la
@@ -73,7 +73,14 @@ export function resolverConAtlas({ units = [], footprint = [], atlas = ATLAS } =
     // cerrarJuntas: el atlas guarda el hueco del muro entre ambientes, pero ALICE deriva los
     // muros de las aristas compartidas. Sin esto no hay adyacencia, no hay puertas, y los
     // ambientes quedan encerrados.
-    for (const a of cerrarJuntas(mejor.adaptacion.ambientes, { ancho: s.ancho, fondo: s.fondo })) {
+    // rellenarHuecos: una tipología leída de una lámina casi nunca tesela su propio sobre
+    // —el lector rotula los cuartos y se saltea el hall— y ese hueco queda como área
+    // residual sin delimitar. Emitirlo como circulación lo cierra y además da la adyacencia
+    // que vanos.js necesita para abrir la puerta que pasaría por ahí.
+    const ambientes = rellenarHuecos(
+      cerrarJuntas(mejor.adaptacion.ambientes, { ancho: s.ancho, fondo: s.fondo }),
+      { ancho: s.ancho, fondo: s.fondo });
+    for (const a of ambientes) {
       rooms.push({
         id: `${unit.unitRef}:${a.nombre}`,
         name: a.nombre, tipo: a.tipo, unitRef: unit.unitRef,

@@ -58,7 +58,7 @@ export function generarPuertas(rooms) {
 // motor ya no es la autoridad sobre dónde va una puerta: emitirlas acá deja DOS verdades
 // distintas sobre el mismo vano, una puesta por el amoblador y otra derivada del muro.
 // El mobiliario, en cambio, sigue siendo suyo.
-export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true, resolver = true } = {}) {
+export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true, resolver = true, vanos = [] } = {}) {
   if (!rooms?.length) return [];
   const items = [];
   const E = 0.35;
@@ -109,7 +109,7 @@ export function amoblarDesdeLayout(rooms, W, D, nse = "C", { aberturas = true, r
   // Las reglas de colocación asumen ambientes de tamaño típico. Con ambientes deformados
   // —los que salen del atlas al adaptarlos a un sobre real— esas distancias chocan: 23
   // pares superpuestos de 115 muebles en la primera corrida de la cadena completa.
-  return resolver ? resolverSuperposiciones(salida, rooms).items : salida;
+  return resolver ? resolverSuperposiciones(salida, rooms, { obstaculos: zonasDePaso(vanos) }).items : salida;
 }
 
 // ── amueblado por ambiente (holguras reales) ───────────────
@@ -541,9 +541,13 @@ const _solape = (a, b) => {
  * Corre o descarta los muebles que se pisan. Puro: no muta la lista que recibe.
  * @returns {{ items, movidos, descartados }}
  */
-export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05 } = {}) {
+export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05, obstaculos = [] } = {}) {
   const out = items.map((t) => ({ ...t }));
-  const movidos = [], descartados = [];
+  // Los obstáculos son cajas INMÓVILES —las zonas de paso de las puertas— contra las que
+  // ningún mueble puede quedar. Se tratan como el mueble más esencial de todos: nada se
+  // mueve para acomodarlos, todo se mueve para dejarlos libres.
+  const bloqueado = (c) => obstaculos.some((o) => _solape(c, o));
+  const movidos = [], descartados = [], estorban = [];
   // caja del ambiente que contiene a cada mueble, para no sacarlo de su cuarto al correrlo
   const cajaAmbiente = (t) => {
     for (const r of rooms) {
@@ -567,8 +571,44 @@ export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05
     }
   }
 
-  // después: los pares que se pisan. Se mueve SIEMPRE el menos esencial.
+  // antes de los pares: lo que nació encima de una puerta. El amoblador coloca sin saber
+  // dónde van los vanos —se calculan después, del grafo de muros— así que sin esto quedan
+  // camas y sofás tapando el paso.
   const fuera = new Set();
+  if (obstaculos.length) {
+    for (let i = 0; i < out.length; i++) {
+      const t = out[i]; const c = _caja(t);
+      if (!bloqueado(c)) continue;
+      // Un aparato sanitario o una cama NO se corre porque una puerta abre cerca: está
+      // donde está por las instalaciones o porque es el único muro que lo admite. Lo que
+      // se mueve en ese caso es la puerta, y eso es decisión de quien edita el plano.
+      // Moverlos igual sacaba las duchas de 13 baños a 6.
+      if (prioridadDe(t.ref) <= 4) {
+        estorban.push({ ref: t.ref, motivo: "queda sobre el paso de una puerta, pero es un aparato fijo: mové la puerta, no el mueble" });
+        continue;
+      }
+      const amb = cajaAmbiente(t);
+      const cand = [];
+      if (amb) {
+        for (const ex of [amb.x0 + c.w / 2 + holgura, amb.x1 - c.w / 2 - holgura])
+          for (const ey of [amb.y0 + c.h / 2 + holgura, amb.y1 - c.h / 2 - holgura]) cand.push({ x: ex, y: ey });
+      }
+      const libre = cand.find((p) => {
+        const nc = { x0: p.x - c.w / 2, y0: p.y - c.h / 2, x1: p.x + c.w / 2, y1: p.y + c.h / 2 };
+        if (bloqueado(nc)) return false;
+        return !out.some((o, k) => k !== i && !fuera.has(k) && _solape(nc, _caja(o)));
+      });
+      if (libre) {
+        t.x = Math.round(libre.x * 100) / 100; t.y = Math.round(libre.y * 100) / 100;
+        movidos.push({ ref: t.ref, motivo: "tapaba el paso de una puerta" });
+      } else {
+        // NO se descarta: un dormitorio sin cama es peor que una cama cerca de la puerta.
+        // Descartar acá sacaba 32 muebles de 115. Se deja y se reporta para que alguien
+        // decida — casi siempre significa que el ambiente es chico para su programa.
+        estorban.push({ ref: t.ref, motivo: "queda sobre el paso de una puerta y el ambiente no tiene otro lugar" });
+      }
+    }
+  }
   for (let i = 0; i < out.length; i++) {
     for (let j = i + 1; j < out.length; j++) {
       if (fuera.has(i) || fuera.has(j)) continue;
@@ -598,6 +638,7 @@ export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05
         if (amb && (p.x - cs.w / 2 < amb.x0 - 1e-6 || p.x + cs.w / 2 > amb.x1 + 1e-6
                  || p.y - cs.h / 2 < amb.y0 - 1e-6 || p.y + cs.h / 2 > amb.y1 + 1e-6)) return false;
         const nc = { x0: p.x - cs.w / 2, y0: p.y - cs.h / 2, x1: p.x + cs.w / 2, y1: p.y + cs.h / 2 };
+        if (bloqueado(nc)) return false;
         return !out.some((o, k) => k !== idxSuelto && !fuera.has(k) && _solape(nc, _caja(o)));
       };
       let ok = intentos.find(cabe);
@@ -624,6 +665,7 @@ export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05
         if (amb2 && (p.x - cfi.w / 2 < amb2.x0 - 1e-6 || p.x + cfi.w / 2 > amb2.x1 + 1e-6
                  || p.y - cfi.h / 2 < amb2.y0 - 1e-6 || p.y + cfi.h / 2 > amb2.y1 + 1e-6)) return false;
         const nc = { x0: p.x - cfi.w / 2, y0: p.y - cfi.h / 2, x1: p.x + cfi.w / 2, y1: p.y + cfi.h / 2 };
+        if (bloqueado(nc)) return false;
         return !out.some((o, k) => k !== idxFijo && !fuera.has(k) && _solape(nc, _caja(o)));
       };
       const ok2 = alt.find(cabeFijo);
@@ -636,5 +678,29 @@ export function resolverSuperposiciones(items = [], rooms = [], { holgura = 0.05
       }
     }
   }
-  return { items: out.filter((_, k) => !fuera.has(k)), movidos, descartados };
+  return { items: out.filter((_, k) => !fuera.has(k)), movidos, descartados, estorban };
+}
+
+/**
+ * Zona de paso de cada vano: la franja que hay que dejar libre para poder cruzarlo.
+ *
+ * Se extiende a los dos lados del muro, porque una puerta se cruza desde ambos ambientes.
+ * 0.45 m de fondo es el paso de una persona de costado. Con 0.60 la franja se comía tanto
+ * suelo que el resolvedor no encontraba dónde poner nada: 32 muebles de 115 sin lugar.
+ *
+ * @param vanos  los de construirVanos, ya resueltos con resolverVano (necesitan p1/p2)
+ */
+export function zonasDePaso(vanos = [], fondo = 0.45) {
+  const out = [];
+  for (const v of vanos) {
+    const g = v?.geom || v;                       // acepta el vano ya resuelto o con .geom
+    if (!g?.p1 || !g?.p2) continue;
+    if (v.tipo === "ventana") continue;           // una ventana no se cruza
+    const x0 = Math.min(g.p1.x, g.p2.x), x1 = Math.max(g.p1.x, g.p2.x);
+    const y0 = Math.min(g.p1.y, g.p2.y), y1 = Math.max(g.p1.y, g.p2.y);
+    // el vano es un segmento: se engorda perpendicular a su eje
+    if (x1 - x0 >= y1 - y0) out.push({ x0, x1, y0: y0 - fondo, y1: y1 + fondo });
+    else out.push({ x0: x0 - fondo, x1: x1 + fondo, y0, y1 });
+  }
+  return out;
 }
