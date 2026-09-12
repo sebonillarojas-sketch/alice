@@ -389,3 +389,103 @@ export function resolverVano(vano, muro) {
     recortado: Math.abs(t - vano.t) > 1e-9,
   };
 }
+
+// ── Ajuste de vanos contra el mobiliario y contra otros vanos ─────────────────────
+// La colocación por conectividad pone cada puerta centrada en su muro. Eso ignora dos
+// cosas que en un plano de verdad mandan: que el barrido no puede pisar un mueble, y que
+// dos puertas no pueden barrer sobre el mismo suelo.
+//
+// Se corrige moviendo la PUERTA, no el mueble. Una cama o una ducha están donde están por
+// el muro que las admite o por las instalaciones; la puerta, en cambio, puede deslizarse a
+// lo largo de su muro sin que nada más cambie. Medido sobre una planta de 7 unidades: 25
+// barridos pisaban un mueble y 4 puertas se pisaban entre sí.
+
+const r2v = (n) => Math.round(n * 100) / 100;
+const cajaMueble = (t) => {
+  const rot = ((t.rot || 0) % 180 + 180) % 180, vert = rot > 45 && rot < 135;
+  const w = vert ? t.d : t.w, h = vert ? t.w : t.d;
+  return { x0: t.x - w / 2, y0: t.y - h / 2, x1: t.x + w / 2, y1: t.y + h / 2 };
+};
+const pisan = (a, b, tol = 0.06) =>
+  Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > tol && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > tol;
+
+/** Caja del barrido de una hoja: el cuadrado de lado = ancho, apoyado en el vano, hacia `lado`. */
+function cajaBarrido(muro, t, ancho, lado) {
+  const L = Math.hypot(muro.b.x - muro.a.x, muro.b.y - muro.a.y);
+  if (!(L > 0)) return null;
+  const ux = (muro.b.x - muro.a.x) / L, uy = (muro.b.y - muro.a.y) / L;
+  const nx = -uy * lado, ny = ux * lado, h = ancho / 2;
+  const p1 = { x: muro.a.x + ux * (t - h), y: muro.a.y + uy * (t - h) };
+  const p2 = { x: muro.a.x + ux * (t + h), y: muro.a.y + uy * (t + h) };
+  const xs = [p1.x, p2.x, p1.x + nx * ancho, p2.x + nx * ancho];
+  const ys = [p1.y, p2.y, p1.y + ny * ancho, p2.y + ny * ancho];
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+
+/**
+ * Desliza cada puerta a lo largo de su muro hasta que su barrido no pise ni un mueble ni el
+ * barrido de otra puerta. Elige además el lado de giro con menos estorbo.
+ *
+ * Las entradas de unidad se resuelven primero: son las que menos margen tienen para moverse
+ * y las que peor se ven mal puestas.
+ *
+ * @returns {{ vanos, movidos, sinLugar }} vanos con `t` ajustado y `lado` decidido
+ */
+export function ajustarVanos(vanos = [], muros = [], items = [], { paso = 0.08, margen = 0.15 } = {}) {
+  const porId = new Map(muros.map((m) => [m.id, m]));
+  const cajasMuebles = items.map(cajaMueble);
+  const out = vanos.map((v) => ({ ...v }));
+  const movidos = [], sinLugar = [];
+  const yaPuestas = [];   // barridos ya fijados, que las siguientes tienen que respetar
+
+  const orden = [...out.keys()].sort((i, j) => {
+    const pri = (v) => (porId.get(v.muroId)?.clase === "a_corredor" ? 0 : 1);
+    return pri(out[i]) - pri(out[j]);
+  });
+
+  for (const idx of orden) {
+    const v = out[idx];
+    if (v.tipo === "ventana") continue;
+    const muro = porId.get(v.muroId);
+    if (!muro) continue;
+    const L = muro.largo, h = v.ancho / 2;
+    const tMin = h + margen, tMax = L - h - margen;
+    if (tMax < tMin) continue;                       // el muro no da ni para centrarla
+
+    // candidatos: la posición actual primero, después alejándose de a poco a los dos lados
+    const cands = [v.t];
+    for (let d = paso; d <= L; d += paso) {
+      if (v.t + d <= tMax) cands.push(r2v(v.t + d));
+      if (v.t - d >= tMin) cands.push(r2v(v.t - d));
+    }
+    let puesto = null;
+    for (const t of cands) {
+      if (t < tMin - 1e-9 || t > tMax + 1e-9) continue;
+      for (const lado of [1, -1]) {
+        const b = cajaBarrido(muro, t, v.ancho, lado);
+        if (!b) continue;
+        if (cajasMuebles.some((c) => pisan(b, c))) continue;
+        if (yaPuestas.some((c) => pisan(b, c))) continue;
+        puesto = { t, lado, caja: b };
+        break;
+      }
+      if (puesto) break;
+    }
+    if (puesto) {
+      if (Math.abs(puesto.t - v.t) > 1e-6) {
+        movidos.push({ id: v.id, de: v.t, a: puesto.t, motivo: "su barrido pisaba un mueble u otra puerta" });
+      }
+      v.t = puesto.t; v.lado = puesto.lado;
+      yaPuestas.push(puesto.caja);
+    } else {
+      // se deja donde estaba, con el lado menos malo, y se reporta
+      const b1 = cajaBarrido(muro, v.t, v.ancho, 1), b2 = cajaBarrido(muro, v.t, v.ancho, -1);
+      const choques = (b) => b ? cajasMuebles.filter((c) => pisan(b, c)).length + yaPuestas.filter((c) => pisan(b, c)).length : 99;
+      v.lado = choques(b1) <= choques(b2) ? 1 : -1;
+      yaPuestas.push(cajaBarrido(muro, v.t, v.ancho, v.lado));
+      sinLugar.push({ id: v.id, entre: v.entre,
+        motivo: "no hay posición en este muro donde el barrido no pise algo: el ambiente está muy cargado" });
+    }
+  }
+  return { vanos: out, movidos, sinLugar };
+}

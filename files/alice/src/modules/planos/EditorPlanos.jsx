@@ -13,7 +13,7 @@ import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, amoblarDesdeLayout } from "./distribucion.js";
 import { construirMuros } from "./muros.js";
-import { construirVanos, resolverVano } from "./vanos.js";
+import { ajustarVanos, construirVanos, resolverVano } from "./vanos.js";
 import { resolverConAtlas } from "./atlas/resolver.js";
 import { muroEsVisible, grosorDeMuro, simboloDeVano } from "./muroDibujo.js";
 
@@ -1032,12 +1032,20 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     const murosDerivados = rooms.length ? construirMuros(rooms, ctxMuros).muros : [];
     const vanosDerivados = rooms.length ? construirVanos(murosDerivados, rooms, ctxMuros).vanos : [];
     const porMuro = new Map(murosDerivados.map((m) => [m.id, m]));
-    const vanosGeom = vanosDerivados
+    const conGeom = (lista) => lista
       .map((v) => ({ ...v, geom: resolverVano(v, porMuro.get(v.muroId)) })).filter((v) => v.geom);
+    // Dos pasadas, porque la dependencia es circular: los muebles se colocan esquivando las
+    // puertas provisorias (centradas en su muro), y después las puertas se deslizan por su
+    // muro hasta que ningún barrido pise un mueble ni el barrido de otra puerta. Se mueve la
+    // puerta y no el mueble: una cama o una ducha están donde el muro o las instalaciones las
+    // admiten; la puerta puede correrse sin que nada más cambie.
     const items = rooms.length
       ? amoblarDesdeLayout(rooms, Math.max(...xs), Math.max(...ys), architectureProgram.nse || "C",
-          { aberturas: false, vanos: vanosGeom })
+          { aberturas: false, vanos: conGeom(vanosDerivados) })
       : [];
+    const vanosFinales = rooms.length
+      ? ajustarVanos(vanosDerivados, murosDerivados, items).vanos : [];
+    const vanosGeom = conGeom(vanosFinales);
     // El lazo de dos niveles (spec §6.3): lo que no se arregla eligiendo otra tipología sube
     // a Cabida como diagnóstico del reparto. Un dormitorio sin fachada no tiene solución de
     // interior — ninguna tipología tiene ventanas donde no hay fachada.
