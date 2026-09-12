@@ -76,3 +76,31 @@ test("las ventanas no se tocan: no tienen barrido", () => {
   assert.equal(r.vanos[0].t, 2.5, "una ventana no se corre por un mueble");
   assert.deepEqual(r.movidos, []);
 });
+
+test("el barrido no cruza un muro: la hoja no abre dentro de otro cuarto", async () => {
+  const { barridoSaleDelAmbiente } = await import("../src/modules/planos/vanos.js");
+  const m = muro("m1", 0, 2, 3, 2);
+  const rooms = [
+    { id: "a", name: "sala", pts: [{ x: 0, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 5 }, { x: 0, y: 5 }] },
+    { id: "b", name: "pasillo", pts: [{ x: 0, y: 1.4 }, { x: 3, y: 1.4 }, { x: 3, y: 2 }, { x: 0, y: 2 }] },
+  ];
+  const v = { id: "v1", muroId: "m1", t: 1.5, ancho: 0.9, tipo: "puerta", entre: ["a", "b"] };
+  assert.equal(barridoSaleDelAmbiente(v, m, rooms, 1), false, "hacia la sala (3 m de fondo) entra");
+  assert.equal(barridoSaleDelAmbiente(v, m, rooms, -1), true, "hacia el pasillo de 0.6 m no entra");
+});
+
+test("construirFlujos: se atraviesa un ambiente de paso, no uno de destino", async () => {
+  const { construirFlujos } = await import("../src/modules/planos/vanos.js");
+  const rooms = [
+    { id: "hall", name: "hall", pts: [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: 2 }, { x: 0, y: 2 }] },
+    { id: "dorm", name: "dormitorio", pts: [{ x: 0, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 5 }, { x: 0, y: 5 }] },
+  ];
+  const muros = [muro("m1", 0, 0, 0, 2), muro("m2", 0, 2, 3, 2)];
+  const vanos = [
+    { id: "e", muroId: "m1", t: 1, ancho: 0.9, tipo: "puerta", entre: ["hall", null] },
+    { id: "d", muroId: "m2", t: 1.5, ancho: 0.8, tipo: "puerta", entre: ["hall", "dorm"] },
+  ];
+  const f = construirFlujos(rooms, vanos, muros);
+  assert.ok(f.some((x) => x.ambiente === "hall"), "el hall tiene dos puertas: se atraviesa");
+  assert.ok(!f.some((x) => x.ambiente === "dorm"), "el dormitorio tiene una: es destino, no se atraviesa");
+});

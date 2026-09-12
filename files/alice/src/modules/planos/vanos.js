@@ -226,6 +226,16 @@ export function construirVanos(muros = [], rooms = [], contexto = {}) {
     const mejorFallo = new Map(); // roomId sin puerta -> { ancho, largo, origen }
     while (cola.length) {
       const actual = cola.shift();
+      // Un ambiente de servicio —baño, clóset, lavandería, depósito— es SIEMPRE destino,
+      // nunca pasillo: no se atraviesa un baño para llegar a un dormitorio. Si el árbol lo
+      // usa de paso, esa unidad termina con un baño de tres puertas. Medido: pasaba en 3 de
+      // los 13 baños de una planta.
+      const esServicioTerminal = (id) => {
+        const r = roomsById.get(id);
+        return /ba[ñn]o|ss\.?hh|cl[oó]set|lavander|dep[oó]sito|ducha/i.test(r?.name || "");
+      };
+      if (actual !== roomEntrada && esServicioTerminal(actual)) continue;
+
       // orden de expansión por plausibilidad: si un ambiente se puede alcanzar por el
       // estar o por otro dormitorio, gana el estar.
       const porPreferencia = [...(vecinos.get(actual) || [])].sort((x, y) =>
@@ -431,7 +441,7 @@ function cajaBarrido(muro, t, ancho, lado) {
  *
  * @returns {{ vanos, movidos, sinLugar }} vanos con `t` ajustado y `lado` decidido
  */
-export function ajustarVanos(vanos = [], muros = [], items = [], { paso = 0.08, margen = 0.15 } = {}) {
+export function ajustarVanos(vanos = [], muros = [], items = [], { paso = 0.08, margen = 0.15, rooms = [] } = {}) {
   const porId = new Map(muros.map((m) => [m.id, m]));
   const cajasMuebles = items.map(cajaMueble);
   const out = vanos.map((v) => ({ ...v }));
@@ -464,6 +474,8 @@ export function ajustarVanos(vanos = [], muros = [], items = [], { paso = 0.08, 
       for (const lado of [1, -1]) {
         const b = cajaBarrido(muro, t, v.ancho, lado);
         if (!b) continue;
+        // la hoja no puede cruzar un muro: una puerta no abre hacia adentro de otro cuarto
+        if (rooms.length && barridoSaleDelAmbiente({ ...v, t }, muro, rooms, lado)) continue;
         if (cajasMuebles.some((c) => pisan(b, c))) continue;
         if (yaPuestas.some((c) => pisan(b, c))) continue;
         puesto = { t, lado, caja: b };
@@ -488,4 +500,119 @@ export function ajustarVanos(vanos = [], muros = [], items = [], { paso = 0.08, 
     }
   }
   return { vanos: out, movidos, sinLugar };
+}
+
+// ── Flujos de circulación ────────────────────────────────────────────────────────
+// El recorrido que hace una persona dentro de la unidad: de la entrada a cada ambiente,
+// cruzando las puertas. No se dibuja —es una planta, no un diagrama— pero OCUPA: un mueble
+// puesto encima de un flujo es un mueble que hay que esquivar para vivir ahí.
+//
+// Es lo que faltaba para que el mobiliario dejara de colocarse "al azar": respetar las
+// puertas evita el choque obvio, pero no evita el sillón plantado justo en el paso entre
+// la entrada y el dormitorio.
+
+const centro = (pts) => {
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+};
+
+/**
+ * Los tramos de circulación: por dónde se ATRAVIESA, no por dónde se entra.
+ *
+ * Un ambiente con dos o más puertas es de paso, y el flujo va de puerta a puerta: el hall,
+ * el pasillo, la sala que distribuye. Un ambiente con una sola puerta es DESTINO —el
+ * dormitorio, el baño— y ahí no hay circulación que proteger más allá del propio vano, que
+ * ya cubre la zona de paso.
+ *
+ * La primera versión iba de cada puerta al centro de cada ambiente y marcaba 52 muebles de
+ * 121 sobre un flujo: en un dormitorio de 3 m la cama está justo entre la puerta y el
+ * centro, y eso no es un defecto sino cómo se amuebla un dormitorio.
+ *
+ * @param ancho  ancho libre de paso (m). 0.80 es el de una persona con algo en la mano.
+ * @returns [{ a, b, ancho, entre }]
+ */
+export function construirFlujos(rooms = [], vanos = [], muros = [], { ancho = 0.8 } = {}) {
+  const porId = new Map(muros.map((m) => [m.id, m]));
+  const puertas = vanos.filter((v) => v.tipo !== "ventana");
+  // puertas que tocan cada ambiente, con su punto en el muro
+  const porAmbiente = new Map();
+  for (const v of puertas) {
+    const g = resolverVano(v, porId.get(v.muroId));
+    if (!g) continue;
+    for (const id of v.entre || []) {
+      if (!id) continue;
+      if (!porAmbiente.has(id)) porAmbiente.set(id, []);
+      porAmbiente.get(id).push({ id: v.id, punto: g.centro });
+    }
+  }
+  const tramos = [];
+  for (const [roomId, ps] of porAmbiente) {
+    if (ps.length < 2) continue;                    // ambiente destino: no se atraviesa
+    for (let i = 0; i < ps.length; i++) {
+      for (let j = i + 1; j < ps.length; j++) {
+        tramos.push({ a: { ...ps[i].punto }, b: { ...ps[j].punto }, ancho,
+                      entre: [ps[i].id, ps[j].id], ambiente: roomId });
+      }
+    }
+  }
+  return tramos;
+}
+
+/**
+ * Cajas de los flujos, para usarlos como obstáculo del mobiliario.
+ *
+ * El recorrido se descompone en dos tramos en ÁNGULO RECTO, que es como se camina en una
+ * planta rectilínea: primero en una dirección, después en la otra. Usar la caja envolvente
+ * del segmento en diagonal cubría el ambiente entero y marcaba medio mobiliario como
+ * estorbo — 51 muebles de 121, la mayoría aparatos de baño que no estorban nada.
+ */
+export function cajasDeFlujo(flujos = [], { recorte = 0.5 } = {}) {
+  const out = [];
+  for (const f0 of flujos) {
+    const h = f0.ancho / 2;
+    // Los extremos del tramo caen sobre las puertas, y ese suelo ya lo protege zonasDePaso.
+    // Sin recortarlos el flujo se mete medio metro dentro del ambiente vecino y marca como
+    // estorbo a los aparatos de baño, que no estorban nada: se contaba dos veces.
+    const largo = Math.hypot(f0.b.x - f0.a.x, f0.b.y - f0.a.y);
+    if (largo <= recorte * 2 + 0.2) continue;      // tramo corto: es todo zona de puerta
+    const ux = (f0.b.x - f0.a.x) / largo, uy = (f0.b.y - f0.a.y) / largo;
+    const f = { ...f0,
+      a: { x: f0.a.x + ux * recorte, y: f0.a.y + uy * recorte },
+      b: { x: f0.b.x - ux * recorte, y: f0.b.y - uy * recorte } };
+    const dx = Math.abs(f.b.x - f.a.x), dy = Math.abs(f.b.y - f.a.y);
+    if (dx < 0.05 || dy < 0.05) {          // recto: un solo tramo
+      out.push({ x0: Math.min(f.a.x, f.b.x) - h, x1: Math.max(f.a.x, f.b.x) + h,
+                 y0: Math.min(f.a.y, f.b.y) - h, y1: Math.max(f.a.y, f.b.y) + h });
+      continue;
+    }
+    // en L: se gira por el eje MÁS LARGO primero, que es el recorrido natural
+    const codo = dx >= dy ? { x: f.b.x, y: f.a.y } : { x: f.a.x, y: f.b.y };
+    for (const [p, q] of [[f.a, codo], [codo, f.b]]) {
+      out.push({ x0: Math.min(p.x, q.x) - h, x1: Math.max(p.x, q.x) + h,
+                 y0: Math.min(p.y, q.y) - h, y1: Math.max(p.y, q.y) + h });
+    }
+  }
+  return out;
+}
+
+/**
+ * ¿El barrido de la puerta se sale de los ambientes que conecta? Una hoja que cruza un muro
+ * es un dibujo imposible: la puerta no puede abrir hacia adentro de otro cuarto.
+ */
+export function barridoSaleDelAmbiente(vano, muro, rooms = [], lado = 1) {
+  const g = resolverVano(vano, muro);
+  if (!g) return false;
+  const L = Math.hypot(muro.b.x - muro.a.x, muro.b.y - muro.a.y) || 1;
+  const nx = -(muro.b.y - muro.a.y) / L * lado, ny = (muro.b.x - muro.a.x) / L * lado;
+  // el ambiente hacia el que barre: el que contiene el punto justo del otro lado del vano
+  const sonda = { x: g.centro.x + nx * 0.12, y: g.centro.y + ny * 0.12 };
+  const dentro = (r, p) => {
+    const xs = r.pts.map((q) => q.x), ys = r.pts.map((q) => q.y);
+    return p.x >= Math.min(...xs) - 1e-6 && p.x <= Math.max(...xs) + 1e-6
+        && p.y >= Math.min(...ys) - 1e-6 && p.y <= Math.max(...ys) + 1e-6;
+  };
+  const destino = rooms.find((r) => r.pts?.length && dentro(r, sonda));
+  if (!destino) return true;                       // barre hacia la nada
+  // la punta de la hoja tiene que caer dentro de ese mismo ambiente
+  return !dentro(destino, { x: g.p1.x + nx * vano.ancho, y: g.p1.y + ny * vano.ancho });
 }

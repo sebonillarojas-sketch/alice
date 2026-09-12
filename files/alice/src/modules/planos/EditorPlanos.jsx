@@ -1044,7 +1044,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           { aberturas: false, vanos: conGeom(vanosDerivados) })
       : [];
     const vanosFinales = rooms.length
-      ? ajustarVanos(vanosDerivados, murosDerivados, items).vanos : [];
+      ? ajustarVanos(vanosDerivados, murosDerivados, items, { rooms }).vanos : [];
     const vanosGeom = conGeom(vanosFinales);
     // El lazo de dos niveles (spec §6.3): lo que no se arregla eligiendo otra tipología sube
     // a Cabida como diagnóstico del reparto. Un dormitorio sin fachada no tiene solución de
