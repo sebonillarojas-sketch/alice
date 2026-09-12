@@ -11,9 +11,10 @@ import {
 } from "./geometry.js";
 import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
-import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt } from "./distribucion.js";
+import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, amoblarDesdeLayout } from "./distribucion.js";
 import { construirMuros } from "./muros.js";
 import { construirVanos } from "./vanos.js";
+import { resolverConAtlas } from "./atlas/resolver.js";
 import { muroEsVisible, grosorDeMuro, simboloDeVano } from "./muroDibujo.js";
 
 // Repositorio de ambientes amueblados — se insertan sueltos en el lienzo (polígono + mobiliario).
@@ -977,28 +978,66 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     }
     return { rooms: generated.rooms, items: generated.items };
   };
-  const designAcceptedFloor = (source) => materializeUnitInteriors({
-    floor: acceptedFloorProposal.floor,
-    designUnit: (unit) => {
-      const unitProgram = { ...unit.program, nse: architectureProgram.nse };
-      return designWithTweedledum({
-        context: contextForUnit(source.id, unit),
-        brief: { ...brief, program: unitProgram },
-        planVersion: { id: source.id, layout: roomsALayout([{ id: unit.polygonId, name: unit.unitRef, tipo: "unidad", pts: unit.boundary }], { program: unitProgram }) },
-        designObjective: `complete residential interior for ${unit.unitRef}`,
+  // Las dos llamadas al agente, extraídas para que las use tanto el camino de siempre como
+  // el que resuelve con el atlas.
+  const designUnitConTweedledum = (source) => (unit) => {
+    const unitProgram = { ...unit.program, nse: architectureProgram.nse };
+    return designWithTweedledum({
+      context: contextForUnit(source.id, unit),
+      brief: { ...brief, program: unitProgram },
+      planVersion: { id: source.id, layout: roomsALayout([{ id: unit.polygonId, name: unit.unitRef, tipo: "unidad", pts: unit.boundary }], { program: unitProgram }) },
+      designObjective: `complete residential interior for ${unit.unitRef}`,
+    });
+  };
+  const reviseUnitConTweedledum = (source) => (unit, design, acceptedFindings) => {
+    const unitProgram = { ...unit.program, nse: architectureProgram.nse };
+    return reviseWithTweedledum({
+      context: contextForUnit(source.id, unit),
+      brief: { ...brief, program: unitProgram },
+      planVersion: { id: source.id, layout: design.layout },
+      acceptedFindings,
+      designObjective: `repair deterministic interior geometry for ${unit.unitRef}`,
+    });
+  };
+
+  // La biblioteca resuelve primero y el agente atiende solo lo que no cubre. Es el reparto
+  // que documentamos de Finch3D: su calidad no viene de que el agente razone mejor sobre
+  // geometría — viene de que no tiene que razonar, porque parte de plantas ya validadas.
+  // Lo que el atlas no puede resolver (ninguna tipología calza, o hay que deformarla más de
+  // 1.35x) baja a Tweedledum con el motivo, que además es un diagnóstico del reparto.
+  const designAcceptedFloorConAtlas = async (source) => {
+    const { units, lockedRooms } = splitAcceptedFloor(acceptedFloorProposal.floor);
+    const huella = designBoundary || footprint || [];
+    const { rooms: roomsAtlas, resultados } = resolverConAtlas({ units, footprint: huella });
+    const sinResolver = resultados.filter((r) => !r.ok).map((r) => r.unitRef);
+
+    let porAgente = null;
+    if (sinResolver.length) {
+      porAgente = await materializeUnitInteriors({
+        floor: { ...acceptedFloorProposal.floor,
+          polygons: acceptedFloorProposal.floor.polygons.filter(
+            (p) => p.role !== "unidad" || sinResolver.includes(p.unitRef)) },
+        designUnit: designUnitConTweedledum(source),
+        reviseUnit: reviseUnitConTweedledum(source),
       });
-    },
-    reviseUnit: (unit, design, acceptedFindings) => {
-      const unitProgram = { ...unit.program, nse: architectureProgram.nse };
-      return reviseWithTweedledum({
-        context: contextForUnit(source.id, unit),
-        brief: { ...brief, program: unitProgram },
-        planVersion: { id: source.id, layout: design.layout },
-        acceptedFindings,
-        designObjective: `repair deterministic interior geometry for ${unit.unitRef}`,
-      });
-    },
-  });
+    }
+    // los ambientes fijos (núcleo y circulación) los trae una sola de las dos ramas
+    const rooms = [...(porAgente ? porAgente.rooms : lockedRooms.map((r) => ({ ...r }))), ...roomsAtlas];
+    const xs = rooms.flatMap((r) => r.pts.map((q) => q.x));
+    const ys = rooms.flatMap((r) => r.pts.map((q) => q.y));
+    const items = rooms.length
+      ? amoblarDesdeLayout(rooms, Math.max(...xs), Math.max(...ys), architectureProgram.nse || "C", { aberturas: false })
+      : [];
+    return {
+      rooms, items,
+      unitResults: [
+        ...resultados.filter((r) => r.ok).map((r) => ({ unitRef: r.unitRef, ok: true, repaired: false, fuente: "atlas", calce: r })),
+        ...(porAgente?.unitResults || []).map((u) => ({ ...u, fuente: "tweedledum" })),
+      ],
+      atlas: resultados,
+    };
+  };
+
   const runDesign = async () => {
     if (architectureBusy) return;
     const readiness = architectureDesignReadiness({ rooms, boundary: designBoundary, areaTarget: brief.areaObjetivo });
@@ -1007,7 +1046,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     try {
       const { source, history } = ensureSourceVersion();
       if (acceptedFloorProposal?.floor) {
-        const resolvedFloor = await designAcceptedFloor(source);
+        const resolvedFloor = await designAcceptedFloorConAtlas(source);
         const proposal = createActivatedPlanVersion(history, {
           projectId: proyecto.id,
           parentVersionId: source.id,
@@ -1074,7 +1113,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
     try {
       const { source, history } = ensureSourceVersion();
       if (acceptedFloorProposal?.floor) {
-        const resolvedFloor = await designAcceptedFloor(source);
+        const resolvedFloor = await designAcceptedFloorConAtlas(source);
         const proposalSnapshot = { rooms: resolvedFloor.rooms, items: resolvedFloor.items };
         const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: proposalSnapshot });
         setArchitectureVersions(proposal.history);
