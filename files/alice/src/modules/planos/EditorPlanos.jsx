@@ -1008,7 +1008,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   const designAcceptedFloorConAtlas = async (source) => {
     const { units, lockedRooms } = splitAcceptedFloor(acceptedFloorProposal.floor);
     const huella = designBoundary || footprint || [];
-    const { rooms: roomsAtlas, resultados } = resolverConAtlas({ units, footprint: huella });
+    const { rooms: roomsAtlas, resultados } = resolverConAtlas({ units, footprint: huella, lockedRooms });
     const sinResolver = resultados.filter((r) => !r.ok).map((r) => r.unitRef);
 
     let porAgente = null;
