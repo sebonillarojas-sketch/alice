@@ -9,7 +9,7 @@
 // Ambas vistas leen y escriben el MISMO proyecto activo → nada se borra al saltar.
 import { useSyncExternalStore } from "react";
 import { db } from "../../lib/supabase.js";
-import { acceptFloorProposalRecord, appendFloorProposalRecord, discardFloorProposalRecord } from "./floorProposal.js";
+import { acceptFloorProposalRecord, appendFloorProposalRecord, discardFloorProposalRecord, registrarDiagnosticoVolumen } from "./floorProposal.js";
 
 const K_PROY = "hygge:cabidaProyectos";       // array de proyectos (sincronizado)
 const K_ACT = "hygge:cabidaProyectoActivo";   // id activo (local por dispositivo)
@@ -185,6 +185,15 @@ export const proyectosStore = {
   discardFloorProposal(id, proposalId, motivo = "") {
     commit(_proyectos.map((project) => (project.id === id
       ? { ...discardFloorProposalRecord(project, proposalId, motivo), updatedAt: now() }
+      : project)));
+  },
+
+  // El lazo de dos niveles: Planos resuelve los interiores, y lo que no se arregla eligiendo
+  // otra tipología —un dormitorio sin fachada, una unidad que no toca el corredor— sube acá
+  // como diagnóstico del reparto. Antes esos hallazgos morían en Planos.
+  registrarDiagnostico(id, proposalId, hallazgos = []) {
+    commit(_proyectos.map((project) => (project.id === id
+      ? { ...registrarDiagnosticoVolumen(project, proposalId, hallazgos), updatedAt: now() }
       : project)));
   },
 

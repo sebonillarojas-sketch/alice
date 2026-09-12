@@ -594,3 +594,77 @@ export function proposalToParti(proposal = {}) {
     stats: { uds: new Set(polygons.filter((item) => item.role === "unidad").map((item) => item.unitRef)).size },
   };
 }
+
+// ── El lazo de dos niveles (spec §6.3) ───────────────────────────────────────────
+// Cuando el interior no cierra, con frecuencia el problema NO es el interior sino el
+// reparto. Un dormitorio sin fachada en una unidad de crujía doble con un solo frente no
+// se arregla eligiendo otra tipología: ninguna tiene ventanas donde no hay fachada. Eso es
+// una decisión de volumen y tiene que volver a Cabida, que es donde se reparte el piso.
+//
+// Hasta ahora esos hallazgos se calculaban en Planos, se mostraban ahí, y morían ahí.
+
+const NIVEL_VOLUMEN = new Set([
+  "ambiente_sin_luz",        // no hay fachada que darle: falta frente o falta un patio
+  "unidad_sin_acceso",       // la unidad no toca el corredor
+  "entrada_por_dormitorio",  // ningún ambiente de estar llega al borde de acceso
+  "calce_deformado",         // ninguna tipología real entra sin estirarse
+  "sin_calce",               // no hay tipología para ese sobre con ese programa
+]);
+
+/** Qué le toca a Cabida y qué se queda en Planos. */
+export function separarPorNivel(hallazgos = []) {
+  const volumen = [], interior = [];
+  for (const h of hallazgos) (NIVEL_VOLUMEN.has(h.codigo) ? volumen : interior).push(h);
+  return { volumen, interior };
+}
+
+/**
+ * Agrupa los hallazgos de volumen por unidad y les pone la recomendación de reparto que
+ * corresponde — que es lo único accionable desde Cabida. Sin esto suben veinte líneas de
+ * "dormitorio 2 sin fachada" y nadie sabe qué hacer con ellas.
+ */
+export function diagnosticoDeVolumen(hallazgos = []) {
+  const { volumen } = separarPorNivel(hallazgos);
+  const porUnidad = new Map();
+  for (const h of volumen) {
+    const unidad = String(h.roomId || "").split(":")[0] || "piso";
+    const g = porUnidad.get(unidad) || { unidad, codigos: {}, ambientes: [] };
+    g.codigos[h.codigo] = (g.codigos[h.codigo] || 0) + 1;
+    const amb = String(h.roomId || "").split(":")[1];
+    if (amb && !g.ambientes.includes(amb)) g.ambientes.push(amb);
+    porUnidad.set(unidad, g);
+  }
+  return [...porUnidad.values()].map((g) => {
+    const sinLuz = g.codigos.ambiente_sin_luz || 0;
+    let recomendacion;
+    if (g.codigos.sin_calce || g.codigos.calce_deformado) {
+      recomendacion = "el sobre no corresponde a su programa: cambiá el ancho de la unidad o su tipo";
+    } else if (g.codigos.unidad_sin_acceso) {
+      recomendacion = "la unidad no toca el corredor: revisá la posición del núcleo o el trazado de circulación";
+    } else if (g.codigos.entrada_por_dormitorio) {
+      recomendacion = "ningún ambiente de estar llega al corredor: la unidad es muy angosta o está mal orientada";
+    } else if (sinLuz >= 3) {
+      recomendacion = `${sinLuz} ambientes sin fachada: la unidad es demasiado profunda para su frente — más ancho, o un patio`;
+    } else {
+      recomendacion = `${sinLuz} ambiente(s) sin fachada: considerá un patio de luz o más frente`;
+    }
+    return { unidad: g.unidad, total: Object.values(g.codigos).reduce((a, b) => a + b, 0),
+             codigos: g.codigos, ambientes: g.ambientes, recomendacion };
+  }).sort((a, b) => b.total - a.total);
+}
+
+/** Guarda el diagnóstico en la propuesta aceptada, para que Cabida lo muestre. */
+export function registrarDiagnosticoVolumen(project = {}, proposalId, hallazgos = [], { now = new Date().toISOString() } = {}) {
+  const cabida = project.cabida || {};
+  const proposals = Array.isArray(cabida.floorProposals) ? cabida.floorProposals : [];
+  const diagnostico = diagnosticoDeVolumen(hallazgos);
+  return {
+    ...project,
+    cabida: {
+      ...cabida,
+      floorProposals: proposals.map((item) => (item.id === proposalId
+        ? { ...clone(item), diagnosticoVolumen: diagnostico, diagnosticoAt: now }
+        : clone(item))),
+    },
+  };
+}

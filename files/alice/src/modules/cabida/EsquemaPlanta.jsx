@@ -604,6 +604,25 @@ export default function EsquemaPlanta({
                 )}
                 {sourceLabel && <span style={{ fontFamily: mono, fontSize: 9.5, color: C.soft }}>origen: {sourceLabel}</span>}
               </div>
+              {/* El lazo de dos niveles: lo que Planos no pudo resolver eligiendo otra
+                  tipología vuelve acá, que es donde se reparte el piso. */}
+              {displayedRecord?.diagnosticoVolumen?.length > 0 && (
+                <div style={{ fontFamily: mono, fontSize: 10.5, marginTop: 10, padding: "10px 12px",
+                              lineHeight: 1.55, background: C.paper, border: `1px solid ${C.line}`,
+                              borderLeft: `3px solid ${C.orange}` }}>
+                  <div style={{ fontWeight: 700, color: C.ink, marginBottom: 6 }}>
+                    El reparto tiene {displayedRecord.diagnosticoVolumen.reduce((a, d) => a + d.total, 0)} objeción(es) desde Planos
+                  </div>
+                  {displayedRecord.diagnosticoVolumen.map((d) => (
+                    <div key={d.unidad} style={{ marginBottom: 4, color: C.soft }}>
+                      <b style={{ color: C.ink }}>{d.unidad}</b> · {d.recomendacion}
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 7, color: C.soft, fontSize: 9.5 }}>
+                    Esto no se arregla en el editor: ninguna tipología tiene ventanas donde no hay fachada.
+                  </div>
+                </div>
+              )}
               {cayoAlRespaldo && (
                 <div style={{ fontFamily: mono, fontSize: 10.5, marginTop: 10, padding: "9px 11px", lineHeight: 1.55,
                   background: "#FFF6F0", border: `1px solid ${C.orange}`, borderRadius: 2, color: C.ink }}>

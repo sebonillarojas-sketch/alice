@@ -130,7 +130,7 @@ import {
 } from "./architecture.js";
 import ArchitectureReviewPanel from "./ArchitectureReviewPanel.jsx";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
-import { useProyectos } from "../cabida/proyectos.js";
+import { proyectosStore, useProyectos } from "../cabida/proyectos.js";
 import { clasificarBordes } from "../cabida/loteReal.js";
 import { proposalToParti } from "../cabida/floorProposal.js";
 
@@ -1038,8 +1038,22 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
       ? amoblarDesdeLayout(rooms, Math.max(...xs), Math.max(...ys), architectureProgram.nse || "C",
           { aberturas: false, vanos: vanosGeom })
       : [];
+    // El lazo de dos niveles (spec §6.3): lo que no se arregla eligiendo otra tipología sube
+    // a Cabida como diagnóstico del reparto. Un dormitorio sin fachada no tiene solución de
+    // interior — ninguna tipología tiene ventanas donde no hay fachada.
+    const hallazgosPiso = rooms.length
+      ? construirVanos(murosDerivados, rooms, ctxMuros).hallazgos
+      : [];
+    const sinCalce = resultados.filter((r) => !r.ok).map((r) => ({
+      codigo: /deformarlo/.test(r.motivo || "") ? "calce_deformado" : "sin_calce",
+      roomId: r.unitRef, mensaje: r.motivo,
+    }));
+    const paraCabida = [...hallazgosPiso, ...sinCalce];
+    if (acceptedFloorProposal?.id && paraCabida.length) {
+      proyectosStore.registrarDiagnostico(proyecto.id, acceptedFloorProposal.id, paraCabida);
+    }
     return {
-      rooms, items,
+      rooms, items, hallazgos: paraCabida,
       unitResults: [
         ...resultados.filter((r) => r.ok).map((r) => ({ unitRef: r.unitRef, ok: true, repaired: false, fuente: "atlas", calce: r })),
         ...(porAgente?.unitResults || []).map((u) => ({ ...u, fuente: "tweedledum" })),
