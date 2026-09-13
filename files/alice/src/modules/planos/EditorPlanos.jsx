@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, Comp
 import {
   MousePointer2, PenLine, Trash2, Undo2, Redo2, Download,
   Magnet, Ruler, Maximize2, Plus, RotateCw, X,
-  Upload, Crosshair, RefreshCw, Box, GitBranch, StickyNote,
+  Upload, Crosshair, RefreshCw, Box, GitBranch, StickyNote, Layers,
 } from "lucide-react";
 import {
   GRID, snapPt, ortho, dist, area, centroid, perimeter,
@@ -13,7 +13,7 @@ import { CATALOGO, porId, CATS } from "./mobiliario.js";
 import { Simbolo } from "./simbolos.jsx";
 import { amoblarDorm, amoblarBano, amoblarCocina, amoblarSocial, it as furnIt, amoblarDesdeLayout } from "./distribucion.js";
 import { construirMuros } from "./muros.js";
-import { ajustarVanos, construirVanos, resolverVano } from "./vanos.js";
+import { ajustarVanos, cajasDeFlujo, construirFlujos, construirVanos, resolverVano } from "./vanos.js";
 import { resolverConAtlas } from "./atlas/resolver.js";
 import { muroEsVisible, grosorDeMuro, simboloDeVano } from "./muroDibujo.js";
 
@@ -905,6 +905,31 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
   // errores de diseño que antes se dibujaban callados. Calcularlos y no mostrarlos sería
   // dejarlos invisibles, así que van a la barra de estado, desplegables.
   const [verHallazgos, setVerHallazgos] = useState(false);
+
+  // Modo de dibujo. "técnico" es el plano de siempre: relleno por zona y jerarquía de línea.
+  // "esquemático" es el lenguaje comercial de Cabida — el color de tipología manda y todo el
+  // interior baja a gris, como información secundaria.
+  const [modo, setModo] = useState("tecnico");
+  const [capas, setCapas] = useState({ divisiones: true, puertas: true, ventanas: true, muebles: true, flujos: false });
+  const esq = modo === "esquematico";
+  const toggleCapa = (k) => setCapas((c) => ({ ...c, [k]: !c[k] }));
+
+  // programa de cada unidad, para pintar por tipología en modo esquemático
+  const tipoDeUnidad = useMemo(() => {
+    const m = new Map();
+    for (const p of acceptedFloorProposal?.floor?.polygons || []) {
+      if (p.role === "unidad" && p.unitRef) m.set(p.unitRef, `${p.unitProgram?.dormitorios ?? "?"}D`);
+    }
+    return m;
+  }, [acceptedFloorProposal]);
+  const TIPO_COLOR = { "1D": "#D8E0F7", "2D": "#95ABE8", "3D": "#F7936F" };
+  const GRIS_ESQ = "#8E8B85";
+
+  // Flujos: por dónde se atraviesa cada ambiente. No se dibujan en una planta de verdad
+  // —por eso la capa arranca apagada— pero sirven para verificar la circulación.
+  const flujos = useMemo(() => (capas.flujos && rooms.length
+    ? construirFlujos(rooms, estructura.vanos, estructura.muros) : []),
+  [capas.flujos, rooms, estructura]);
   const architectureProgram = resolveArchitectureProgram(brief, rooms);
   const architectureBrief = { ...brief, program: architectureProgram };
 
@@ -1278,6 +1303,25 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           title="Tweedledum diseña · Tweedledee critica · las reglas determinísticas validan">
           <GitBranch size={13} /> architecture
         </Btn>
+        {/* Modo de dibujo y capas. El esquemático es el lenguaje comercial de Cabida —el
+            color de tipología manda y el interior baja a gris—; el técnico es el plano. */}
+        <Btn active={esq} onClick={() => setModo(esq ? "tecnico" : "esquematico")} disabled={!rooms.length}
+          title={esq ? "volver al plano técnico: relleno por zona y jerarquía de línea"
+                     : "esquemático: color por tipología, interior en gris"}>
+          <Layers size={13} /> {esq ? "esquemático" : "técnico"}
+        </Btn>
+        {rooms.length > 0 && (
+          <div style={{ display: "flex", gap: 3, alignItems: "center", padding: "0 2px" }}>
+            {[["divisiones", "div"], ["puertas", "puer"], ["ventanas", "vent"], ["muebles", "mueb"], ["flujos", "flujo"]].map(([k, corto]) => (
+              <button key={k} onClick={() => toggleCapa(k)} title={k}
+                style={{ fontFamily: mono, fontSize: 9.5, padding: "3px 6px", borderRadius: 2, cursor: "pointer",
+                  border: `1px solid ${capas[k] ? C.ink : C.line}`,
+                  background: capas[k] ? C.ink : C.card, color: capas[k] ? C.card : C.soft }}>
+                {corto}
+              </button>
+            ))}
+          </div>
+        )}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {selItem && <Btn onClick={rotateSel} title="Rotar 90° (R)"><RotateCw size={13} /></Btn>}
           {selId && !selItem && isRoomEditable(sel) && (
@@ -1446,7 +1490,8 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             const terraza = r.tipo === "terraza"; // borde fino punteado, no es muro
             return (
               <polygon key={r.id} points={scr.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill={roomFill(r, i)} fillOpacity={selected ? 0.95 : 0.8}
+                fill={esq ? (r.unitRef ? (TIPO_COLOR[tipoDeUnidad.get(r.unitRef)] || "#E4E2DC") : roomFill(r, i)) : roomFill(r, i)}
+                fillOpacity={selected ? 0.95 : esq ? 1 : 0.8}
                 stroke={terraza ? C.ink : "none"} strokeWidth={terraza ? 1.2 : 0}
                 strokeDasharray={terraza ? "6 4" : undefined} strokeLinejoin="miter" />
             );
@@ -1457,10 +1502,16 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
               pared cruzando el corredor. Jerarquía de línea: grueso = perimetral/
               estructural, delgado = tabique (muroDibujo.js). */}
           <g pointerEvents="none">
-            {estructura.muros.filter(muroEsVisible).map((m) => {
+            {estructura.muros.filter(muroEsVisible).filter((m) => {
+              if (!esq) return true;
+              if (!capas.divisiones) return false;
+              // en esquemático los muros perimetrales ya los marca el borde del bloque
+              return !["fachada", "medianera", "entre_unidades", "fachada_patio"].includes(m.clase);
+            }).map((m) => {
               const A = toScreen(m.a), B = toScreen(m.b);
-              const grosorPx = Math.max(grosorDeMuro(m.clase, muro) * k, 1.2);
-              return <line key={m.id} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke={C.ink} strokeWidth={grosorPx} strokeLinecap="square" />;
+              const grosorPx = esq ? 1 : Math.max(grosorDeMuro(m.clase, muro) * k, 1.2);
+              return <line key={m.id} x1={A.x} y1={A.y} x2={B.x} y2={B.y}
+                stroke={esq ? GRIS_ESQ : C.ink} strokeWidth={grosorPx} strokeOpacity={esq ? 0.78 : 1} strokeLinecap="square" />;
             })}
           </g>
           {/* resalte del ambiente seleccionado (encima de los muros) */}
@@ -1472,7 +1523,7 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
           {/* vanos derivados (§9): interrupción del trazo del muro (el fondo blanco del
               símbolo la produce) + el símbolo de simbolos.jsx. Posición y ángulo salen
               SIEMPRE de resolverVano vía simboloDeVano — nunca se calculan acá. */}
-          {estructura.vanos.map((v) => {
+          {estructura.vanos.filter((v) => (v.tipo === "ventana" ? capas.ventanas : capas.puertas)).map((v) => {
             const m = murosById.get(v.muroId);
             if (!m) return null; // grafo inconsistente entre corridas — no debería pasar, pero no se cae
             const s = simboloDeVano(v, m, muro);
@@ -1481,8 +1532,24 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
             return <Simbolo key={v.id} it={{ ref: s.ref, w: s.w, d: s.d, rot: s.rot }} px={p.x} py={p.y} k={k} selected={false} />;
           })}
 
+          {/* flujos: el recorrido de puerta a puerta. Invisible por defecto. */}
+          {flujos.length > 0 && (
+            <g pointerEvents="none">
+              {cajasDeFlujo(flujos).map((c, i) => {
+                const a = toScreen({ x: c.x0, y: c.y1 }), b = toScreen({ x: c.x1, y: c.y0 });
+                return <rect key={`fq${i}`} x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)}
+                  width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} fill={C.peri} fillOpacity={0.16} />;
+              })}
+              {flujos.map((f, i) => {
+                const a = toScreen(f.a), b = toScreen(f.b);
+                return <line key={`fl${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                  stroke={C.peri} strokeWidth={1} strokeDasharray="4 3" strokeOpacity={0.7} />;
+              })}
+            </g>
+          )}
+
           {/* mobiliario */}
-          {muebles.map((t) => {
+          {(capas.muebles ? muebles : []).map((t) => {
             const s = toScreen({ x: t.x, y: t.y });
             return <Simbolo key={t.id} it={t} px={s.x} py={s.y} k={k} selected={t.id === selItem || inMulti("item", t.id)} />;
           })}
