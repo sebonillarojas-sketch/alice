@@ -1,0 +1,43 @@
+{
+  "id": "2026-09-10-u01",
+  "nombre": "1D/1B amplio, lote en cuña — chaflán frontal de avenidas oblicuas (72°) absorbido en una sala-comedor generosa con ventana de esquina real, terraza-pozo posterior de ancho completo, Magdalena del Mar/Lima Moderna (8.60×7.15, chaflán 2.80×2.20)",
+  "area_techada": 54.0,
+  "frente_m": 8.60,
+  "fondo_m": 7.15,
+  "ambientes": [
+    {"nombre": "dormitorio principal", "poligono": [[0.125,0.125],[3.825,0.125],[3.825,3.15],[0.125,3.15]], "zona": "intima", "luz": true},
+    {"nombre": "sala-comedor", "poligono": [[3.975,0.125],[5.757,0.125],[8.475,2.261],[8.475,3.15],[3.975,3.15]], "zona": "social", "luz": true},
+    {"nombre": "vestidor", "poligono": [[0.125,3.30],[1.875,3.30],[1.875,5.175],[0.125,5.175]], "zona": "servicio", "luz": false},
+    {"nombre": "baño 1", "poligono": [[2.025,3.30],[3.825,3.30],[3.825,5.175],[2.025,5.175]], "zona": "servicio", "luz": false},
+    {"nombre": "cocina", "poligono": [[3.975,3.30],[6.975,3.30],[6.975,5.175],[3.975,5.175]], "zona": "servicio", "luz": false},
+    {"nombre": "lavandería", "poligono": [[7.125,3.30],[8.475,3.30],[8.475,5.175],[7.125,5.175]], "zona": "servicio", "luz": false},
+    {"nombre": "terraza", "poligono": [[0.125,5.425],[8.475,5.425],[8.475,7.025],[0.125,7.025]], "zona": "social", "luz": false}
+  ],
+  "muros": [
+    {"a": [0,0], "b": [5.80,0], "espesor": 0.25, "portante": true},
+    {"a": [5.80,0], "b": [8.60,2.20], "espesor": 0.25, "portante": true},
+    {"a": [8.60,2.20], "b": [8.60,7.15], "espesor": 0.25, "portante": true},
+    {"a": [8.60,7.15], "b": [0,7.15], "espesor": 0.25, "portante": true},
+    {"a": [0,7.15], "b": [0,0], "espesor": 0.25, "portante": true},
+    {"a": [3.90,0], "b": [3.90,5.30], "espesor": 0.15, "portante": false},
+    {"a": [0,3.225], "b": [8.60,3.225], "espesor": 0.15, "portante": false},
+    {"a": [1.95,3.225], "b": [1.95,5.30], "espesor": 0.15, "portante": false},
+    {"a": [7.05,3.225], "b": [7.05,5.30], "espesor": 0.15, "portante": false},
+    {"a": [0,5.30], "b": [8.60,5.30], "espesor": 0.25, "portante": true}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "cocina", "ancho": 1.20},
+    {"de": "dormitorio principal", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "baño 1", "ancho": 0.70},
+    {"de": "cocina", "a": "lavandería", "ancho": 0.80},
+    {"de": "cocina", "a": "terraza", "ancho": 1.80}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 1.70, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 1.40, "alto": 1.30, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0,5.30], "b": [8.60,5.30]}
+}

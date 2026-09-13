@@ -1,0 +1,574 @@
+{
+  "id": "2026-08-25-u01",
+  "nombre": "1D/1B amplio, fachada única frente ancho, banda húmeda posterior + vestidor-buffer, terraza posterior ≥6 m como pozo, San Miguel/Lima Moderna",
+  "area_techada": 54.0,
+  "frente_m": 6.8,
+  "fondo_m": 8.0,
+  "ambientes": [
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [
+        [
+          0.125,
+          0.125
+        ],
+        [
+          3.275,
+          0.125
+        ],
+        [
+          3.275,
+          3.325
+        ],
+        [
+          0.125,
+          3.325
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "sala-comedor",
+      "poligono": [
+        [
+          3.35,
+          0.125
+        ],
+        [
+          6.675,
+          0.125
+        ],
+        [
+          6.675,
+          3.325
+        ],
+        [
+          3.35,
+          3.325
+        ]
+      ],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "vestidor",
+      "poligono": [
+        [
+          0.125,
+          3.475
+        ],
+        [
+          2.325,
+          3.475
+        ],
+        [
+          2.325,
+          5.875
+        ],
+        [
+          0.125,
+          5.875
+        ]
+      ],
+      "zona": "intima",
+      "luz": false
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [
+        [
+          2.325,
+          3.475
+        ],
+        [
+          4.3,
+          3.475
+        ],
+        [
+          4.3,
+          4.775
+        ],
+        [
+          2.325,
+          4.775
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavandería",
+      "poligono": [
+        [
+          2.325,
+          4.925
+        ],
+        [
+          4.3,
+          4.925
+        ],
+        [
+          4.3,
+          5.875
+        ],
+        [
+          2.325,
+          5.875
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "cocina",
+      "poligono": [
+        [
+          4.45,
+          3.475
+        ],
+        [
+          6.675,
+          3.475
+        ],
+        [
+          6.675,
+          5.875
+        ],
+        [
+          4.45,
+          5.875
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "terraza",
+      "poligono": [
+        [
+          0.125,
+          6.025
+        ],
+        [
+          6.675,
+          6.025
+        ],
+        [
+          6.675,
+          7.875
+        ],
+        [
+          0.125,
+          7.875
+        ]
+      ],
+      "zona": "social",
+      "luz": false
+    }
+  ],
+  "muros": [
+    {
+      "a": [
+        0.125,
+        0.125
+      ],
+      "b": [
+        3.275,
+        0.125
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.275,
+        0.125
+      ],
+      "b": [
+        3.275,
+        3.325
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.275,
+        3.325
+      ],
+      "b": [
+        0.125,
+        3.325
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.125,
+        3.325
+      ],
+      "b": [
+        0.125,
+        0.125
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.35,
+        0.125
+      ],
+      "b": [
+        6.675,
+        0.125
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.675,
+        0.125
+      ],
+      "b": [
+        6.675,
+        3.325
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.675,
+        3.325
+      ],
+      "b": [
+        3.35,
+        3.325
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.35,
+        3.325
+      ],
+      "b": [
+        3.35,
+        0.125
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.125,
+        3.475
+      ],
+      "b": [
+        2.325,
+        3.475
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        3.475
+      ],
+      "b": [
+        2.325,
+        5.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        5.875
+      ],
+      "b": [
+        0.125,
+        5.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.125,
+        5.875
+      ],
+      "b": [
+        0.125,
+        3.475
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        3.475
+      ],
+      "b": [
+        4.3,
+        3.475
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.3,
+        3.475
+      ],
+      "b": [
+        4.3,
+        4.775
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.3,
+        4.775
+      ],
+      "b": [
+        2.325,
+        4.775
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        4.775
+      ],
+      "b": [
+        2.325,
+        3.475
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        4.925
+      ],
+      "b": [
+        4.3,
+        4.925
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.3,
+        4.925
+      ],
+      "b": [
+        4.3,
+        5.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.3,
+        5.875
+      ],
+      "b": [
+        2.325,
+        5.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        5.875
+      ],
+      "b": [
+        2.325,
+        4.925
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.45,
+        3.475
+      ],
+      "b": [
+        6.675,
+        3.475
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.675,
+        3.475
+      ],
+      "b": [
+        6.675,
+        5.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.675,
+        5.875
+      ],
+      "b": [
+        4.45,
+        5.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.45,
+        5.875
+      ],
+      "b": [
+        4.45,
+        3.475
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.125,
+        6.025
+      ],
+      "b": [
+        6.675,
+        6.025
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.675,
+        6.025
+      ],
+      "b": [
+        6.675,
+        7.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.675,
+        7.875
+      ],
+      "b": [
+        0.125,
+        7.875
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.125,
+        7.875
+      ],
+      "b": [
+        0.125,
+        6.025
+      ],
+      "espesor": 0.15,
+      "portante": false
+    }
+  ],
+  "puertas": [
+    {
+      "de": "exterior",
+      "a": "sala-comedor",
+      "ancho": 0.9
+    },
+    {
+      "de": "sala-comedor",
+      "a": "dormitorio principal",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "baño 1",
+      "ancho": 0.7
+    },
+    {
+      "de": "dormitorio principal",
+      "a": "vestidor",
+      "ancho": 0.8
+    },
+    {
+      "de": "vestidor",
+      "a": "baño 1",
+      "ancho": 0.7
+    },
+    {
+      "de": "sala-comedor",
+      "a": "cocina",
+      "ancho": 1.2
+    },
+    {
+      "de": "cocina",
+      "a": "lavandería",
+      "ancho": 0.8
+    },
+    {
+      "de": "lavandería",
+      "a": "terraza",
+      "ancho": 0.8
+    }
+  ],
+  "ventanas": [
+    {
+      "ambiente": "dormitorio principal",
+      "ancho": 1.6,
+      "alto": 1.2,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 2.6,
+      "alto": 1.4,
+      "alfeizar": 1.0
+    }
+  ],
+  "muro_humedo": {
+    "a": [
+      4.375,
+      3.4
+    ],
+    "b": [
+      4.375,
+      5.95
+    ]
+  }
+}

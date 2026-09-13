@@ -1,0 +1,63 @@
+{
+  "id": "2026-08-17-u03",
+  "nombre": "3D/2B fachada única profunda, medianeros reales a línea de propiedad (zero-lot-line: cero ventanas laterales) — sala al frente, hall transversal reparte los 3 dormitorios contra un pozo posterior de 9.10 m (>6 m normativo), baño principal compartido junto al hall por restricción de muro húmedo",
+  "area_techada": 108.00,
+  "frente_m": 9.60,
+  "fondo_m": 13.80,
+  "ambientes": [
+    { "nombre": "terraza", "poligono": [[0.25,0.25],[1.85,0.25],[1.85,3.60],[0.25,3.60]], "zona": "social", "luz": false },
+    { "nombre": "sala-comedor", "poligono": [[2.00,0.25],[9.35,0.25],[9.35,3.60],[2.00,3.60]], "zona": "social", "luz": true },
+    { "nombre": "cocina", "poligono": [[0.25,3.75],[2.45,3.75],[2.45,6.00],[0.25,6.00]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[2.60,3.75],[3.60,3.75],[3.60,6.00],[2.60,6.00]], "zona": "servicio", "luz": false },
+    { "nombre": "baño 2", "poligono": [[3.75,3.75],[5.25,3.75],[5.25,6.00],[3.75,6.00]], "zona": "servicio", "luz": false },
+    { "nombre": "depósito", "poligono": [[5.40,3.75],[6.45,3.75],[6.45,6.00],[5.40,6.00]], "zona": "servicio", "luz": false },
+    { "nombre": "baño 1", "poligono": [[6.60,3.75],[8.10,3.75],[8.10,6.00],[6.60,6.00]], "zona": "servicio", "luz": false },
+    { "nombre": "pasillo", "poligono": [[8.25,3.75],[9.35,3.75],[9.35,6.00],[8.25,6.00]], "zona": "intima", "luz": false },
+    { "nombre": "hall", "poligono": [[0.25,6.15],[9.35,6.15],[9.35,7.05],[0.25,7.05]], "zona": "intima", "luz": false },
+    { "nombre": "dormitorio 2", "poligono": [[0.25,7.20],[2.65,7.20],[2.65,11.20],[0.25,11.20]], "zona": "intima", "luz": true },
+    { "nombre": "dormitorio 3", "poligono": [[2.80,7.20],[5.20,7.20],[5.20,11.20],[2.80,11.20]], "zona": "intima", "luz": true },
+    { "nombre": "vestidor", "poligono": [[5.35,7.20],[9.35,7.20],[9.35,8.30],[5.35,8.30]], "zona": "intima", "luz": false },
+    { "nombre": "dormitorio principal", "poligono": [[5.35,8.45],[9.35,8.45],[9.35,11.20],[5.35,11.20]], "zona": "intima", "luz": true }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [9.60,0], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,13.80], "espesor": 0.25, "portante": true},
+    {"a": [9.60,0], "b": [9.60,13.80], "espesor": 0.25, "portante": true},
+    {"a": [9.60,13.80], "b": [0,13.80], "espesor": 0.25, "portante": true},
+    {"a": [0,11.45], "b": [9.60,11.45], "espesor": 0.25, "portante": true},
+    {"a": [1.925,0.25], "b": [1.925,3.60], "espesor": 0.15, "portante": false},
+    {"a": [0.25,3.675], "b": [9.35,3.675], "espesor": 0.15, "portante": false},
+    {"a": [2.525,3.75], "b": [2.525,6.00], "espesor": 0.15, "portante": false},
+    {"a": [3.675,3.75], "b": [3.675,6.00], "espesor": 0.15, "portante": false},
+    {"a": [5.325,3.75], "b": [5.325,6.00], "espesor": 0.15, "portante": false},
+    {"a": [6.525,3.75], "b": [6.525,6.00], "espesor": 0.15, "portante": false},
+    {"a": [8.175,3.75], "b": [8.175,6.00], "espesor": 0.15, "portante": false},
+    {"a": [0.25,6.075], "b": [9.35,6.075], "espesor": 0.15, "portante": false},
+    {"a": [0.25,7.125], "b": [9.35,7.125], "espesor": 0.15, "portante": false},
+    {"a": [2.725,7.20], "b": [2.725,11.20], "espesor": 0.15, "portante": false},
+    {"a": [5.275,7.20], "b": [5.275,11.20], "espesor": 0.15, "portante": false},
+    {"a": [5.35,8.375], "b": [9.35,8.375], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "lavandería", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "pasillo", "ancho": 0.90},
+    {"de": "lavandería", "a": "cocina", "ancho": 0.80},
+    {"de": "lavandería", "a": "baño 2", "ancho": 0.70},
+    {"de": "baño 2", "a": "depósito", "ancho": 0.80},
+    {"de": "pasillo", "a": "baño 1", "ancho": 0.70},
+    {"de": "pasillo", "a": "hall", "ancho": 0.90},
+    {"de": "hall", "a": "dormitorio 2", "ancho": 0.80},
+    {"de": "hall", "a": "dormitorio 3", "ancho": 0.80},
+    {"de": "hall", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "dormitorio principal", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "sala-comedor", "ancho": 2.60, "alto": 1.50, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 2", "ancho": 1.60, "alto": 1.20, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 3", "ancho": 1.60, "alto": 1.20, "alfeizar": 1.00},
+    {"ambiente": "dormitorio principal", "ancho": 2.60, "alto": 1.40, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.25, 6.00], "b": [8.10, 6.00]}
+}

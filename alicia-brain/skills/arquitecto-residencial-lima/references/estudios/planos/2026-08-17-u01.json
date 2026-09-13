@@ -1,0 +1,43 @@
+{
+  "id": "2026-08-17-u01",
+  "nombre": "1D/1B lote pasante — doble frente real (calle Este/calle Oeste), sala-comedor y dormitorio principal en cada frente, banda húmeda intermedia con pasillo-espina y baño de doble acceso",
+  "area_techada": 53.32,
+  "frente_m": 6.20,
+  "fondo_m": 8.60,
+  "ambientes": [
+    { "nombre": "sala-comedor", "poligono": [[0.25,0.25],[4.375,0.25],[4.375,2.95],[0.25,2.95]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[4.525,0.25],[5.95,0.25],[5.95,2.95],[4.525,2.95]], "zona": "social", "luz": false },
+    { "nombre": "cocina", "poligono": [[0.25,3.10],[2.15,3.10],[2.15,5.30],[0.25,5.30]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[2.30,3.10],[3.35,3.10],[3.35,5.30],[2.30,5.30]], "zona": "servicio", "luz": false },
+    { "nombre": "pasillo", "poligono": [[3.50,3.10],[4.45,3.10],[4.45,5.30],[3.50,5.30]], "zona": "intima", "luz": false },
+    { "nombre": "baño 1", "poligono": [[4.60,3.10],[5.95,3.10],[5.95,5.30],[4.60,5.30]], "zona": "servicio", "luz": false },
+    { "nombre": "dormitorio principal", "poligono": [[0.25,5.45],[5.95,5.45],[5.95,8.35],[0.25,8.35]], "zona": "intima", "luz": true }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [6.20,0], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,8.60], "espesor": 0.25, "portante": true},
+    {"a": [6.20,0], "b": [6.20,8.60], "espesor": 0.25, "portante": true},
+    {"a": [0,8.60], "b": [6.20,8.60], "espesor": 0.25, "portante": true},
+    {"a": [0,3.025], "b": [6.20,3.025], "espesor": 0.15, "portante": false},
+    {"a": [0,5.375], "b": [6.20,5.375], "espesor": 0.15, "portante": false},
+    {"a": [4.45,0.25], "b": [4.45,2.95], "espesor": 0.15, "portante": false},
+    {"a": [2.225,3.10], "b": [2.225,5.30], "espesor": 0.15, "portante": false},
+    {"a": [3.425,3.10], "b": [3.425,5.30], "espesor": 0.15, "portante": false},
+    {"a": [4.525,3.10], "b": [4.525,5.30], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "cocina", "ancho": 1.20},
+    {"de": "cocina", "a": "lavandería", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "pasillo", "ancho": 0.85},
+    {"de": "pasillo", "a": "baño 1", "ancho": 0.75},
+    {"de": "pasillo", "a": "dormitorio principal", "ancho": 0.90},
+    {"de": "dormitorio principal", "a": "baño 1", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "sala-comedor", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio principal", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.25, 5.30], "b": [5.95, 5.30]}
+}

@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1058 660" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1058" height="660" fill="#fbfaf7"/>
+<text x="70" y="24" font-size="15" font-weight="bold" fill="#222">3D/2B fachada única de frente amplio, terraza al frente + taller/estudio profesional con puerta</text>
+<polygon points="77.5,281.5 605.5,281.5 605.5,77.5 77.5,77.5" fill="#fdf3d9" stroke="none"/>
+<text x="341.5" y="173.5" font-size="12" text-anchor="middle" fill="#111">sala-comedor</text>
+<text x="341.5" y="188.5" font-size="10.5" text-anchor="middle" fill="#555">29.92 m²</text>
+<polygon points="614.5,77.5 614.5,281.5 824.5,281.5 824.5,77.5" fill="#fdf3d9" stroke="none"/>
+<text x="719.5" y="173.5" font-size="12" text-anchor="middle" fill="#111">terraza</text>
+<text x="719.5" y="188.5" font-size="10.5" text-anchor="middle" fill="#555">11.90 m²</text>
+<polygon points="833.5,77.5 833.5,281.5 980.5,281.5 980.5,77.5" fill="#fdf3d9" stroke="none"/>
+<text x="907.0" y="173.5" font-size="12" text-anchor="middle" fill="#111">taller</text>
+<text x="907.0" y="188.5" font-size="10.5" text-anchor="middle" fill="#555">8.33 m²</text>
+<polygon points="203.5,290.5 77.5,290.5 77.5,542.5 203.5,542.5" fill="#e6e6e6" stroke="none"/>
+<text x="140.5" y="410.5" font-size="12" text-anchor="middle" fill="#111">cocina</text>
+<text x="140.5" y="425.5" font-size="10.5" text-anchor="middle" fill="#555">8.82 m²</text>
+<polygon points="212.5,353.5 980.5,353.5 980.5,290.5 212.5,290.5" fill="#fdf3d9" stroke="none"/>
+<text x="596.5" y="316.0" font-size="12" text-anchor="middle" fill="#111">hall</text>
+<text x="596.5" y="331.0" font-size="10.5" text-anchor="middle" fill="#555">13.44 m²</text>
+<polygon points="365.5,362.5 365.5,542.5 212.5,542.5 212.5,362.5" fill="#dceaf7" stroke="none"/>
+<text x="289.0" y="446.5" font-size="12" text-anchor="middle" fill="#111">dormitorio 2</text>
+<text x="289.0" y="461.5" font-size="10.5" text-anchor="middle" fill="#555">7.65 m²</text>
+<polygon points="455.5,362.5 455.5,542.5 374.5,542.5 374.5,362.5" fill="#e6e6e6" stroke="none"/>
+<text x="415.0" y="446.5" font-size="12" text-anchor="middle" fill="#111">baño 2</text>
+<text x="415.0" y="461.5" font-size="10.5" text-anchor="middle" fill="#555">4.05 m²</text>
+<polygon points="605.5,362.5 605.5,542.5 464.5,542.5 464.5,362.5" fill="#dceaf7" stroke="none"/>
+<text x="535.0" y="446.5" font-size="12" text-anchor="middle" fill="#111">dormitorio 3</text>
+<text x="535.0" y="461.5" font-size="10.5" text-anchor="middle" fill="#555">7.05 m²</text>
+<polygon points="809.5,362.5 809.5,542.5 614.5,542.5 614.5,362.5" fill="#dceaf7" stroke="none"/>
+<text x="712.0" y="446.5" font-size="12" text-anchor="middle" fill="#111">dormitorio principal</text>
+<text x="712.0" y="461.5" font-size="10.5" text-anchor="middle" fill="#555">9.75 m²</text>
+<polygon points="887.5,362.5 887.5,542.5 818.5,542.5 818.5,362.5" fill="#e6e6e6" stroke="none"/>
+<text x="853.0" y="446.5" font-size="12" text-anchor="middle" fill="#111">vestidor</text>
+<text x="853.0" y="461.5" font-size="10.5" text-anchor="middle" fill="#555">3.45 m²</text>
+<polygon points="980.5,362.5 980.5,542.5 896.5,542.5 896.5,362.5" fill="#e6e6e6" stroke="none"/>
+<text x="938.5" y="446.5" font-size="12" text-anchor="middle" fill="#111">baño principal</text>
+<text x="938.5" y="461.5" font-size="10.5" text-anchor="middle" fill="#555">4.20 m²</text>
+<line x1="70.0" y1="70.0" x2="70.0" y2="286.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="286.0" x2="70.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="208.0" y1="286.0" x2="208.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="208.0" y1="358.0" x2="208.0" y2="550.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="370.0" y1="358.0" x2="370.0" y2="550.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="460.0" y1="358.0" x2="460.0" y2="550.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="610.0" y1="70.0" x2="610.0" y2="286.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="610.0" y1="358.0" x2="610.0" y2="550.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="814.0" y1="358.0" x2="814.0" y2="550.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="892.0" y1="358.0" x2="892.0" y2="550.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="829.0" y1="70.0" x2="829.0" y2="286.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="988.0" y1="70.0" x2="988.0" y2="286.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="988.0" y1="286.0" x2="988.0" y2="358.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="988.0" y1="358.0" x2="988.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="70.0" x2="610.0" y2="70.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="610.0" y1="70.0" x2="829.0" y2="70.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="829.0" y1="70.0" x2="988.0" y2="70.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="286.0" x2="208.0" y2="286.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="208.0" y1="286.0" x2="610.0" y2="286.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="610.0" y1="286.0" x2="988.0" y2="286.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="208.0" y1="358.0" x2="370.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="370.0" y1="358.0" x2="460.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="460.0" y1="358.0" x2="610.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="610.0" y1="358.0" x2="814.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="814.0" y1="358.0" x2="892.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="892.0" y1="358.0" x2="988.0" y2="358.0" stroke="#555" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="70.0" y1="550.0" x2="208.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="208.0" y1="550.0" x2="370.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="370.0" y1="550.0" x2="460.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="460.0" y1="550.0" x2="610.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="610.0" y1="550.0" x2="814.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="814.0" y1="550.0" x2="892.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="892.0" y1="550.0" x2="988.0" y2="550.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="314.5" y1="77.5" x2="368.5" y2="77.5" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 314.5 77.5 A 54.0 54.0 0 0 1 314.5 131.5" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="314.5" y1="77.5" x2="314.5" y2="131.5" stroke="#b33" stroke-width="1.4"/>
+<line x1="877.0" y1="77.5" x2="937.0" y2="77.5" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 877.0 77.5 A 60.0 60.0 0 0 1 877.0 137.5" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="877.0" y1="77.5" x2="877.0" y2="137.5" stroke="#b33" stroke-width="1.4"/>
+<line x1="610.0" y1="125.5" x2="610.0" y2="233.5" stroke="#fbfaf7" stroke-width="7"/>
+<line x1="98.5" y1="286.0" x2="182.5" y2="286.0" stroke="#fbfaf7" stroke-width="7"/>
+<line x1="382.0" y1="286.0" x2="436.0" y2="286.0" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 382.0 286.0 L 382.0 340.0 A 54.0 54.0 0 0 1 436.0 286.0 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="265.0" y1="358.0" x2="313.0" y2="358.0" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 265.0 358.0 L 265.0 406.0 A 48.0 48.0 0 0 1 313.0 358.0 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="394.0" y1="358.0" x2="436.0" y2="358.0" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 394.0 358.0 L 394.0 400.0 A 42.0 42.0 0 0 1 436.0 358.0 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="511.0" y1="358.0" x2="559.0" y2="358.0" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 511.0 358.0 L 511.0 406.0 A 48.0 48.0 0 0 1 559.0 358.0 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="688.0" y1="358.0" x2="736.0" y2="358.0" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 688.0 358.0 L 688.0 406.0 A 48.0 48.0 0 0 1 736.0 358.0 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="814.0" y1="428.5" x2="814.0" y2="476.5" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 814.0 428.5 L 862.0 428.5 A 48.0 48.0 0 0 1 814.0 476.5 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="892.0" y1="431.5" x2="892.0" y2="473.5" stroke="#fbfaf7" stroke-width="7"/>
+<path d="M 892.0 431.5 L 934.0 431.5 A 42.0 42.0 0 0 1 892.0 473.5 Z" fill="none" stroke="#b33" stroke-width="1"/>
+<line x1="233.5" y1="77.5" x2="449.5" y2="77.5" stroke="#2b6cb0" stroke-width="4"/>
+<line x1="859.0" y1="77.5" x2="955.0" y2="77.5" stroke="#2b6cb0" stroke-width="4"/>
+<line x1="235.0" y1="542.5" x2="343.0" y2="542.5" stroke="#2b6cb0" stroke-width="4"/>
+<line x1="481.0" y1="542.5" x2="589.0" y2="542.5" stroke="#2b6cb0" stroke-width="4"/>
+<line x1="652.0" y1="542.5" x2="772.0" y2="542.5" stroke="#2b6cb0" stroke-width="4"/>
+<line x1="70.0" y1="550.0" x2="988.0" y2="550.0" stroke="#c0392b" stroke-width="2" stroke-dasharray="4,3" opacity="0.55"/>
+<line x1="70.0" y1="572.0" x2="988.0" y2="572.0" stroke="#888" stroke-width="0.8"/>
+<text x="529.0" y="586.0" font-size="11" text-anchor="middle" fill="#666">15.30 m</text>
+<line x1="1010.0" y1="70.0" x2="1010.0" y2="550.0" stroke="#888" stroke-width="0.8"/>
+<text x="1016.0" y="310.0" font-size="11" fill="#666">8.00 m</text>
+<text x="70" y="652" font-size="10" fill="#999">área techada 122.4 m² · 2026-09-04-u03</text>
+</svg>

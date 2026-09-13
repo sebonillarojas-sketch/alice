@@ -1,0 +1,46 @@
+# Día 5 — 2026-08-09 — Flexibilidad y desjerarquización (+ corrección de Sebastián sobre fachada, terraza y baños)
+
+## Corrección de Sebastián aplicada primero (paso 2b)
+
+Antes de estudiar el tema de hoy, se leyeron y aplicaron como criterio DURO las 3 correcciones pendientes (`correcciones/pendientes.md`, unidades 1D/2D/3D del día 3, con imágenes anotadas c2/c3/c4 revisadas):
+
+1. **Nunca ventana y puerta de ingreso juntas** en el mismo paño — generan una composición de fachada incongruente. Hoy: la puerta de ingreso vive en un ambiente sin ventana propia (terraza en 1D/2D) o en un extremo de la sala alejado varios metros de su propia ventana (3D), nunca a menos de una columna/eje de distancia de cualquier vano.
+2. **El frente nunca es muro ciego**: en las tres unidades de hoy, TODO lo que toca la fachada real es sala, dormitorio o terraza — nunca un tramo ciego de servicio.
+3. **La sala-comedor va al frente con la terraza como elemento de fachada** (no como muesca residual escondida): hoy la terraza es una pieza propia, generosa (4.3–7.9 m², nunca por debajo de 3 m²), lindando con la fachada real, con mampara amplia hacia la sala.
+4. **El dormitorio principal también gana el frente** cuando el parti lo permite (1D y 2D de hoy): recibe su propia ventana a la calle, no solo luz indirecta.
+5. **Baño que sirve de en-suite y de visita sin obligar a cruzar el dormitorio**: en 1D se resolvió con doble acceso (vestidor privado + terraza pública) hacia el mismo baño; en 2D, baño 2 se alcanza `exterior→terraza→baño 2`, cero cruce de dormitorio.
+6. **No cruzar la cocina para llegar a un baño de visita/servicio**: en 2D, baño 2 ya no depende de lavandería→baño 2 (que obligaba a atravesar cocina); ahora cuelga directo de la terraza. En 3D se agregó un baño de visita propio junto a la sala, sin pasar por cocina ni por el hall íntimo.
+7. **Cocina y lavandería pegadas siempre funciona** (regla de Sebastián): aplicada en las 3 unidades — cocina y lavandería comparten pared en las tres tipologías de hoy.
+8. **Estudiar bien qué hacen las terrazas** (nota de Sebastián en c4) — ver investigación abajo.
+
+## Qué estudié (tema 5 del currículo)
+
+- **"Planta de equivalencias" / mat-rooming (hgsearquitectos.com)**: en vivienda flexible desjerarquizada, las etiquetas "principal"/"secundaria" desaparecen; los ambientes comparten calidad constructiva, métrica, iluminación y potencial de uso, y es el ocupante quien decide el uso final. La Villa Buggenhout (Office KGDVS) lleva esto al extremo: una retícula de 9 habitaciones idénticas con 2+ puertas cada una, sin pasillo — ningún acceso es más relevante que otro.
+- **Flexible Housing (Jeremy Till, AWS/PDF)**: la estrategia práctica es un número de habitaciones de tamaño equivalente alrededor de un hall o eje de circulación central, con la cocina integrada en una de ellas o como pieza separada pequeña. Quitar la jerarquía de nombres (comedor/estar/dormitorio principal/dormitorio) convierte cada ambiente en una entidad independiente que el ocupante reinterpreta con el tiempo. El caso británico "The Adaptable House" (1962, Parker Morris Report) fue pionero en esto.
+- **Estudio cuantitativo de reconfiguración real (Springer, Journal of Housing and the Built Environment)**: plantas con 3–4 habitaciones de tamaño comparable y tabiques ligeros removibles se mantuvieron habitables y adaptables durante décadas en un edificio español de los años 30 (Casa de las Flores). Tener más de un acceso por unidad también facilita subdividir la vivienda en el futuro.
+- **Guía práctica de dimensionado flexible (mymodernhome.com)**: todo ambiente secundario pensado como "flex" (podría ser dormitorio, estudio, cuarto de niños) debe dimensionarse con el mínimo de un dormitorio real (≈3×3 m) y llevar ventana propia — no solo por confort, también porque en la mayoría de normas un dormitorio exige salida/ventilación al exterior, así que un ambiente sin ventana nunca podrá "ascender" a dormitorio.
+- **Qué hace realmente una terraza (investigación pedida por Sebastián)**: la literatura de balcones/terrazas (Buildings & Cities journal; Lumon; planeo.com) distingue terraza de balcón por tamaño y función — el balcón (1.2–1.5 m de fondo, 3.5–5 m² típico) es apenas suficiente para una mesa pequeña; la terraza, al ser a nivel de piso y más grande, admite reposo, comidas al aire libre y reuniones. El error de diseño más común (documentado en el estudio de Buildings & Cities) es tratar la terraza como un "añadido" de fachada en vez de una pieza integral del programa social — exactamente el error que Sebastián señaló en c2/c3/c4. Una terraza bien resuelta se conecta a la sala con una mampara amplia (no una puerta angosta) y tiene profundidad real (≥1.2–1.5 m mínimo, idealmente ≥2 m) para admitir mobiliario.
+
+## Ideas clave para la distribución en Lima
+
+1. La desjerarquización total (habitaciones idénticas sin nombre) no es el estándar de mercado limeño — el dataset de tipologias-lima.md muestra que compradores esperan "dormitorio principal" claramente diferenciado (con baño en suite) — pero el PRINCIPIO aplicable es dimensionar los dormitorios secundarios con margen suficiente para que funcionen como estudio/flex sin perder la etiqueta de dormitorio: ventana propia, ≥3 m de lado menor, puerta hacia zona común.
+2. Un ambiente "flex" sin ventana nunca es flexible de verdad: no puede convertirse en dormitorio porque no cumple RNE A.020 Art. 11 (iluminación/ventilación de habitables). La flexibilidad empieza por la ventana, no por el nombre en el JSON.
+3. Muros interiores ligeros (0.15 m, no portantes) entre dormitorios secundarios y zona social son los que en la práctica permiten remodelaciones futuras (tabique removible) — coherente con el estándar de espesores del skill (Paso 6): mientras más muros del bloque íntimo sean 0.15 no portante en vez de 0.25 portante, más margen de reconfiguración real tiene la unidad.
+4. La terraza no es un descuento del área techada ni una muesca decorativa: es programa social de pleno derecho. Dimensionarla con la misma disciplina que la sala (mampara ancha, profundidad para mobiliario, luz) es lo que la diferencia de un balcón residual.
+
+## Reglas accionables para la distribución en Lima
+
+1. Todo ambiente pensado como "flexible" (dormitorio secundario que podría ser estudio, o viceversa) debe llevar ventana propia y lado menor ≥ 3.00 m — sin eso no puede legalmente operar como dormitorio y la "flexibilidad" es solo nominal. — Fuente: [The Top Benefits of a Flexible House Plan](https://www.mymodernhome.com/blog/top-benefits-designing-flexible-house-plan-and-how-achieve-them); RNE A.020 Art. 11.
+2. Preferir tabiques de 0.15 m no portantes (en vez de portantes) en los muros que separan dormitorios secundarios de la zona social, cuando la estructura lo permita — es la decisión concreta que habilita reconfiguración futura sin obra mayor. — Fuente: [Adaptable housing? end-user rearrangement study](https://link.springer.com/article/10.1007/s10901-019-09693-9) (Casa de las Flores, Madrid).
+3. La terraza se dimensiona y conecta como pieza social de pleno derecho: mampara ancha (≥1.20 m, sin puerta angosta) hacia la sala, profundidad ≥1.5 m para admitir mobiliario, nunca como muesca residual en un vértice ajeno a la sala. — Fuente: [The use of apartment balconies](https://journal-buildingscities.org/articles/10.5334/bc.193) (Buildings & Cities journal); [Balcony facade design trends](https://lumon.com/int/professionals/insights/pro-blog/balcony-facade-design-trends-in-2024).
+4. Un baño que debe servir de en-suite Y de visita (o un baño que debe alcanzar 2+ dormitorios) se resuelve dándole un segundo acceso desde una pieza pública (terraza, hall corto, o sala directamente) — nunca obligando a cruzar la cocina ni el dormitorio ajeno para llegar a él. — Fuente: regla BAM (Sebastián, corrección c2/c3, 2026-08-09).
+
+Estas 4 reglas se agregan a `lecciones-distribucion.md`.
+
+## Las 3 tipologías de hoy (ejercicios independientes)
+
+- **u01 — 1D/1B amplio (52.80 m²)**, San Isidro/Surco: fachada de tres piezas (dormitorio principal | terraza | sala), terraza como distribuidor de entrada, baño con doble acceso (vestidor + terraza) que sirve de en-suite sin obligar a cruzar el dormitorio para uso de visita, cocina generosa (5.0 m²) y lavandería al fondo.
+- **u02 — 2D/2B esquina (69.60 m²)**, Surquillo/Jesús María: fachada de cuatro piezas (dormitorio 2 | sala | terraza | dormitorio principal — este último sobre la segunda fachada real, "a la derecha"), terraza como hub público que da baño 2 sin cruzar la cocina, cocina+lavandería pegadas, dormitorio principal con vestidor+baño en suite.
+- **u03 — 3D/3B fachada única profunda (91.84 m²)**, Pueblo Libre/La Molina: paquete frontal 100% social (sala+terraza, sin dormitorio), baño de visita propio junto a la sala, hall corto (único pasillo justificado) que reparte a los tres dormitorios y al baño compartido sin cruzar ningún dormitorio, los tres dormitorios atrás con ventilación real vía pozo lateral (dormitorio 3) y pozo posterior (principal + dormitorio 2).
+
+Los 3 JSON pasan `scripts/validator.py` sin errores. Planos en `planos/2026-08-09-u01.svg` / `u02.svg` / `u03.svg` (+ JSON correspondientes).
