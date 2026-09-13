@@ -34,7 +34,9 @@ test("los polígonos de ambiente ya no llevan trazo de contorno (solo relleno; t
 });
 
 test("los vanos derivados se dibujan con el símbolo existente, posicionado por resolverVano (vía simboloDeVano)", () => {
-  assert.match(ed, /estructura\.vanos\.map/);
+  // Puede haber un .filter() de capa en el medio. Lo que fija el test es la INTENCIÓN: que
+  // la lista de vanos salga de estructura.vanos y termine en un .map que los dibuja.
+  assert.match(ed, /estructura\.vanos[\s\S]{0,160}?\.map\(/);
   assert.match(ed, /simboloDeVano\(/);
   assert.match(ed, /<Simbolo[^>]*it=\{\{\s*ref: s\.ref/, "debe pasar el resultado de simboloDeVano directo al símbolo, sin recalcular la posición");
 });
