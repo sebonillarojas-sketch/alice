@@ -126,7 +126,7 @@ import { BamLogo } from "./marca.jsx";
 import { isRoomEditable, materializeInteriorLayout, materializeUnitInteriors, materializeWithOneRevision, planALayout, preserveLockedRooms, resolveArchitectureProgram, roomsALayout, splitAcceptedFloor } from "./materialize.js";
 import {
   applyPlanVersion, architectureDesignReadiness, buildArchitectureContext, createActivatedPlanVersion, createPlanVersion, critiqueWithTweedledee,
-  designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation,
+  designWithTweedledum, mapFindingLocation, reviseWithTweedledum, serializeValidation, unirValidacion,
 } from "./architecture.js";
 import ArchitectureReviewPanel from "./ArchitectureReviewPanel.jsx";
 import ProyectoTabs from "../cabida/ProyectoTabs.jsx";
@@ -1174,7 +1174,12 @@ function EditorPlanosInner({ proyecto, onSavePlano, navigate }) {
         const proposalSnapshot = { rooms: resolvedFloor.rooms, items: resolvedFloor.items };
         const proposal = createPlanVersion(history, { projectId: proyecto.id, parentVersionId: source.id, createdBy: "tweedledum", snapshot: proposalSnapshot });
         setArchitectureVersions(proposal.history);
-        const deterministicValidation = serializeValidation(validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null }));
+        // El crítico recibe TAMBIÉN lo que el grafo ya midió: sin esto gasta sus seis
+        // hallazgos repitiendo que un dormitorio no tiene fachada, que es justo lo que el
+        // motor detecta solo y gratis.
+        const deterministicValidation = unirValidacion(
+          serializeValidation(validarPlan({ rooms: proposalSnapshot.rooms, items: proposalSnapshot.items, limite: lote?.pts || footprint || null })),
+          resolvedFloor.hallazgos || []);
         const critiqueRaw = await critiqueWithTweedledee({
           context: contextForFloor(proposal.version.id),
           planVersion: { id: proposal.version.id, layout: planALayout(proposalSnapshot.rooms, proposalSnapshot.items, brief) },

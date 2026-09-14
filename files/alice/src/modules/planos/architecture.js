@@ -110,6 +110,50 @@ export function serializeValidation(value = {}) {
   return { ok: value.ok === true, total: findings.length, findings, messages: Array.isArray(value.mensajes) ? value.mensajes.map(String) : [] };
 }
 
+// Traduce los hallazgos del grafo de muros y vanos al mismo formato que la validación
+// determinística, para que Tweedledee los reciba como hechos ya establecidos.
+//
+// Sin esto el crítico mira la planta a ciegas de todo lo que el motor ya midió —qué
+// ambiente quedó sin fachada, por dónde se entra, qué mueble tapa una puerta— y gasta sus
+// seis hallazgos repitiendo lo que ya sabemos. El prompt es explícito en que la validación
+// determinística es autoridad sobre lo que enumera: pasarle esto le libera la crítica para
+// lo que sólo el juicio ve.
+const SEVERIDAD_HALLAZGO = {
+  ambiente_inaccesible: "critical",
+  unidad_sin_acceso: "critical",
+  ambiente_sin_luz: "major",
+  entrada_por_dormitorio: "major",
+  paso_entre_dormitorios: "major",
+  sin_muro_para_puerta: "minor",
+  ventana_no_cabe: "minor",
+};
+
+export function serializeHallazgos(hallazgos = []) {
+  return hallazgos.filter((h) => h && h.codigo).map((h) => ({
+    code: String(h.codigo),
+    severity: SEVERIDAD_HALLAZGO[h.codigo] || "minor",
+    targetType: "room",
+    targetId: String(h.roomId || ""),
+    message: String(h.mensaje || h.codigo),
+  }));
+}
+
+/** Une la validación de siempre con los hallazgos del grafo, sin duplicar códigos. */
+export function unirValidacion(validacion = {}, hallazgos = []) {
+  const extra = serializeHallazgos(hallazgos);
+  const vistos = new Set((validacion.findings || []).map((f) => `${f.code}:${f.targetId}`));
+  const findings = [...(validacion.findings || []),
+    ...extra.filter((f) => !vistos.has(`${f.code}:${f.targetId}`))];
+  return {
+    ...validacion,
+    ok: validacion.ok === true && extra.length === 0,
+    total: findings.length,
+    findings,
+    messages: [...(validacion.messages || []),
+      ...(extra.length ? [`${extra.length} hallazgo(s) del grafo de muros y vanos`] : [])],
+  };
+}
+
 export function mapFindingLocation(finding = {}, rooms = [], items = []) {
   const location = finding.location || {};
   const room = location.roomId ? rooms.find((entry) => entry.id === location.roomId) : null;
