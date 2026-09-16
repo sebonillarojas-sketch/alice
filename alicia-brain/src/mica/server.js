@@ -24,6 +24,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.static(PUBLIC));
 
 app.get("/", (_, res) => res.sendFile(join(PUBLIC, "mica.html")));
+app.get("/health", (_, res) => res.json({ ok: true, agente: "mica" }));
 
 app.get("/api/mica/estado", (_, res) => res.json({
   backend: process.env.ANTHROPIC_API_KEY ? "Anthropic SDK" : "Claude CLI",
@@ -44,5 +45,6 @@ app.post("/api/mica/chat", async (req, res) => {
   }
 });
 
-const PORT = process.env.MICA_PORT || 3010;
-app.listen(PORT, () => console.log(`🟠 Mica escuchando en http://localhost:${PORT}`));
+// Railway inyecta PORT y contra ese hace el healthcheck. MICA_PORT es solo para local.
+const PORT = process.env.PORT || process.env.MICA_PORT || 3010;
+app.listen(PORT, "0.0.0.0", () => console.log(`🟠 Mica escuchando en http://localhost:${PORT}`));
