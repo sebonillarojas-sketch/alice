@@ -57,7 +57,17 @@ await page.keyboard.press("Enter");
 await page.waitForTimeout(6000);
 
 const cuerpo1 = await page.textContent("body");
-check(/cabida/i.test(cuerpo1), "el módulo Cabida quedó en pantalla");
+// OJO: `/cabida/i` sobre el body ENTERO pasa aunque no haya navegación de verdad,
+// porque el usuario tipeó literalmente "abrime cabida" y ese texto se ecoa en la
+// burbuja del mensaje — y además TODAS las ramas de `navegar()` en manos.js
+// interpolan el id del módulo en su texto de vuelta, incluida la de "el módulo X
+// no existe". Un regex así pasa aunque erp_navigate esté roto. Por eso se
+// verifican dos cosas independientes: que el eco del mensaje tipeado (que sólo
+// existe mientras seguís en el space alicia) haya desaparecido, y que un texto
+// que SÓLO vive adentro de CabidaView (el título de una de sus cards) esté en
+// pantalla — ninguna de las dos depende de lo que el usuario escribió.
+check(!/abrime cabida/i.test(cuerpo1), "salimos del space alicia: el eco del mensaje tipeado ya no está en pantalla");
+check(/terreno y normativa/i.test(cuerpo1), "el módulo Cabida realmente montó (título de card que sólo existe en CabidaView)");
 
 // erp_navigate cambió de space: la conversación de AliciaView (ancho="full")
 // se desmontó con él, y con ella el "El browser contestó…" del done — el dock

@@ -144,6 +144,12 @@ http.createServer(async (req, res) => {
       return res.end();
     }
     // Cualquier turno más allá del 4: eco simple, para no colgar humos que pidan más.
+    // Si llegamos hasta acá es porque el mensaje no matcheó ningún guion de manos
+    // NI cayó en 1-4: un desfasaje de texto entre este archivo y quien lo llama
+    // (humo-manos.mjs u otro) no produce un verde falso —las aserciones de manos
+    // fallan igual, buscando frames que nunca van a llegar—, pero sin este aviso
+    // el diagnóstico es "¿por qué falló?" en vez de "ah, el texto no matcheó".
+    if (turno > 4) console.warn(`[cerebro-falso] mensaje sin guion conocido en turno ${turno}: ${JSON.stringify(mensaje)}`);
     send("done", { text: "eco", actions: [] });
     return res.end();
   }
