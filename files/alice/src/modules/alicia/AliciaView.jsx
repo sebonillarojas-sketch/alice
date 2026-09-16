@@ -14,6 +14,7 @@ import {
 
 import { ALICIA_URL } from "../../lib/brain.js";
 import { useCopiloto } from "../../copilot/CopilotoProvider.jsx";
+import AliciaAvatar from "../../copilot/AliciaAvatar.jsx";
 import Conversacion from "../../copilot/Conversacion.jsx";
 import PanelContexto from "../../copilot/PanelContexto.jsx";
 import { saveChat } from "../../copilot/historial.js";
@@ -290,58 +291,9 @@ const C = {
 // `Avatar` (el redondel con las iniciales del usuario) se fue con las burbujas:
 // lo único que lo usaba era el hilo, que ahora dibuja <Conversacion/>.
 
-function AliciaAvatar({ size = 32, state = "idle" }) {
-  const s = size;
-  const isLarge = s >= 40;
-
-  if (state === "speaking" && isLarge) {
-    return (
-      <div style={{ width: s, height: s, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <style>{`
-          @keyframes av-squeeze {
-            0%,100% { border-radius:50%; transform:scaleX(1) scaleY(1); }
-            25%     { border-radius:50%; transform:scaleX(1.22) scaleY(0.80); }
-            50%     { border-radius:50%; transform:scaleX(0.82) scaleY(1.18); }
-            75%     { border-radius:50%; transform:scaleX(1.10) scaleY(0.92); }
-          }
-        `}</style>
-        <div style={{ width: s * 0.82, height: s * 0.82, background: BAM, borderRadius: "50%", animation: "av-squeeze 0.55s ease-in-out infinite" }} />
-      </div>
-    );
-  }
-
-  if (state === "thinking" && isLarge) {
-    const dot = s * 0.14;
-    return (
-      <div style={{ width: s, height: s, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: s * 0.09 }}>
-        <style>{`
-          @keyframes av-dot {
-            0%,80%,100% { transform:scale(0.55); opacity:0.3; }
-            40%          { transform:scale(1);    opacity:1; }
-          }
-        `}</style>
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: dot, height: dot, borderRadius: "50%", background: BAM, animation: `av-dot 1.2s ${i * 0.2}s ease-in-out infinite` }} />
-        ))}
-      </div>
-    );
-  }
-
-  // idle — blob orgánico (todos los tamaños)
-  return (
-    <div style={{ width: s, height: s, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <style>{`
-        @keyframes av-blob {
-          0%,100% { border-radius:60% 40% 55% 45%/45% 55% 45% 55%; }
-          25%     { border-radius:40% 60% 45% 55%/55% 45% 60% 40%; }
-          50%     { border-radius:55% 45% 60% 40%/40% 60% 40% 60%; }
-          75%     { border-radius:45% 55% 40% 60%/60% 40% 55% 45%; }
-        }
-      `}</style>
-      <div style={{ width: s * 0.82, height: s * 0.82, background: BAM, animation: "av-blob 3.5s ease-in-out infinite" }} />
-    </div>
-  );
-}
+// `AliciaAvatar` se mudó a src/copilot/AliciaAvatar.jsx: el estado vacío del
+// hilo (que ahora dibuja Conversacion) también lo necesita, y el dock no puede
+// importar nada de este archivo sin cerrar un ciclo.
 
 // ── API Key gate ───────────────────────────────────────────────────────────────
 function ApiKeySetup({ onSave }) {
@@ -413,7 +365,7 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   // antes era estado local acá adentro murió: mientras existieron los dos turnos
   // (este y el del provider) compartían la clave `alicia_chat_<uid>_v1` y se
   // pisaban el hilo entre ellos.
-  const { mensajes, setMensajes, enviando, enviar, selectedUserId, setSelectedUserId } = useCopiloto();
+  const { mensajes, setMensajes, enviando, setBorrador, selectedUserId, setSelectedUserId } = useCopiloto();
 
   const [apiKey, setApiKey] = useState(loadApiKey);
   const [backendAvailable, setBackendAvailable] = useState(false);
@@ -500,10 +452,11 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   // Save profiles whenever they change
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
 
-  // Dictado. El transcript ya no cae en un campo de texto de este archivo: el
-  // composer se fue a <Conversacion/> y su borrador es estado interno de ese
-  // componente. Así que lo dictado se manda derecho, que además es lo que uno
-  // espera de un botón de micrófono al lado del avatar y no adentro del input.
+  // Dictado. Lo dictado se APPENDEA al borrador, no se manda: dictás, corregís y
+  // recién mandás. Mandarlo derecho es peor que no dictar, sobre todo con nombres
+  // propios y números, que es de lo que habla este ERP. El borrador vive en el
+  // provider justamente para que este botón —que está en la topbar, afuera del
+  // composer— pueda escribirle.
   const startListening = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
@@ -514,21 +467,29 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
     r.onresult = e => {
       const t = e.results[0][0].transcript;
       setListening(false);
-      if (t?.trim()) enviar(t);
+      if (t?.trim()) setBorrador(prev => prev + (prev ? " " : "") + t);
     };
     r.onerror = () => setListening(false);
     r.onend = () => setListening(false);
     recognitionRef.current = r;
     r.start();
     setListening(true);
-  }, [enviar]);
+  }, [setBorrador]);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
     setListening(false);
   }, []);
 
-  // Execute actions returned by Alicia
+  // CÓDIGO MUERTO, y no desde esta fase: nunca pudo matchear.
+  //
+  // El cerebro cierra el turno con `return { text: finalText, actions: toolResults }`
+  // (alicia-brain/src/server.js:912), y `toolResults` se llena con objetos
+  // `{ tool, input, result }` (alicia-brain/src/server.js:873) — SIN campo `type`.
+  // Todo lo de abajo ramifica por `action.type === "create_task"` y compañía, así
+  // que ninguna rama se ejecutó jamás. Queda tal cual, sin "arreglar", porque
+  // arreglarlo significaría inventar un contrato que el servidor no emite: el
+  // camino vivo de la Fase 3 es client_tool/confirm → manos → bus.
   const executeActions = useCallback((actions, profiles_) => {
     if (!actions?.length) return;
     const updatedProfiles = { ...profiles_ };
@@ -709,7 +670,9 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
             literalmente el mismo componente. Dibujarlos de nuevo acá es cómo se
             separaron las dos vistas la vez pasada. */}
         <div style={{ flex: 1, minHeight: 0 }}>
-          <Conversacion ancho="full" />
+          {/* `nombre` es para el saludo del hilo vacío. Sale de `chatProfile` y no
+              de la persona logueada: con el "ver como" del CEO no son la misma. */}
+          <Conversacion ancho="full" nombre={chatProfile?.name?.split(" ")[0] || ""} />
         </div>
       </div>
 
@@ -724,13 +687,9 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
         />
       </div>
 
-      <style>{`
-        @keyframes bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-6px); opacity: 1; }
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      {/* El <style> que había acá se fue entero: `bounce` viajó a Conversacion.jsx
+          con los tres puntitos (su único usuario) y `spin` ya estaba declarado en
+          HyggeOS.jsx, así que esta copia no hacía nada. */}
     </div>
   );
 }

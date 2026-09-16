@@ -4,16 +4,26 @@
 // separarían. La paleta y las proporciones (radios asimétricos, sombra de la
 // burbuja del usuario, tamaños de fuente) son las mismas que ya usaba el hilo
 // de AliciaView — esto no inventa un sistema visual nuevo, lo hereda.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { useCopiloto } from "./CopilotoProvider.jsx";
+import AliciaAvatar from "./AliciaAvatar.jsx";
 import Markdown from "./Markdown.jsx";
 import TrazaTool from "./TrazaTool.jsx";
 
 const C = {
-  bg: "#EEEBE3", paper: "#F4F1EA", ink: "#0A0B0F",
+  bg: "#EEEBE3", paper: "#F4F1EA", ink: "#0A0B0F", inkSoft: "#2E2E33",
   muted: "#6B6863", line: "#D9D5CD", lineSoft: "#E5E1D6", bam: "#A855F7",
 };
+
+// Las cuatro preguntas de arranque, tal cual estaban en AliciaView. No son
+// decoración: es lo primero que ve el CEO cada vez que abre el chat vacío.
+const SUGERENCIAS = [
+  "¿Qué tareas tengo pendientes?",
+  "Crea una reunión con el equipo BAM",
+  "¿Cómo va el proyecto DC01?",
+  "Quiero revisar mis objetivos de crecimiento",
+];
 
 // El resultado de una acción legada (las del array `actions` que devuelve `done`,
 // no las manos de la Fase 3). Vivía inline en AliciaView y se vino con las
@@ -37,9 +47,12 @@ function ActionResult({ action }) {
   );
 }
 
-export default function Conversacion({ ancho = "dock" }) {
-  const { mensajes, enviando, enviar, hiloFallo } = useCopiloto();
-  const [texto, setTexto] = useState("");
+// `nombre` sólo lo pasa el space `alicia`, que es el único que conoce los
+// perfiles (el saludo dice el nombre de pila de la persona con la que Alicia
+// está hablando, que con el "ver como" del CEO no es siempre la logueada). El
+// dock no tiene de dónde sacarlo, así que saluda sin nombre.
+export default function Conversacion({ ancho = "dock", nombre = "" }) {
+  const { mensajes, enviando, enviar, hiloFallo, borrador, setBorrador } = useCopiloto();
   const finRef = useRef(null);
   const esFull = ancho === "full";
 
@@ -80,11 +93,14 @@ export default function Conversacion({ ancho = "dock" }) {
     if (pegadoAlFondo.current) finRef.current?.scrollIntoView({ block: "end" });
   }, [mensajes]);
 
-  const mandar = () => {
-    if (!texto.trim() || enviando) return;
-    enviar(texto);
-    setTexto("");
-  };
+  // `enviar` vacía el borrador por su cuenta: el estado es suyo ahora.
+  const mandar = () => enviar(borrador);
+
+  // Los tres puntitos: el turno arrancó pero todavía no llegó un solo token. En
+  // cuanto hay texto, la burbuja en vivo con su cursor `▍` cuenta la misma
+  // historia mejor, así que los puntitos se apagan y no quedan los dos a la vez.
+  const ultimo = mensajes[mensajes.length - 1];
+  const esperandoTexto = enviando && (!ultimo || ultimo.role !== "assistant" || !ultimo.content);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", backgroundColor: C.paper }}>
@@ -105,10 +121,31 @@ export default function Conversacion({ ancho = "dock" }) {
           </div>
         )}
 
+        {/* El hilo vacío: saludo, avatar grande y las cuatro preguntas de
+            arranque, recuperados de AliciaView. En el dock (380px) es la misma
+            cosa en chico y con los chips en columna: cuatro preguntas largas en
+            fila ahí adentro se cortan en dos palabras por renglón. */}
         {mensajes.length === 0 && (
-          <div style={{ margin: "auto", textAlign: "center", maxWidth: 320, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-            Preguntale algo a Alicia — tareas, agenda, un archivo, o simplemente
-            cómo va el trabajo.
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: esFull ? 20 : 14, opacity: 0.7 }}>
+            <AliciaAvatar size={esFull ? 56 : 40} state="idle" />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: esFull ? 18 : 15, fontWeight: 700, color: C.ink, marginBottom: 6 }}>
+                Hola{nombre ? `, ${nombre}` : ""} 👋
+              </div>
+              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, maxWidth: esFull ? 380 : 260 }}>
+                Soy Alicia. Puedo ayudarte a crear tareas, agendar reuniones, buscar archivos o simplemente conversar sobre cómo va el trabajo.
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: esFull ? "row" : "column", flexWrap: "wrap", gap: 8, justifyContent: "center", alignItems: "center", maxWidth: esFull ? 420 : 300 }}>
+              {SUGERENCIAS.map(q => (
+                <button key={q} onClick={() => enviar(q)} disabled={enviando}
+                  style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${C.line}`, backgroundColor: C.paper, fontSize: 12, color: C.inkSoft, cursor: enviando ? "default" : "pointer", transition: "all 0.12s", maxWidth: "100%" }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = C.bam; e.currentTarget.style.color = C.bam; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = C.line; e.currentTarget.style.color = C.inkSoft; }}>
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {mensajes.map((m, i) => {
@@ -167,14 +204,34 @@ export default function Conversacion({ ancho = "dock" }) {
             </div>
           );
         })}
+        {esperandoTexto && (
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+            <AliciaAvatar size={26} state="thinking" />
+            <div style={{ padding: "10px 14px", borderRadius: "12px 12px 12px 2px", backgroundColor: C.paper, border: `1px solid ${C.lineSoft}`, display: "flex", gap: 4, alignItems: "center" }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: C.bam, animation: `bounce 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+              ))}
+            </div>
+          </div>
+        )}
+
         <div ref={finRef} />
       </div>
+
+      {/* `bounce` se vino de AliciaView con los puntitos: es su único usuario y
+          tiene que estar donde se monten, que ahora es también el dock. */}
+      <style>{`
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-6px); opacity: 1; }
+        }
+      `}</style>
 
       <div style={{ padding: esFull ? "12px 15%" : "12px 16px", borderTop: `1px solid ${C.line}`, backgroundColor: C.paper, flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", backgroundColor: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: "8px 12px" }}>
           <textarea
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            value={borrador}
+            onChange={(e) => setBorrador(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); mandar(); } }}
             placeholder={enviando ? "Alicia está trabajando…" : "Escribile a Alicia…"}
             rows={esFull ? 1 : 2}
@@ -182,12 +239,12 @@ export default function Conversacion({ ancho = "dock" }) {
           />
           <button
             onClick={mandar}
-            disabled={enviando || !texto.trim()}
+            disabled={enviando || !borrador.trim()}
             style={{
               width: 32, height: 32, borderRadius: "50%", flexShrink: 0, border: "none",
               display: "flex", alignItems: "center", justifyContent: "center",
-              backgroundColor: enviando || !texto.trim() ? C.line : C.bam,
-              cursor: enviando || !texto.trim() ? "default" : "pointer",
+              backgroundColor: enviando || !borrador.trim() ? C.line : C.bam,
+              cursor: enviando || !borrador.trim() ? "default" : "pointer",
             }}
           >
             <Send size={14} color="#fff" />

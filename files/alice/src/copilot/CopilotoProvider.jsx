@@ -39,6 +39,13 @@ export function CopilotoProvider({ children, userId = null }) {
   // cerebro (tabla `messages`).
   const [mensajes, setMensajes] = useState(() => (userId ? loadChat(userId) : []));
   const [enviando, setEnviando] = useState(false);
+  // El borrador del composer. Vivía adentro de Conversacion, y ahí no alcanza:
+  // el micrófono del space `alicia` tiene que poder APPENDEARLE lo dictado (se
+  // dicta, se corrige y recién se manda — dictar sin poder corregir es peor que
+  // no dictar, sobre todo con nombres propios y números), y ese botón vive
+  // afuera del composer. De yapa, acá arriba el borrador sobrevive a cambiar de
+  // space: lo que estabas escribiendo no se pierde porque Alicia te navegó.
+  const [borrador, setBorrador] = useState("");
   const [abierto, setAbierto] = useState(false);
   // { call_id, id, tool, input, resolver } — lo que el dock le muestra al usuario.
   // `id` es el mismo block.id que viajó en el tool_start: sirve para ligar el
@@ -149,6 +156,9 @@ export function CopilotoProvider({ children, userId = null }) {
 
   const enviar = useCallback(async (texto) => {
     if (!texto.trim() || enviando) return;
+    // El borrador se vacía acá y no en el composer: ahora que vive en el provider,
+    // el que lo consume es el que lo tiene que soltar.
+    setBorrador("");
     const userMsg = { role: "user", content: texto.trim(), ts: Date.now() };
     const base = [...mensajes, userMsg];
     generacion.current++;   // invalida cualquier fetch de historial que haya salido antes de este turno
@@ -334,10 +344,11 @@ export function CopilotoProvider({ children, userId = null }) {
 
   const value = useMemo(() => ({
     mensajes, setMensajes, enviando, enviar, hiloFallo,
+    borrador, setBorrador,
     confirmacion, responderConfirmacion, abierto, setAbierto,
     registrarAccion, registrarNavigate,
     selectedUserId, setSelectedUserId,
-  }), [mensajes, enviando, enviar, hiloFallo, confirmacion, responderConfirmacion, abierto, registrarAccion, registrarNavigate, selectedUserId]);
+  }), [mensajes, enviando, enviar, hiloFallo, borrador, confirmacion, responderConfirmacion, abierto, registrarAccion, registrarNavigate, selectedUserId]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
