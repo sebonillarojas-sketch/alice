@@ -26,6 +26,13 @@ export function CopilotoProvider({ children, userId = null }) {
   // `userId` entra por prop y no por useAuth() a propósito: el provider no tiene
   // por qué depender del árbol de auth, y así se puede montar en un test con un
   // uid de mentira.
+  //
+  // Se lee UNA sola vez, como semilla. No hay efecto que lo sincronice después
+  // porque no hace falta: App.jsx devuelve LoginScreen si no hay `user`, así que
+  // cuando este provider monta el uid ya es real, y un cambio de persona (logout
+  // → login) pasa por ahí y remonta todo. De acá en adelante el dueño del uid es
+  // `selectedUserId`, que además carga el "ver como" del CEO — un efecto que lo
+  // pisara con la prop le rompería eso.
   const [selectedUserId, setSelectedUserId] = useState(userId);
   // localStorage es caché optimista: pinta el hilo al instante mientras el fetch
   // del historial del servidor viaja. La fuente de verdad sigue siendo el
@@ -53,11 +60,6 @@ export function CopilotoProvider({ children, userId = null }) {
     () => crearManos({ bus, registro, navigate: (s, v) => navigateRef.current(s, v) }),
     [bus, registro]
   );
-
-  // Si la sesión resuelve después de montar, el uid llega tarde: adoptarlo.
-  useEffect(() => {
-    if (userId) setSelectedUserId((prev) => prev ?? userId);
-  }, [userId]);
 
   // Rehidratar al cambiar de persona (el "ver como" del CEO). El primer render ya
   // hidrató en el useState de arriba, así que este ref evita el setState redundante.
@@ -176,9 +178,18 @@ export function CopilotoProvider({ children, userId = null }) {
           // Una escritura. NO se ejecuta hasta que el usuario haga click: la
           // promesa queda guardada en el estado y la resuelve el diálogo.
           else if (event === "confirm") {
+            // Del otro lado de este `ok` hay una ESCRITURA real (crear una tarea,
+            // mandar un mail). Que hoy sea inalcanzable un doble click —React
+            // flushea el setConfirmacion(null) antes— es un detalle de scheduling,
+            // y una escritura no se apoya en eso: la guarda es del closure, así
+            // que cubre tanto a responderConfirmacion como a quien agarre
+            // `resolver` del estado y lo llame de más.
+            let contestado = false;
             setConfirmacion({
               call_id: data.call_id, id: data.id, tool: data.tool, input: data.input,
               resolver: async (ok) => {
+                if (contestado) return;
+                contestado = true;
                 setConfirmacion(null);
                 if (!ok) return contestar(turnId, data.call_id, token, "El usuario NO autorizó esta acción. No la reintentes: preguntale qué prefiere.");
                 const r = await manos.ejecutar(data.tool, data.input).catch((e) => `Falló al ejecutar: ${e?.message ?? e}`);
@@ -253,12 +264,18 @@ export function CopilotoProvider({ children, userId = null }) {
     }
   }, [enviando, mensajes, selectedUserId, takeSnapshot, manos, contestar]);
 
+  // El nombre del contrato para lo que el diálogo tiene que poder hacer. La
+  // capacidad ya estaba en `confirmacion.resolver`; esto es para que el dock no
+  // tenga que ir a buscarla adentro del estado. Sin confirmación pendiente no
+  // hace nada: un botón que llega tarde no puede romper nada.
+  const responderConfirmacion = useCallback((ok) => confirmacion?.resolver(ok), [confirmacion]);
+
   const value = useMemo(() => ({
     mensajes, setMensajes, enviando, enviar,
-    confirmacion, abierto, setAbierto,
+    confirmacion, responderConfirmacion, abierto, setAbierto,
     registrarAccion, registrarNavigate,
     selectedUserId, setSelectedUserId,
-  }), [mensajes, enviando, enviar, confirmacion, abierto, registrarAccion, registrarNavigate, selectedUserId]);
+  }), [mensajes, enviando, enviar, confirmacion, responderConfirmacion, abierto, registrarAccion, registrarNavigate, selectedUserId]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -279,5 +296,11 @@ export function useAccionERP(nombre, fn) {
   useEffect(() => {
     if (!ctx) return;            // sin provider (tests, storybook) no hace nada
     return ctx.registrarAccion(nombre, (args) => ref.current(args));
-  }, [ctx, nombre]);
+    // Depende de `registrarAccion`, NO del ctx entero: `enviar` cambia de identidad
+    // con cada repintado del stream, así que el value rota ~60 veces por segundo
+    // mientras Alicia escribe. Con `ctx` en las deps, cada módulo del ERP se
+    // desregistraría y re-registraría a ese ritmo, todos a la vez, por estar esto
+    // montado por encima del router. `registrarAccion` es useCallback con dep
+    // [bus]: estable de verdad.
+  }, [ctx?.registrarAccion, nombre]);
 }
