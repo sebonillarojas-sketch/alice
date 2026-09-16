@@ -13,7 +13,10 @@ export default function DialogoConfirmar() {
   if (!confirmacion) return null;
 
   const { tool, input } = confirmacion;
-  const accion = tool === "erp_action" ? input?.action : tool;
+  // `?? tool` para que un frame `confirm` malformado (sin `input.action`) no
+  // deje el título en blanco: peor que un nombre feo es un diálogo que pide
+  // autorizar algo sin decir qué.
+  const accion = tool === "erp_action" ? (input?.action ?? tool) : tool;
   const args = tool === "erp_action" ? input?.args : input;
 
   return (

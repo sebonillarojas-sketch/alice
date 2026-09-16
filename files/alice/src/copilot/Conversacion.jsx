@@ -4,7 +4,7 @@
 // separarían. La paleta y las proporciones (radios asimétricos, sombra de la
 // burbuja del usuario, tamaños de fuente) son las mismas que ya usaba el hilo
 // de AliciaView — esto no inventa un sistema visual nuevo, lo hereda.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { useCopiloto } from "./CopilotoProvider.jsx";
 import Markdown from "./Markdown.jsx";
@@ -15,20 +15,69 @@ const C = {
   muted: "#6B6863", line: "#D9D5CD", lineSoft: "#E5E1D6", bam: "#A855F7",
 };
 
+// El resultado de una acción legada (las del array `actions` que devuelve `done`,
+// no las manos de la Fase 3). Vivía inline en AliciaView y se vino con las
+// burbujas: si se quedaba allá, el hilo del dock renderizaba `msg.actions` como
+// nada y el usuario no se enteraba de que Alicia había creado la tarea.
+function ActionResult({ action }) {
+  const icons = { create_task: "✅", create_event: "📅", add_alicia_note: "🧠", update_growth: "🎯", update_skills: "⚡", search_file: "🔍" };
+  const labels = {
+    create_task: `Tarea creada: "${action.title}"`,
+    create_event: `Evento agendado: "${action.title}" el ${action.date} a las ${action.time}`,
+    add_alicia_note: `Nota guardada en perfil`,
+    update_growth: `Objetivos de crecimiento actualizados`,
+    update_skills: `Skills actualizados`,
+    search_file: `Búsqueda: "${action.query}"`,
+  };
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 2, backgroundColor: C.bam + "12", border: `1px solid ${C.bam}30`, fontSize: 11, color: C.bam, fontWeight: 500, margin: "2px 0" }}>
+      <span>{icons[action.type] || "•"}</span>
+      <span>{labels[action.type] || action.type}</span>
+    </div>
+  );
+}
+
 export default function Conversacion({ ancho = "dock" }) {
-  const { mensajes, enviando, enviar } = useCopiloto();
+  const { mensajes, enviando, enviar, hiloFallo } = useCopiloto();
   const [texto, setTexto] = useState("");
   const finRef = useRef(null);
-  const scrollRef = useRef(null);
   const esFull = ancho === "full";
 
+  // ¿El usuario está mirando el fondo del hilo? Se registra en el evento de
+  // scroll y NO midiendo dentro del effect: para cuando el effect corre, el
+  // mensaje nuevo ya está en el DOM y `scrollHeight` creció, así que alguien que
+  // estaba pegado al fondo mide "lejos" y no se lo volvería a seguir nunca más.
+  // Basta un mensaje de unas pocas líneas para dispararlo. Esta cicatriz venía de
+  // AliciaView; el hilo se mudó acá y el mecanismo tenía que venirse con él.
+  const pegadoAlFondo = useRef(true);
+  const soltarScroll = useRef(null);
+  // Callback ref y no useRef + useEffect([]): el contenedor del hilo no existe
+  // siempre en el primer render (el dock arranca cerrado y el space `alicia`
+  // arranca detrás del gate de la API key), así que un effect con deps vacías
+  // correría antes de que el nodo exista y el listener no se ataría nunca.
+  const hiloRef = useCallback((nodo) => {
+    soltarScroll.current?.();
+    soltarScroll.current = null;
+    if (!nodo) return;
+    const onScroll = () => {
+      pegadoAlFondo.current = nodo.scrollHeight - nodo.scrollTop - nodo.clientHeight < 100;
+    };
+    nodo.addEventListener("scroll", onScroll, { passive: true });
+    soltarScroll.current = () => nodo.removeEventListener("scroll", onScroll);
+  }, []);
+
   // Auto-scroll sólo si ya estabas abajo: si subiste a leer algo, el stream no
-  // te arrastra de vuelta. Mismo criterio que cubre humo-stream.mjs.
+  // te arrastra de vuelta. Mismo criterio que cubre humo-stream.mjs (control
+  // positivo y negativo).
+  //
+  // Sin `behavior: "smooth"` a propósito: a 60 repintados por segundo la
+  // animación suave se reinicia en cada frame (no se ve suave, se ve temblando)
+  // y además sus posiciones intermedias disparan eventos de scroll que apagarían
+  // `pegadoAlFondo` a mitad de camino — o sea que el smooth sabotea la guarda de
+  // acá arriba. Instantáneo es lo correcto para un feed que crece, y es lo que
+  // hacen las terminales y los chats.
   useEffect(() => {
-    const cont = scrollRef.current;
-    if (!cont) return;
-    const alFondo = cont.scrollHeight - cont.scrollTop - cont.clientHeight < 120;
-    if (alFondo) finRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (pegadoAlFondo.current) finRef.current?.scrollIntoView({ block: "end" });
   }, [mensajes]);
 
   const mandar = () => {
@@ -40,13 +89,22 @@ export default function Conversacion({ ancho = "dock" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", backgroundColor: C.paper }}>
       <div
-        ref={scrollRef}
+        ref={hiloRef}
         style={{
           flex: 1, overflowY: "auto",
           padding: esFull ? "20px 15% 8px" : "16px 16px 8px",
           display: "flex", flexDirection: "column", gap: 14,
         }}
       >
+        {/* El hilo vive en el servidor: si no se pudo traer, lo que se ve es el
+            caché del navegador y puede estar viejo. Callarlo es el síntoma de
+            "Alicia no se acuerda" con otra causa. */}
+        {hiloFallo && (
+          <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "2px 0" }}>
+            No pude cargar el hilo — estás viendo una copia local.
+          </div>
+        )}
+
         {mensajes.length === 0 && (
           <div style={{ margin: "auto", textAlign: "center", maxWidth: 320, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
             Preguntale algo a Alicia — tareas, agenda, un archivo, o simplemente
@@ -85,9 +143,25 @@ export default function Conversacion({ ancho = "dock" }) {
                   </>
                 )}
               </div>
+              {!esUsuario && m.actions?.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingInline: 4 }}>
+                  {m.actions.map((a, j) => <ActionResult key={j} action={a} />)}
+                </div>
+              )}
               {m.ts && (
                 <div style={{ fontSize: 9, color: C.muted, letterSpacing: "0.04em", paddingInline: 4 }}>
                   {new Date(m.ts).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                  {/* El badge existe para avisar que el mensaje entró por OTRA puerta
+                      (WhatsApp, voz). "app" y "copilot" son las dos formas en que el
+                      ERP se identificó a lo largo del tiempo: "app" en los mensajes
+                      viejos, "copilot" desde la Fase 2 (el cerebro lo necesita para el
+                      tope de iteraciones y para turn_usage). Los dos significan "esto
+                      salió de acá", así que ninguno lleva badge — no borres uno. */}
+                  {m.channel && m.channel !== "app" && m.channel !== "copilot" && (
+                    <span style={{ fontSize: 9, color: C.muted, marginLeft: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      {m.channel === "whatsapp" ? "· whatsapp" : m.channel === "embodied" ? "· voz" : `· ${m.channel}`}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

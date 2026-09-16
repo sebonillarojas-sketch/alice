@@ -45,6 +45,20 @@ export function CopilotoProvider({ children, userId = null }) {
   // diálogo con su fila de la traza. Todavía no lo lee nadie (Tarea 8), pero si
   // no se guarda acá se pierde y no hay de dónde recuperarlo.
   const [confirmacion, setConfirmacion] = useState(null);
+  // No se pudo traer el hilo del servidor: lo que se ve es el caché local.
+  const [hiloFallo, setHiloFallo] = useState(false);
+
+  // Se incrementa cada vez que `enviar` toca `mensajes` a mano. El fetch del
+  // historial guarda la generación vigente ANTES de salir a la red; si al volver
+  // ya cambió, alguien mandó un mensaje mientras tanto y aplicar la respuesta
+  // pisaría ese turno en pantalla. No la borres para "simplificar": `vivo` cubre
+  // desmontaje/cambio de usuario, esto cubre el turno propio.
+  //
+  // El contador y el fetch viajan JUNTOS, siempre: separarlos (el contador acá y
+  // el fetch en AliciaView, o al revés) es exactamente cómo se reintrodujo este
+  // bug la vez pasada. Por eso el fetch se mudó al provider con `enviar`, en vez
+  // de quedarse en el space.
+  const generacion = useRef(0);
 
   const takeSnapshot = useCopilotSnapshot();
   const registro = useRegistroERP();
@@ -70,6 +84,53 @@ export function CopilotoProvider({ children, userId = null }) {
     setMensajes(selectedUserId ? loadChat(selectedUserId) : []);
   }, [selectedUserId]);
 
+  // El hilo vive en el servidor (tabla `messages`, un hilo por persona, todos los
+  // canales). localStorage es caché: pinta al instante y lo reemplaza lo que
+  // llegue del cerebro. Antes era la fuente de verdad, y por eso la pantalla
+  // mostraba una conversación que Alicia no recordaba.
+  //
+  // Vive acá arriba y ya no en el space `alicia` porque el dock muestra el mismo
+  // hilo desde CUALQUIER space: si el fetch se quedara adentro del space, el dock
+  // pintaría para siempre el caché del navegador sin refrescarlo nunca. Y porque
+  // la guarda `generacion` tiene que compartir alcance con `enviar`, que está acá.
+  // Depende de [selectedUserId, userId], así que corre al montar y al cambiar de
+  // persona — no en cada repintado del dock.
+  useEffect(() => {
+    let vivo = true;
+    const gen = generacion.current;   // snapshot: si `enviar` avanza esto antes de que vuelva el fetch, se descarta
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        const qs = new URLSearchParams({ limit: "60" });
+        if (selectedUserId !== userId) qs.set("userId", selectedUserId);
+        const res = await fetch(`${ALICIA_URL}/api/copilot/history?${qs}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: AbortSignal.timeout(10000),
+        });
+        // Un 403, una sesión vencida o Railway despertándose dejaban la copia
+        // vieja en pantalla sin decir nada: exactamente el síntoma de "Alicia no
+        // se acuerda" que este hilo vino a matar, con otra causa. Lo avisamos.
+        if (!res.ok) { if (vivo && generacion.current === gen) setHiloFallo(true); return; }
+        const { messages: hilo } = await res.json();
+        if (!vivo || generacion.current !== gen || !Array.isArray(hilo)) return;
+        const mapped = hilo.map((m) => ({
+          role: m.role, content: m.content, actions: m.actions || [],
+          // SQLite devuelve "YYYY-MM-DD HH:MM:SS" (con espacio); Safari no lo
+          // parsea, así que lo pasamos a ISO antes de agregarle la "Z".
+          channel: m.channel, ts: Date.parse(m.createdAt.replace(" ", "T") + "Z") || Date.now(),
+        }));
+        setMensajes(mapped);
+        saveChat(selectedUserId, mapped);
+        setHiloFallo(false);
+      } catch {
+        // el caché de localStorage ya está en pantalla, pero desactualizado
+        if (vivo && generacion.current === gen) setHiloFallo(true);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [selectedUserId, userId]);
+
   // Contesta un client_tool/confirm por la ruta de resultados. Es una request
   // aparte: la del turno está ocupada streameando.
   const contestar = useCallback(async (turnId, callId, token, result) => {
@@ -90,6 +151,7 @@ export function CopilotoProvider({ children, userId = null }) {
     if (!texto.trim() || enviando) return;
     const userMsg = { role: "user", content: texto.trim(), ts: Date.now() };
     const base = [...mensajes, userMsg];
+    generacion.current++;   // invalida cualquier fetch de historial que haya salido antes de este turno
     setMensajes(base);
     setEnviando(true);
 
@@ -271,11 +333,11 @@ export function CopilotoProvider({ children, userId = null }) {
   const responderConfirmacion = useCallback((ok) => confirmacion?.resolver(ok), [confirmacion]);
 
   const value = useMemo(() => ({
-    mensajes, setMensajes, enviando, enviar,
+    mensajes, setMensajes, enviando, enviar, hiloFallo,
     confirmacion, responderConfirmacion, abierto, setAbierto,
     registrarAccion, registrarNavigate,
     selectedUserId, setSelectedUserId,
-  }), [mensajes, enviando, enviar, confirmacion, responderConfirmacion, abierto, registrarAccion, registrarNavigate, selectedUserId]);
+  }), [mensajes, enviando, enviar, hiloFallo, confirmacion, responderConfirmacion, abierto, registrarAccion, registrarNavigate, selectedUserId]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
