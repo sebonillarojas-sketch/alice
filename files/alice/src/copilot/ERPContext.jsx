@@ -4,6 +4,7 @@
 // puntuales a useERPContext.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { buildSnapshot } from "./snapshot.js";
+import { crearEsperas } from "./esperas.js";
 
 const Ctx = createContext(null);
 
@@ -21,21 +22,17 @@ export function ERPContextProvider({ children }) {
   // Alicia, es el módulo del que acabás de salir.
   const ultimoVisto = useRef(null);
 
-  // Quién está esperando que tal módulo aparezca: moduleId → Set<resolve>.
-  // Existe por erp_navigate: cuando Alicia llama a navigate(), React todavía no
-  // re-renderizó y el módulo destino no montó. Sin esto, el erp_read que viene
-  // atrás leería un registro vacío y Alicia diría que Cabida no tiene nada.
-  const esperas = useRef(new Map());
+  // El mecanismo de espera de erp_navigate vive en su propio módulo puro
+  // (esperas.js): tiene la única lógica de concurrencia de este archivo
+  // (Promise + Map + Set + setTimeout) y necesitaba poder testearse sin montar
+  // React. Ver el comentario de ese archivo para el motivo completo.
+  const esperas = useRef(crearEsperas());
 
   const register = useCallback((moduleId, describeFn) => {
     registry.current.set(moduleId, describeFn);
 
     // Despertar a quien estaba esperando este módulo.
-    const cola = esperas.current.get(moduleId);
-    if (cola) {
-      esperas.current.delete(moduleId);
-      for (const resolver of cola) resolver(true);
-    }
+    esperas.current.despertar(moduleId);
 
     return () => {
       // Antes de soltarlo, guardar la foto: es lo único que va a quedar de este
@@ -58,20 +55,7 @@ export function ERPContextProvider({ children }) {
   const setActive = useCallback((moduleId) => { activeId.current = moduleId; }, []);
 
   const esperarRegistro = useCallback((moduleId, timeoutMs = 3000) => {
-    if (registry.current.has(moduleId)) return Promise.resolve(true);
-    return new Promise((resolver) => {
-      const cola = esperas.current.get(moduleId) ?? new Set();
-      cola.add(resolver);
-      esperas.current.set(moduleId, cola);
-      // Que no monte NO es un error del que haya que recuperarse: puede ser un
-      // módulo que no existe, o uno que tarda. Resolvemos en false y que la mano
-      // lo cuente como lo que es.
-      setTimeout(() => {
-        const c = esperas.current.get(moduleId);
-        if (c?.delete(resolver) && c.size === 0) esperas.current.delete(moduleId);
-        resolver(false);
-      }, timeoutMs);
-    });
+    return esperas.current.esperar(moduleId, timeoutMs, registry.current.has(moduleId));
   }, []);
 
   // Los módulos montados ahora mismo, con su descripción. Es lo que leen las

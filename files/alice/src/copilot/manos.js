@@ -30,6 +30,13 @@ export const RUTAS = {
   wikihygge:  { space: "wikihygge",      nombre: "WikiHygge" },
   // El space de un proyecto es su propio id (dc01, pu01, tg01, l36), así que la
   // ruta la da el entityId y no una constante.
+  //
+  // LÍMITE CONOCIDO: hoy ningún módulo se registra con moduleId "proyecto" ni
+  // con los ids de proyecto (dc01/pu01/tg01/l36) — los que llaman a
+  // useERPContext son growth, mesa, cotizacion, obra, cabida y velocity (grep
+  // verificado). erp_navigate a un proyecto SÍ cambia la pantalla, pero el
+  // erp_read que sigue siempre va a decir "no pude leer su estado": no hay
+  // describe() que responda a esos ids todavía.
   proyecto:   { porEntidad: true,        nombre: "Un proyecto (pasá entityId: dc01, pu01, tg01, l36)" },
 };
 
@@ -84,7 +91,15 @@ export function crearManos({ bus, registro, navigate }) {
       // un space sin describe() (la mayoría todavía no lo tiene) o uno lento.
       return `Abrí "${module}" en la pantalla del usuario, pero no pude leer su estado (ese módulo todavía no se describe a sí mismo). Preguntale qué ve si necesitás los números.`;
     }
-    return `Abrí "${module}". Esto es lo que hay ahora:\n${describirTexto(registro.describir(module))}`;
+    // `monto` en true sólo dice que el módulo se registró — describe() puede
+    // haber tirado (queda capturado en ERPContext y vuelve null) o devuelto
+    // algo falsy justo en ese instante. Mismo criterio de honestidad: no
+    // mentir con un texto tipo `...ahora:\nnull`.
+    const texto = describirTexto(registro.describir(module));
+    if (!texto) {
+      return `Abrí "${module}" en la pantalla del usuario, pero no pude leer su estado justo ahora. Preguntale qué ve si necesitás los números.`;
+    }
+    return `Abrí "${module}". Esto es lo que hay ahora:\n${texto}`;
   }
 
   async function accionar({ action, args }) {

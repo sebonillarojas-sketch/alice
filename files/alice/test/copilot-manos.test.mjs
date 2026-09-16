@@ -22,7 +22,7 @@ test("erp_list_modules lista TODAS las rutas, no sólo las montadas", async () =
   const salida = await manos.ejecutar("erp_list_modules", {});
   assert.match(salida, /cabida/);
   assert.match(salida, /velocity/);
-  assert.equal(salida.split("\n").length >= Object.keys(RUTAS).length, true);
+  assert.equal(salida.split("\n").length, Object.keys(RUTAS).length);
 });
 
 test("erp_list_modules marca cuál está abierto ahora", async () => {
@@ -80,6 +80,21 @@ test("erp_navigate que navega pero el módulo no monta lo dice sin mentir", asyn
   const salida = await manos.ejecutar("erp_navigate", { module: "cabida" });
   assert.match(salida, /abrí|abrió/i);
   assert.match(salida, /no pude leer/i);
+});
+
+test("erp_navigate que monta pero describe() no devuelve nada no dice \"null\"", async () => {
+  // Bug real: si describe() tiró (ERPContext lo captura y vuelve null) justo
+  // después de montar, el texto no puede terminar siendo literalmente
+  // `...ahora:\nnull` — mismo criterio de honestidad que ya usa leer().
+  const registro = {
+    modulos: () => [],
+    describir: () => null,
+    esperarRegistro: async () => true,   // el módulo sí montó
+  };
+  const manos = crearManos({ bus: crearBus(), registro, navigate: () => {} });
+  const salida = await manos.ejecutar("erp_navigate", { module: "cabida" });
+  assert.match(salida, /no pude leer/i);
+  assert.doesNotMatch(salida, /\bnull\b/);
 });
 
 test("erp_navigate pasa el entityId a los módulos que lo aceptan", async () => {
