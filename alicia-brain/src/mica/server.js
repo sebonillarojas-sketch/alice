@@ -21,9 +21,12 @@ const catalogo = (() => {
 const llm = backendPorDefecto();
 const app = express();
 app.use(express.json({ limit: "1mb" }));
-app.use(express.static(PUBLIC));
 
+// OJO: nada de express.static(PUBLIC). Esa carpeta es del brain y su index.html es el
+// panel de control de Alice — servirla acá lo publicaba entero en el dominio de Mica.
+// Mica sirve exactamente sus dos archivos y nada más.
 app.get("/", (_, res) => res.sendFile(join(PUBLIC, "mica.html")));
+app.get("/favicon.svg", (_, res) => res.sendFile(join(PUBLIC, "favicon.svg")));
 app.get("/health", (_, res) => res.json({ ok: true, agente: "mica" }));
 
 app.get("/api/mica/estado", (_, res) => res.json({
