@@ -1245,6 +1245,10 @@ app.post("/api/copilot/turn", async (req, res) => {
         });
         return await promesa;
       },
+      onEvent: (e) => {
+        const { type, ...resto } = e;
+        enviar(type, resto);
+      },
     });
     enviar("done", { text, actions });
   } catch (e) {
