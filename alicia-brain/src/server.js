@@ -22,6 +22,7 @@ import { renderErpContext } from "./erp-context.js";
 import { readThread } from "./history.js";
 import { sseFrame, SSE_HEADERS } from "./sse.js";
 import { usoVacio, acumularUso, registrarUso } from "./uso.js";
+import { esClientTool, clientToolsPara, efectoDe } from "./client-tools.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -675,6 +676,14 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
+  // Las client tools van DESPUÉS del breakpoint, nunca adentro. El enum de
+  // erp_action sale del contexto del ERP, así que cambia cada vez que la persona
+  // se mueve de módulo: meterlas en el prefijo cacheado invalidaría el caché de
+  // tools (que es el bloque grande) en cada navegación. Es la misma disciplina
+  // que ya aplica el contexto del ERP en systemBlocks.
+  const toolsDelTurno = opts.clientTools?.length
+    ? [...cachedTools, ...opts.clientTools]
+    : cachedTools;
   const toolResults = [];
   let finalText = "";
   // Acumulador de costo del turno: se resetea acá (por turno, no por request handler)
@@ -747,7 +756,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       // el panel corta a los 60s).
       output_config: { effort: maximumEffort ? "high" : "medium" },
       system: systemBlocks,
-      tools: cachedTools,
+      tools: toolsDelTurno,
       tool_choice: { type: "auto" },
       messages: loopMessages,
     };
@@ -829,7 +838,19 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       let result;
       try {
         emitir({ type: "tool_start", id: block.id, tool: block.name, input: block.input });
-        if (admin && SENSITIVE_ADMIN.has(block.name)) {
+        if (esClientTool(block.name)) {
+          // La ejecuta el browser. `emitir` ya mandó el tool_start de arriba, así
+          // que la traza muestra la tool desde que se pide; el frame que le pide
+          // al cliente que la ejecute lo manda quien armó ejecutarClientTool.
+          if (!opts.ejecutarClientTool) {
+            // Un canal sin manos nunca debería haber recibido estas tools. Si
+            // pasa, se lo decimos al modelo en vez de romper: puede seguir con
+            // las tools del servidor.
+            result = `${block.name} no está disponible en este canal.`;
+          } else {
+            result = await opts.ejecutarClientTool(block.name, block.input);
+          }
+        } else if (admin && SENSITIVE_ADMIN.has(block.name)) {
           // acción sensible de un admin → no se ejecuta; se manda a aprobación del CEO
           result = await encolarAprobacion(userId, profile?.name?.split(" ")[0] || userId, block.name, block.input);
           console.log(`🔐 [${userId}] ${block.name} → aprobación CEO`);
