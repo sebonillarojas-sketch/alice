@@ -89,6 +89,11 @@ export function CopilotoProvider({ children, userId = null }) {
     if (uidHidratado.current === selectedUserId) return;
     uidHidratado.current = selectedUserId;
     setMensajes(selectedUserId ? loadChat(selectedUserId) : []);
+    // El borrador pertenece a la conversación que estabas escribiendo, no a la
+    // siguiente. Sobrevivir a cambiar de SPACE es la gracia (lo que estabas
+    // tipeando no se pierde porque Alicia te navegó); sobrevivir a cambiar de
+    // PERSONA es cruzar datos entre hilos. Se parecen y son cosas opuestas.
+    setBorrador("");
   }, [selectedUserId]);
 
   // El hilo vive en el servidor (tabla `messages`, un hilo por persona, todos los
@@ -165,6 +170,16 @@ export function CopilotoProvider({ children, userId = null }) {
     setMensajes(base);
     setEnviando(true);
 
+    // De quién es este turno. Un turno dura hasta 90s y el CEO puede cambiar de
+    // persona en el medio: sin esto, la respuesta (y cada frame del stream, que
+    // repinta `base` entero) se escribiría ENCIMA del hilo de la otra persona.
+    // `uidHidratado` es justamente el ref que dice qué conversación está a la
+    // vista, así que alcanza con preguntarle antes de tocar la pantalla.
+    // Ojo: lo que se GUARDA va siempre bajo `uidTurno` — el turno es de quien lo
+    // mandó, mires lo que mires ahora.
+    const uidTurno = selectedUserId;
+    const aLaVista = () => uidHidratado.current === uidTurno;
+
     // Estas viven FUERA del try para que el `finally` pueda apagar el repintado
     // agrupado pase lo que pase. Un rAF que sobreviva al turno vuelve a pintar la
     // burbuja en vivo ENCIMA del mensaje final (o del de error) y resucita texto
@@ -204,9 +219,12 @@ export function CopilotoProvider({ children, userId = null }) {
       // segundo. Agrupamos los repintados en el frame: se ve igual de fluido y el
       // navegador no se ahoga.
       let pendiente = false;
-      const pintarYa = () => setMensajes([...base, {
-        role: "assistant", content: acumulado, pasos, ts: Date.now(), streaming: true,
-      }]);
+      const pintarYa = () => {
+        if (!aLaVista()) return;   // el CEO se fue a otra conversación: no le pintes esta encima
+        setMensajes([...base, {
+          role: "assistant", content: acumulado, pasos, ts: Date.now(), streaming: true,
+        }]);
+      };
       const pintar = () => {
         if (pendiente || terminado) return;
         pendiente = true;
@@ -257,6 +275,15 @@ export function CopilotoProvider({ children, userId = null }) {
             // que cubre tanto a responderConfirmacion como a quien agarre
             // `resolver` del estado y lo llame de más.
             let contestado = false;
+            // Si el CEO ya se fue a la conversación de otra persona, este diálogo
+            // pide autorizar una escritura de un hilo que no está mirando. No se
+            // le muestra: se rechaza con el MISMO texto del "No", que es la
+            // verdad (no lo autorizó) y además le dice al cerebro que vuelva a
+            // preguntar en vez de quedarse colgado hasta el timeout.
+            if (!aLaVista()) {
+              contestar(turnId, data.call_id, token, "El usuario NO autorizó esta acción. No la reintentes: preguntale qué prefiere.");
+              return;
+            }
             setConfirmacion({
               call_id: data.call_id, id: data.id, tool: data.tool, input: data.input,
               resolver: async (ok) => {
@@ -302,8 +329,10 @@ export function CopilotoProvider({ children, userId = null }) {
       const hilo = [...base, {
         role: "assistant", content: final.text ?? "", actions: final.actions || [], pasos, ts: Date.now(),
       }];
-      setMensajes(hilo);
-      if (selectedUserId) saveChat(selectedUserId, hilo);
+      // Guardar SIEMPRE (el turno es de `uidTurno`), pintar sólo si esa sigue
+      // siendo la conversación a la vista.
+      if (aLaVista()) setMensajes(hilo);
+      if (uidTurno) saveChat(uidTurno, hilo);
     } catch (err) {
       // `base` no incluye la burbuja en vivo: reemplazar por esto la borra.
       // Tres textos distintos porque son tres situaciones distintas:
@@ -320,8 +349,8 @@ export function CopilotoProvider({ children, userId = null }) {
           ? "Dejé de recibir respuesta del servidor y corté la espera. Puede que Alicia haya terminado igual y la respuesta esté guardada: recargá antes de volver a preguntar, así no pagás el turno dos veces."
           : `Tuve un problema de conexión con el servidor (${err.message}). Reintentá en un momento.`;
       const hilo = [...base, { role: "assistant", content: contenido, actions: [], pasos, ts: Date.now(), isError: true }];
-      setMensajes(hilo);
-      if (selectedUserId) saveChat(selectedUserId, hilo);
+      if (aLaVista()) setMensajes(hilo);
+      if (uidTurno) saveChat(uidTurno, hilo);
     } finally {
       terminado = true;
       // El timer de inactividad tiene que morir con el turno: si sobrevive, aborta

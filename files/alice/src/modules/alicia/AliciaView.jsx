@@ -572,6 +572,13 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   // este componente montado.
   const ultimoProcesado = useRef(0);
   const huboTurno = useRef(false);
+  // Las dos guardas son POR CONVERSACIÓN, así que cambiar de persona las
+  // reinicia. Sin esto: el CEO manda un turno como él (huboTurno queda en true),
+  // cambia a "ver como Vanessa", entra el hilo de ella y su última respuesta
+  // —vieja, de otro día— tiene un ts distinto al procesado, así que Alicia la
+  // leería en voz alta como si acabara de contestarla. Y encima dos veces: una
+  // con el caché de localStorage y otra cuando vuelve el fetch del servidor.
+  useEffect(() => { huboTurno.current = false; ultimoProcesado.current = 0; }, [selectedUserId]);
   useEffect(() => { if (enviando) huboTurno.current = true; }, [enviando]);
   useEffect(() => {
     if (!huboTurno.current) return;
