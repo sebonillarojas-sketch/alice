@@ -2024,7 +2024,7 @@ git commit -m "test(copilot): el round-trip de las manos contra un browser de ve
 - [ ] `cd files/alice && npm run build` → limpio
 - [ ] `npm run humo` → `HUMO OK` · `npm run humo:burbuja` → `BURBUJA OK` · `npm run humo:stream` → `STREAM OK` (las tres siguen pasando: la Fase 2 no se rompió)
 - [ ] `npm run humo:manos` → `MANOS OK`
-- [ ] `POST /api/copilot/turn/:id/result` sin auth → **401**; con auth y un turno ajeno → **403**; con un turno que no existe → **404**
+- [ ] `POST /api/copilot/turn/:id/result`: turno inexistente → **404** (verificable con curl). El **401** sin auth y el **403** de turno ajeno NO son reproducibles con `GATE_DEV_OPEN=1` (cualquier curl local autentica como CEO) ni sin él (da 503 `panel_locked`): se verifican por lectura —`resolveActingUser` corre antes de cualquier lookup de turno— y por los tests de `turnos.js`, que cubren `no_autorizado`.
 - [ ] `turn_start` es el **primer** evento del stream, antes de cualquier `text_delta`
 - [ ] Con `SANDBOX=1`, `/api/chat` y `/api/embodied` devuelven 200 y su respuesta no cambió: **WhatsApp y el teléfono nunca ven una client tool**
 - [ ] En el ERP: pedirle a Alicia que abra Cabida **cambia la pantalla y el chat sigue abierto con el hilo entero**
