@@ -28,7 +28,9 @@ export function construirSystem({ catalogo = [], estado = {} } = {}) {
         const tip = (pr.tipologias || []).map(t =>
           [t.nombre, t.dormitorios != null ? `${t.dormitorios}D` : null, t.m2 ? `${t.m2} m²` : null]
             .filter(Boolean).join(" · ")).join(" | ");
-        return `- ${pr.id}${pr.nombre ? ` (${pr.nombre})` : ""}${tip ? `: ${tip}` : ""}`;
+        // Proyecto conocido pero sin tipologías: se dice explícitamente, porque un
+        // renglón a medias es justo lo que el modelo completa de su cosecha.
+        return `- ${pr.id}${pr.nombre ? ` (${pr.nombre})` : ""}: ${tip || "sin tipologías cargadas"}`;
       }).join("\n")
     : "(vacío — no tienes catálogo cargado: no nombres ningún proyecto ni tipología. " +
       "Si preguntan por uno, decí que lo confirmas y derivá a José.)";
@@ -39,6 +41,9 @@ export function construirSystem({ catalogo = [], estado = {} } = {}) {
     catalogoTxt,
     "## Recordatorio",
     "Mica nunca envía planos ni dice un precio. Nada que no esté arriba, existe para vos.",
+    "Donde diga \"sin tipologías cargadas\": no nombres tipologías, metrajes ni cantidades de " +
+      "dormitorios de ese proyecto. Podés nombrar el proyecto y nada más. Si preguntan por las " +
+      "unidades, decí que José te las confirma.",
     estado.nombre ? `El prospecto se llama ${estado.nombre}.` : "",
   ].filter(Boolean).join("\n\n");
 }

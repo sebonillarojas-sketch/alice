@@ -40,3 +40,10 @@ test("sin catálogo, el system le prohíbe nombrar proyectos en vez de inventarl
   const s = construirSystem({ catalogo: [] });
   assert.match(s, /no (tienes|tenés) cat[áa]logo/i);
 });
+
+test("un proyecto sin tipologías cargadas prohíbe nombrar tipologías — el hueco no se rellena", () => {
+  const s = construirSystem({ catalogo: [{ id: "OLVR-01", tipologias: [] }] });
+  assert.match(s, /OLVR-01/);
+  assert.match(s, /sin tipolog[íi]as cargadas/i);
+  assert.match(s, /no (nombres|inventes) tipolog[íi]as/i);
+});
