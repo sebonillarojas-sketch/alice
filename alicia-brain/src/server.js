@@ -13,6 +13,7 @@ import { coalesceMessage } from "./coalesce.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
+import { realpathSync } from "fs";
 import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
@@ -22,7 +23,7 @@ import { renderErpContext } from "./erp-context.js";
 import { readThread } from "./history.js";
 import { sseFrame, SSE_HEADERS } from "./sse.js";
 import { usoVacio, acumularUso, registrarUso } from "./uso.js";
-import { esClientTool, clientToolsPara, efectoDe } from "./client-tools.js";
+import { esClientTool, clientToolsPara, efectoDe, frameParaEfecto } from "./client-tools.js";
 import { crearRegistroTurnos } from "./turnos.js";
 dotenv.config();
 
@@ -844,6 +845,13 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     const toolResultContents = [];
     for (const block of toolUseBlocks) {
       let result;
+      // La fila de la traza sale verde salvo que alguien diga lo contrario. Las
+      // tools del servidor sólo fallan tirando (y eso lo agarra el catch), pero
+      // una client tool NUNCA rechaza: un `confirm` que el usuario rechazó
+      // vuelve con texto igual que uno que corrió. Sin este `ok` explícito, un
+      // "No" quedaba en verde mientras el texto de Alicia decía que no lo hizo
+      // — justo la duda que la traza existe para que no exista.
+      let ok = true;
       try {
         emitir({ type: "tool_start", id: block.id, tool: block.name, input: block.input });
         if (esClientTool(block.name)) {
@@ -855,12 +863,20 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
             // pasa, se lo decimos al modelo en vez de romper: puede seguir con
             // las tools del servidor.
             result = `${block.name} no está disponible en este canal.`;
+            ok = false;
           } else {
             // block.id viaja como 3er argumento para que quien arme el frame
             // client_tool/confirm pueda correlacionarlo con el tool_start de
             // arriba — son dos IDs para la misma invocación (call_id del lado
             // del registro de turnos, id del lado de la traza del modelo).
-            result = await opts.ejecutarClientTool(block.name, block.input, block.id);
+            // Devuelve `{ ok, texto }`: el texto es lo único que ve el modelo
+            // (el tool_result de más abajo), el `ok` es lo único que ve la
+            // traza. Son dos cosas distintas y no hay que mezclarlas: un
+            // rechazo también le tiene que llegar al modelo como texto, para
+            // que sepa que preguntar es lo que corresponde.
+            const respuesta = await opts.ejecutarClientTool(block.name, block.input, block.id);
+            result = respuesta.texto;
+            ok = respuesta.ok !== false;
           }
         } else if (admin && SENSITIVE_ADMIN.has(block.name)) {
           // acción sensible de un admin → no se ejecuta; se manda a aprobación del CEO
@@ -871,7 +887,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
           console.log(`🔧 [${userId}] ${block.name}:`, JSON.stringify(block.input).slice(0, 100));
         }
         toolResults.push({ tool: block.name, input: block.input, result });
-        emitir({ type: "tool_done", id: block.id, tool: block.name, ok: true });
+        emitir({ type: "tool_done", id: block.id, tool: block.name, ok });
       } catch (e) {
         result = `Error al ejecutar ${block.name}: ${e.message}`;
         console.error(`Tool ${block.name} error:`, e.message);
@@ -1246,17 +1262,12 @@ app.post("/api/copilot/turn", async (req, res) => {
       ejecutarClientTool: async (nombre, input, id) => {
         // El cliente ya se fue: no tiene sentido abrir una espera de 60s para
         // alguien que no está. Se lo decimos al modelo y sigue.
-        if (!vivo) return "La pantalla del usuario se desconectó.";
+        if (!vivo) return { ok: false, texto: "La pantalla del usuario se desconectó." };
         const efecto = efectoDe(nombre);
-        // Lista blanca (read/navigate), no `efecto !== "write"`: un efecto que
-        // no reconocemos —typo, tool nueva sin clasificar todavía— tiene que
-        // caer del lado seguro (confirmación), no ejecutarse derecho. La
-        // frontera de seguridad falla cerrada, no abierta.
-        const directo = efecto === "read" || efecto === "navigate";
-        // Un solo criterio (`directo`) decide evento Y timeout: si se derivaran
-        // por separado (dos comparaciones contra "write") podrían desincronizarse
-        // el día que se agregue un tercer efecto.
-        const timeoutMs = directo ? 60000 : 180000;
+        // La lista blanca (y el timeout que va con ella) la decide
+        // `frameParaEfecto`, en client-tools.js, junto al catálogo que asigna
+        // los efectos y con tests propios. Acá sólo se transporta.
+        const { evento, timeoutMs } = frameParaEfecto(efecto);
         const { callId, promesa } = turnosCopiloto.pedir(turnId, { timeoutMs });
         // El evento distinto ES la clasificación: el cliente no decide si pedir
         // confirmación mirando el nombre de la tool, la decide el frame que le
@@ -1264,10 +1275,15 @@ app.post("/api/copilot/turn", async (req, res) => {
         // `id` (el mismo que ya viajó en tool_start/tool_done) y `call_id` (el
         // que espera turnos.js) son dos identificadores de la MISMA invocación:
         // sin los dos, el front no puede ligar este diálogo con su fila de traza.
-        enviar(directo ? "client_tool" : "confirm", {
+        enviar(evento, {
           call_id: callId, id, tool: nombre, input, efecto,
         });
-        return await promesa;
+        const respuesta = await promesa;
+        // La ruta de resultados resuelve con `{ ok, texto }` (el browser dice si
+        // la escritura se autorizó y corrió, o si el usuario apretó "No"). El
+        // timeout y el cierre del turno resuelven con su texto pelado: nadie
+        // contestó, así que tampoco son un `ok`.
+        return typeof respuesta === "string" ? { ok: false, texto: respuesta } : respuesta;
       },
       onEvent: (e) => {
         const { type, ...resto } = e;
@@ -1296,16 +1312,24 @@ app.post("/api/copilot/turn", async (req, res) => {
 app.post("/api/copilot/turn/:turnId/result", (req, res) => {
   const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
   if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
-  const { call_id, result } = req.body || {};
+  const { call_id, result, ok } = req.body || {};
   if (!call_id) return res.status(400).json({ error: "falta_call_id" });
 
   const codigo = turnosCopiloto.resolver({
     turnId: req.params.turnId,
     callId: call_id,
     userId: act.userId,
-    // El resultado viaja al modelo como texto: si el cliente manda un objeto lo
-    // serializamos acá y no en el loop, que no tiene por qué saber de transporte.
-    result: typeof result === "string" ? result : JSON.stringify(result ?? null),
+    // Dos cosas distintas en el mismo POST: `texto` es lo que ve el modelo,
+    // `ok` es lo que ve la traza. Un `confirm` que el usuario rechazó contesta
+    // igual (el modelo tiene que enterarse) pero con `ok: false`, para que la
+    // fila no quede en verde diciendo que se hizo algo que no se hizo.
+    // Ausente = true: una tool de lectura que salió bien no manda nada.
+    result: {
+      ok: ok !== false,
+      // El resultado viaja al modelo como texto: si el cliente manda un objeto lo
+      // serializamos acá y no en el loop, que no tiene por qué saber de transporte.
+      texto: typeof result === "string" ? result : JSON.stringify(result ?? null),
+    },
   });
 
   if (codigo === "ok") return res.json({ ok: true });
@@ -2559,7 +2583,17 @@ const PORT = process.env.PORT || 3001;
 // `import` de este módulo (como el test de armarToolsDelTurno) NO levanta un
 // server real ni pega contra BCRP/Nexo/sqlite — antes de esta tarea nada
 // importaba server.js como módulo, así que no había necesidad del guard.
-if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+// `realpathSync`: node resuelve los módulos a su realpath, así que
+// `import.meta.url` ya viene sin symlinks, pero `process.argv[1]` es tal cual lo
+// escribió quien arrancó el proceso. Con un symlink en el medio los dos no
+// coinciden, el guard da false y el proceso SALE CON CÓDIGO 0 y sin un solo log
+// — y `restartPolicyType: "ON_FAILURE"` ni siquiera reintenta. En Railway hoy
+// anda; el modo de falla es demasiado silencioso para dejarlo al azar.
+const entradaReal = (() => {
+  try { return realpathSync(process.argv[1] || ""); }
+  catch { return process.argv[1] || ""; }   // argv[1] vacío o inexistente: comparar el crudo, que da false igual que antes
+})();
+if (import.meta.url === pathToFileURL(entradaReal).href) {
   app.listen(PORT, async () => {
     console.log(`\n🧠 Alicia Brain · http://localhost:${PORT}`);
     console.log(`   ERP: ${process.env.ERP_URL || "http://localhost:3002"}`);

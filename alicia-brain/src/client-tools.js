@@ -59,6 +59,26 @@ const POR_NOMBRE = new Map(CLIENT_TOOLS.map(t => [t.name, t]));
 export const esClientTool = (nombre) => POR_NOMBRE.has(nombre);
 export const efectoDe = (nombre) => POR_NOMBRE.get(nombre)?.efecto;
 
+// La unión entre el catálogo y el transporte: qué frame le toca a cada efecto.
+// Vive acá, y no inline en la ruta del turno, porque es LA decisión de seguridad
+// de esta fase y una decisión que no se puede importar termina sin un solo test
+// (fue exactamente lo que pasó: `efectoDe` tenía pruebas, el registro de turnos
+// también, y la unión de los dos no).
+//
+// Lista blanca (read/navigate) y NO `efecto !== "write"`: un efecto que no
+// reconocemos —un typo, una tool nueva sin clasificar todavía, un `undefined`
+// porque la tool ni existe en el catálogo— tiene que caer del lado seguro
+// (confirmación), no ejecutarse derecho. La frontera falla cerrada, no abierta.
+export function frameParaEfecto(efecto) {
+  const directo = efecto === "read" || efecto === "navigate";
+  // Un solo criterio (`directo`) decide evento Y timeout: si se derivaran por
+  // separado (dos comparaciones contra "write") podrían desincronizarse el día
+  // que se agregue un tercer efecto.
+  return directo
+    ? { evento: "client_tool", timeoutMs: 60000 }
+    : { evento: "confirm", timeoutMs: 180000 };
+}
+
 // Saca `efecto` antes de que la definición viaje a la API: es un campo nuestro y
 // el contrato de tools de Anthropic no lo tiene.
 const paraLaApi = ({ efecto, ...resto }) => resto;

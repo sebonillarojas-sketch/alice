@@ -44,6 +44,12 @@ export function crearRegistroTurnos({ nuevoId = nuevoIdPorDefecto } = {}) {
     return { callId, promesa };
   }
 
+  // `result` es OPACO acá: este registro no lo mira ni lo transforma. Hoy la
+  // ruta de resultados manda `{ ok, texto }` (el `ok` es lo que la traza
+  // necesita para no pintar en verde un `confirm` rechazado) y el timeout y el
+  // cierre resuelven con su texto pelado; quien espera la promesa distingue los
+  // dos casos. Meter esa forma acá adentro sería atar el puente al contrato del
+  // loop, que es justo lo que este archivo no quiere saber.
   function resolver({ turnId, callId, userId, result }) {
     const turno = turnos.get(turnId);
     if (!turno) return "turno_desconocido";
