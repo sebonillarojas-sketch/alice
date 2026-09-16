@@ -11,9 +11,9 @@
   :root{
     --bg:#0A0B0F;--paper:#111318;--card:#181C24;--border:#222730;
     --ink:#F4F1EA;--muted:#6B7280;--soft:#9CA3AF;
-    /* Naranja Hygge — del swatch de marca. Ojo: NO es el #F7643B que usa
-       ConceptoBam.jsx en el ERP; ese es más coral. Este es el de la marca. */
-    --hygge:#EE8033;--hygge2:#C4641F;--hygge3:#F7A468;
+    /* Naranja Hygge · #F7643B (R247 G100 B59) — el mismo que ya usa
+       ConceptoBam.jsx en el ERP. --hygge2 y --hygge3 son su sombra y su luz. */
+    --hygge:#F7643B;--hygge2:#C94A28;--hygge3:#FF8A5C;
     --green:#5F8A6A;--brick:#A85B5B;--ochre:#C2A45A;--cobalt:#3D52D5;
   }
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex}
@@ -24,7 +24,7 @@
   .logo span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
   nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .15s;cursor:pointer}
   nav a:hover{color:var(--ink);background:rgba(255,255,255,.04)}
-  nav a.active{color:var(--ink);border-left-color:var(--hygge);background:rgba(238,128,51,.08)}
+  nav a.active{color:var(--ink);border-left-color:var(--hygge);background:rgba(247,100,59,.08)}
   .nav-section{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;padding:16px 20px 6px}
 
   main{margin-left:220px;flex:1;padding:32px;min-height:100vh}
@@ -42,14 +42,14 @@
   .badge{font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600;letter-spacing:.02em}
   .badge.frio{background:rgba(61,82,213,.18);color:#8fa2ff}
   .badge.tibio{background:rgba(194,164,90,.2);color:#fbbf24}
-  .badge.hot{background:rgba(238,128,51,.2);color:var(--hygge3)}
+  .badge.hot{background:rgba(247,100,59,.2);color:var(--hygge3)}
   .badge.handoff{background:rgba(95,138,106,.2);color:#4ade80}
 
   /* BLOB — naranja Hygge */
-  .blob{width:120px;height:120px;background:linear-gradient(135deg,var(--hygge),var(--hygge2));box-shadow:0 0 70px rgba(238,128,51,.35);border-radius:42% 58% 65% 35%/45% 45% 55% 55%}
+  .blob{width:120px;height:120px;background:linear-gradient(135deg,var(--hygge),var(--hygge2));box-shadow:0 0 70px rgba(247,100,59,.35);border-radius:42% 58% 65% 35%/45% 45% 55% 55%}
   .blob-idle{animation:blob-morph 8s ease-in-out infinite, blob-float 5s ease-in-out infinite}
-  .blob-thinking{background:linear-gradient(135deg,var(--hygge2),#9b4c12);animation:blob-morph 2.8s ease-in-out infinite, blob-float 5s ease-in-out infinite, blob-dim 1.6s ease-in-out infinite}
-  .blob-speaking{background:linear-gradient(135deg,var(--hygge3),var(--hygge));animation:blob-morph 1.8s ease-in-out infinite, blob-bounce .55s cubic-bezier(.36,1.4,.5,1) infinite;box-shadow:0 0 100px rgba(247,164,104,.5)}
+  .blob-thinking{background:linear-gradient(135deg,var(--hygge2),#8c2f14);animation:blob-morph 2.8s ease-in-out infinite, blob-float 5s ease-in-out infinite, blob-dim 1.6s ease-in-out infinite}
+  .blob-speaking{background:linear-gradient(135deg,var(--hygge3),var(--hygge));animation:blob-morph 1.8s ease-in-out infinite, blob-bounce .55s cubic-bezier(.36,1.4,.5,1) infinite;box-shadow:0 0 100px rgba(255,138,92,.5)}
   @keyframes blob-morph{0%,100%{border-radius:42% 58% 65% 35%/45% 45% 55% 55%}34%{border-radius:60% 40% 42% 58%/60% 45% 55% 40%}67%{border-radius:45% 55% 60% 40%/40% 62% 38% 60%}}
   @keyframes blob-float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-9px) scale(1.01)}}
   @keyframes blob-dim{0%,100%{opacity:1}50%{opacity:.65}}
