@@ -63,11 +63,19 @@ const cuerpo1 = await page.textContent("body");
 // interpolan el id del módulo en su texto de vuelta, incluida la de "el módulo X
 // no existe". Un regex así pasa aunque erp_navigate esté roto. Por eso se
 // verifican dos cosas independientes: que el eco del mensaje tipeado (que sólo
-// existe mientras seguís en el space alicia) haya desaparecido, y que un texto
-// que SÓLO vive adentro de CabidaView (el título de una de sus cards) esté en
-// pantalla — ninguna de las dos depende de lo que el usuario escribió.
+// existe mientras seguís en el space alicia) haya desaparecido, y que el título
+// de una de las cards de CabidaView esté en pantalla — ninguna de las dos
+// depende de lo que el usuario escribió.
+//
+// "terreno y normativa" NO es exclusivo de CabidaView: también está en
+// mesa/laminas.jsx:123 (y dos veces más en cabida/EsquemaPlanta.jsx, que se
+// monta adentro de Cabida). La aserción se sostiene igual porque la app monta un
+// módulo por vez y este humo nunca navega a `mesa`: el único camino por el que
+// ese texto puede aparecer acá es que Cabida haya montado de verdad. Si algún
+// día el humo pasa por la mesa de trabajo, hay que cambiar el texto por uno que
+// sólo exista en Cabida.
 check(!/abrime cabida/i.test(cuerpo1), "salimos del space alicia: el eco del mensaje tipeado ya no está en pantalla");
-check(/terreno y normativa/i.test(cuerpo1), "el módulo Cabida realmente montó (título de card que sólo existe en CabidaView)");
+check(/terreno y normativa/i.test(cuerpo1), "el módulo Cabida realmente montó (título de una card suya; ningún otro módulo montado puede pintarlo)");
 
 // erp_navigate cambió de space: la conversación de AliciaView (ancho="full")
 // se desmontó con él, y con ella el "El browser contestó…" del done — el dock

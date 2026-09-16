@@ -22,6 +22,13 @@ import { loadChat, saveChat } from "./historial.js";
 
 const Ctx = createContext(null);
 
+// Lo que se le contesta al cerebro cuando una escritura NO se ejecutó: el "No"
+// del usuario, un diálogo que quedó abierto de la conversación de otra persona,
+// o un frame que este cliente se niega a ejecutar. Es un solo texto porque desde
+// el modelo las tres son la misma cosa —nadie autorizó esto— y porque repetir el
+// literal es cómo se desincronizan.
+const TEXTO_RECHAZO = "El usuario NO autorizó esta acción. No la reintentes: preguntale qué prefiere.";
+
 export function CopilotoProvider({ children, userId = null }) {
   // `userId` entra por prop y no por useAuth() a propósito: el provider no tiene
   // por qué depender del árbol de auth, y así se puede montar en un test con un
@@ -94,7 +101,15 @@ export function CopilotoProvider({ children, userId = null }) {
     // tipeando no se pierde porque Alicia te navegó); sobrevivir a cambiar de
     // PERSONA es cruzar datos entre hilos. Se parecen y son cosas opuestas.
     setBorrador("");
-  }, [selectedUserId]);
+    // Un diálogo de confirmación abierto pide autorizar una ESCRITURA de la
+    // conversación anterior, y es alcanzable con teclado: el overlay no atrapa
+    // el foco, así que con Tab se llega al <select> de "Viendo como", se cambia
+    // de persona y Shift+Tab vuelve a "Ejecutar" (que tiene autoFocus).
+    // Se RESUELVE en false, no se borra con un setConfirmacion(null) pelado:
+    // borrarlo saca el diálogo de la pantalla pero deja el turno del otro lado
+    // colgado 180 segundos esperando un click que ya no puede llegar.
+    confirmacion?.resolver(false);
+  }, [selectedUserId, confirmacion]);   // `confirmacion` en las deps es seguro: la primera línea corta si el uid no cambió
 
   // El hilo vive en el servidor (tabla `messages`, un hilo por persona, todos los
   // canales). localStorage es caché: pinta al instante y lo reemplaza lo que
@@ -145,12 +160,16 @@ export function CopilotoProvider({ children, userId = null }) {
 
   // Contesta un client_tool/confirm por la ruta de resultados. Es una request
   // aparte: la del turno está ocupada streameando.
-  const contestar = useCallback(async (turnId, callId, token, result) => {
+  // `ok` es lo que ve la TRAZA, `result` lo que ve el modelo: son dos cosas
+  // distintas. Un "No" contesta igual (el modelo tiene que enterarse) pero con
+  // ok:false, para que su fila no quede en verde diciendo que se hizo algo que
+  // no se hizo. Por defecto true: una lectura que salió bien no dice nada.
+  const contestar = useCallback(async (turnId, callId, token, result, ok = true) => {
     try {
       await fetch(`${ALICIA_URL}/api/copilot/turn/${turnId}/result`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ call_id: callId, result, userId: selectedUserId }),
+        body: JSON.stringify({ call_id: callId, result, ok, userId: selectedUserId }),
       });
     } catch (e) {
       // Si el POST falla, el servidor va a cortar solo por timeout. Insistir
@@ -261,9 +280,22 @@ export function CopilotoProvider({ children, userId = null }) {
           // Una tool que corre en el browser. read y navigate van directo: el
           // catálogo del cerebro ya decidió que no necesitan permiso.
           else if (event === "client_tool") {
+            // El servidor manda el `efecto` en el mismo frame y hasta acá el
+            // browser lo ignoraba: ejecutaba CUALQUIER tool que llegara por
+            // `client_tool`, con lo cual todo el gate de escritura era un solo
+            // `if` del servidor. Un rollback parcial, un bug o un cerebro
+            // comprometido que emitiera `client_tool` con `tool: "erp_action"`
+            // escribía sin diálogo. Esto no re-litiga quién clasifica —la
+            // clasificación la sigue decidiendo el catálogo del cerebro—, sólo
+            // hace que el gate deje de ser un único punto de falla.
+            const deLectura = data.efecto === "read" || data.efecto === "navigate";
+            if (!deLectura || data.tool === "erp_action") {
+              contestar(turnId, data.call_id, token, TEXTO_RECHAZO, false);
+              return;
+            }
             manos.ejecutar(data.tool, data.input)
               .then((r) => contestar(turnId, data.call_id, token, r))
-              .catch((e) => contestar(turnId, data.call_id, token, `Falló en la pantalla: ${e?.message ?? e}`));
+              .catch((e) => contestar(turnId, data.call_id, token, `Falló en la pantalla: ${e?.message ?? e}`, false));
           }
           // Una escritura. NO se ejecuta hasta que el usuario haga click: la
           // promesa queda guardada en el estado y la resuelve el diálogo.
@@ -281,7 +313,7 @@ export function CopilotoProvider({ children, userId = null }) {
             // verdad (no lo autorizó) y además le dice al cerebro que vuelva a
             // preguntar en vez de quedarse colgado hasta el timeout.
             if (!aLaVista()) {
-              contestar(turnId, data.call_id, token, "El usuario NO autorizó esta acción. No la reintentes: preguntale qué prefiere.");
+              contestar(turnId, data.call_id, token, TEXTO_RECHAZO, false);
               return;
             }
             setConfirmacion({
@@ -290,7 +322,13 @@ export function CopilotoProvider({ children, userId = null }) {
                 if (contestado) return;
                 contestado = true;
                 setConfirmacion(null);
-                if (!ok) return contestar(turnId, data.call_id, token, "El usuario NO autorizó esta acción. No la reintentes: preguntale qué prefiere.");
+                // `!aLaVista()` acá adentro además del efecto de `uidHidratado`:
+                // el efecto limpia el diálogo que ya estaba abierto cuando se
+                // cambia de persona, pero este chequeo cierra la carrera aunque
+                // ese efecto llegue tarde (el click y el re-render compiten).
+                // Autorizar acá es ejecutar una escritura de la conversación de
+                // otro, que es exactamente lo que no puede pasar.
+                if (!ok || !aLaVista()) return contestar(turnId, data.call_id, token, TEXTO_RECHAZO, false);
                 const r = await manos.ejecutar(data.tool, data.input).catch((e) => `Falló al ejecutar: ${e?.message ?? e}`);
                 return contestar(turnId, data.call_id, token, r);
               },

@@ -114,6 +114,22 @@ function Row({ k, v, unit, strong, accent, indent, dark }) {
   );
 }
 
+// Acción de humo: existe para que humo-manos.mjs pueda verificar el camino
+// completo de una escritura confirmada contra una acción REAL del bus, sin que
+// el humo tenga que tocar los números de una cabida.
+//
+// Vive en un componente aparte que sólo se monta en DEV, y no en un
+// `useAccionERP` condicional adentro de CabidaView, porque un hook condicional
+// viola las reglas de hooks. Que sea DEV-only importa: `actions:` no la ofrece,
+// así que el enum de `erp_action` no la nombra, pero el enum de Anthropic es una
+// guía y no una validación dura — el nombre de la acción lo elige el modelo por
+// string. Un hook de test no tiene por qué existir en el bus de producción. El
+// humo corre contra el dev server, así que no pierde nada.
+function AccionDeHumo() {
+  useAccionERP("humo.escribir", (args) => `humo.escribir recibió ${JSON.stringify(args)}`);
+  return null;
+}
+
 function Kpi({ label, value, unit, accent }) {
   return (
     <div style={{ flex: 1, minWidth: 150, padding: "14px 20px", borderLeft: `3px solid ${accent || C.ink}` }}>
@@ -308,11 +324,6 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
     return `Apliqué ${JSON.stringify(aplicados)}. La cabida se recalcula sola.`;
   });
 
-  // Acción de humo: existe para que humo-manos.mjs pueda verificar el camino
-  // completo de una escritura confirmada contra una acción REAL del bus, sin
-  // que el humo tenga que tocar los números de una cabida.
-  useAccionERP("humo.escribir", (args) => `humo.escribir recibió ${JSON.stringify(args)}`);
-
   const mixWarn = mix1 + mix2 > 100;
 
   // persiste TODO el estado de la cabida (sobrevive ir/volver del editor de planos)
@@ -330,6 +341,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
 
   return (
     <div style={{ minHeight: "100%", background: C.paper, color: C.ink, paddingBottom: 48 }}>
+      {import.meta.env.DEV && <AccionDeHumo />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         input[type=number]::-webkit-inner-spin-button { opacity: 0.25; }

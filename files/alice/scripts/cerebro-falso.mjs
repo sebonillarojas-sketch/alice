@@ -143,13 +143,13 @@ http.createServer(async (req, res) => {
       send("done", { text: "hola mundo", actions: [] });
       return res.end();
     }
-    // Cualquier turno más allá del 4: eco simple, para no colgar humos que pidan más.
-    // Si llegamos hasta acá es porque el mensaje no matcheó ningún guion de manos
-    // NI cayó en 1-4: un desfasaje de texto entre este archivo y quien lo llama
-    // (humo-manos.mjs u otro) no produce un verde falso —las aserciones de manos
-    // fallan igual, buscando frames que nunca van a llegar—, pero sin este aviso
-    // el diagnóstico es "¿por qué falló?" en vez de "ah, el texto no matcheó".
-    if (turno > 4) console.warn(`[cerebro-falso] mensaje sin guion conocido en turno ${turno}: ${JSON.stringify(mensaje)}`);
+    // Cualquier turno más allá del 4: eco simple, para no colgar humos que pidan
+    // más. Es un camino NORMAL, no un síntoma: humo-stream.mjs manda seis
+    // mensajes y los dos últimos ("no me arrastres", "seguime") son sondas de
+    // auto-scroll que usan este eco genérico A PROPÓSITO. Un aviso acá hacía
+    // parecer rota toda corrida sana. Si el texto de un guion de manos se
+    // desfasara entre este archivo y humo-manos.mjs, no hay verde falso: las
+    // aserciones de manos fallan igual, buscando frames que nunca llegan.
     send("done", { text: "eco", actions: [] });
     return res.end();
   }

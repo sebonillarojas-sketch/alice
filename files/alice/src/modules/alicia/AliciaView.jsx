@@ -408,6 +408,17 @@ export default function AliciaView({ currentUser, tasks = [], addTask, updateTas
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
 
+  // Cortar voz y micrófono al desmontar. Es viejo, pero recién esta fase lo hace
+  // alcanzable: `erp_navigate` cambia de space a mitad de turno y desmonta
+  // AliciaView con el TTS sonando — y el botón de mute se va con el componente,
+  // así que la voz sigue en otro space sin ningún control para apagarla.
+  useEffect(() => () => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    window.speechSynthesis?.cancel();
+    try { recognitionRef.current?.stop(); } catch { /* ya estaba parado */ }
+    recognitionRef.current = null;
+  }, []);
+
   const speak = useCallback(async (text) => {
     if (!voiceEnabled) return;
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
