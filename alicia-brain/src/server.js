@@ -23,6 +23,7 @@ import { readThread } from "./history.js";
 import { sseFrame, SSE_HEADERS } from "./sse.js";
 import { usoVacio, acumularUso, registrarUso } from "./uso.js";
 import { esClientTool, clientToolsPara, efectoDe } from "./client-tools.js";
+import { crearRegistroTurnos } from "./turnos.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -1178,6 +1179,10 @@ app.get("/api/copilot/history", (req, res) => {
   res.json({ userId: act.userId, messages: readThread(getDB(), act.userId, limit) });
 });
 
+// Vive a nivel de módulo a propósito: el POST de resultados llega por OTRA
+// request y tiene que encontrar el turno que abrió la primera.
+const turnosCopiloto = crearRegistroTurnos();
+
 // El turno del copiloto. A diferencia de /api/chat, que espera callado hasta 20
 // segundos y devuelve un JSON, acá el cliente ve el texto aparecer y qué herramienta
 // se está usando. Mismo cerebro, mismo loop: lo único que cambia es el transporte.
@@ -1186,6 +1191,11 @@ app.post("/api/copilot/turn", async (req, res) => {
   if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
   const { message, erpContext } = req.body || {};
   if (!message) return res.status(400).json({ error: "Falta message" });
+
+  // Se abre ANTES del writeHead para que ya exista cuando el `res.on("close")`
+  // de más abajo lo necesite: ese handler puede saltar antes de que el try
+  // arranque (el cliente cortando apenas conecta).
+  const turnId = turnosCopiloto.abrir(act.userId);
 
   res.writeHead(200, SSE_HEADERS);
   res.flushHeaders?.();
@@ -1201,19 +1211,39 @@ app.post("/api/copilot/turn", async (req, res) => {
   // `vivo` se apagaba al instante y el turno entero corría a ciegas: nunca se emitía
   // ni el "done", ni se limpiaba el intervalo, y la conexión quedaba colgada para
   // siempre (verificado a mano con el curl del brief). `res` sí refleja el socket real.
-  res.on("close", () => { vivo = false; clearInterval(latido); });
+  // También cierra el turno acá: si el cliente se desconecta, cualquier client_tool
+  // pendiente se suelta al instante en vez de esperar su timeout.
+  res.on("close", () => { vivo = false; clearInterval(latido); turnosCopiloto.cerrar(turnId); });
 
   const enviar = (evento, data) => {
     if (!vivo) return;
     try { res.write(sseFrame(evento, data)); } catch { vivo = false; }
   };
 
+  // Primero de todo: el cliente necesita el turnId ANTES de que pueda llegarle
+  // cualquier client_tool, porque es a dónde tiene que contestar.
+  enviar("turn_start", { turnId });
+
   try {
     const { text, actions } = await processAliciaMessage(act.userId, message, "copilot", {
       erpContext,
-      onEvent: (e) => {
-        const { type, ...resto } = e;
-        enviar(type, resto);
+      clientTools: clientToolsPara(erpContext),
+      ejecutarClientTool: async (nombre, input) => {
+        // El cliente ya se fue: no tiene sentido abrir una espera de 60s para
+        // alguien que no está. Se lo decimos al modelo y sigue.
+        if (!vivo) return "La pantalla del usuario se desconectó.";
+        const efecto = efectoDe(nombre);
+        // Una escritura la mira un humano: el techo es el de la paciencia de una
+        // persona frente a un diálogo, no el de una llamada de red.
+        const timeoutMs = efecto === "write" ? 180000 : 60000;
+        const { callId, promesa } = turnosCopiloto.pedir(turnId, { timeoutMs });
+        // El evento distinto ES la clasificación: el cliente no decide si pedir
+        // confirmación mirando el nombre de la tool, la decide el frame que le
+        // llega. Ver client-tools.js.
+        enviar(efecto === "write" ? "confirm" : "client_tool", {
+          call_id: callId, tool: nombre, input, efecto,
+        });
+        return await promesa;
       },
     });
     enviar("done", { text, actions });
@@ -1222,8 +1252,36 @@ app.post("/api/copilot/turn", async (req, res) => {
     enviar("error", { message: e.message });
   } finally {
     clearInterval(latido);
+    // Cerrar el turno ANTES de cerrar el socket: si quedó algo esperando, esto es
+    // lo que lo suelta. Sin esto, un turno que muere por excepción deja promesas
+    // colgadas y su timer vivo hasta 3 minutos.
+    turnosCopiloto.cerrar(turnId);
     if (vivo) res.end();
   }
+});
+
+// Por acá contesta el browser un `client_tool` o un `confirm`. Es una request
+// aparte: la del turno está ocupada streameando.
+app.post("/api/copilot/turn/:turnId/result", (req, res) => {
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
+  const { call_id, result } = req.body || {};
+  if (!call_id) return res.status(400).json({ error: "falta_call_id" });
+
+  const codigo = turnosCopiloto.resolver({
+    turnId: req.params.turnId,
+    callId: call_id,
+    userId: act.userId,
+    // El resultado viaja al modelo como texto: si el cliente manda un objeto lo
+    // serializamos acá y no en el loop, que no tiene por qué saber de transporte.
+    result: typeof result === "string" ? result : JSON.stringify(result ?? null),
+  });
+
+  if (codigo === "ok") return res.json({ ok: true });
+  // 404 y no 403 para un turno desconocido: un turno que ya cerró (deploy,
+  // timeout, el usuario recargó) es el caso normal, no un ataque.
+  const status = codigo === "no_autorizado" ? 403 : codigo === "turno_desconocido" ? 404 : 409;
+  return res.status(status).json({ error: codigo });
 });
 
 // ── Cuerpo (el teléfono de Alicia) ────────────────────────────────────────────
