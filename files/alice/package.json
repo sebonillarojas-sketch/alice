@@ -12,6 +12,7 @@
     "humo": "node scripts/humo.mjs",
     "humo:burbuja": "node scripts/humo-burbuja.mjs",
     "humo:stream": "node scripts/humo-stream.mjs",
+    "humo:manos": "node scripts/humo-manos.mjs",
     "cerebro-falso": "node scripts/cerebro-falso.mjs"
   },
   "dependencies": {

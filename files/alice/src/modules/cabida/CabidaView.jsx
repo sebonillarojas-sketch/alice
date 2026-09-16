@@ -3,6 +3,7 @@ import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
 import { useProyectos } from "./proyectos.js";
 import { useERPContext } from "../../copilot/ERPContext.jsx";
+import { useAccionERP } from "../../copilot/CopilotoProvider.jsx";
 
 const C = {
   ink: "#373737",
@@ -279,8 +280,38 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
       margen: Math.round(r.margen), utilNeta: Math.round(r.utilNeta),
       eficiencia: Number(r.eficiencia.toFixed(1)), incidencia: Number(r.incidencia.toFixed(1)),
     },
-    actions: [],   // se llenan en la Fase 3, cuando Alicia tenga manos
+    actions: ["cabida.setParams"],
   }));
+
+  // Las manos sobre Cabida. El módulo decide qué acepta: Alicia propone, Cabida
+  // valida. Los valores entran por los MISMOS setters que usa el formulario —
+  // si entraran por otro lado, la cabida recalcularía distinto de lo que muestra.
+  useAccionERP("cabida.setParams", (args) => {
+    const setters = {
+      terreno: setTerreno, areaLibre: setAreaLibre, pisos: setPisos,
+      areaDpto: setAreaDpto, precioM2: setPrecioM2, costoM2: setCostoM2,
+    };
+    const aplicados = {};
+    for (const [k, v] of Object.entries(args ?? {})) {
+      const set = setters[k];
+      if (!set) continue;
+      const n = Number(v);
+      // Un NaN acá se propaga a los 19 escalares del cálculo y toda la cabida
+      // sale NaN sin un solo error en consola.
+      if (!Number.isFinite(n)) continue;
+      set(n);
+      aplicados[k] = n;
+    }
+    if (!Object.keys(aplicados).length) {
+      return `No reconocí ningún parámetro numérico. Acepto: ${Object.keys(setters).join(", ")}.`;
+    }
+    return `Apliqué ${JSON.stringify(aplicados)}. La cabida se recalcula sola.`;
+  });
+
+  // Acción de humo: existe para que humo-manos.mjs pueda verificar el camino
+  // completo de una escritura confirmada contra una acción REAL del bus, sin
+  // que el humo tenga que tocar los números de una cabida.
+  useAccionERP("humo.escribir", (args) => `humo.escribir recibió ${JSON.stringify(args)}`);
 
   const mixWarn = mix1 + mix2 > 100;
 
