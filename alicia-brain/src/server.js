@@ -856,7 +856,11 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
             // las tools del servidor.
             result = `${block.name} no está disponible en este canal.`;
           } else {
-            result = await opts.ejecutarClientTool(block.name, block.input);
+            // block.id viaja como 3er argumento para que quien arme el frame
+            // client_tool/confirm pueda correlacionarlo con el tool_start de
+            // arriba — son dos IDs para la misma invocación (call_id del lado
+            // del registro de turnos, id del lado de la traza del modelo).
+            result = await opts.ejecutarClientTool(block.name, block.input, block.id);
           }
         } else if (admin && SENSITIVE_ADMIN.has(block.name)) {
           // acción sensible de un admin → no se ejecuta; se manda a aprobación del CEO
@@ -1197,51 +1201,71 @@ app.post("/api/copilot/turn", async (req, res) => {
   // arranque (el cliente cortando apenas conecta).
   const turnId = turnosCopiloto.abrir(act.userId);
 
-  res.writeHead(200, SSE_HEADERS);
-  res.flushHeaders?.();
-
-  // Los proxies cortan conexiones ociosas, y un turno con varias tools puede pasar
-  // 30s sin emitir nada. Un comentario SSE (línea que arranca con ":") mantiene viva
-  // la conexión sin que el cliente tenga que interpretarlo.
-  const latido = setInterval(() => { try { res.write(": ping\n\n"); } catch {} }, 15000);
-  let vivo = true;
-  // OJO: es `res` y no `req` a propósito. `req` (el body ya leído por express.json())
-  // dispara "close" apenas termina de recibirse el request, casi al toque de entrar
-  // acá — mucho antes de que el cliente se desconecte de verdad. Con `req.on("close")`
-  // `vivo` se apagaba al instante y el turno entero corría a ciegas: nunca se emitía
-  // ni el "done", ni se limpiaba el intervalo, y la conexión quedaba colgada para
-  // siempre (verificado a mano con el curl del brief). `res` sí refleja el socket real.
-  // También cierra el turno acá: si el cliente se desconecta, cualquier client_tool
-  // pendiente se suelta al instante en vez de esperar su timeout.
-  res.on("close", () => { vivo = false; clearInterval(latido); turnosCopiloto.cerrar(turnId); });
-
+  // `latido` y `vivo` se declaran ACÁ (afuera del try) para que el `finally`
+  // los pueda usar aunque el try explote antes de llegar a inicializarlos de
+  // verdad — `clearInterval(undefined)` no tira, `vivo` arranca en false.
+  let latido;
+  let vivo = false;
   const enviar = (evento, data) => {
     if (!vivo) return;
     try { res.write(sseFrame(evento, data)); } catch { vivo = false; }
   };
 
-  // Primero de todo: el cliente necesita el turnId ANTES de que pueda llegarle
-  // cualquier client_tool, porque es a dónde tiene que contestar.
-  enviar("turn_start", { turnId });
-
+  // Desde acá hasta el final, TODO queda adentro del mismo try/finally —
+  // incluidos el writeHead y el setInterval. Express 4 no atrapa un rechazo
+  // async que se escape de un handler, así que si algo entre el `abrir()` de
+  // arriba y el `processAliciaMessage` de abajo tirara y quedara afuera del
+  // try, el turnId se quedaría en turnosCopiloto para siempre (nadie llamaría
+  // a `cerrar()`).
   try {
+    res.writeHead(200, SSE_HEADERS);
+    res.flushHeaders?.();
+
+    // Los proxies cortan conexiones ociosas, y un turno con varias tools puede
+    // pasar 30s sin emitir nada. Un comentario SSE (línea que arranca con ":")
+    // mantiene viva la conexión sin que el cliente tenga que interpretarlo.
+    latido = setInterval(() => { try { res.write(": ping\n\n"); } catch {} }, 15000);
+    vivo = true;
+    // OJO: es `res` y no `req` a propósito. `req` (el body ya leído por express.json())
+    // dispara "close" apenas termina de recibirse el request, casi al toque de entrar
+    // acá — mucho antes de que el cliente se desconecte de verdad. Con `req.on("close")`
+    // `vivo` se apagaba al instante y el turno entero corría a ciegas: nunca se emitía
+    // ni el "done", ni se limpiaba el intervalo, y la conexión quedaba colgada para
+    // siempre (verificado a mano con el curl del brief). `res` sí refleja el socket real.
+    // También cierra el turno acá: si el cliente se desconecta, cualquier client_tool
+    // pendiente se suelta al instante en vez de esperar su timeout.
+    res.on("close", () => { vivo = false; clearInterval(latido); turnosCopiloto.cerrar(turnId); });
+
+    // Primero de todo: el cliente necesita el turnId ANTES de que pueda llegarle
+    // cualquier client_tool, porque es a dónde tiene que contestar.
+    enviar("turn_start", { turnId });
+
     const { text, actions } = await processAliciaMessage(act.userId, message, "copilot", {
       erpContext,
       clientTools: clientToolsPara(erpContext),
-      ejecutarClientTool: async (nombre, input) => {
+      ejecutarClientTool: async (nombre, input, id) => {
         // El cliente ya se fue: no tiene sentido abrir una espera de 60s para
         // alguien que no está. Se lo decimos al modelo y sigue.
         if (!vivo) return "La pantalla del usuario se desconectó.";
         const efecto = efectoDe(nombre);
-        // Una escritura la mira un humano: el techo es el de la paciencia de una
-        // persona frente a un diálogo, no el de una llamada de red.
-        const timeoutMs = efecto === "write" ? 180000 : 60000;
+        // Lista blanca (read/navigate), no `efecto !== "write"`: un efecto que
+        // no reconocemos —typo, tool nueva sin clasificar todavía— tiene que
+        // caer del lado seguro (confirmación), no ejecutarse derecho. La
+        // frontera de seguridad falla cerrada, no abierta.
+        const directo = efecto === "read" || efecto === "navigate";
+        // Un solo criterio (`directo`) decide evento Y timeout: si se derivaran
+        // por separado (dos comparaciones contra "write") podrían desincronizarse
+        // el día que se agregue un tercer efecto.
+        const timeoutMs = directo ? 60000 : 180000;
         const { callId, promesa } = turnosCopiloto.pedir(turnId, { timeoutMs });
         // El evento distinto ES la clasificación: el cliente no decide si pedir
         // confirmación mirando el nombre de la tool, la decide el frame que le
         // llega. Ver client-tools.js.
-        enviar(efecto === "write" ? "confirm" : "client_tool", {
-          call_id: callId, tool: nombre, input, efecto,
+        // `id` (el mismo que ya viajó en tool_start/tool_done) y `call_id` (el
+        // que espera turnos.js) son dos identificadores de la MISMA invocación:
+        // sin los dos, el front no puede ligar este diálogo con su fila de traza.
+        enviar(directo ? "client_tool" : "confirm", {
+          call_id: callId, id, tool: nombre, input, efecto,
         });
         return await promesa;
       },
@@ -1253,7 +1277,10 @@ app.post("/api/copilot/turn", async (req, res) => {
     enviar("done", { text, actions });
   } catch (e) {
     console.error("Turn error:", e.message);
-    enviar("error", { message: e.message });
+    // Si los headers nunca salieron (tiró antes del writeHead), no hay stream
+    // SSE al que escribirle nada — `enviar` de todos modos no-opea con `vivo`
+    // en false, pero chequear acá deja explícito por qué no hace falta.
+    if (res.headersSent) enviar("error", { message: e.message });
   } finally {
     clearInterval(latido);
     // Cerrar el turno ANTES de cerrar el socket: si quedó algo esperando, esto es
