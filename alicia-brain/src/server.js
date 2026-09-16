@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { query, parseArr, getDB } from "./db.js";
 import { lessonsForScope, formatLessonsBlock, pendingLessonsForCEO, formatPendingBlock } from "./lessons.js";
@@ -626,6 +626,20 @@ async function buildLiveContext(userId) {
   return text;
 }
 
+// Las client tools van DESPUÉS del breakpoint, nunca adentro. El enum de
+// erp_action sale del contexto del ERP, así que cambia cada vez que la persona
+// se mueve de módulo: meterlas en el prefijo cacheado invalidaría el caché de
+// tools (que es el bloque grande) en cada navegación. Es la misma disciplina
+// que ya aplica el contexto del ERP en systemBlocks.
+// Función pura (sin `opts`, sin `this`) para que un test la ejerza sin tener
+// que levantar `processAliciaMessage` ni tocar el modelo: sin `clientTools` (
+// ausente, `null` o vacío) devuelve LA MISMA REFERENCIA que recibió — esa
+// identidad es lo que garantiza que WhatsApp, el teléfono y /api/chat arman el
+// cuerpo de la request exactamente igual que antes de esta tarea.
+export function armarToolsDelTurno(cachedTools, clientTools) {
+  return clientTools?.length ? [...cachedTools, ...clientTools] : cachedTools;
+}
+
 async function processAliciaMessage(userId, userText, channel = "app", opts = {}) {
   const [profile, allProfiles, history, memories, knowledge] = await Promise.all([
     getProfile(userId),
@@ -676,14 +690,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
-  // Las client tools van DESPUÉS del breakpoint, nunca adentro. El enum de
-  // erp_action sale del contexto del ERP, así que cambia cada vez que la persona
-  // se mueve de módulo: meterlas en el prefijo cacheado invalidaría el caché de
-  // tools (que es el bloque grande) en cada navegación. Es la misma disciplina
-  // que ya aplica el contexto del ERP en systemBlocks.
-  const toolsDelTurno = opts.clientTools?.length
-    ? [...cachedTools, ...opts.clientTools]
-    : cachedTools;
+  const toolsDelTurno = armarToolsDelTurno(cachedTools, opts.clientTools);
   const toolResults = [];
   let finalText = "";
   // Acumulador de costo del turno: se resetea acá (por turno, no por request handler)
@@ -2458,29 +2465,36 @@ app.get("/health", async (_, res) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, async () => {
-  console.log(`\n🧠 Alicia Brain · http://localhost:${PORT}`);
-  console.log(`   ERP: ${process.env.ERP_URL || "http://localhost:3002"}`);
-  console.log(`   Google:  ${process.env.GOOGLE_CLIENT_ID ? "✅" : "⏳ pendiente"}`);
-  console.log(`   Zoom:    ${process.env.ZOOM_ACCOUNT_ID ? "✅" : "⏳ pendiente"}`);
-  console.log(`   Dropbox: ${process.env.DROPBOX_ACCESS_TOKEN ? "✅" : "⏳ pendiente"}`);
-  console.log(`   Tavily:  ${process.env.TAVILY_API_KEY ? "✅" : "⏳ pendiente"}\n`);
+// Guard de "soy el programa principal": `node src/server.js` (prod, Railway,
+// clon-nocturno.js) siempre entra acá igual que antes. Lo nuevo es que un
+// `import` de este módulo (como el test de armarToolsDelTurno) NO levanta un
+// server real ni pega contra BCRP/Nexo/sqlite — antes de esta tarea nada
+// importaba server.js como módulo, así que no había necesidad del guard.
+if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+  app.listen(PORT, async () => {
+    console.log(`\n🧠 Alicia Brain · http://localhost:${PORT}`);
+    console.log(`   ERP: ${process.env.ERP_URL || "http://localhost:3002"}`);
+    console.log(`   Google:  ${process.env.GOOGLE_CLIENT_ID ? "✅" : "⏳ pendiente"}`);
+    console.log(`   Zoom:    ${process.env.ZOOM_ACCOUNT_ID ? "✅" : "⏳ pendiente"}`);
+    console.log(`   Dropbox: ${process.env.DROPBOX_ACCESS_TOKEN ? "✅" : "⏳ pendiente"}`);
+    console.log(`   Tavily:  ${process.env.TAVILY_API_KEY ? "✅" : "⏳ pendiente"}\n`);
 
-  // Ensure market tables exist, seed projects from static file if empty
-  ensureMarketSchema();
-  loadApprovals(); // aprobaciones pendientes de admins (sobreviven redeploys)
-  try {
-    const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
-    const raw = await readFile(staticPath, "utf8");
-    const parsed = JSON.parse(raw);
-    await seedFromStaticIfEmpty(parsed.projects || []);
-  } catch (e) {
-    console.warn("Market seed: no se pudo leer el static file:", e.message);
-  }
+    // Ensure market tables exist, seed projects from static file if empty
+    ensureMarketSchema();
+    loadApprovals(); // aprobaciones pendientes de admins (sobreviven redeploys)
+    try {
+      const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
+      const raw = await readFile(staticPath, "utf8");
+      const parsed = JSON.parse(raw);
+      await seedFromStaticIfEmpty(parsed.projects || []);
+    } catch (e) {
+      console.warn("Market seed: no se pudo leer el static file:", e.message);
+    }
 
-  // Fetch real macro data from BCRP on startup (non-blocking)
-  refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
+    // Fetch real macro data from BCRP on startup (non-blocking)
+    refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
 
-  // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
-  if (!isSandbox()) startCron();
-});
+    // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
+    if (!isSandbox()) startCron();
+  });
+}

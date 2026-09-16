@@ -1,27 +1,49 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clientToolsPara, esClientTool } from "../src/client-tools.js";
+import { armarToolsDelTurno } from "../src/server.js";
 
-// Estos tests no levantan el server: verifican el CONTRATO que el loop usa para
-// decidir. El comportamiento end-to-end del loop lo cubre humo-manos.mjs, que
-// corre contra un browser de verdad.
+// `armarToolsDelTurno` es la función pura que decide qué `tools` viajan en el
+// cuerpo del request. Se testea directo (sin levantar `processAliciaMessage`
+// ni el server real) porque es la única garantía automatizada de que un canal
+// sin `clientTools` arma exactamente el mismo array que armaba antes de la
+// Tarea 3 — el resto del loop (el dispatch de `esClientTool` y el mensaje de
+// aviso sin `ejecutarClientTool`) sólo se puede ejercitar disparando el modelo
+// de verdad, y eso lo cubre el humo de la Tarea 10.
 
-test("una tool del servidor nunca se deriva al browser", () => {
-  for (const n of ["gmail_send", "create_task", "radar_query", "use_skill"]) {
-    assert.equal(esClientTool(n), false, `${n} se estaría derivando al browser`);
+const cachedTools = [
+  { name: "tool_a", input_schema: { type: "object", properties: {} } },
+  { name: "tool_b", input_schema: { type: "object", properties: {} }, cache_control: { type: "ephemeral" } },
+];
+
+test("sin clientTools (undefined, null o vacío) devuelve LA MISMA referencia que cachedTools", () => {
+  // strictEqual y no deepEqual a propósito: la garantía de byte-identidad de
+  // WhatsApp/embodied//api/chat depende de que sea el MISMO array, no una copia.
+  assert.strictEqual(armarToolsDelTurno(cachedTools, undefined), cachedTools);
+  assert.strictEqual(armarToolsDelTurno(cachedTools, null), cachedTools);
+  assert.strictEqual(armarToolsDelTurno(cachedTools, []), cachedTools);
+});
+
+test("el cache_control se queda en la última tool estable, y ninguna client tool lo lleva", () => {
+  const clientTools = [
+    { name: "erp_navigate", input_schema: { type: "object", properties: {} } },
+    { name: "erp_action", input_schema: { type: "object", properties: {} } },
+  ];
+  const resultado = armarToolsDelTurno(cachedTools, clientTools);
+
+  const conBreakpoint = resultado.filter(t => t.cache_control);
+  assert.equal(conBreakpoint.length, 1);
+  assert.equal(conBreakpoint[0].name, "tool_b");
+  for (const t of clientTools) {
+    assert.equal("cache_control" in resultado.find(r => r.name === t.name), false, `${t.name} no debería tener cache_control`);
   }
 });
 
-test("sin contexto del ERP igual hay manos para navegar y descubrir", () => {
-  const nombres = clientToolsPara(null).map(t => t.name);
-  assert.ok(nombres.includes("erp_navigate"));
-  assert.ok(nombres.includes("erp_list_modules"));
-});
+test("las client tools quedan estrictamente después del elemento con cache_control", () => {
+  const clientTools = [{ name: "erp_navigate", input_schema: { type: "object", properties: {} } }];
+  const resultado = armarToolsDelTurno(cachedTools, clientTools);
 
-test("las client tools tienen la forma exacta que espera la API de tools", () => {
-  for (const t of clientToolsPara({ active: { module: "cabida", actions: ["cabida.setParams"] }, others: [] })) {
-    assert.deepEqual(Object.keys(t).sort(), ["description", "input_schema", "name"]);
-    assert.equal(t.input_schema.type, "object");
-    assert.equal(typeof t.input_schema.properties, "object");
-  }
+  const idxBreakpoint = resultado.findIndex(t => t.cache_control);
+  const idxClientTool = resultado.findIndex(t => t.name === "erp_navigate");
+  assert.ok(idxBreakpoint >= 0);
+  assert.ok(idxClientTool > idxBreakpoint, "la client tool debe ir después del breakpoint de caché");
 });
