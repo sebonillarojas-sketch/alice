@@ -9,13 +9,13 @@ import { abrirTurno } from "../../copilot/turn.js";
 import Markdown from "../../copilot/Markdown.jsx";
 import TrazaTool from "../../copilot/TrazaTool.jsx";
 import PanelContexto from "../../copilot/PanelContexto.jsx";
+import { loadChat, saveChat } from "../../copilot/historial.js";
 import { supabase } from "../../lib/supabase.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BAM = "#A855F7";
 const PROFILES_KEY = "alicia_profiles_v1";
 const API_KEY_KEY = "alicia_api_key";
-const chatKey = (uid) => `alicia_chat_${uid}_v1`;
 
 const SPV_CONTEXT = `
 SPVs / proyectos de Hygge:
@@ -192,8 +192,6 @@ function loadProfiles() {
   return JSON.parse(JSON.stringify(DEFAULT_PROFILES));
 }
 function saveProfiles(p) { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(p)); } catch {} }
-function loadChat(uid) { try { const r = localStorage.getItem(chatKey(uid)); return r ? JSON.parse(r) : []; } catch { return []; } }
-function saveChat(uid, msgs) { try { localStorage.setItem(chatKey(uid), JSON.stringify(msgs.slice(-100))); } catch {} }
 // Sin key de env: el bundle es público (así se filtró la key el 13 jul 2026). El chat va vía
 // backend aliceai; el fallback directo a Anthropic solo corre si el admin pegó su key en localStorage.
 function loadApiKey() { try { return localStorage.getItem(API_KEY_KEY) || ""; } catch { return ""; } }

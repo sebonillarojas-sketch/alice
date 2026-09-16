@@ -4,6 +4,7 @@ import LoginScreen from "./auth/LoginScreen.jsx";
 import HyggeOS from "./HyggeOS.jsx";
 import { ALICIA_URL as BRAIN_ALICIA_URL } from "./lib/brain.js";
 import { ERPContextProvider } from "./copilot/ERPContext.jsx";
+import { CopilotoProvider } from "./copilot/CopilotoProvider.jsx";
 import { decideCalendarGate } from "./lib/onboardingGate.js";
 
 const C = {
@@ -692,9 +693,14 @@ function Gate() {
   if (!waSet)      return <WhatsAppModal user={user} onDone={handleWa} />;
   if (!pwSet)      return <SetPasswordModal user={user} onDone={handleSetPassword} />;
 
+  // El turno del copiloto va ADENTRO de ERPContextProvider (usa useCopilotSnapshot
+  // y useRegistroERP) y AFUERA de HyggeOS: el router de spaces vive ahí adentro, y
+  // si el turno viviera por debajo, un erp_navigate lo desmontaría a mitad.
   return (
     <ERPContextProvider>
-      <HyggeOS authUser={user} />
+      <CopilotoProvider userId={user.id}>
+        <HyggeOS authUser={user} />
+      </CopilotoProvider>
     </ERPContextProvider>
   );
 }
