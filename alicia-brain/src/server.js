@@ -2315,14 +2315,25 @@ app.post("/api/market-import", (req, res) => {
 
   try {
     const { type, projects, rates, source } = req.body;
+    // Este endpoint es el ÚNICO rastro que deja la bestia (buzzfly5): corre Playwright
+    // en la máquina de Lima y pushea. Si deja de correr no hay error en ningún lado —
+    // estuvo siete días muda y nadie se enteró. Registrar la corrida convierte ese
+    // silencio en algo medible (ver checkFleetFreshness en scrapers/fleet.js).
+    const anotarBestia = (summary, actions) => {
+      import("./scrapers/fleet.js")
+        .then(({ recordScraperRun }) => recordScraperRun("buzzfly5", { result: "ok", summary, actions: [actions] }))
+        .catch(e => console.error("🪰 buzzfly5: no pude registrar el push:", e.message));
+    };
     if (type === "projects" && Array.isArray(projects)) {
       const src = source || "nexo";
       saveSnapshot(projects, src);                  // snapshot por-fuente → Radar combina nexo + urbania
       if (src === "nexo") importProjects(projects); // compat: path histórico de Nexo (tabla projects)
+      anotarBestia(`Bestia → ${src}: ${projects.length} proyectos`, { type, source: src, saved: projects.length });
       return res.json({ ok: true, type, source: src, saved: projects.length });
     }
     if (type === "bank_rates" && Array.isArray(rates)) {
       saveBankRates(rates);
+      anotarBestia(`Bestia → tasas: ${rates.length} entidades`, { type, saved: rates.length });
       return res.json({ ok: true, type, saved: rates.length });
     }
     res.status(400).json({ ok: false, error: "unknown type" });
