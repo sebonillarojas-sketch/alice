@@ -2019,7 +2019,7 @@ git commit -m "test(copilot): el round-trip de las manos contra un browser de ve
 
 ## Verificación de cierre
 
-- [ ] `cd alicia-brain && node --test test/*.test.mjs` → PASS (los 313 de hoy + 8 de `client-tools` + 8 de `turnos` + 3 del loop = **332**)
+- [ ] `cd alicia-brain && node --test test/*.test.mjs` → PASS (los 313 de hoy + 9 de `client-tools` + 8 de `turnos` + 3 del loop = **333**)
 - [ ] `cd files/alice && node --test test/*.test.mjs` → PASS (los 263 de hoy + 7 de `acciones` + 11 de `manos` = **281**)
 - [ ] `cd files/alice && npm run build` → limpio
 - [ ] `npm run humo` → `HUMO OK` · `npm run humo:burbuja` → `BURBUJA OK` · `npm run humo:stream` → `STREAM OK` (las tres siguen pasando: la Fase 2 no se rompió)
