@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="797" height="1353" font-family="Helvetica,Arial,sans-serif">
+<rect width="100%" height="100%" fill="white"/>
+<text x="70" y="28" font-size="17" font-weight="bold">1D/1B vivienda semilla de crecimiento horizontal, núcleo húmedo fijo en la etapa ya</text>
+<text x="70" y="49" font-size="14" font-weight="bold">construida, patio de reserva = huella exacta del futuro dormitorio 2, San Juan de Lurigancho/Lima Norte</text>
+<text x="70" y="73" font-size="13" fill="#666">2026-09-16-u01 &#183; area techada 71.13 m&#178; &#183; 6.3&#215;12.75 m</text>
+<g transform="translate(70,96)">
+<polygon points="11.2,11.2 555.8,11.2 555.8,308.2 11.2,308.2" fill="#fdebd3" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="283.5" y="153.8" font-size="12.5" text-anchor="middle">sala-comedor</text>
+<text x="283.5" y="168.8" font-size="10.5" fill="#666" text-anchor="middle">19.96 m&#178;</text>
+<polygon points="11.2,321.8 110.3,321.8 110.3,555.8 11.2,555.8" fill="#d6ead9" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="60.8" y="432.8" font-size="12.5" text-anchor="middle">vestidor</text>
+<text x="60.8" y="447.8" font-size="10.5" fill="#666" text-anchor="middle">2.86 m&#178;</text>
+<polygon points="123.8,321.8 272.2,321.8 272.2,555.8 123.8,555.8" fill="#d6ead9" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="198.0" y="432.8" font-size="12.5" text-anchor="middle">baño 1</text>
+<text x="198.0" y="447.8" font-size="10.5" fill="#666" text-anchor="middle">4.29 m&#178;</text>
+<polygon points="285.8,321.8 434.2,321.8 434.2,555.8 285.8,555.8" fill="#d6ead9" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="360.0" y="432.8" font-size="12.5" text-anchor="middle">cocina</text>
+<text x="360.0" y="447.8" font-size="10.5" fill="#666" text-anchor="middle">4.29 m&#178;</text>
+<polygon points="447.7,321.8 555.8,321.8 555.8,555.8 447.7,555.8" fill="#d6ead9" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="501.8" y="432.8" font-size="12.5" text-anchor="middle">lavandería</text>
+<text x="501.8" y="447.8" font-size="10.5" fill="#666" text-anchor="middle">3.12 m&#178;</text>
+<polygon points="11.2,569.2 555.8,569.2 555.8,843.8 11.2,843.8" fill="#cfe0f3" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="283.5" y="700.5" font-size="12.5" text-anchor="middle">dormitorio principal</text>
+<text x="283.5" y="715.5" font-size="10.5" fill="#666" text-anchor="middle">18.45 m&#178;</text>
+<polygon points="11.2,866.2 555.8,866.2 555.8,1136.2 11.2,1136.2" fill="#fdebd3" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="283.5" y="995.2" font-size="12.5" text-anchor="middle">terraza / patio de reserva</text>
+<text x="283.5" y="1010.2" font-size="10.5" fill="#666" text-anchor="middle">18.15 m&#178;</text>
+<line x1="0.0" y1="0.0" x2="0.0" y2="1147.5" stroke="#222" stroke-width="5"/>
+<line x1="567.0" y1="0.0" x2="567.0" y2="1147.5" stroke="#222" stroke-width="5"/>
+<line x1="0.0" y1="0.0" x2="567.0" y2="0.0" stroke="#222" stroke-width="5"/>
+<line x1="0.0" y1="315.0" x2="567.0" y2="315.0" stroke="#555" stroke-width="3"/>
+<line x1="117.0" y1="315.0" x2="117.0" y2="562.5" stroke="#555" stroke-width="3"/>
+<line x1="279.0" y1="315.0" x2="279.0" y2="562.5" stroke="#555" stroke-width="3"/>
+<line x1="441.0" y1="315.0" x2="441.0" y2="562.5" stroke="#555" stroke-width="3"/>
+<line x1="0.0" y1="562.5" x2="567.0" y2="562.5" stroke="#555" stroke-width="3"/>
+<line x1="0.0" y1="855.0" x2="567.0" y2="855.0" stroke="#222" stroke-width="5"/>
+<line x1="0.0" y1="1147.5" x2="567.0" y2="1147.5" stroke="#222" stroke-width="5"/>
+<line x1="243.0" y1="11.2" x2="324.0" y2="11.2" stroke="white" stroke-width="6"/>
+<path d="M 243.0 11.2 L 243.0 92.2 A 81.0 81.0 0 0 1 324.0 11.2" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="288.0" y1="315.0" x2="432.0" y2="315.0" stroke="white" stroke-width="6"/>
+<path d="M 288.0 315.0 L 288.0 459.0 A 144.0 144.0 0 0 1 432.0 315.0" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="166.5" y1="315.0" x2="229.5" y2="315.0" stroke="white" stroke-width="6"/>
+<path d="M 166.5 315.0 L 166.5 378.0 A 63.0 63.0 0 0 1 229.5 315.0" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="465.7" y1="315.0" x2="537.8" y2="315.0" stroke="white" stroke-width="6"/>
+<path d="M 465.7 315.0 L 465.7 387.0 A 72.0 72.0 0 0 1 537.8 315.0" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="117.0" y1="407.3" x2="117.0" y2="470.2" stroke="white" stroke-width="6"/>
+<path d="M 117.0 407.3 L 180.0 407.3 A 63.0 63.0 0 0 1 117.0 470.2" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="24.8" y1="562.5" x2="96.8" y2="562.5" stroke="white" stroke-width="6"/>
+<path d="M 24.8 562.5 L 24.8 634.5 A 72.0 72.0 0 0 1 96.8 562.5" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="247.5" y1="855.0" x2="319.5" y2="855.0" stroke="white" stroke-width="6"/>
+<path d="M 247.5 855.0 L 247.5 927.0 A 72.0 72.0 0 0 1 319.5 855.0" fill="none" stroke="#8a5a2b" stroke-width="1.5" stroke-dasharray="2,2"/>
+<line x1="148.5" y1="11.2" x2="418.5" y2="11.2" stroke="#3a7bd5" stroke-width="5"/>
+<line x1="184.5" y1="843.8" x2="382.5" y2="843.8" stroke="#3a7bd5" stroke-width="5"/>
+</g>
+<text x="353.5" y="1273.5" font-size="13" text-anchor="middle">6.3 m</text>
+<line x1="70" y1="1258.5" x2="637.0" y2="1258.5" stroke="#333" stroke-width="1"/>
+<text x="667.0" y="669.8" font-size="13" transform="rotate(90 667.0,669.8)" text-anchor="middle">12.75 m</text>
+<line x1="652.0" y1="96" x2="652.0" y2="1243.5" stroke="#333" stroke-width="1"/>
+</svg>
