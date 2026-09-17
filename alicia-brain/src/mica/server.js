@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import { responder } from "./chat.js";
 import { backendPorDefecto } from "./llm.js";
+import { normalizarTwilio, enviarWA, firmaValida } from "./wa.js";
+import { abrirHilos, guardar, hilo, estado, marcarHandoff } from "./hilos.js";
 
 dotenv.config();
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -19,8 +21,22 @@ const catalogo = (() => {
 })();
 
 const llm = backendPorDefecto();
+
+// Los hilos viven en el volumen si hay uno; si no, en memoria (el sandbox del cockpit
+// no necesita persistir, pero WhatsApp sí: un redeploy no puede borrar una conversación).
+const HILOS_PATH = process.env.MICA_DB_PATH || (process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "mica.db") : ":memory:");
+const hilos = abrirHilos(HILOS_PATH);
+
+const TW = {
+  sid: process.env.TWILIO_ACCOUNT_SID || "",
+  token: process.env.TWILIO_AUTH_TOKEN || "",
+  from: process.env.MICA_WHATSAPP_FROM || "",
+};
+
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false }));
 
 // OJO: nada de express.static(PUBLIC). Esa carpeta es del brain y su index.html es el
 // panel de control de Alice — servirla acá lo publicaba entero en el dominio de Mica.
@@ -49,5 +65,43 @@ app.post("/api/mica/chat", async (req, res) => {
 });
 
 // Railway inyecta PORT y contra ese hace el healthcheck. MICA_PORT es solo para local.
+// WhatsApp entrante (Twilio). Se responde 200 al toque y se contesta aparte: el
+// modelo tarda segundos y Twilio no debe quedarse esperando ni reintentar.
+app.post("/webhook/whatsapp", (req, res) => {
+  // Twilio firma sobre la URL EXACTA que llamó. Detrás del proxy de Railway el
+  // esquema real viene en X-Forwarded-Proto; en local es http. Fijar "https" acá
+  // hace que la firma no cierre nunca fuera de producción.
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  const url = `${proto}://${req.get("host")}${req.originalUrl}`;
+  if (!firmaValida({ url, params: req.body, firma: req.get("X-Twilio-Signature"), token: TW.token })) {
+    console.warn("🟠 webhook con firma inválida — descartado");
+    return res.status(403).end();
+  }
+  res.type("text/xml").send("<Response></Response>");
+
+  const m = normalizarTwilio(req.body);
+  if (!m) return;
+  atender(m).catch(e => console.error("🟠 atendiendo WhatsApp:", e.message));
+});
+
+async function atender(m) {
+  // Un audio o una foto no se responden con silencio: se dice la verdad.
+  const texto = m.texto || "(te mandó un adjunto que Mica todavía no puede abrir)";
+  guardar(hilos, m.telefono, "prospecto", texto);
+
+  const st = estado(hilos, m.telefono);
+  const r = await responder({
+    mensajes: hilo(hilos, m.telefono, 20),
+    estado: { ...st, nombre: st.nombre || m.nombrePerfil },
+    catalogo,
+    llm,
+  });
+
+  guardar(hilos, m.telefono, "mica", r.texto);
+  if (r.tipo === "handoff") marcarHandoff(hilos, m.telefono, r.combo);
+  await enviarWA({ to: m.telefono, texto: r.texto, ...TW });
+  console.log(`🟠 ${m.telefono} · ${r.tipo} · ${r.temperatura}`);
+}
+
 const PORT = process.env.PORT || process.env.MICA_PORT || 3010;
 app.listen(PORT, "0.0.0.0", () => console.log(`🟠 Mica escuchando en http://localhost:${PORT}`));
