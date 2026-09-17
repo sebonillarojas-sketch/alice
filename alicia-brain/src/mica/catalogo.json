@@ -2,15 +2,59 @@
   {
     "id": "SA01",
     "nombre": "San Antonio 01",
-    "alias": [],
+    "alias": [
+      "Legendre",
+      "PU01",
+      "Ugarriza"
+    ],
     "estado": "en_venta",
-    "dropbox": "/Hygge/02_PROYECTOS/San Antonio 01",
-    "tipologias": []
+    "dropbox": "/Hygge/06_COMERCIAL/ERP-CRM/San Antonio 01",
+    "tipologias": [
+      {
+        "nombre": "flat 1 dormitorio",
+        "dormitorios": 1,
+        "banos": 2,
+        "m2": 139,
+        "detalle": "patio interior con parrilla"
+      },
+      {
+        "nombre": "flat 2 dormitorios",
+        "dormitorios": 2,
+        "banos": 3,
+        "m2": 111
+      },
+      {
+        "nombre": "flat 2 dormitorios + estudio",
+        "dormitorios": 2,
+        "banos": 4,
+        "m2": 155,
+        "detalle": "dos patios interiores"
+      },
+      {
+        "nombre": "flat 3 dormitorios + estudio",
+        "dormitorios": 3,
+        "banos": 5,
+        "m2": 159,
+        "detalle": "terraza con vista al parque"
+      },
+      {
+        "nombre": "dúplex 2 dormitorios + estudio",
+        "dormitorios": 2,
+        "banos": 4,
+        "m2": 213,
+        "detalle": "azotea con piscina, family den y bar"
+      }
+    ],
+    "distrito": "Miraflores",
+    "direccion": "Ca. Francisco de Paula Ugarriza 249"
   },
   {
     "id": "SA02",
     "nombre": "San Antonio 02",
-    "alias": ["del Castillo", "DC01"],
+    "alias": [
+      "del Castillo",
+      "DC01"
+    ],
     "estado": "en_venta",
     "dropbox": "/Hygge/02_PROYECTOS/DC01_del_castillo",
     "tipologias": []
@@ -18,7 +62,10 @@
   {
     "id": "OLVR01",
     "nombre": "Olivar 01",
-    "alias": ["de la Torre", "TG01"],
+    "alias": [
+      "de la Torre",
+      "TG01"
+    ],
     "estado": "por_confirmar",
     "dropbox": "/Hygge/02_PROYECTOS/TG01_de_la_torre",
     "tipologias": []

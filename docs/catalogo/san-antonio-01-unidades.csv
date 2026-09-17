@@ -1,0 +1,8 @@
+piso,numero,tipologia,dormitorios,estudio,banos,m2_techada,m2_libre,m2_total,estacionamientos,deposito,precio_lista,moneda,estado,notas
+01,101,flat 1D,1,0,2,82.95,56.38,139.33,1,1,358212.15,USD,disponible,patio interior con parrilla
+01,102,flat 1D,1,0,2,80.23,56.44,136.67,1,1,350148.88,USD,disponible,patio interior con parrilla
+01,103,flat 2D + estudio,2,1,4,112.90,41.80,154.70,2,1,442485.50,USD,disponible,dos patios interiores
+02,201,flat 3D + estudio,3,1,5,143.40,15.62,159.02,2,1,494671.98,USD,disponible,terraza con vista al parque
+02,203,flat 2D,2,0,3,110.74,0.00,110.74,1,1,357013.15,USD,disponible,vista interior
+03,303,flat 2D,2,0,3,110.74,0.00,110.74,1,1,357013.15,USD,disponible,vista interior · igual al 203
+05,503,duplex 2D + estudio,2,1,4,149.47,63.08,212.55,2,1,567647.48,USD,disponible,piso 5 y azotea · piscina, family den y bar
