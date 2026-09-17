@@ -96,6 +96,14 @@
             Temperatura del hilo: <span id="temp" class="badge frio">frío</span>
           </div>
           <div id="evidencia" style="font-size:12px;color:var(--muted);margin-top:8px;font-style:italic"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+            <select id="voz" style="width:auto;padding:6px 10px;font-size:12px;background:var(--paper);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+              <option value="">Cargando voces…</option>
+            </select>
+            <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+              <input type="checkbox" id="auto-voz"> hablar sola
+            </label>
+          </div>
         </div>
       </div>
       <div class="chat" id="chat"></div>
@@ -159,8 +167,11 @@ function setBlob(estado, texto) {
   $('estado-txt').textContent = texto;
 }
 function pintar() {
-  $('chat').innerHTML = mensajes.map(m =>
-    `<div class="msg ${m.rol === 'prospecto' ? 'yo' : 'mica'}">${m.texto.replace(/</g,'&lt;')}</div>`
+  $('chat').innerHTML = mensajes.map((m, i) =>
+    m.rol === 'prospecto'
+      ? `<div class="msg yo">${m.texto.replace(/</g,'&lt;')}</div>`
+      : `<div class="msg mica">${m.texto.replace(/</g,'&lt;')}` +
+        `<button onclick="hablar(${i})" title="Escuchar a Mica" style="background:none;border:none;color:var(--hygge3);cursor:pointer;font-size:13px;padding:0 0 0 6px">🔊</button></div>`
   ).join('');
   $('chat').scrollTop = $('chat').scrollHeight;
 }
@@ -190,7 +201,8 @@ async function enviar() {
         '<div class="msg meta"><span class="badge handoff">HANDOFF</span> — de acá en adelante el lead es de José</div>');
       $('chat').scrollTop = $('chat').scrollHeight;
     }
-    setBlob('speaking', d.tipo === 'handoff' ? 'Derivado a José' : 'Lista para conversar');
+    if ($('auto-voz').checked) hablar(mensajes.length - 1);
+    else setBlob('speaking', d.tipo === 'handoff' ? 'Derivado a José' : 'Lista para conversar');
     setTimeout(() => setBlob('idle', d.tipo === 'handoff' ? 'Derivado a José' : 'Lista para conversar'), 1200);
   } catch (e) {
     setBlob('idle', 'No pude responder');
@@ -198,9 +210,43 @@ async function enviar() {
 }
 $('enviar').onclick = enviar;
 $('entrada').onkeydown = (e) => { if (e.key === 'Enter') enviar(); };
+let audioActual = null;
+async function hablar(i) {
+  const m = mensajes[i];
+  if (!m) return;
+  try {
+    if (audioActual) { audioActual.pause(); audioActual = null; }
+    setBlob('speaking', 'Hablando…');
+    const r = await fetch('/api/mica/voz', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto: m.texto, voiceId: $('voz').value })
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || r.status); }
+    audioActual = new Audio(URL.createObjectURL(await r.blob()));
+    audioActual.onended = () => setBlob('idle', 'Lista para conversar');
+    await audioActual.play();
+  } catch (e) {
+    setBlob('idle', 'No pude hablar: ' + e.message);
+  }
+}
+
+fetch('/api/mica/voces').then(r => r.json()).then(d => {
+  const sel = $('voz');
+  if (!d.voces || !d.voces.length) {
+    sel.innerHTML = `<option value="">${d.error === 'sin ELEVENLABS_API_KEY' ? 'sin key de ElevenLabs' : 'sin voces'}</option>`;
+    return;
+  }
+  const guardada = localStorage.getItem('mica_voz') || d.elegida || '';
+  sel.innerHTML = d.voces.map(v =>
+    `<option value="${v.id}" ${v.id === guardada ? 'selected' : ''}>${v.nombre}${v.etiquetas?.accent ? ' · ' + v.etiquetas.accent : ''}</option>`
+  ).join('');
+  sel.onchange = () => localStorage.setItem('mica_voz', sel.value);
+}).catch(()=>{});
+
 $('reset').onclick = () => { mensajes = []; pintar(); $('temp').className='badge frio'; $('temp').textContent='frío'; $('evidencia').textContent=''; setBlob('idle','Lista para conversar'); };
 
-fetch('/api/mica/voz').then(r => r.text()).then(t => $('voz-txt').textContent = t).catch(()=>{});
+
+fetch('/api/mica/skill-voz').then(r => r.text()).then(t => $('voz-txt').textContent = t).catch(()=>{});
 fetch('/api/mica/estado').then(r => r.json()).then(d => {
   $('s-modelo').textContent = d.backend;
   $('s-modelo-sub').textContent = d.modelo;

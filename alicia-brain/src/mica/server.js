@@ -9,6 +9,7 @@ import { responder } from "./chat.js";
 import { backendPorDefecto } from "./llm.js";
 import { normalizarTwilio, enviarWA, firmaValida } from "./wa.js";
 import { abrirHilos, guardar, hilo, estado, marcarHandoff } from "./hilos.js";
+import { sintetizar, listarVoces } from "./voz.js";
 
 dotenv.config();
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,12 @@ const TW = {
   from: process.env.MICA_WHATSAPP_FROM || "",
 };
 
+const EL = {
+  apiKey: process.env.ELEVENLABS_API_KEY || "",
+  // Voz PROPIA de Mica. Nunca cae a ELEVENLABS_VOICE_ID, que es la de Alicia.
+  voiceId: process.env.MICA_VOICE_ID || "",
+};
+
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
@@ -51,7 +58,7 @@ app.get("/api/mica/estado", (_, res) => res.json({
   catalogo,
 }));
 
-app.get("/api/mica/voz", (_, res) =>
+app.get("/api/mica/skill-voz", (_, res) =>
   res.type("text/plain").send(readFileSync(join(SKILL, "references/voz.md"), "utf8")));
 
 app.post("/api/mica/chat", async (req, res) => {
@@ -65,6 +72,26 @@ app.post("/api/mica/chat", async (req, res) => {
 });
 
 // Railway inyecta PORT y contra ese hace el healthcheck. MICA_PORT es solo para local.
+// Las voces de la cuenta, para elegir la de Mica escuchándolas desde el cockpit.
+app.get("/api/mica/voces", async (_, res) => {
+  if (!EL.apiKey) return res.json({ voces: [], error: "sin ELEVENLABS_API_KEY" });
+  try {
+    res.json({ voces: await listarVoces(EL), elegida: EL.voiceId });
+  } catch (e) { res.status(502).json({ voces: [], error: e.message }); }
+});
+
+app.post("/api/mica/voz", async (req, res) => {
+  const { texto, voiceId } = req.body || {};
+  if (!texto) return res.status(400).json({ error: "falta texto" });
+  try {
+    const audio = await sintetizar({ texto, apiKey: EL.apiKey, voiceId: voiceId || EL.voiceId });
+    res.type("audio/mpeg").send(audio);
+  } catch (e) {
+    console.error("🟠 voz:", e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // WhatsApp entrante (Twilio). Se responde 200 al toque y se contesta aparte: el
 // modelo tarda segundos y Twilio no debe quedarse esperando ni reintentar.
 app.post("/webhook/whatsapp", (req, res) => {
