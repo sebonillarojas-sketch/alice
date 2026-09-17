@@ -9,6 +9,8 @@ import { proyectosStore } from "./modules/cabida/proyectos.js";
 import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
 import CotizacionView from "./modules/cotizacion/CotizacionView";
 import { useERPContext } from "./copilot/ERPContext.jsx";
+import { useCopiloto } from "./copilot/CopilotoProvider.jsx";
+import CopilotoDock from "./copilot/CopilotoDock.jsx";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { DISTRICTS_DATA, COMPETITORS_DB, TREND_LABEL } from "./modules/mercado/sectorData";
 import { useTimer } from "./modules/timer/useTimer";
@@ -16109,6 +16111,11 @@ export default function HyggeOS({ authUser } = {}) {
     setCurrentSpace(space);
     if (vw) setView(vw);
   }, [currentSpace]);
+  const { registrarNavigate } = useCopiloto();
+  // Las manos del copiloto navegan con la MISMA función que el sidebar. Si algún
+  // día navigate cambia de forma, erp_navigate cambia con ella sin que nadie se
+  // acuerde de venir hasta acá.
+  useEffect(() => { registrarNavigate(navigate); }, [registrarNavigate, navigate]);
   const goBack = useCallback(() => {
     setSpaceHistory(h => {
       const prev = h[h.length - 1];
@@ -16367,16 +16374,21 @@ REGLAS:
       }
     }
     if (currentSpace === "alicia") {
+      // Con boundary como el resto de los módulos: ahora que el hilo lo dibuja
+      // <Conversacion/>, un mensaje con markdown roto revienta acá adentro y sin
+      // esto se llevaría puesto el ERP entero.
       return (
-        <AliciaView
-          currentUser={{ ...currentUser, isCEO: authUser?.isCEO }}
-          tasks={tasks}
-          addTask={addTask}
-          updateTask={updateTask}
-          allSpaces={allSpaces}
-          knowledgeLinks={knowledgeLinks}
-          createEvent={(ev) => createFromSmartCapture && createFromSmartCapture(`EVENTO: ${ev.title} el ${ev.date} ${ev.time} · asistentes: ${(ev.attendees || []).join(", ")} · ${ev.description || ""}`)}
-        />
+        <ModuleErrorBoundary key="alicia" moduleName="Alicia" onExit={() => navigate("hq")}>
+          <AliciaView
+            currentUser={{ ...currentUser, isCEO: authUser?.isCEO }}
+            tasks={tasks}
+            addTask={addTask}
+            updateTask={updateTask}
+            allSpaces={allSpaces}
+            knowledgeLinks={knowledgeLinks}
+            createEvent={(ev) => createFromSmartCapture && createFromSmartCapture(`EVENTO: ${ev.title} el ${ev.date} ${ev.time} · asistentes: ${(ev.attendees || []).join(", ")} · ${ev.description || ""}`)}
+          />
+        </ModuleErrorBoundary>
       );
     }
     if (currentSpace === "calendar-tool") {
@@ -16783,6 +16795,12 @@ REGLAS:
           onNavigateSpace={(id) => navigate(id)}
         />
       )}
+      {/* El copiloto, hermano del layout y no hijo del switch de spaces: por eso
+          sobrevive a que Alicia navegue con erp_navigate. Se oculta en el space
+          `alicia`, que ya muestra la MISMA conversación a lo ancho — si no, la
+          misma cosa se ve dos veces en pantalla. (Oculto sigue montando el
+          diálogo de confirmación: una escritura puede pedir permiso desde ahí.) */}
+      <CopilotoDock ocultar={currentSpace === "alicia"} />
     </div>
     </UsersContext.Provider>
     </ConfirmProvider>

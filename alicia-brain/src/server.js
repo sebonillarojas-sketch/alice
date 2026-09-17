@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { query, parseArr, getDB } from "./db.js";
 import { lessonsForScope, formatLessonsBlock, pendingLessonsForCEO, formatPendingBlock } from "./lessons.js";
@@ -13,6 +13,7 @@ import { coalesceMessage } from "./coalesce.js";
 import { startCron } from "./cron.js";
 import { getLatestSnapshot, refreshMarketData, seedFromStaticIfEmpty, ensureMarketSchema, getMacroData, getBankRates, saveBankRates, saveSnapshot, importProjects, getRentalListings, refreshRentalListings } from "./market.js";
 import { readFile } from "fs/promises";
+import { realpathSync } from "fs";
 import crypto from "crypto";
 import { getStagedFile } from "./file-relay.js";
 import { isSandbox } from "./sandbox.js";
@@ -22,6 +23,8 @@ import { renderErpContext } from "./erp-context.js";
 import { readThread } from "./history.js";
 import { sseFrame, SSE_HEADERS } from "./sse.js";
 import { usoVacio, acumularUso, registrarUso } from "./uso.js";
+import { esClientTool, clientToolsPara, efectoDe, frameParaEfecto } from "./client-tools.js";
+import { crearRegistroTurnos } from "./turnos.js";
 dotenv.config();
 
 // ── Red de seguridad del proceso ──────────────────────────────────────────────
@@ -625,6 +628,20 @@ async function buildLiveContext(userId) {
   return text;
 }
 
+// Las client tools van DESPUÉS del breakpoint, nunca adentro. El enum de
+// erp_action sale del contexto del ERP, así que cambia cada vez que la persona
+// se mueve de módulo: meterlas en el prefijo cacheado invalidaría el caché de
+// tools (que es el bloque grande) en cada navegación. Es la misma disciplina
+// que ya aplica el contexto del ERP en systemBlocks.
+// Función pura (sin `opts`, sin `this`) para que un test la ejerza sin tener
+// que levantar `processAliciaMessage` ni tocar el modelo: sin `clientTools` (
+// ausente, `null` o vacío) devuelve LA MISMA REFERENCIA que recibió — esa
+// identidad es lo que garantiza que WhatsApp, el teléfono y /api/chat arman el
+// cuerpo de la request exactamente igual que antes de esta tarea.
+export function armarToolsDelTurno(cachedTools, clientTools) {
+  return clientTools?.length ? [...cachedTools, ...clientTools] : cachedTools;
+}
+
 async function processAliciaMessage(userId, userText, channel = "app", opts = {}) {
   const [profile, allProfiles, history, memories, knowledge] = await Promise.all([
     getProfile(userId),
@@ -675,6 +692,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
   const cachedTools = tools.length
     ? [...tools.slice(0, -1), { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } }]
     : tools;
+  const toolsDelTurno = armarToolsDelTurno(cachedTools, opts.clientTools);
   const toolResults = [];
   let finalText = "";
   // Acumulador de costo del turno: se resetea acá (por turno, no por request handler)
@@ -747,7 +765,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
       // el panel corta a los 60s).
       output_config: { effort: maximumEffort ? "high" : "medium" },
       system: systemBlocks,
-      tools: cachedTools,
+      tools: toolsDelTurno,
       tool_choice: { type: "auto" },
       messages: loopMessages,
     };
@@ -827,9 +845,40 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
     const toolResultContents = [];
     for (const block of toolUseBlocks) {
       let result;
+      // La fila de la traza sale verde salvo que alguien diga lo contrario. Las
+      // tools del servidor sólo fallan tirando (y eso lo agarra el catch), pero
+      // una client tool NUNCA rechaza: un `confirm` que el usuario rechazó
+      // vuelve con texto igual que uno que corrió. Sin este `ok` explícito, un
+      // "No" quedaba en verde mientras el texto de Alicia decía que no lo hizo
+      // — justo la duda que la traza existe para que no exista.
+      let ok = true;
       try {
         emitir({ type: "tool_start", id: block.id, tool: block.name, input: block.input });
-        if (admin && SENSITIVE_ADMIN.has(block.name)) {
+        if (esClientTool(block.name)) {
+          // La ejecuta el browser. `emitir` ya mandó el tool_start de arriba, así
+          // que la traza muestra la tool desde que se pide; el frame que le pide
+          // al cliente que la ejecute lo manda quien armó ejecutarClientTool.
+          if (!opts.ejecutarClientTool) {
+            // Un canal sin manos nunca debería haber recibido estas tools. Si
+            // pasa, se lo decimos al modelo en vez de romper: puede seguir con
+            // las tools del servidor.
+            result = `${block.name} no está disponible en este canal.`;
+            ok = false;
+          } else {
+            // block.id viaja como 3er argumento para que quien arme el frame
+            // client_tool/confirm pueda correlacionarlo con el tool_start de
+            // arriba — son dos IDs para la misma invocación (call_id del lado
+            // del registro de turnos, id del lado de la traza del modelo).
+            // Devuelve `{ ok, texto }`: el texto es lo único que ve el modelo
+            // (el tool_result de más abajo), el `ok` es lo único que ve la
+            // traza. Son dos cosas distintas y no hay que mezclarlas: un
+            // rechazo también le tiene que llegar al modelo como texto, para
+            // que sepa que preguntar es lo que corresponde.
+            const respuesta = await opts.ejecutarClientTool(block.name, block.input, block.id);
+            result = respuesta.texto;
+            ok = respuesta.ok !== false;
+          }
+        } else if (admin && SENSITIVE_ADMIN.has(block.name)) {
           // acción sensible de un admin → no se ejecuta; se manda a aprobación del CEO
           result = await encolarAprobacion(userId, profile?.name?.split(" ")[0] || userId, block.name, block.input);
           console.log(`🔐 [${userId}] ${block.name} → aprobación CEO`);
@@ -838,7 +887,7 @@ async function processAliciaMessage(userId, userText, channel = "app", opts = {}
           console.log(`🔧 [${userId}] ${block.name}:`, JSON.stringify(block.input).slice(0, 100));
         }
         toolResults.push({ tool: block.name, input: block.input, result });
-        emitir({ type: "tool_done", id: block.id, tool: block.name, ok: true });
+        emitir({ type: "tool_done", id: block.id, tool: block.name, ok });
       } catch (e) {
         result = `Error al ejecutar ${block.name}: ${e.message}`;
         console.error(`Tool ${block.name} error:`, e.message);
@@ -1150,6 +1199,10 @@ app.get("/api/copilot/history", (req, res) => {
   res.json({ userId: act.userId, messages: readThread(getDB(), act.userId, limit) });
 });
 
+// Vive a nivel de módulo a propósito: el POST de resultados llega por OTRA
+// request y tiene que encontrar el turno que abrió la primera.
+const turnosCopiloto = crearRegistroTurnos();
+
 // El turno del copiloto. A diferencia de /api/chat, que espera callado hasta 20
 // segundos y devuelve un JSON, acá el cliente ve el texto aparecer y qué herramienta
 // se está usando. Mismo cerebro, mismo loop: lo único que cambia es el transporte.
@@ -1159,30 +1212,79 @@ app.post("/api/copilot/turn", async (req, res) => {
   const { message, erpContext } = req.body || {};
   if (!message) return res.status(400).json({ error: "Falta message" });
 
-  res.writeHead(200, SSE_HEADERS);
-  res.flushHeaders?.();
+  // Se abre ANTES del writeHead para que ya exista cuando el `res.on("close")`
+  // de más abajo lo necesite: ese handler puede saltar antes de que el try
+  // arranque (el cliente cortando apenas conecta).
+  const turnId = turnosCopiloto.abrir(act.userId);
 
-  // Los proxies cortan conexiones ociosas, y un turno con varias tools puede pasar
-  // 30s sin emitir nada. Un comentario SSE (línea que arranca con ":") mantiene viva
-  // la conexión sin que el cliente tenga que interpretarlo.
-  const latido = setInterval(() => { try { res.write(": ping\n\n"); } catch {} }, 15000);
-  let vivo = true;
-  // OJO: es `res` y no `req` a propósito. `req` (el body ya leído por express.json())
-  // dispara "close" apenas termina de recibirse el request, casi al toque de entrar
-  // acá — mucho antes de que el cliente se desconecte de verdad. Con `req.on("close")`
-  // `vivo` se apagaba al instante y el turno entero corría a ciegas: nunca se emitía
-  // ni el "done", ni se limpiaba el intervalo, y la conexión quedaba colgada para
-  // siempre (verificado a mano con el curl del brief). `res` sí refleja el socket real.
-  res.on("close", () => { vivo = false; clearInterval(latido); });
-
+  // `latido` y `vivo` se declaran ACÁ (afuera del try) para que el `finally`
+  // los pueda usar aunque el try explote antes de llegar a inicializarlos de
+  // verdad — `clearInterval(undefined)` no tira, `vivo` arranca en false.
+  let latido;
+  let vivo = false;
   const enviar = (evento, data) => {
     if (!vivo) return;
     try { res.write(sseFrame(evento, data)); } catch { vivo = false; }
   };
 
+  // Desde acá hasta el final, TODO queda adentro del mismo try/finally —
+  // incluidos el writeHead y el setInterval. Express 4 no atrapa un rechazo
+  // async que se escape de un handler, así que si algo entre el `abrir()` de
+  // arriba y el `processAliciaMessage` de abajo tirara y quedara afuera del
+  // try, el turnId se quedaría en turnosCopiloto para siempre (nadie llamaría
+  // a `cerrar()`).
   try {
+    res.writeHead(200, SSE_HEADERS);
+    res.flushHeaders?.();
+
+    // Los proxies cortan conexiones ociosas, y un turno con varias tools puede
+    // pasar 30s sin emitir nada. Un comentario SSE (línea que arranca con ":")
+    // mantiene viva la conexión sin que el cliente tenga que interpretarlo.
+    latido = setInterval(() => { try { res.write(": ping\n\n"); } catch {} }, 15000);
+    vivo = true;
+    // OJO: es `res` y no `req` a propósito. `req` (el body ya leído por express.json())
+    // dispara "close" apenas termina de recibirse el request, casi al toque de entrar
+    // acá — mucho antes de que el cliente se desconecte de verdad. Con `req.on("close")`
+    // `vivo` se apagaba al instante y el turno entero corría a ciegas: nunca se emitía
+    // ni el "done", ni se limpiaba el intervalo, y la conexión quedaba colgada para
+    // siempre (verificado a mano con el curl del brief). `res` sí refleja el socket real.
+    // También cierra el turno acá: si el cliente se desconecta, cualquier client_tool
+    // pendiente se suelta al instante en vez de esperar su timeout.
+    res.on("close", () => { vivo = false; clearInterval(latido); turnosCopiloto.cerrar(turnId); });
+
+    // Primero de todo: el cliente necesita el turnId ANTES de que pueda llegarle
+    // cualquier client_tool, porque es a dónde tiene que contestar.
+    enviar("turn_start", { turnId });
+
     const { text, actions } = await processAliciaMessage(act.userId, message, "copilot", {
       erpContext,
+      clientTools: clientToolsPara(erpContext),
+      ejecutarClientTool: async (nombre, input, id) => {
+        // El cliente ya se fue: no tiene sentido abrir una espera de 60s para
+        // alguien que no está. Se lo decimos al modelo y sigue.
+        if (!vivo) return { ok: false, texto: "La pantalla del usuario se desconectó." };
+        const efecto = efectoDe(nombre);
+        // La lista blanca (y el timeout que va con ella) la decide
+        // `frameParaEfecto`, en client-tools.js, junto al catálogo que asigna
+        // los efectos y con tests propios. Acá sólo se transporta.
+        const { evento, timeoutMs } = frameParaEfecto(efecto);
+        const { callId, promesa } = turnosCopiloto.pedir(turnId, { timeoutMs });
+        // El evento distinto ES la clasificación: el cliente no decide si pedir
+        // confirmación mirando el nombre de la tool, la decide el frame que le
+        // llega. Ver client-tools.js.
+        // `id` (el mismo que ya viajó en tool_start/tool_done) y `call_id` (el
+        // que espera turnos.js) son dos identificadores de la MISMA invocación:
+        // sin los dos, el front no puede ligar este diálogo con su fila de traza.
+        enviar(evento, {
+          call_id: callId, id, tool: nombre, input, efecto,
+        });
+        const respuesta = await promesa;
+        // La ruta de resultados resuelve con `{ ok, texto }` (el browser dice si
+        // la escritura se autorizó y corrió, o si el usuario apretó "No"). El
+        // timeout y el cierre del turno resuelven con su texto pelado: nadie
+        // contestó, así que tampoco son un `ok`.
+        return typeof respuesta === "string" ? { ok: false, texto: respuesta } : respuesta;
+      },
       onEvent: (e) => {
         const { type, ...resto } = e;
         enviar(type, resto);
@@ -1191,11 +1293,50 @@ app.post("/api/copilot/turn", async (req, res) => {
     enviar("done", { text, actions });
   } catch (e) {
     console.error("Turn error:", e.message);
-    enviar("error", { message: e.message });
+    // Si los headers nunca salieron (tiró antes del writeHead), no hay stream
+    // SSE al que escribirle nada — `enviar` de todos modos no-opea con `vivo`
+    // en false, pero chequear acá deja explícito por qué no hace falta.
+    if (res.headersSent) enviar("error", { message: e.message });
   } finally {
     clearInterval(latido);
+    // Cerrar el turno ANTES de cerrar el socket: si quedó algo esperando, esto es
+    // lo que lo suelta. Sin esto, un turno que muere por excepción deja promesas
+    // colgadas y su timer vivo hasta 3 minutos.
+    turnosCopiloto.cerrar(turnId);
     if (vivo) res.end();
   }
+});
+
+// Por acá contesta el browser un `client_tool` o un `confirm`. Es una request
+// aparte: la del turno está ocupada streameando.
+app.post("/api/copilot/turn/:turnId/result", (req, res) => {
+  const act = resolveActingUser({ actorId: req.aliceUser?.id, requestedUserId: req.body.userId });
+  if (!act.ok) return res.status(act.error === "no_auth" ? 401 : 403).json({ error: act.error });
+  const { call_id, result, ok } = req.body || {};
+  if (!call_id) return res.status(400).json({ error: "falta_call_id" });
+
+  const codigo = turnosCopiloto.resolver({
+    turnId: req.params.turnId,
+    callId: call_id,
+    userId: act.userId,
+    // Dos cosas distintas en el mismo POST: `texto` es lo que ve el modelo,
+    // `ok` es lo que ve la traza. Un `confirm` que el usuario rechazó contesta
+    // igual (el modelo tiene que enterarse) pero con `ok: false`, para que la
+    // fila no quede en verde diciendo que se hizo algo que no se hizo.
+    // Ausente = true: una tool de lectura que salió bien no manda nada.
+    result: {
+      ok: ok !== false,
+      // El resultado viaja al modelo como texto: si el cliente manda un objeto lo
+      // serializamos acá y no en el loop, que no tiene por qué saber de transporte.
+      texto: typeof result === "string" ? result : JSON.stringify(result ?? null),
+    },
+  });
+
+  if (codigo === "ok") return res.json({ ok: true });
+  // 404 y no 403 para un turno desconocido: un turno que ya cerró (deploy,
+  // timeout, el usuario recargó) es el caso normal, no un ataque.
+  const status = codigo === "no_autorizado" ? 403 : codigo === "turno_desconocido" ? 404 : 409;
+  return res.status(status).json({ error: codigo });
 });
 
 // ── Cuerpo (el teléfono de Alicia) ────────────────────────────────────────────
@@ -2479,29 +2620,46 @@ app.get("/health", async (_, res) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, async () => {
-  console.log(`\n🧠 Alicia Brain · http://localhost:${PORT}`);
-  console.log(`   ERP: ${process.env.ERP_URL || "http://localhost:3002"}`);
-  console.log(`   Google:  ${process.env.GOOGLE_CLIENT_ID ? "✅" : "⏳ pendiente"}`);
-  console.log(`   Zoom:    ${process.env.ZOOM_ACCOUNT_ID ? "✅" : "⏳ pendiente"}`);
-  console.log(`   Dropbox: ${process.env.DROPBOX_ACCESS_TOKEN ? "✅" : "⏳ pendiente"}`);
-  console.log(`   Tavily:  ${process.env.TAVILY_API_KEY ? "✅" : "⏳ pendiente"}\n`);
+// Guard de "soy el programa principal": `node src/server.js` (prod, Railway,
+// clon-nocturno.js) siempre entra acá igual que antes. Lo nuevo es que un
+// `import` de este módulo (como el test de armarToolsDelTurno) NO levanta un
+// server real ni pega contra BCRP/Nexo/sqlite — antes de esta tarea nada
+// importaba server.js como módulo, así que no había necesidad del guard.
+// `realpathSync`: node resuelve los módulos a su realpath, así que
+// `import.meta.url` ya viene sin symlinks, pero `process.argv[1]` es tal cual lo
+// escribió quien arrancó el proceso. Con un symlink en el medio los dos no
+// coinciden, el guard da false y el proceso SALE CON CÓDIGO 0 y sin un solo log
+// — y `restartPolicyType: "ON_FAILURE"` ni siquiera reintenta. En Railway hoy
+// anda; el modo de falla es demasiado silencioso para dejarlo al azar.
+const entradaReal = (() => {
+  try { return realpathSync(process.argv[1] || ""); }
+  catch { return process.argv[1] || ""; }   // argv[1] vacío o inexistente: comparar el crudo, que da false igual que antes
+})();
+if (import.meta.url === pathToFileURL(entradaReal).href) {
+  app.listen(PORT, async () => {
+    console.log(`\n🧠 Alicia Brain · http://localhost:${PORT}`);
+    console.log(`   ERP: ${process.env.ERP_URL || "http://localhost:3002"}`);
+    console.log(`   Google:  ${process.env.GOOGLE_CLIENT_ID ? "✅" : "⏳ pendiente"}`);
+    console.log(`   Zoom:    ${process.env.ZOOM_ACCOUNT_ID ? "✅" : "⏳ pendiente"}`);
+    console.log(`   Dropbox: ${process.env.DROPBOX_ACCESS_TOKEN ? "✅" : "⏳ pendiente"}`);
+    console.log(`   Tavily:  ${process.env.TAVILY_API_KEY ? "✅" : "⏳ pendiente"}\n`);
 
-  // Ensure market tables exist, seed projects from static file if empty
-  ensureMarketSchema();
-  loadApprovals(); // aprobaciones pendientes de admins (sobreviven redeploys)
-  try {
-    const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
-    const raw = await readFile(staticPath, "utf8");
-    const parsed = JSON.parse(raw);
-    await seedFromStaticIfEmpty(parsed.projects || []);
-  } catch (e) {
-    console.warn("Market seed: no se pudo leer el static file:", e.message);
-  }
+    // Ensure market tables exist, seed projects from static file if empty
+    ensureMarketSchema();
+    loadApprovals(); // aprobaciones pendientes de admins (sobreviven redeploys)
+    try {
+      const staticPath = join(__dirname, "../../files/alice/public/data/projects.json");
+      const raw = await readFile(staticPath, "utf8");
+      const parsed = JSON.parse(raw);
+      await seedFromStaticIfEmpty(parsed.projects || []);
+    } catch (e) {
+      console.warn("Market seed: no se pudo leer el static file:", e.message);
+    }
 
-  // Fetch real macro data from BCRP on startup (non-blocking)
-  refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
+    // Fetch real macro data from BCRP on startup (non-blocking)
+    refreshMarketData().catch(e => console.warn("Startup market refresh error:", e.message));
 
-  // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
-  if (!isSandbox()) startCron();
-});
+    // El cron (White Rabbit, scrapers, brainsync, etc.) tampoco corre en el clon.
+    if (!isSandbox()) startCron();
+  });
+}

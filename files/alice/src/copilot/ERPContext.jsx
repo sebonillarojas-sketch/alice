@@ -4,6 +4,7 @@
 // puntuales a useERPContext.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { buildSnapshot } from "./snapshot.js";
+import { crearEsperas } from "./esperas.js";
 
 const Ctx = createContext(null);
 
@@ -21,8 +22,18 @@ export function ERPContextProvider({ children }) {
   // Alicia, es el módulo del que acabás de salir.
   const ultimoVisto = useRef(null);
 
+  // El mecanismo de espera de erp_navigate vive en su propio módulo puro
+  // (esperas.js): tiene la única lógica de concurrencia de este archivo
+  // (Promise + Map + Set + setTimeout) y necesitaba poder testearse sin montar
+  // React. Ver el comentario de ese archivo para el motivo completo.
+  const esperas = useRef(crearEsperas());
+
   const register = useCallback((moduleId, describeFn) => {
     registry.current.set(moduleId, describeFn);
+
+    // Despertar a quien estaba esperando este módulo.
+    esperas.current.despertar(moduleId);
+
     return () => {
       // Antes de soltarlo, guardar la foto: es lo único que va a quedar de este
       // módulo cuando la persona ya esté en el chat. Un describe() roto no puede
@@ -42,6 +53,25 @@ export function ERPContextProvider({ children }) {
   }, []);
 
   const setActive = useCallback((moduleId) => { activeId.current = moduleId; }, []);
+
+  const esperarRegistro = useCallback((moduleId, timeoutMs = 3000) => {
+    return esperas.current.esperar(moduleId, timeoutMs, registry.current.has(moduleId));
+  }, []);
+
+  // Los módulos montados ahora mismo, con su descripción. Es lo que leen las
+  // manos; el snapshot del turno sigue saliendo por `snapshot()`.
+  const modulos = useCallback(() => [...registry.current.keys()], []);
+  const describir = useCallback((moduleId) => {
+    const fn = registry.current.get(moduleId);
+    if (!fn) {
+      // El único que sobrevive al desmontaje es `ultimoVisto`: si preguntan por
+      // él, devolvemos la foto y avisamos que es una foto.
+      if (ultimoVisto.current?.module === moduleId) return { ...ultimoVisto.current, congelado: true };
+      return null;
+    }
+    try { const d = fn(); return d ? { module: moduleId, ...d } : null; }
+    catch (e) { console.warn(`[copilot] describe() de "${moduleId}" falló:`, e); return null; }
+  }, []);
 
   const snapshot = useCallback(() => {
     const entries = [];
@@ -69,7 +99,10 @@ export function ERPContextProvider({ children }) {
   // Memoizado: si no, cada render de ERPContextProvider crea un objeto nuevo y
   // eso re-dispara el efecto de CADA módulo registrado (ctx está en sus deps),
   // aunque register/setActive/snapshot sean estables.
-  const value = useMemo(() => ({ register, setActive, snapshot }), [register, setActive, snapshot]);
+  const value = useMemo(
+    () => ({ register, setActive, snapshot, esperarRegistro, modulos, describir }),
+    [register, setActive, snapshot, esperarRegistro, modulos, describir]
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -95,4 +128,14 @@ export function useCopilotSnapshot() {
   // Sin provider devolvemos un snapshot vacío en vez de romper: así AliciaView
   // sigue andando en cualquier árbol que no lo tenga montado.
   return ctx?.snapshot ?? (() => ({ active: null, others: [], dropped: 0 }));
+}
+
+export function useRegistroERP() {
+  const ctx = useContext(Ctx);
+  // Sin provider las manos degradan a "no hay nada montado" en vez de romper.
+  return ctx ?? {
+    modulos: () => [],
+    describir: () => null,
+    esperarRegistro: () => Promise.resolve(false),
+  };
 }

@@ -3,6 +3,7 @@ import EsquemaPlanta from "./EsquemaPlanta.jsx";
 import { importCAD } from "./cad.js";
 import { useProyectos } from "./proyectos.js";
 import { useERPContext } from "../../copilot/ERPContext.jsx";
+import { useAccionERP } from "../../copilot/CopilotoProvider.jsx";
 
 const C = {
   ink: "#373737",
@@ -111,6 +112,22 @@ function Row({ k, v, unit, strong, accent, indent, dark }) {
       </span>
     </div>
   );
+}
+
+// Acción de humo: existe para que humo-manos.mjs pueda verificar el camino
+// completo de una escritura confirmada contra una acción REAL del bus, sin que
+// el humo tenga que tocar los números de una cabida.
+//
+// Vive en un componente aparte que sólo se monta en DEV, y no en un
+// `useAccionERP` condicional adentro de CabidaView, porque un hook condicional
+// viola las reglas de hooks. Que sea DEV-only importa: `actions:` no la ofrece,
+// así que el enum de `erp_action` no la nombra, pero el enum de Anthropic es una
+// guía y no una validación dura — el nombre de la acción lo elige el modelo por
+// string. Un hook de test no tiene por qué existir en el bus de producción. El
+// humo corre contra el dev server, así que no pierde nada.
+function AccionDeHumo() {
+  useAccionERP("humo.escribir", (args) => `humo.escribir recibió ${JSON.stringify(args)}`);
+  return null;
 }
 
 function Kpi({ label, value, unit, accent }) {
@@ -279,8 +296,33 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
       margen: Math.round(r.margen), utilNeta: Math.round(r.utilNeta),
       eficiencia: Number(r.eficiencia.toFixed(1)), incidencia: Number(r.incidencia.toFixed(1)),
     },
-    actions: [],   // se llenan en la Fase 3, cuando Alicia tenga manos
+    actions: ["cabida.setParams"],
   }));
+
+  // Las manos sobre Cabida. El módulo decide qué acepta: Alicia propone, Cabida
+  // valida. Los valores entran por los MISMOS setters que usa el formulario —
+  // si entraran por otro lado, la cabida recalcularía distinto de lo que muestra.
+  useAccionERP("cabida.setParams", (args) => {
+    const setters = {
+      terreno: setTerreno, areaLibre: setAreaLibre, pisos: setPisos,
+      areaDpto: setAreaDpto, precioM2: setPrecioM2, costoM2: setCostoM2,
+    };
+    const aplicados = {};
+    for (const [k, v] of Object.entries(args ?? {})) {
+      const set = setters[k];
+      if (!set) continue;
+      const n = Number(v);
+      // Un NaN acá se propaga a los 19 escalares del cálculo y toda la cabida
+      // sale NaN sin un solo error en consola.
+      if (!Number.isFinite(n)) continue;
+      set(n);
+      aplicados[k] = n;
+    }
+    if (!Object.keys(aplicados).length) {
+      return `No reconocí ningún parámetro numérico. Acepto: ${Object.keys(setters).join(", ")}.`;
+    }
+    return `Apliqué ${JSON.stringify(aplicados)}. La cabida se recalcula sola.`;
+  });
 
   const mixWarn = mix1 + mix2 > 100;
 
@@ -299,6 +341,7 @@ export default function CabidaView({ initialTerreno, initialValorTerreno, compac
 
   return (
     <div style={{ minHeight: "100%", background: C.paper, color: C.ink, paddingBottom: 48 }}>
+      {import.meta.env.DEV && <AccionDeHumo />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         input[type=number]::-webkit-inner-spin-button { opacity: 0.25; }
