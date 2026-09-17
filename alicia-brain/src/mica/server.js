@@ -10,6 +10,8 @@ import { backendPorDefecto } from "./llm.js";
 import { normalizarTwilio, enviarWA, firmaValida } from "./wa.js";
 import { abrirHilos, guardar, hilo, estado, marcarHandoff } from "./hilos.js";
 import { sintetizar, listarVoces } from "./voz.js";
+import { extraerPersona } from "./persona.js";
+import { armarDossier } from "./dossier.js";
 
 dotenv.config();
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +36,10 @@ const TW = {
   token: process.env.TWILIO_AUTH_TOKEN || "",
   from: process.env.MICA_WHATSAPP_FROM || "",
 };
+
+// El teléfono de José. Sin esto el handoff le llega al prospecto pero no a él,
+// que es la mitad que importa.
+const JOSE = process.env.PHONE_jt || "";
 
 const EL = {
   apiKey: process.env.ELEVENLABS_API_KEY || "",
@@ -125,9 +131,32 @@ async function atender(m) {
   });
 
   guardar(hilos, m.telefono, "mica", r.texto);
-  if (r.tipo === "handoff") marcarHandoff(hilos, m.telefono, r.combo);
   await enviarWA({ to: m.telefono, texto: r.texto, ...TW });
   console.log(`🟠 ${m.telefono} · ${r.tipo} · ${r.temperatura}`);
+
+  // El handoff no termina cuando Mica responde: termina cuando José tiene el dossier.
+  // Va después de contestarle al prospecto, y aparte: si falla el aviso a José, la
+  // persona ya recibió su respuesta igual.
+  if (r.tipo === "handoff") {
+    marcarHandoff(hilos, m.telefono, r.combo);
+    avisarAJose({ telefono: m.telefono, nombre: m.nombrePerfil, r })
+      .catch(e => console.error("🟠 no pude avisarle a José:", e.message));
+  }
+}
+
+async function avisarAJose({ telefono, nombre, r }) {
+  if (!JOSE) { console.warn("🟠 handoff sin PHONE_jt — José no se entera"); return; }
+  const mensajes = hilo(hilos, telefono, 40);
+  const persona = await extraerPersona({ mensajes, llm });
+  const dossier = armarDossier({
+    telefono, nombre,
+    proyecto: catalogo[0]?.id || null,
+    temperatura: r.temperatura,
+    evidencia: r.evidencia,
+    persona,
+  });
+  await enviarWA({ to: JOSE, texto: dossier, ...TW });
+  console.log(`🟠 dossier a José · ${telefono} · ${Object.keys(persona).length} datos con cita`);
 }
 
 const PORT = process.env.PORT || process.env.MICA_PORT || 3010;
