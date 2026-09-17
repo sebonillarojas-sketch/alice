@@ -30,3 +30,8 @@ test("el pedido a ElevenLabs va con la voz de Mica y el modelo multilingüe", ()
 test("sin voz propia configurada no habla — nunca cae a la voz de Alicia", () => {
   assert.throws(() => construirTTS({ texto: "Hola", voiceId: "", apiKey: "k" }), /MICA_VOICE_ID/);
 });
+
+test("sacar el emoji no deja un espacio huérfano antes del punto", () => {
+  assert.equal(limpiarParaVoz("Qué bueno 🙂. José lleva el proyecto"), "Qué bueno. José lleva el proyecto");
+  assert.equal(limpiarParaVoz("Listo ✨, te escribe"), "Listo, te escribe");
+});

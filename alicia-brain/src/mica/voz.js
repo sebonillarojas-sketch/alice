@@ -15,6 +15,8 @@ export function limpiarParaVoz(texto = "") {
     .replace(/\s*m(?:2\b|²)/g, " metros cuadrados")
     .replace(/\s*\n+\s*/g, " ")
     .replace(/\s{2,}/g, " ")
+    // El emoji se fue y dejó un espacio pegado a la puntuación.
+    .replace(/\s+([.,;:!?])/g, "$1")
     .trim();
 }
 
