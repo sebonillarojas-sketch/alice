@@ -111,6 +111,14 @@ export function startCron() {
     await runScraperAgent({ sources: ["urbania"] }).catch(e => console.error("Scraper Urbania error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Frescura de la flota de scrapers 🪰 · cada hora al minuto 40.
+  // Vigila el SILENCIO, no solo el fallo: un scraper que dejó de correr no genera
+  // ningún hallazgo por sí mismo. Así se cazan tanto Urbania caído como la bestia muda.
+  cron.schedule("40 * * * *", async () => {
+    const { checkFleetFreshness } = await import("./scrapers/fleet.js");
+    try { checkFleetFreshness(); } catch (e) { console.error("🪰 Frescura de la flota error:", e.message); }
+  }, { timezone: "America/Lima" });
+
   // Loop de aprendizaje · fusión de lecciones equivalentes · 6:25am, justo antes del gate.
   // Va antes a propósito: el gate mide evidencia, y hasta que las repeticiones no se
   // funden esa evidencia está repartida entre filas y no llega al umbral nunca. Medido
@@ -184,5 +192,5 @@ export function startCron() {
     await refreshRentalListings().catch(e => console.error("Rental listings boot error:", e.message));
   }, 90000);
 
-  console.log("⏰ Cron activo · briefing 9am (ejecutivo + equipo) · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am · scraper Urbania c/12h · fusión de lecciones 6:25am · gate-pass 6:30am · cerebro→Dropbox 3:30am");
+  console.log("⏰ Cron activo · briefing 9am (ejecutivo + equipo) · market refresh · rental listings c/6h · White Rabbit c/30min · Mad Hatter c/hora · Dark Alice 7:15am · Tea Table lunes 7:30 · scraper SBS 6am (buzzfly1) · scraper Urbania c/12h (buzzfly2) · frescura de la flota c/hora · fusión de lecciones 6:25am · gate-pass 6:30am · cerebro→Dropbox 3:30am");
 }

@@ -12,6 +12,10 @@ const AGENTS = {
   "white-rabbit": "🐰 White Rabbit", "cheshire": "😺 Cheshire", "mad-hatter": "🎩 Mad Hatter",
   "tea-table": "🫖 Tea Table", "bandersnatch": "⚔️ Bandersnatch",
   "jabberwocky": "⚡ Jabberwocky", "knave": "🃏 Knave",
+  // La flota de scrapers: cada uno con identidad propia (ver scrapers/fleet.js).
+  "buzzfly1": "🪰 Buzzfly 1 (SBS)", "buzzfly2": "🪰 Buzzfly 2 (Urbania)",
+  "buzzfly3": "🪰 Buzzfly 3 (Nexo)", "buzzfly4": "🪰 Buzzfly 4 (Wynwood)",
+  "buzzfly5": "🪰 Buzzfly 5 (bestia)",
 };
 
 // Propuestas que Dark Alice sugiere (texto) según la categoría del hallazgo — NO ejecuta
@@ -22,6 +26,8 @@ const PLAYBOOK = {
   "ux-login": "Revisar el flujo de auth (Supabase) y el manejo de errores en el front.",
   "js-errors": "Abrir la consola del bundle en prod; probablemente derivado de otro hallazgo.",
   "capacidad": "Evaluar limpieza/rotación de datos o subir el plan de almacenamiento.",
+  "scraper": "Revisar la cadena de render (SCRAPINGBEE_API_KEY con créditos, fallback jina) y si la fuente cambió de HTML.",
+  "datos-viejos": "El scraper no trae datos hace rato: ver si está corriendo (cron del cerebro / reloj de la bestia) antes de mirar el parser.",
 };
 
 export async function runDarkAlice({ notify = true } = {}) {

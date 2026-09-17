@@ -36,9 +36,16 @@ export async function runWhiteRabbitChecks() {
 
   // Ciclo de vida de hallazgos: si todo está OK ahora, auto-cerrar los abiertos del conejo
   // (antes quedaban "open" para siempre y Dark Alice seguía gritando algo ya resuelto).
+  //
+  // ⚠️ Acotado a category = 'infra-publica', que es lo único que este check mide.
+  // Sin ese filtro, el UPDATE cerraba TODO lo abierto bajo 'white-rabbit' — y los
+  // scrapers reportaban con ese mismo nombre. Urbania y SBS fallaban al amanecer y
+  // esta guardia les borraba el hallazgo antes de que Dark Alice mirara a las 7:15.
+  // Los scrapers ya tienen identidad propia (buzzfly1…5, ver scrapers/fleet.js);
+  // el filtro por categoría es el cinturón además de los tiradores.
   if (!failed.length) {
     query(`UPDATE agent_findings SET status = 'auto-fixed', resolved_by = 'white-rabbit', updated_at = datetime('now')
-           WHERE agent = 'white-rabbit' AND status IN ('open','escalated')`);
+           WHERE agent = 'white-rabbit' AND category = 'infra-publica' AND status IN ('open','escalated')`);
   }
 
   const { lastID: runId } = query(

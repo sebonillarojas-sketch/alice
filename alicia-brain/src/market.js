@@ -11,6 +11,7 @@
 
 import { query } from "./db.js";
 import { scrapeWynwoodHouseLima } from "./rentalScraper.js";
+import { recordScraperRun } from "./scrapers/fleet.js";
 
 const BCRP_API = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api";
 const NEXO_API_URL = process.env.NEXO_API_URL || "";
@@ -417,9 +418,16 @@ export async function refreshRentalListings() {
   try {
     const listings = await scrapeWynwoodHouseLima();
     saveRentalListings("wynwood_house", listings);
+    recordScraperRun("buzzfly4", { result: "ok", summary: `Wynwood House: ${listings.length} listings`, actions: [{ total: listings.length }] });
     return { ok: true, total: listings.length };
   } catch (e) {
     console.error("🐰 Wynwood House scraper error:", e.message);
+    recordScraperRun("buzzfly4", {
+      result: "error",
+      summary: "Wynwood House: falló el scrape",
+      actions: [{ reason: e.message }],
+      findings: [{ severity: "major", category: "scraper", detail: `Wynwood House: ${e.message.slice(0, 160)}` }],
+    });
     return { ok: false, reason: e.message };
   }
 }
@@ -479,19 +487,33 @@ export async function refreshMarketData() {
   }
 
   // 2. Nexo projects (Cloudflare-protected — tries but will usually fall back to cached)
+  //    Reporta como buzzfly3: antes solo escribía al log y ningún agente lo vigilaba.
   try {
     const projects = await fetchNexoProjects();
     if (projects && projects.length > 0) {
       saveSnapshot(projects);
       console.log(`🐰 Nexo: ${projects.length} proyectos guardados`);
       result.projects = { ok: true, total: projects.length, source: "nexo_live" };
+      recordScraperRun("buzzfly3", { result: "ok", summary: `Nexo: ${projects.length} proyectos`, actions: [result.projects] });
     } else {
       const last = getLatestSnapshot();
       result.projects = { ok: false, reason: "scrape_failed", last_update: last?.scraped_at, total: last?.total };
+      recordScraperRun("buzzfly3", {
+        result: "error",
+        summary: "Nexo: sin datos (se sirve el snapshot cacheado)",
+        actions: [result.projects],
+        findings: [{ severity: "major", category: "scraper", detail: `Nexo: 0 proyectos — el Radar queda con el snapshot de ${last?.scraped_at || "nunca"}` }],
+      });
     }
   } catch (e) {
     console.error("🐰 Nexo error:", e.message);
     result.projects = { ok: false, reason: e.message };
+    recordScraperRun("buzzfly3", {
+      result: "error",
+      summary: "Nexo: falló el scrape",
+      actions: [result.projects],
+      findings: [{ severity: "major", category: "scraper", detail: `Nexo: ${e.message.slice(0, 160)}` }],
+    });
   }
 
   return result;

@@ -15,10 +15,17 @@ export const AGENT_PROFILES = {
   "dark-alice":   { emoji: "🖤", name: "Dark Alice", role: "jefa de operaciones de Wonderland", voice: "calmada y ejecutiva; sintetizás el estado y proponés, no ejecutás sola" },
   "bandersnatch": { emoji: "⚔️", name: "Bandersnatch", role: "chaos tester de saturación", voice: "bruto y directo; hablás de a qué carga se rompe cada cosa" },
   "jabberwocky":  { emoji: "⚡", name: "Jabberwocky", role: "fuzzer de inputs adversariales", voice: "caótico; hablás de qué inputs rompen el parser" },
+  "buzzfly1":     { emoji: "🪰", name: "Buzzfly 1", role: "scraper de SBS · tasas por banco", voice: "zumbón y literal; contás cuántos registros trajiste y qué te bloqueó, sin adornos" },
+  "buzzfly2":     { emoji: "🪰", name: "Buzzfly 2", role: "scraper de Urbania · venta Lima", voice: "zumbón y literal; contás cuántos registros trajiste y qué te bloqueó, sin adornos" },
+  "buzzfly3":     { emoji: "🪰", name: "Buzzfly 3", role: "scraper de Nexo · proyectos", voice: "zumbón y literal; contás cuántos registros trajiste y qué te bloqueó, sin adornos" },
+  "buzzfly4":     { emoji: "🪰", name: "Buzzfly 4", role: "scraper de Wynwood House · renta", voice: "zumbón y literal; contás cuántos registros trajiste y qué te bloqueó, sin adornos" },
+  "buzzfly5":     { emoji: "🪰", name: "Buzzfly 5", role: "scraper de Bestia · Playwright", voice: "zumbón y literal; contás cuántos registros trajiste y qué te bloqueó, sin adornos" },
 };
 
 // Alias comunes → clave real (por si Alicia manda un nombre coloquial).
-const ALIASES = { "conejo": "white-rabbit", "rabbit": "white-rabbit", "gato": "cheshire", "mesa": "tea-table", "sombrerero": "mad-hatter" };
+const ALIASES = { "conejo": "white-rabbit", "rabbit": "white-rabbit", "gato": "cheshire", "mesa": "tea-table", "sombrerero": "mad-hatter",
+  "sbs": "buzzfly1", "urbania": "buzzfly2", "nexo": "buzzfly3", "wynwood": "buzzfly4", "bestia": "buzzfly5",
+  "mosca": "buzzfly1", "buzzfly": "buzzfly1" };
 
 export function resolveAgentKey(agent) {
   const a = String(agent || "").toLowerCase().trim();
