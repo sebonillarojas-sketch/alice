@@ -8,6 +8,7 @@ import TallerBammy from "./modules/planos/TallerBammy.jsx";
 import { proyectosStore } from "./modules/cabida/proyectos.js";
 import MesaDeTrabajo from "./modules/mesa/MesaDeTrabajo";
 import CotizacionView from "./modules/cotizacion/CotizacionView";
+import CrmView from "./modules/crm/CrmView.jsx";
 import { useERPContext } from "./copilot/ERPContext.jsx";
 import PropuestaBamTab from "./modules/propuesta/PropuestaBamTab";
 import { DISTRICTS_DATA, COMPETITORS_DB, TREND_LABEL } from "./modules/mercado/sectorData";
@@ -4911,26 +4912,11 @@ function LegalDashboard() {
 
 const METABASE_CRM_URL = "https://metabase.logicwareperu.com/public/dashboard/b1b54376-94e1-468b-af36-cba305ad645f?tab=6-analisis-de-leads-1&fecha_de_registro=past30days&canal_de_entrada=";
 
+// El space Comercial es ahora el CRM propio (src/modules/crm/), no el iframe de
+// Metabase: los leads de Mica viven en Supabase y Metabase no los ve. El link al
+// dashboard viejo sigue en la cabecera del módulo mientras siga sirviendo de análisis.
 function ComercialDashboard() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      <div style={{ padding: "16px 24px 12px", borderBottom: `1px solid ${C.line}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: C.muted, marginBottom: 2 }}>Comercial · Jose Torres</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>CRM · Análisis de Leads</div>
-        </div>
-        <a href={METABASE_CRM_URL} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: C.muted, textDecoration: "none", border: `1px solid ${C.line}`, borderRadius: 3, padding: "4px 10px" }}>
-          Abrir en Metabase ↗
-        </a>
-      </div>
-      <iframe
-        src={METABASE_CRM_URL}
-        style={{ flex: 1, border: "none", width: "100%", background: C.bg }}
-        allowTransparency
-        title="CRM Comercial"
-      />
-    </div>
-  );
+  return <CrmView metabaseUrl={METABASE_CRM_URL} />;
 }
 
 function MarketingDashboard() {

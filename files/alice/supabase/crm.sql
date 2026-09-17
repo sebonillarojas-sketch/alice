@@ -11,10 +11,13 @@
 -- Tampoco entra el estado de la cadencia de seguimiento (+1/+3/+7/+21, §11): eso es
 -- el paso 5 del §14 y necesita decidir dónde corre el reloj antes de tener columnas.
 --
--- PENDIENTE DE CONFIRMAR con Sebastián: `moneda` default 'PEN' para seguir a
--- rental_comps, pero la vivienda nueva en Lima se lista habitualmente en USD. Si es
--- USD, se cambia el default acá ANTES de cargar el primer proyecto — después implica
--- revisar fila por fila cuál quedó mal.
+-- MONEDA: USD por decisión de Sebastián (17 sep 2026). OJO, el CHECK admite también
+-- 'PEN' a propósito: un proyecto futuro puede listarse en soles. Por eso la moneda se
+-- guarda POR FILA y no como constante del sistema — y por eso toda pantalla que
+-- muestre un monto tiene que imprimir la moneda al lado. `rental_comps` está en PEN,
+-- así que un número pelado en la misma pantalla que un comp de alquiler es dos
+-- monedas mezcladas sin avisar. No hay conversión en el sistema (no hay tipo de
+-- cambio) ni debe haberla acá: se muestran ambas, etiquetadas.
 --
 -- CÓMO CORRERLO: Supabase Dashboard → SQL Editor → pegar todo → Run.
 -- Es idempotente (create if not exists / drop policy if exists). Seguro re-correrlo.
@@ -52,7 +55,7 @@ create table if not exists public.crm_tipologias (
   m2            numeric(7,2) check (m2 > 0),
   precio_desde  numeric(12,2) check (precio_desde >= 0),
   precio_hasta  numeric(12,2) check (precio_hasta >= 0),
-  moneda        text not null default 'PEN' check (moneda in ('PEN','USD')),
+  moneda        text not null default 'USD' check (moneda in ('USD','PEN')),
   brochure_url  text,                             -- cada brochure enviado es señal de interés (§9)
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
@@ -86,7 +89,7 @@ create table if not exists public.crm_unidades (
   torre         text,
   m2            numeric(7,2) check (m2 > 0),      -- el real de ESTA unidad; puede diferir del de la tipología
   precio_lista  numeric(12,2) check (precio_lista >= 0),
-  moneda        text not null default 'PEN' check (moneda in ('PEN','USD')),
+  moneda        text not null default 'USD' check (moneda in ('USD','PEN')),
   estado        text not null default 'disponible'
                 check (estado in ('disponible','separada','vendida','bloqueada')),
   nota          text,                             -- por qué está bloqueada, quién la separó, etc.
@@ -248,8 +251,15 @@ create table if not exists public.crm_buyer_persona (
   prioridad          text check (prioridad in ('sala','habitaciones','ambos')),
   prioridad_cita     text,
 
-  -- En meses. La regla de `hot` es "plazo ≤ 6 meses" (§8): un entero comparable,
-  -- no "para fin de año".
+  -- DOS columnas, y la que manda es `plazo_texto`. El extractor (mica/persona.js)
+  -- devuelve el plazo como lo dijo la persona: "para antes de fin de año", "cuando
+  -- venda el depa". Con solo `plazo_meses` había que convertir eso a un número o
+  -- tirar el dato entero — y tirarlo es perder justo lo que José necesita leer.
+  -- `plazo_meses` queda como normalización OPCIONAL, solo cuando la frase trae un
+  -- número inequívoco ("en 3 meses"); es lo que compara la regla de `hot`
+  -- ("plazo ≤ 6 meses", §8). Si no se puede normalizar sin adivinar, queda null:
+  -- un plazo inventado convierte un lead tibio en hot y le hace perder el día a José.
+  plazo_texto        text,
   plazo_meses        smallint check (plazo_meses >= 0),
   plazo_cita         text,
 
@@ -263,11 +273,25 @@ create table if not exists public.crm_buyer_persona (
   -- El invariante del §8, declarado: valor y cita viajan juntos o no viajan.
   -- `(a is null) = (b is null)` = ambos nulos o ambos presentes. Una cita huérfana
   -- tampoco pasa: evidencia de nada no es evidencia.
+  --
+  -- RIGE TAMBIÉN PARA LA CARGA MANUAL (decisión de Sebastián, 17 sep 2026). Si estás
+  -- leyendo esto porque el CHECK te está molestando: no lo relajes, arreglá la
+  -- pantalla. Una restricción que la UI no acompaña se vuelve un muro, la gente pega
+  -- "x" con tal de guardar, el CHECK queda verde y la evidencia es basura — peor que
+  -- no tenerlo. Por eso el formulario de la ficha (src/modules/crm/CrmView.jsx) pone
+  -- el campo de la cita AL LADO del dato y lo llama "¿qué te dijo?": no le pedimos a
+  -- José que documente, le pedimos que recuerde la frase. Y si no la recuerda, lo
+  -- correcto es dejar el campo vacío, no inventarla: tres datos ciertos valen más
+  -- que seis con dos inventados. Es la misma regla que aplica mica/persona.js del
+  -- lado del modelo, que descarta el dato entero cuando la cita no es textual.
   constraint crm_bp_motivacion_con_cita check ((motivacion is null) = (motivacion_cita is null)),
   constraint crm_bp_hogar_con_cita      check ((hogar      is null) = (hogar_cita      is null)),
   constraint crm_bp_tipologia_con_cita  check ((tipologia  is null) = (tipologia_cita  is null)),
   constraint crm_bp_prioridad_con_cita  check ((prioridad  is null) = (prioridad_cita  is null)),
-  constraint crm_bp_plazo_con_cita      check ((plazo_meses is null) = (plazo_cita     is null)),
+  constraint crm_bp_plazo_con_cita      check ((plazo_texto is null) = (plazo_cita     is null)),
+  -- `plazo_meses` es una lectura de `plazo_texto`, no un dato propio: sin la frase
+  -- que normaliza, el número no tiene de dónde haber salido.
+  constraint crm_bp_plazo_meses_sostenido check (plazo_meses is null or plazo_texto is not null),
   constraint crm_bp_metraje_con_cita    check (
     (metraje_min is null and metraje_max is null) = (metraje_cita is null)
   ),
@@ -315,6 +339,11 @@ create table if not exists public.crm_eventos (
                'handoff',      -- la entrega a José
                'seguimiento',  -- toque de la cadencia +1/+3/+7/+21 (§11)
                'etapa',        -- movimiento en el embudo
+               -- Cambio de dueño ("tomar el lead" desde la bandeja). Es su propio tipo
+               -- y no una nota porque "¿quién lo tomó y cuándo?" es una pregunta que un
+               -- CRM auditable tiene que contestar sin leer texto libre: sin esto, dos
+               -- personas se pisan un lead y no queda rastro de quién llegó primero.
+               'dueno',
                'nota'          -- lo que escribe una persona a mano
              )),
   -- Solo aplica a 'mensaje'. Un evento sin dirección no es un mensaje, y un mensaje

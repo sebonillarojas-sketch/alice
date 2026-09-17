@@ -10,7 +10,9 @@
 --   3. crm_eventos es append-only    — en las dos capas: RLS y trigger.
 --   4. Sin evidencia no hay dato     — los CHECK del buyer persona y de temperatura.
 --   5. Stock e ingesta sin duplicados.
---   6. La vista de Mica no tiene precios.
+--   6. `direccion` solo existe en los eventos de tipo mensaje.
+--   7. La vista de Mica no tiene precios (y sí cuenta stock).
+--   8. Un lead con historia se descarta, no se borra.
 begin;
 
 -- ── fixtures ────────────────────────────────────────────────────────────────
@@ -148,17 +150,28 @@ begin
   end;
   if not ok then raise exception 'FALLA: entró una cita sin valor'; end if;
 
-  -- 4c · el par completo sí.
+  -- 4c · un plazo_meses sin la frase que lo normaliza es un número sin origen.
+  ok := false;
+  begin
+    insert into public.crm_buyer_persona (lead_id, plazo_meses, plazo_cita)
+    values ('00000000-0000-0000-0000-0000000000a1', 6, 'en seis meses');
+  exception when check_violation then ok := true;
+  end;
+  if not ok then raise exception 'FALLA: entró un plazo_meses sin plazo_texto'; end if;
+
+  -- 4d · el par completo sí. Fijate que el plazo entra como TEXTO ("para antes de
+  -- fin de año") y sin meses: es exactamente lo que devuelve mica/persona.js cuando
+  -- la frase no trae un número, y tiene que poder guardarse igual.
   insert into public.crm_buyer_persona (lead_id, motivacion, motivacion_cita,
                                         metraje_min, metraje_max, metraje_cita,
-                                        plazo_meses, plazo_cita, forma)
+                                        plazo_texto, plazo_cita, forma)
   values ('00000000-0000-0000-0000-0000000000a1',
           'mudarse con su pareja', 'nos queremos mudar con mi esposa',
           80, 100, 'algo entre 80 y 100 metros',
-          4, 'para antes de fin de año',
+          'para antes de fin de año', 'queremos estar antes de fin de año',
           '{"registro":"tu","emojis":false}'::jsonb);
 
-  -- 4d · una temperatura distinta de 'frio' sin la frase que la causó no entra.
+  -- 4e · una temperatura distinta de 'frio' sin la frase que la causó no entra.
   ok := false;
   begin
     insert into public.crm_leads (canal, external_id, temperatura)
@@ -167,7 +180,7 @@ begin
   end;
   if not ok then raise exception 'FALLA: entró un lead hot sin cita'; end if;
 
-  -- 4e · 'frio' sí puede no tener cita: es la ausencia de evidencia.
+  -- 4f · 'frio' sí puede no tener cita: es la ausencia de evidencia.
   insert into public.crm_leads (canal, external_id, temperatura)
   values ('instagram', 'ig-frio', 'frio');
 
