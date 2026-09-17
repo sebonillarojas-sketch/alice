@@ -104,7 +104,9 @@ BODY=$(printf '{"host":"%s","clock":"%s","node":"%s","branch":"%s","last_tick":"
   "$([ "$TICK_MIN" -ge 99999 ] && echo "nunca" || echo "hace ${TICK_MIN} min")" \
   "$(limpio "${NOTAS:-sin novedad}")")
 
-curl -fsS -m 15 -X POST "${BRAIN}/api/bestia/heartbeat" \
+# El path va bajo /api/agents/ porque el panelGate del cerebro solo acepta
+# x-agent-key en ese prefijo: afuera devuelve 401 aunque la clave sea correcta.
+curl -fsS -m 15 -X POST "${BRAIN}/api/agents/bestia/heartbeat" \
   -H "x-agent-key: ${KEY}" -H "Content-Type: application/json" \
   -d "$BODY" >/dev/null 2>&1 \
   && echo "🐕 latido enviado · reloj ${CLOCK_STATE} · tick hace ${TICK_MIN} min" \

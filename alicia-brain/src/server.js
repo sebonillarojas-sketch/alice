@@ -1765,11 +1765,15 @@ app.post("/api/agents/run-requests/:id/done", requireAgentKey, async (req, res) 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Va bajo /api/agents/ como el resto: el panelGate solo acepta x-agent-key en
+// /agents/* (server.js:132). Fuera de ese prefijo el gate responde 401 antes de
+// que requireAgentKey llegue a mirar la clave — con la clave correcta y todo.
+//
 // Latido de la bestia. Lo postea su watchdog cada 10 min con curl puro: es la
 // única señal que sobrevive a que node, volta o el repo de allá estén rotos.
 // Una sola fila en app_settings — 144 latidos por día no tienen por qué ser 144
 // filas en agent_runs. checkBestiaHeartbeat() la mira cada 30 min.
-app.post("/api/bestia/heartbeat", requireAgentKey, (req, res) => {
+app.post("/api/agents/bestia/heartbeat", requireAgentKey, (req, res) => {
   try {
     const { host = null, clock = null, node = null, branch = null, last_tick = null, note = null } = req.body || {};
     query(
@@ -1784,7 +1788,7 @@ app.post("/api/bestia/heartbeat", requireAgentKey, (req, res) => {
 });
 
 // Lo que sabemos de la bestia sin poder entrar a la bestia.
-app.get("/api/bestia/heartbeat", requireAgentKey, (req, res) => {
+app.get("/api/agents/bestia/heartbeat", requireAgentKey, (req, res) => {
   try {
     const { rows } = query(`SELECT value, updated_at FROM app_settings WHERE key = 'bestia_heartbeat'`);
     if (!rows[0]) return res.json({ ok: true, latido: null });

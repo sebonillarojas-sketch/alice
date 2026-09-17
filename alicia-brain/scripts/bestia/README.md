@@ -44,7 +44,7 @@ distinguirlas desde el cerebro.
 
 ## El latido
 
-El watchdog postea cada 10 min a `POST /api/bestia/heartbeat` con: host, estado del
+El watchdog postea cada 10 min a `POST /api/agents/bestia/heartbeat` con: host, estado del
 reloj, ruta de node, rama del repo, edad del último tick y qué reparó. Es **bash y
 curl a propósito**: no comparte nada con lo que vigila — ni node, ni volta, ni el
 repo, ni git — así que si todo eso está roto, el latido igual llega y dice cuál.

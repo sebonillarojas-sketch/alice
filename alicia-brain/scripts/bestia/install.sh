@@ -185,5 +185,5 @@ echo "    tail -f /var/log/wonderland-watchdog.log"
 echo "  Y el reloj:"
 echo "    tail -f /Users/${USUARIO}/Library/Logs/wonderland.err.log"
 echo
-echo "  En el cerebro, el latido queda en /api/bestia/heartbeat y si se corta más de"
+echo "  En el cerebro, el latido queda en /api/agents/bestia/heartbeat y si se corta"
 echo "  30 min aparece un hallazgo 'bestia-muda' que Dark Alice avisa por WhatsApp."
