@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  El reloj de Wonderland, como LaunchDaemon (dominio system) y no LaunchAgent.
+  install.sh reemplaza __USER__ y __REPO__ y lo instala en /Library/LaunchDaemons.
+
+  POR QUÉ DAEMON: el LaunchAgent anterior vivía en gui/<uid>, así que solo corría
+  mientras esa cuenta tenía sesión gráfica abierta. Un logout, un reinicio sin login
+  o la máquina dormida y no disparaba nada — sin que nadie se enterara. En el dominio
+  system arranca con la máquina, sin que nadie tenga que loguearse.
+
+  PERO corre como el usuario (UserName), no como root: el estado vive en su
+  ~/Library/Application Support, el repo es suyo, y un `git pull` de root dejaría
+  archivos root-owned que después rompen el repo del usuario. Persistencia de daemon,
+  permisos de usuario.
+
+  HOME va explícito porque un daemon no hereda el del usuario, y sin él el estado
+  del scheduler se escribiría en /var/root.
+
+  Sin KeepAlive a propósito: esto es un trabajo periódico, no un servicio. KeepAlive
+  relanzaría el tick en loop apenas termina.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.hygge.wonderland.clock</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO__/scripts/bestia/run-tick.sh</string>
+  </array>
+
+  <key>UserName</key>
+  <string>__USER__</string>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/__USER__</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>600</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/__USER__/Library/Logs/wonderland.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/__USER__/Library/Logs/wonderland.err.log</string>
+</dict>
+</plist>

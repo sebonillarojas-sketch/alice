@@ -111,6 +111,13 @@ export function startCron() {
     await runScraperAgent({ sources: ["urbania"] }).catch(e => console.error("Scraper Urbania error:", e.message));
   }, { timezone: "America/Lima" });
 
+  // Latido de la bestia 💓 · cada 30 min. Detecta la máquina caída en ~30 minutos
+  // en vez de las 18h que tarda la falta de datos en cantar.
+  cron.schedule("*/30 * * * *", async () => {
+    const { checkBestiaHeartbeat } = await import("./scrapers/fleet.js");
+    try { checkBestiaHeartbeat(); } catch (e) { console.error("💓 Latido de la bestia error:", e.message); }
+  }, { timezone: "America/Lima" });
+
   // Frescura de la flota de scrapers 🪰 · cada hora al minuto 40.
   // Vigila el SILENCIO, no solo el fallo: un scraper que dejó de correr no genera
   // ningún hallazgo por sí mismo. Así se cazan tanto Urbania caído como la bestia muda.

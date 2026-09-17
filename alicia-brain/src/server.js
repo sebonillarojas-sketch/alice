@@ -1624,6 +1624,37 @@ app.post("/api/agents/run-requests/:id/done", requireAgentKey, async (req, res) 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Latido de la bestia. Lo postea su watchdog cada 10 min con curl puro: es la
+// única señal que sobrevive a que node, volta o el repo de allá estén rotos.
+// Una sola fila en app_settings — 144 latidos por día no tienen por qué ser 144
+// filas en agent_runs. checkBestiaHeartbeat() la mira cada 30 min.
+app.post("/api/bestia/heartbeat", requireAgentKey, (req, res) => {
+  try {
+    const { host = null, clock = null, node = null, branch = null, last_tick = null, note = null } = req.body || {};
+    query(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES ('bestia_heartbeat', ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+      [JSON.stringify({ host, clock, node, branch, last_tick, note })]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Lo que sabemos de la bestia sin poder entrar a la bestia.
+app.get("/api/bestia/heartbeat", requireAgentKey, (req, res) => {
+  try {
+    const { rows } = query(`SELECT value, updated_at FROM app_settings WHERE key = 'bestia_heartbeat'`);
+    if (!rows[0]) return res.json({ ok: true, latido: null });
+    let value = null;
+    try { value = JSON.parse(rows[0].value); } catch { value = rows[0].value; }
+    res.json({ ok: true, latido: { ...value, updated_at: rows[0].updated_at } });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.post("/api/agents/report", requireAgentKey, async (req, res) => {
   try {
     const { agent, result = "ok", summary = "", actions_taken = [], findings = [] } = req.body || {};

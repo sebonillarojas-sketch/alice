@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { FLEET, AGENT_BY_SOURCE, staleFindings, tsMs, masReciente } from "../src/scrapers/fleet.js";
+import { FLEET, AGENT_BY_SOURCE, staleFindings, tsMs, masReciente, heartbeatFinding } from "../src/scrapers/fleet.js";
 
 const H = 3_600_000;
 const NOW = Date.parse("2026-09-16T18:00:00Z");
@@ -93,4 +93,35 @@ test("cada fuente con tabla propia sabe dónde mirar su huella", () => {
     assert.match(cfg.datos.sql, /^SELECT MAX\(scraped_at\) AS ts FROM \w+ WHERE source = '/);
     assert.ok(cfg.datos.sql.includes(`'${cfg.source}'`), `${agent} debe filtrar por su propia fuente`);
   }
+});
+
+// ── Latido de la bestia ───────────────────────────────────────────────────────
+// Mide que la MÁQUINA esté viva, que es otra pregunta que si hay datos frescos:
+// el reloj puede estar muerto nueve horas antes de que la falta de datos cante.
+
+test("latido reciente → sin hallazgo", () => {
+  assert.equal(heartbeatFinding(NOW - 9 * 60_000, NOW), null);
+});
+
+test("latido cortado pasada la gracia → major (el watchdog late c/10 min)", () => {
+  const f = heartbeatFinding(NOW - 45 * 60_000, NOW);
+  assert.equal(f.severity, "major");
+  assert.equal(f.category, "bestia-muda");
+  assert.equal(f.agent, "buzzfly5");
+  assert.match(f.detail, /45 min/);
+});
+
+test("una corrida perdida no alarma: 10 min de cadencia, 30 de gracia", () => {
+  assert.equal(heartbeatFinding(NOW - 29 * 60_000, NOW), null);
+  assert.ok(heartbeatFinding(NOW - 31 * 60_000, NOW));
+});
+
+test("más de 3h sin latir → critical", () => {
+  assert.equal(heartbeatFinding(NOW - 4 * H, NOW).severity, "critical");
+});
+
+test("nunca latió → critical y lo dice sin rodeos", () => {
+  const f = heartbeatFinding(null, NOW);
+  assert.equal(f.severity, "critical");
+  assert.match(f.detail, /nunca report/);
 });

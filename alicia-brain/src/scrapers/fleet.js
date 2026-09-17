@@ -107,6 +107,70 @@ export function staleFindings(lastOkByAgent, nowMs, fleet = FLEET) {
   return out;
 }
 
+// ── Latido de la bestia ───────────────────────────────────────────────────────
+// buzzfly5 mide DATOS (tolera 18h, porque scrapea cada 6h). Esto mide que la
+// MÁQUINA esté viva, y es otra pregunta: el reloj puede estar muerto nueve horas
+// antes de que la falta de datos cante. El watchdog de allá postea cada 10 min con
+// curl puro — sin node, sin repo, sin nada que pueda romperse en el medio — así que
+// si esto se calla, se calló la máquina.
+export const HEARTBEAT_KEY = "bestia_heartbeat";
+
+// PURA: severidad según cuánto lleva sin latir. 10 min de cadencia → 30 de gracia.
+export function heartbeatFinding(lastMs, nowMs, { graciaMin = 30, mudaHoras = 3 } = {}) {
+  if (lastMs != null && nowMs - lastMs <= graciaMin * 60_000) return null;
+  const min = lastMs == null ? null : Math.round((nowMs - lastMs) / 60_000);
+  const muda = min == null || min > mudaHoras * 60;
+  return {
+    agent: "buzzfly5",
+    severity: muda ? "critical" : "major",
+    category: "bestia-muda",
+    detail: min == null
+      ? "La bestia nunca reportó un latido — el reloj de Wonderland no está corriendo"
+      : `La bestia no late hace ${min} min (el watchdog postea cada 10) — el reloj o la máquina están caídos`,
+  };
+}
+
+// Corre cada 30 min desde el cron. Abre uno y solo uno; lo cierra cuando vuelve.
+export function checkBestiaHeartbeat({ now = Date.now() } = {}) {
+  let last = null;
+  try {
+    const { rows } = query(`SELECT updated_at FROM app_settings WHERE key = ?`, [HEARTBEAT_KEY]);
+    last = tsMs(rows[0]?.updated_at);
+  } catch { last = null; }
+
+  const f = heartbeatFinding(last, now);
+  const { rows: previos } = query(
+    `SELECT id, severity FROM agent_findings
+     WHERE category = 'bestia-muda' AND status IN ('open','escalated') LIMIT 1`
+  );
+  const abierto = previos[0];
+
+  if (!f) {
+    if (abierto) {
+      query(
+        `UPDATE agent_findings SET status = 'auto-fixed', resolved_by = 'latido', updated_at = datetime('now') WHERE id = ?`,
+        [abierto.id]
+      );
+      console.log("💓 La bestia volvió a latir — hallazgo cerrado");
+    }
+    return { vivo: true };
+  }
+
+  if (!abierto) {
+    query(
+      `INSERT INTO agent_findings (agent, severity, category, detail, status) VALUES (?, ?, ?, ?, 'open')`,
+      [f.agent, f.severity, f.category, f.detail]
+    );
+  } else if (abierto.severity !== "critical" && f.severity === "critical") {
+    query(
+      `UPDATE agent_findings SET severity = 'critical', detail = ?, updated_at = datetime('now') WHERE id = ?`,
+      [f.detail, abierto.id]
+    );
+  }
+  console.log(`💔 ${f.detail}`);
+  return { vivo: false, finding: f };
+}
+
 // Corre cada hora desde el cron. Un hallazgo abierto por scraper: no repite el
 // mismo grito cada hora, pero si el atraso se vuelve silencio sube la severidad.
 export function checkFleetFreshness({ now = Date.now() } = {}) {

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  El watchdog del reloj. install.sh reemplaza __USER__ y __REPO__.
+
+  Corre como root a propósito: necesita `launchctl bootstrap`/`kickstart` en el
+  dominio system para poder revivir el reloj. Es lo único que hace con ese poder.
+
+  Es bash + curl, sin node y sin depender del repo más que para leer el .env: si
+  node, volta o git están rotos allá, este sigue latiendo y nos dice cuál de los
+  tres es. Un watchdog que comparte dependencias con el vigilado no es un watchdog.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.hygge.wonderland.watchdog</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO__/scripts/bestia/watchdog.sh</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>WONDERLAND_USER</key>
+    <string>__USER__</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>600</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/var/log/wonderland-watchdog.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/wonderland-watchdog.log</string>
+</dict>
+</plist>

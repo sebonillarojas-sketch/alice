@@ -20,7 +20,22 @@ async function isLoaded(label) {
   catch { return false; }
 }
 
+const DAEMON_LABEL = "com.hygge.wonderland.clock";
+
 export async function ensureWonderlandClock() {
+  // Si el reloj ya corre como LaunchDaemon (scripts/bestia/install.sh), este
+  // bootstrap no tiene nada que hacer: reinstalar el LaunchAgent dejaría DOS relojes
+  // disparando el mismo scraper cada 10 min. El daemon manda.
+  try {
+    await execFileP("launchctl", ["print", `system/${DAEMON_LABEL}`]);
+    // Y de paso, si quedó el agente viejo cargado, retirarlo (idempotente).
+    for (const viejo of [NEW_LABEL, OLD_LABEL]) {
+      try { await execFileP("launchctl", ["bootout", `gui/${uid}/${viejo}`]); } catch {}
+    }
+    console.log("🕰️ el reloj corre como daemon — no toco los LaunchAgents");
+    return { installed: true, daemon: true };
+  } catch { /* no hay daemon: seguimos con el camino viejo */ }
+
   // Si el reloj nuevo YA está cargado, no tocar nada: un bootout aquí mataría
   // el árbol de procesos actual (bestia-runner + este scrape.js) a mitad del
   // await, y el bootstrap de reemplazo nunca llegaría a correr (sin SSH para

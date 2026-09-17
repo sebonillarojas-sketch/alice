@@ -89,6 +89,15 @@ export async function tick({ now = Date.now(), statePath = STATE_PATH, pull = de
   }
   // Después de lo agendado, drenar los pedidos on-demand (run_agent).
   const onDemand = await drainRequests({ fetchImpl, spawn });
+
+  // Marca de tick COMPLETADO. El wrapper (bestia/run-tick.sh) ya dejó `last-fire`
+  // antes de arrancar; la diferencia entre las dos marcas es lo que le permite al
+  // watchdog distinguir "el reloj no dispara" de "dispara y el runner se muere" —
+  // dos causas con arreglos opuestos, y sin SSH es el único diagnóstico disponible.
+  try {
+    writeFileSync(join(dirname(statePath), "last-tick"), new Date().toISOString().replace(/\.\d+Z$/, "Z"));
+  } catch (e) { console.error("🕰️ no pude dejar la marca del tick:", e.message); }
+
   console.log(`🕰️ tick · ${due.length} agendado(s) + ${onDemand} on-demand`);
 }
 
