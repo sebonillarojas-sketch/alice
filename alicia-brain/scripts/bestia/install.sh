@@ -53,6 +53,28 @@ info "repo:    $REPO"
 DUENO="$(stat -f %Su "$REPO")"
 [ "$DUENO" != "$USUARIO" ] && info "⚠️  el repo es de $DUENO, no de $USUARIO — el reloj correrá como $USUARIO"
 
+# macOS le prohíbe a los daemons tocar Desktop/Documents/Downloads (TCC), aunque
+# los permisos del archivo sean 755 y el daemon corra como el dueño. launchd carga
+# el job igual y recién falla al ejecutarlo, con "Operation not permitted" en un log
+# local — o sea, se instala en verde y no corre nunca. Lo cazamos ANTES.
+case "$REPO" in
+  "/Users/$USUARIO/Desktop/"*|"/Users/$USUARIO/Documents/"*|"/Users/$USUARIO/Downloads/"*)
+    DESTINO="/Users/$USUARIO/$(basename "$(dirname "$REPO")")"
+    mal "El repo está en una carpeta protegida por macOS (TCC): $REPO"
+    echo
+    echo "     Un LaunchDaemon NO puede ejecutar nada ahí. Los permisos están bien;"
+    echo "     es la protección de privacidad de macOS, y no se arregla con chmod."
+    echo
+    echo "     Movelo una carpeta más arriba y volvé a correr esto:"
+    echo
+    echo "       mv \"$(dirname "$REPO")\" \"$DESTINO\""
+    echo "       sudo bash $DESTINO/$(basename "$REPO")/scripts/bestia/install.sh ${1:-}"
+    echo
+    echo "     (El home mismo no está protegido: solo Desktop, Documents y Downloads.)"
+    exit 1
+    ;;
+esac
+
 chmod +x "$HERE"/*.sh 2>/dev/null
 if NODE_BIN="$(sudo -u "$USUARIO" "$HERE/node-resolve.sh" 2>/dev/null)"; then
   ok "node: $NODE_BIN"
@@ -85,6 +107,27 @@ if [ "$CLOCK_OK" -ne 1 ]; then
   echo
   mal "NO retiro el LaunchAgent viejo: es lo único que queda en pie."
   echo "     Mirá: sudo launchctl print system/${CLOCK}"
+  exit 1
+fi
+
+# "Cargado" no es "funciona": launchd carga felizmente un job que después no puede
+# ejecutar. RunAtLoad ya disparó un tick, así que la marca `last-fire` tiene que
+# aparecer en segundos. Si no aparece, esto se instaló en verde y no corre — que es
+# exactamente el tipo de mentira que estamos tratando de sacar del sistema.
+MARCA="/Users/${USUARIO}/Library/Application Support/wonderland/last-fire"
+info "esperando la primera señal de vida del reloj…"
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  [ -f "$MARCA" ] && break
+  sleep 2
+done
+if [ -f "$MARCA" ]; then
+  ok "el reloj DISPARÓ (marca: $(cat "$MARCA" 2>/dev/null))"
+else
+  mal "el reloj está cargado pero NO llegó a ejecutarse"
+  echo "     Mirá por qué:  tail -5 /Users/${USUARIO}/Library/Logs/wonderland.err.log"
+  echo "     Si dice 'Operation not permitted', es TCC: el repo tiene que salir de"
+  echo "     Desktop/Documents/Downloads (ver arriba)."
+  mal "NO retiro el LaunchAgent viejo hasta que el nuevo demuestre que corre."
   exit 1
 fi
 echo
