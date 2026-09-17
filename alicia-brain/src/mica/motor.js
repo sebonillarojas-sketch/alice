@@ -30,7 +30,11 @@ export function construirSystem({ catalogo = [], estado = {} } = {}) {
             .filter(Boolean).join(" · ")).join(" | ");
         // Proyecto conocido pero sin tipologías: se dice explícitamente, porque un
         // renglón a medias es justo lo que el modelo completa de su cosecha.
-        return `- ${pr.id}${pr.nombre ? ` (${pr.nombre})` : ""}: ${tip || "sin tipologías cargadas"}`;
+        // Los alias importan: el mismo proyecto se llama distinto según quién hable
+        // (San Antonio 02 es "del Castillo" para media empresa). Sin ellos Mica no
+        // reconoce su propio proyecto cuando el prospecto lo nombra como lo conoce.
+        const como = (pr.alias || []).length ? ` — también le dicen ${pr.alias.join(", ")}` : "";
+        return `- ${pr.nombre || pr.id}${como}: ${tip || "sin tipologías cargadas"}`;
       }).join("\n")
     : "(vacío — no tienes catálogo cargado: no nombres ningún proyecto ni tipología. " +
       "Si preguntan por uno, decí que lo confirmas y derivá a José.)";

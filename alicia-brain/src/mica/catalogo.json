@@ -1,6 +1,26 @@
 [
   {
-    "id": "OLVR-01",
+    "id": "SA01",
+    "nombre": "San Antonio 01",
+    "alias": [],
+    "estado": "en_venta",
+    "dropbox": "/Hygge/02_PROYECTOS/San Antonio 01",
+    "tipologias": []
+  },
+  {
+    "id": "SA02",
+    "nombre": "San Antonio 02",
+    "alias": ["del Castillo", "DC01"],
+    "estado": "en_venta",
+    "dropbox": "/Hygge/02_PROYECTOS/DC01_del_castillo",
+    "tipologias": []
+  },
+  {
+    "id": "OLVR01",
+    "nombre": "Olivar 01",
+    "alias": ["de la Torre", "TG01"],
+    "estado": "por_confirmar",
+    "dropbox": "/Hygge/02_PROYECTOS/TG01_de_la_torre",
     "tipologias": []
   }
 ]

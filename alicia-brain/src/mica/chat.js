@@ -12,7 +12,10 @@ export async function responder({ mensajes = [], estado = {}, catalogo = [], llm
 
   if (d.tipo === "handoff") {
     // Sin proyecto conocido no se inventa uno: se deriva igual, sin nombrarlo.
-    const proyecto = estado.proyecto || catalogo[0]?.id || null;
+    // Con UN solo proyecto en el catálogo se puede asumir cuál es; con varios, no:
+    // nombrarle San Antonio a quien pregunta por Olivar es peor que no nombrar nada,
+    // porque suena a que del otro lado no escucharon.
+    const proyecto = estado.proyecto || (catalogo.length === 1 ? (catalogo[0].nombre || catalogo[0].id) : null);
     const { texto, combo } = armarHandoff({ proyecto, usadas: estado.combosUsados || [] });
     return { tipo: "handoff", texto, combo, ...meta };
   }
