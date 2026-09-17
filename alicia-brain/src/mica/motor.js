@@ -7,6 +7,28 @@ import { clasificar } from "./temperatura.js";
 
 const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../skills/conversacion-comercial-hygge");
 
+// Cuál de los proyectos está mirando el prospecto. Importa para el handoff y para
+// el dossier: derivar "el proyecto" cuando la persona dijo su nombre es la señal
+// más clara de que del otro lado no la escucharon.
+const sinRuido = (t) => String(t || "").toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/\s+/g, " ").trim();
+
+export function detectarProyecto(mensajes = [], catalogo = []) {
+  let encontrado = null;
+  for (const m of mensajes) {
+    // Solo el prospecto: lo que nombra Mica es oferta, no interés.
+    if (m.rol !== "prospecto") continue;
+    const t = sinRuido(m.texto);
+    for (const pr of catalogo) {
+      const nombres = [pr.nombre, pr.id, ...(pr.alias || [])].filter(Boolean);
+      // El último que nombre gana: es hacia donde derivó la conversación.
+      if (nombres.some(n => t.includes(sinRuido(n)))) encontrado = pr;
+    }
+  }
+  return encontrado;
+}
+
 export function decidirTurno({ mensajes = [], estado = {} } = {}) {
   const { temperatura, evidencia } = clasificar(mensajes);
   // Después del handoff el lead es de José. Mica mantiene el hilo tibio y no
@@ -49,5 +71,8 @@ export function construirSystem({ catalogo = [], estado = {} } = {}) {
       "dormitorios de ese proyecto. Podés nombrar el proyecto y nada más. Si preguntan por las " +
       "unidades, decí que José te las confirma.",
     estado.nombre ? `El prospecto se llama ${estado.nombre}.` : "",
+    "## Cómo responder",
+    "Escribí SOLO el próximo mensaje de Mica, tal como saldría por WhatsApp. " +
+      "Sin prefijo, sin comillas, sin explicar lo que hacés.",
   ].filter(Boolean).join("\n\n");
 }

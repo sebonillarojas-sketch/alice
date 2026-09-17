@@ -12,12 +12,15 @@ const transcripcion = (mensajes) => mensajes
   .map(m => `${m.rol === "prospecto" ? "Prospecto" : "Mica"}: ${m.texto}`)
   .join("\n");
 
-const INSTRUCCION = "\n\nEscribí SOLO el próximo mensaje de Mica. Sin prefijo, sin comillas, sin explicar nada.";
+// NADA de instrucciones propias acá. El backend es un canal, no un autor: cuando
+// le pegaba "escribí solo el próximo mensaje de Mica" a cada llamada, el extractor
+// de buyer persona recibía a Mica ACTUANDO en vez del JSON que pedía — y actuando
+// mal, ofreciendo planos y precios. Lo que cada uso necesite, va en su system.
 
 export function backendCLI({ model = "sonnet", timeoutMs = 60_000 } = {}) {
   return async ({ system, mensajes }) => {
     const { stdout } = await execFileP("claude", [
-      "-p", transcripcion(mensajes) + INSTRUCCION,
+      "-p", transcripcion(mensajes),
       "--system-prompt", system,
       "--model", model,
     ], { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 });
@@ -25,8 +28,8 @@ export function backendCLI({ model = "sonnet", timeoutMs = 60_000 } = {}) {
   };
 }
 
-export function backendAnthropic({ model = "claude-sonnet-5", apiKey = process.env.ANTHROPIC_API_KEY } = {}) {
-  const client = new Anthropic({ apiKey });
+export function backendAnthropic({ model = "claude-sonnet-5", apiKey = process.env.ANTHROPIC_API_KEY, client = null } = {}) {
+  client = client || new Anthropic({ apiKey });
   return async ({ system, mensajes }) => {
     const r = await client.messages.create({
       model,

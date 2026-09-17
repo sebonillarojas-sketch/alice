@@ -47,3 +47,8 @@ test("un proyecto sin tipologías cargadas prohíbe nombrar tipologías — el h
   assert.match(s, /sin tipolog[íi]as cargadas/i);
   assert.match(s, /no (nombres|inventes) tipolog[íi]as/i);
 });
+
+test("la consigna de 'escribí solo el próximo mensaje' vive en el system de conversar, no en el backend", () => {
+  const s = construirSystem({ catalogo: [] });
+  assert.match(s, /solo el pr[óo]ximo mensaje/i);
+});

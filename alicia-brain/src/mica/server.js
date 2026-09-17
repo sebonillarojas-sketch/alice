@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import { responder } from "./chat.js";
+import { detectarProyecto } from "./motor.js";
 import { backendPorDefecto } from "./llm.js";
 import { normalizarTwilio, enviarWA, firmaValida } from "./wa.js";
 import { abrirHilos, guardar, hilo, estado, marcarHandoff } from "./hilos.js";
@@ -117,46 +118,70 @@ app.post("/webhook/whatsapp", (req, res) => {
   atender(m).catch(e => console.error("🟠 atendiendo WhatsApp:", e.message));
 });
 
-async function atender(m) {
-  // Un audio o una foto no se responden con silencio: se dice la verdad.
-  const texto = m.texto || "(te mandó un adjunto que Mica todavía no puede abrir)";
-  guardar(hilos, m.telefono, "prospecto", texto);
-
-  const st = estado(hilos, m.telefono);
+// Lo que Mica piensa para un mensaje: hilo + respuesta + dossier si toca.
+// NO manda nada — quien tenga el canal se encarga. Así el mismo cerebro sirve
+// para el WhatsApp propio de Mica y para el puente por el número de Alicia.
+export async function pensar({ telefono, texto, nombre }) {
+  guardar(hilos, telefono, "prospecto", texto);
+  const st = estado(hilos, telefono);
+  const mensajes = hilo(hilos, telefono, 20);
+  // Si la persona nombró un proyecto, ese es el suyo — aunque haya varios cargados.
+  const proyecto = detectarProyecto(mensajes, catalogo);
   const r = await responder({
-    mensajes: hilo(hilos, m.telefono, 20),
-    estado: { ...st, nombre: st.nombre || m.nombrePerfil },
+    mensajes,
+    estado: { ...st, nombre: st.nombre || nombre, proyecto: st.proyecto || proyecto?.nombre || null },
     catalogo,
     llm,
   });
+  guardar(hilos, telefono, "mica", r.texto);
 
-  guardar(hilos, m.telefono, "mica", r.texto);
+  let dossier = null;
+  if (r.tipo === "handoff") {
+    marcarHandoff(hilos, telefono, r.combo);
+    try {
+      const persona = await extraerPersona({ mensajes: hilo(hilos, telefono, 40), llm });
+      dossier = armarDossier({
+        telefono, nombre,
+        proyecto: proyecto?.nombre || (catalogo.length === 1 ? (catalogo[0].nombre || catalogo[0].id) : null),
+        temperatura: r.temperatura, evidencia: r.evidencia, persona,
+      });
+    } catch (e) { console.error("🟠 dossier:", e.message); }
+  }
+  return { ...r, dossier };
+}
+
+// El puente desde el brain: Alicia recibe por su número y le pregunta a Mica qué
+// contestar. Autenticado con la misma llave que usan Cheshire y Knave.
+app.post("/api/mica/puente", async (req, res) => {
+  const key = process.env.AGENTS_API_KEY || "";
+  if (!key || req.get("x-agent-key") !== key) return res.status(401).json({ error: "no autorizado" });
+  const { telefono, texto, nombre } = req.body || {};
+  if (!telefono || !texto) return res.status(400).json({ error: "faltan telefono o texto" });
+  try {
+    const r = await pensar({ telefono, texto, nombre });
+    console.log(`🟠 puente · ${telefono} · ${r.tipo} · ${r.temperatura}`);
+    res.json(r);
+  } catch (e) {
+    console.error("🟠 puente:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+async function atender(m) {
+  // Un audio o una foto no se responden con silencio: se dice la verdad.
+  const texto = m.texto || "(te mandó un adjunto que Mica todavía no puede abrir)";
+  const r = await pensar({ telefono: m.telefono, texto, nombre: m.nombrePerfil });
+
   await enviarWA({ to: m.telefono, texto: r.texto, ...TW });
   console.log(`🟠 ${m.telefono} · ${r.tipo} · ${r.temperatura}`);
 
   // El handoff no termina cuando Mica responde: termina cuando José tiene el dossier.
   // Va después de contestarle al prospecto, y aparte: si falla el aviso a José, la
   // persona ya recibió su respuesta igual.
-  if (r.tipo === "handoff") {
-    marcarHandoff(hilos, m.telefono, r.combo);
-    avisarAJose({ telefono: m.telefono, nombre: m.nombrePerfil, r })
+  if (r.dossier && JOSE) {
+    enviarWA({ to: JOSE, texto: r.dossier, ...TW })
       .catch(e => console.error("🟠 no pude avisarle a José:", e.message));
   }
-}
-
-async function avisarAJose({ telefono, nombre, r }) {
-  if (!JOSE) { console.warn("🟠 handoff sin PHONE_jt — José no se entera"); return; }
-  const mensajes = hilo(hilos, telefono, 40);
-  const persona = await extraerPersona({ mensajes, llm });
-  const dossier = armarDossier({
-    telefono, nombre,
-    proyecto: catalogo[0]?.id || null,
-    temperatura: r.temperatura,
-    evidencia: r.evidencia,
-    persona,
-  });
-  await enviarWA({ to: JOSE, texto: dossier, ...TW });
-  console.log(`🟠 dossier a José · ${telefono} · ${Object.keys(persona).length} datos con cita`);
 }
 
 const PORT = process.env.PORT || process.env.MICA_PORT || 3010;

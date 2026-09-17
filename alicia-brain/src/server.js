@@ -900,6 +900,48 @@ app.post("/webhook/twilio", async (req, res) => {
       if (!allowed.includes(phone.replace(/\D/g, ""))) { console.log(`🚫 Twilio de ${phone} no autorizado`); return; }
       const userId = phoneToUserId(phone);
       if (!userId) return;
+
+      // ── Puente a Mica ────────────────────────────────────────────────────
+      // Mientras Mica no tenga sender propio aprobado, se la prueba por este
+      // mismo número. El brain sigue siendo la puerta: solo le pasa a Mica las
+      // conversaciones que lo pidieron con "ACTIVAR MICA". Si Mica se cae,
+      // Alicia sigue atendiendo igual.
+      {
+        const { detectarComando, ensureModoSchema, enModoMica, activar, salir, preguntarAMica } =
+          await import("./mica-bridge.js");
+        const db = getDB();
+        ensureModoSchema(db);
+        const cmd = detectarComando(body);
+        const micaUrl = process.env.MICA_URL || "https://micaai.bam.pe";
+
+        if (cmd === "activar") {
+          activar(db, phone);
+          await sendWA(phone, "🟠 Listo, ahora hablás con Mica. Escribile como si fueras un prospecto que vio el proyecto en Instagram.\n\nPara volver con Alicia: SALIR MICA");
+          return;
+        }
+        if (cmd === "salir") {
+          salir(db, phone);
+          await sendWA(phone, "Volviste con Alicia 💬");
+          return;
+        }
+        if (enModoMica(db, phone)) {
+          try {
+            const r = await preguntarAMica({
+              telefono: phone, texto: body, nombre: req.body.ProfileName || null,
+              url: micaUrl, key: process.env.AGENTS_API_KEY,
+            });
+            await sendWA(phone, r.texto);
+            // El dossier del handoff sale por el mismo número, a José.
+            if (r.dossier && process.env.PHONE_jt) await sendWA(process.env.PHONE_jt, r.dossier);
+            console.log(`🟠 Mica [${phone}] ${r.tipo} · ${r.temperatura}`);
+          } catch (e) {
+            // Si Mica no responde, se dice la verdad y se devuelve el control.
+            console.error("🟠 puente a Mica falló:", e.message);
+            await sendWA(phone, "Mica no está respondiendo ahora. Escribí SALIR MICA para volver con Alicia.");
+          }
+          return;
+        }
+      }
       let userText = body, inputWasAudio = false;
       if (numMedia > 0 && mediaType.startsWith("audio/")) {
         userText = await transcribeAudio(mediaUrl, mediaType) || "[audio no entendido]";
