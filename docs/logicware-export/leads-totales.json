@@ -1,0 +1,5 @@
+{"data":{"rows":[
+[303]
+],
+"cols":[{"base_type":"type/Integer","name":"count","display_name":"Contar","semantic_type":"type/Quantity","source":"aggregation","field_ref":["aggregation",0],"aggregation_index":0,"effective_type":"type/Integer"}],"insights":null,"requested_timezone":"America/Lima","results_timezone":"-05:00"},
+"json_query":{},"status":"completed"}

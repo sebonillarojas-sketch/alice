@@ -1,0 +1,6 @@
+{"data":{"rows":[
+["Activo",296],
+["Cerrado",7]
+],
+"cols":[{"description":null,"semantic_type":"type/Category","table_id":15,"coercion_strategy":null,"name":"Estado","settings":null,"source":"breakout","fk_target_field_id":null,"field_ref":["field",307,{"base-type":"type/Text"}],"effective_type":"type/Text","nfc_path":null,"parent_id":null,"id":307,"position":30,"visibility_type":"normal","display_name":"Estado","fingerprint":{"global":{"distinct-count":1,"nil%":0.0},"type":{"type/Text":{"percent-json":0.0,"percent-url":0.0,"percent-email":0.0,"percent-state":0.0,"average-length":6.0}}},"base_type":"type/Text"},{"base_type":"type/Integer","name":"count","display_name":"Contar","semantic_type":"type/Quantity","source":"aggregation","field_ref":["aggregation",0],"aggregation_index":0,"effective_type":"type/Integer"}],"insights":null,"requested_timezone":"America/Lima","results_timezone":"-05:00"},
+"json_query":{},"status":"completed"}
