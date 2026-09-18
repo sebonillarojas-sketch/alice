@@ -118,11 +118,17 @@ db.exec(`
 console.log("✅ Schema actualizado");
 
 // ── Seed: Perfiles del equipo ─────────────────────────────────────────────────
+// `DO NOTHING` y no `INSERT OR REPLACE`: este script corre en CADA deploy
+// (railway.json: `node scripts/setup-db.js && node src/server.js`), así que un
+// REPLACE devolvía cada ficha a los valores de julio —pisando lo que el equipo
+// editó desde el panel— y dejaba en NULL las columnas que no nombra: phone,
+// growth_notes y email. Un seed arranca una DB vacía; no impone valores después.
 const insert = db.prepare(`
-  INSERT OR REPLACE INTO profiles
+  INSERT INTO profiles
   (user_id, name, role, projects, skills_current, skills_developing, skills_explore,
    growth_short, growth_long, work_style, strengths, opportunities)
   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+  ON CONFLICT(user_id) DO NOTHING
 `);
 
 const team = [
