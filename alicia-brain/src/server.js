@@ -62,7 +62,9 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 días
 // la consume radar.html sin sesión) y /market-refresh|import (self-auth con su
 // propio bearer MARKET_REFRESH_TOKEN adentro del handler).
 // /agents/report|findings pasan el gate con x-agent-key (requireAgentKey valida el valor).
-const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/market-import", "/rental-refresh"];
+// /market-import salió de acá el 18/09/2026: ahora vive bajo /agents/ y lo valida
+// requireAgentKey. Los refresh siguen porque los llama el ERP desde el navegador.
+const PANEL_PUBLIC = ["/login", "/market-data", "/market-refresh", "/rental-refresh"];
 
 // Valida el access_token de Supabase contra /auth/v1/user (con cache) — así el
 // backend no necesita el JWT secret ni JWKS: Supabase confirma sesión viva.
@@ -2483,11 +2485,19 @@ app.get("/api/market-data", (req, res) => {
   }
 });
 
-// Receives data from the local Playwright scraper (runs on Mac, pushes here)
-app.post("/api/market-import", (req, res) => {
-  const auth = req.headers.authorization || "";
-  const token = process.env.MARKET_REFRESH_TOKEN || "white-rabbit";
-  if (auth !== `Bearer ${token}`) return res.status(401).json({ ok: false, error: "unauthorized" });
+// Recibe los datos del scraper con navegador que corre en la bestia.
+//
+// VA BAJO /api/agents/ Y CON requireAgentKey. Antes vivía en /api/market-import con
+// el mismo bearer que los refresh del ERP — y ese token viaja hardcodeado en el
+// bundle del navegador (MercadoView.jsx), o sea que es público por diseño, y el repo
+// también es público. Este endpoint ESCRIBE en el Radar (precios, áreas, tasas por
+// banco), así que cualquiera en internet podía meterle los números que quisiera, y
+// esos números terminan en decisiones. Verificado el 18/09/2026: `Bearer
+// white-rabbit` devolvía 400 —auth aceptada—, no 401.
+//
+// No hace falta un secreto nuevo: la bestia ya tiene AGENTS_API_KEY, que nunca
+// viajó a un navegador y es la que usan Cheshire, Knave y el latido.
+app.post("/api/agents/market-import", requireAgentKey, (req, res) => {
 
   try {
     const { type, projects, rates, source } = req.body;
@@ -2518,6 +2528,24 @@ app.post("/api/market-import", (req, res) => {
   }
 });
 
+// ⚠️ Estos dos siguen con el token compartido porque el ERP los llama DESDE EL
+// NAVEGADOR (radar.html, MercadoView.jsx) con el valor hardcodeado: cambiarlo rompe
+// los botones de refrescar. No es un secreto y no puede serlo mientras se mande
+// desde el browser. Son gatillos —hacen scrapear, no escriben lo que les manden—
+// así que el daño es carga, no corrupción de datos. Lo correcto es que usen la
+// sesión del ERP; queda anotado, no hecho.
+// El path viejo queda cerrado a propósito, con un mensaje que dice adónde ir: si
+// algo quedó apuntando acá, que falle hablando y no en silencio.
+app.post("/api/market-import", (_req, res) => {
+  res.status(410).json({ ok: false, error: "movido a POST /api/agents/market-import con header x-agent-key" });
+});
+
+// ⚠️ Estos dos siguen con el token compartido porque el ERP los llama DESDE EL
+// NAVEGADOR (radar.html, MercadoView.jsx) con el valor hardcodeado: cambiarlo rompe
+// los botones de refrescar. No es un secreto y no puede serlo mientras se mande
+// desde el browser. Son gatillos —hacen scrapear, no escriben lo que les manden—
+// así que el daño es carga, no corrupción de datos. Lo correcto es que usen la
+// sesión del ERP; queda anotado, no hecho.
 app.post("/api/market-refresh", async (req, res) => {
   // Simple bearer check so random internet can't spam refreshes
   const auth = req.headers.authorization || "";

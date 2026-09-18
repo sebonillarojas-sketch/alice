@@ -25,17 +25,24 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const BRAIN_URL   = process.env.BRAIN_URL || "http://localhost:3001";
-const AUTH_TOKEN  = process.env.MARKET_REFRESH_TOKEN || "white-rabbit";
+// AGENTS_API_KEY, la misma que usan Cheshire, Knave y el watchdog. Sin fallback a
+// propósito: el default publicado (`white-rabbit`) era justamente el agujero.
+const AUTH_TOKEN  = process.env.AGENTS_API_KEY || "";
 const DRY         = process.argv.includes("--dry-run");   // scrapea pero NO pushea (prueba segura, no toca prod)
 const TARGET      = (process.argv[2] && !process.argv[2].startsWith("--")) ? process.argv[2] : "all";
 
 // ── Push to alicia-brain ──────────────────────────────────────────────────────
 async function pushToAPI(endpoint, data) {
+  // Fallar acá es mejor que mandar `Bearer ` vacío y comerse un 401 por scrape:
+  // el trabajo ya está hecho a esa altura y el mensaje tiene que decir la verdad.
+  if (!AUTH_TOKEN) {
+    throw new Error("falta AGENTS_API_KEY en el .env — no pusheo (se pierde lo scrapeado, pero no me autentico con una credencial pública)");
+  }
   const res = await fetch(`${BRAIN_URL}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${AUTH_TOKEN}`,
+      "x-agent-key": AUTH_TOKEN,
     },
     body: JSON.stringify(data),
   });
@@ -325,7 +332,7 @@ async function main() {
       const projects = await scrapeNexoLima();   // fetch directo + search_data (IP Lima); reemplaza el scraper viejo por selectores
       if (projects.length > 0) {
         if (DRY) console.log(`  [dry-run] ${projects.length} proyectos Nexo — NO se pushea`);
-        else { const result = await pushToAPI("/api/market-import", { type: "projects", source: "nexo", projects }); console.log("API response:", result); }
+        else { const result = await pushToAPI("/api/agents/market-import", { type: "projects", source: "nexo", projects }); console.log("API response:", result); }
       }
     }
 
@@ -333,7 +340,7 @@ async function main() {
       const projects = await scrapeUrbania(page);
       if (projects.length > 0) {
         if (DRY) console.log(`  [dry-run] ${projects.length} proyectos Urbania — NO se pushea · muestra: ${JSON.stringify(projects[0]).slice(0, 200)}`);
-        else { const result = await pushToAPI("/api/market-import", { type: "projects", source: "urbania", projects }); console.log("API response:", result); }
+        else { const result = await pushToAPI("/api/agents/market-import", { type: "projects", source: "urbania", projects }); console.log("API response:", result); }
       }
     }
 
@@ -341,7 +348,7 @@ async function main() {
       const rates = await scrapeSBSRates(page);
       if (rates.length > 0) {
         if (DRY) console.log(`  [dry-run] ${rates.length} tasas SBS — NO se pushea`);
-        else { const result = await pushToAPI("/api/market-import", { type: "bank_rates", rates }); console.log("API response:", result); }
+        else { const result = await pushToAPI("/api/agents/market-import", { type: "bank_rates", rates }); console.log("API response:", result); }
       }
     }
   } finally {

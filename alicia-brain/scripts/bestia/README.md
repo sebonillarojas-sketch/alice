@@ -2,7 +2,7 @@
 
 La máquina de los agentes (`alicias-mac-pro-1`, Tailscale `100.88.12.17`) corre el
 scraper con navegador real, Cheshire y Knave. Entre el **9 y el 16 de septiembre de
-2026 no corrió ninguno** y nadie se enteró: cero pushes a `/api/market-import`, cero
+2026 no corrió ninguno** y nadie se enteró: cero pushes a `/api/agents/market-import`, cero
 reportes a `/api/agents/report`, cero polls a `/api/agents/run-requests`. No fue un
 problema de scraping — fue el reloj.
 

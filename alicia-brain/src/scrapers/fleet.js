@@ -28,7 +28,7 @@ export const FLEET = {
   buzzfly4: { source: "wynwood_house", label: "Wynwood House · renta corta",        cadencia: "cada 6h",       maxHours: 18,
               datos: { sql: "SELECT MAX(scraped_at) AS ts FROM rental_listings WHERE source = 'wynwood_house'" } },
   // La bestia no tiene tabla propia: escribe en las mismas que las demás fuentes.
-  // Su única huella distinguible es el push registrado en /api/market-import.
+  // Su única huella distinguible es el push registrado en /api/agents/market-import.
   buzzfly5: { source: "bestia",        label: "Bestia · Playwright (Nexo+Urbania+SBS)", cadencia: "cada 6h",   maxHours: 18,
               datos: null },
 };

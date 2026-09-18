@@ -16,7 +16,7 @@ los hallazgos de cada uno sea suyo.
 | `buzzfly2` | **Urbania** (`urbania.js`) | cerebro, c/12h | venta en Lima → `market_snapshots` | 30h |
 | `buzzfly3` | **Nexo** (`market.js`) | cerebro, c/hora | proyectos → `market_snapshots` | 6h |
 | `buzzfly4` | **Wynwood House** (`market.js`) | cerebro, c/6h | renta corta → `rental_listings` | 18h |
-| `buzzfly5` | **Bestia** (`scripts/scrape.js`) | Mac de Lima, c/6h | Playwright + IP residencial → `POST /api/market-import` | 18h |
+| `buzzfly5` | **Bestia** (`scripts/scrape.js`) | Mac de Lima, c/6h | Playwright + IP residencial → `POST /api/agents/market-import` | 18h |
 
 `checkFleetFreshness()` corre cada hora y vigila el **silencio** además del fallo: un
 scraper que dejó de correr no genera ningún hallazgo por sí solo — así fue como la
@@ -32,8 +32,9 @@ bestia estuvo siete días sin pushear y nadie lo notó.
 ## Cómo corre
 
 - **Cron** (`cron.js`): SBS diario 6:00am Lima; Urbania cada 12h (5:30 / 17:30).
-- **Manual**: `POST /api/scrapers/run` (bearer `MARKET_REFRESH_TOKEN`), body opcional
-  `{ "sources": ["sbs","urbania"] }`.
+- **Manual**: `POST /api/scrapers/run`, body opcional `{ "sources": ["sbs","urbania"] }`.
+  No lleva bearer: lo protege el panelGate (sesión del panel o JWT de Supabase). El
+  push de datos de la bestia va aparte, a `/api/agents/market-import`, con `x-agent-key`.
 - Cada corrida se registra en `agent_runs`/`agent_findings` bajo **su propio buzzfly**
   (`recordScraperRun` en `fleet.js`), así el trabajo es visible en el cockpit y un fallo
   llega a Dark Alice sin que otro agente se lo lleve puesto.
