@@ -1,0 +1,56 @@
+{
+  "id": "2026-09-06-u03",
+  "nombre": "3D/2B esquina real NORTE+ESTE — inspirado en Gifu Kitagata (SANAA): 3 dormitorios-módulo de área idéntica servidos por una galería única no jerárquica, terraza al frente junto a la sala y servicios al fondo, La Molina-Surco/Lima Top",
+  "area_techada": 127.92,
+  "frente_m": 15.60,
+  "fondo_m": 8.20,
+  "ambientes": [
+    { "nombre": "dormitorio principal", "poligono": [[0.25,0.25],[3.75,0.25],[3.75,3.50],[0.25,3.50]], "zona": "intima", "luz": true },
+    { "nombre": "dormitorio 2", "poligono": [[3.90,0.25],[7.40,0.25],[7.40,3.50],[3.90,3.50]], "zona": "intima", "luz": true },
+    { "nombre": "dormitorio 3", "poligono": [[7.55,0.25],[11.05,0.25],[11.05,3.50],[7.55,3.50]], "zona": "intima", "luz": true },
+    { "nombre": "sala-comedor", "poligono": [[11.20,0.25],[15.35,0.25],[15.35,4.60],[11.20,4.60]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[11.20,4.75],[15.35,4.75],[15.35,7.95],[11.20,7.95]], "zona": "social", "luz": false },
+    { "nombre": "pasillo", "poligono": [[0.25,3.65],[11.05,3.65],[11.05,4.55],[0.25,4.55]], "zona": "social", "luz": false },
+    { "nombre": "vestidor", "poligono": [[0.25,4.70],[3.75,4.70],[3.75,6.30],[0.25,6.30]], "zona": "servicio", "luz": false },
+    { "nombre": "baño principal", "poligono": [[0.25,6.45],[3.75,6.45],[3.75,7.95],[0.25,7.95]], "zona": "servicio", "luz": false },
+    { "nombre": "baño 2", "poligono": [[3.90,4.70],[7.40,4.70],[7.40,6.30],[3.90,6.30]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[3.90,6.45],[7.40,6.45],[7.40,7.95],[3.90,7.95]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[7.55,4.70],[11.05,4.70],[11.05,6.375],[11.05,7.95],[7.55,7.95],[7.55,6.375]], "zona": "servicio", "luz": false }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [15.60,0], "espesor": 0.25, "portante": true},
+    {"a": [0,8.20], "b": [15.60,8.20], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,8.20], "espesor": 0.25, "portante": true},
+    {"a": [15.60,0], "b": [15.60,8.20], "espesor": 0.25, "portante": true},
+    {"a": [3.825,0.25], "b": [3.825,3.50], "espesor": 0.15, "portante": false},
+    {"a": [7.475,0.25], "b": [7.475,3.50], "espesor": 0.15, "portante": false},
+    {"a": [11.125,0.25], "b": [11.125,7.95], "espesor": 0.15, "portante": false},
+    {"a": [0.25,3.575], "b": [11.05,3.575], "espesor": 0.15, "portante": false},
+    {"a": [0.25,4.625], "b": [11.05,4.625], "espesor": 0.15, "portante": false},
+    {"a": [11.20,4.675], "b": [15.35,4.675], "espesor": 0.15, "portante": false},
+    {"a": [3.825,4.70], "b": [3.825,7.95], "espesor": 0.15, "portante": false},
+    {"a": [7.475,4.70], "b": [7.475,7.95], "espesor": 0.15, "portante": false},
+    {"a": [0.25,6.375], "b": [3.75,6.375], "espesor": 0.15, "portante": false},
+    {"a": [3.90,6.375], "b": [7.40,6.375], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 1.00},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 2.20},
+    {"de": "sala-comedor", "a": "pasillo", "ancho": 0.80},
+    {"de": "pasillo", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "pasillo", "a": "dormitorio 2", "ancho": 0.80},
+    {"de": "pasillo", "a": "dormitorio 3", "ancho": 0.80},
+    {"de": "pasillo", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "baño principal", "ancho": 0.70},
+    {"de": "pasillo", "a": "baño 2", "ancho": 0.70},
+    {"de": "pasillo", "a": "cocina", "ancho": 1.20},
+    {"de": "cocina", "a": "lavandería", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 2", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 3", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 2.60, "alto": 1.50, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.25,6.375], "b": [11.05,6.375]}
+}

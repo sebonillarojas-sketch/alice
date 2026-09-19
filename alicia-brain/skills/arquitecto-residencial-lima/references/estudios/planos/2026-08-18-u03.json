@@ -1,0 +1,651 @@
+{
+  "id": "2026-08-18-u03",
+  "nombre": "3D/4B fachada unica profunda, un bano propio por cada dormitorio + bano de visita independiente sobre un unico corredor y un unico muro humedo posterior (pozo posterior) - La Molina/Surco, Lima Top",
+  "area_techada": 98.0,
+  "frente_m": 14.6,
+  "fondo_m": 7.7,
+  "ambientes": [
+    {
+      "nombre": "terraza",
+      "poligono": [
+        [
+          0.25,
+          0.15
+        ],
+        [
+          1.85,
+          0.15
+        ],
+        [
+          1.85,
+          3.75
+        ],
+        [
+          0.25,
+          3.75
+        ]
+      ],
+      "zona": "social",
+      "luz": false
+    },
+    {
+      "nombre": "sala-comedor",
+      "poligono": [
+        [
+          2.0,
+          0.15
+        ],
+        [
+          7.2,
+          0.15
+        ],
+        [
+          7.2,
+          3.75
+        ],
+        [
+          2.0,
+          3.75
+        ]
+      ],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "estudio",
+      "poligono": [
+        [
+          7.35,
+          0.15
+        ],
+        [
+          10.0,
+          0.15
+        ],
+        [
+          10.0,
+          3.75
+        ],
+        [
+          7.35,
+          3.75
+        ]
+      ],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [
+        [
+          10.15,
+          0.15
+        ],
+        [
+          14.35,
+          0.15
+        ],
+        [
+          14.35,
+          3.75
+        ],
+        [
+          10.15,
+          3.75
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "pasillo",
+      "poligono": [
+        [
+          0.25,
+          3.9
+        ],
+        [
+          14.35,
+          3.9
+        ],
+        [
+          14.35,
+          4.8
+        ],
+        [
+          0.25,
+          4.8
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "cocina",
+      "poligono": [
+        [
+          0.25,
+          4.95
+        ],
+        [
+          1.85,
+          4.95
+        ],
+        [
+          1.85,
+          7.45
+        ],
+        [
+          0.25,
+          7.45
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavanderia",
+      "poligono": [
+        [
+          2.0,
+          4.95
+        ],
+        [
+          2.8,
+          4.95
+        ],
+        [
+          2.8,
+          7.45
+        ],
+        [
+          2.0,
+          7.45
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "baño visita",
+      "poligono": [
+        [
+          2.95,
+          4.95
+        ],
+        [
+          4.0,
+          4.95
+        ],
+        [
+          4.0,
+          7.45
+        ],
+        [
+          2.95,
+          7.45
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "vestidor",
+      "poligono": [
+        [
+          4.15,
+          4.95
+        ],
+        [
+          5.1,
+          4.95
+        ],
+        [
+          5.1,
+          7.45
+        ],
+        [
+          4.15,
+          7.45
+        ]
+      ],
+      "zona": "intima",
+      "luz": false
+    },
+    {
+      "nombre": "baño principal",
+      "poligono": [
+        [
+          5.25,
+          4.95
+        ],
+        [
+          6.45,
+          4.95
+        ],
+        [
+          6.45,
+          7.45
+        ],
+        [
+          5.25,
+          7.45
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "dormitorio 2",
+      "poligono": [
+        [
+          6.6,
+          4.95
+        ],
+        [
+          9.2,
+          4.95
+        ],
+        [
+          9.2,
+          7.45
+        ],
+        [
+          6.6,
+          7.45
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "baño 2",
+      "poligono": [
+        [
+          9.35,
+          4.95
+        ],
+        [
+          10.4,
+          4.95
+        ],
+        [
+          10.4,
+          7.45
+        ],
+        [
+          9.35,
+          7.45
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "dormitorio 3",
+      "poligono": [
+        [
+          10.55,
+          4.95
+        ],
+        [
+          13.15,
+          4.95
+        ],
+        [
+          13.15,
+          7.45
+        ],
+        [
+          10.55,
+          7.45
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "baño 3",
+      "poligono": [
+        [
+          13.3,
+          4.95
+        ],
+        [
+          14.35,
+          4.95
+        ],
+        [
+          14.35,
+          7.45
+        ],
+        [
+          13.3,
+          7.45
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    }
+  ],
+  "muros": [
+    {
+      "a": [
+        0.0,
+        0.0
+      ],
+      "b": [
+        14.6,
+        0.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        0.0
+      ],
+      "b": [
+        0.0,
+        7.7
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        14.6,
+        0.0
+      ],
+      "b": [
+        14.6,
+        7.7
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        7.7
+      ],
+      "b": [
+        14.6,
+        7.7
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.25,
+        3.825
+      ],
+      "b": [
+        14.35,
+        3.825
+      ],
+      "espesor": 0.15,
+      "portante": true
+    },
+    {
+      "a": [
+        0.25,
+        4.875
+      ],
+      "b": [
+        14.35,
+        4.875
+      ],
+      "espesor": 0.15,
+      "portante": true
+    },
+    {
+      "a": [
+        1.925,
+        0.15
+      ],
+      "b": [
+        1.925,
+        3.75
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        7.275,
+        0.15
+      ],
+      "b": [
+        7.275,
+        3.75
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        10.075,
+        0.15
+      ],
+      "b": [
+        10.075,
+        3.75
+      ],
+      "espesor": 0.15,
+      "portante": true
+    },
+    {
+      "a": [
+        1.925,
+        4.95
+      ],
+      "b": [
+        1.925,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.925,
+        4.95
+      ],
+      "b": [
+        2.925,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        4.075,
+        4.95
+      ],
+      "b": [
+        4.075,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        5.175,
+        4.95
+      ],
+      "b": [
+        5.175,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.525,
+        4.95
+      ],
+      "b": [
+        6.525,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": true
+    },
+    {
+      "a": [
+        9.275,
+        4.95
+      ],
+      "b": [
+        9.275,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        10.475,
+        4.95
+      ],
+      "b": [
+        10.475,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": true
+    },
+    {
+      "a": [
+        13.225,
+        4.95
+      ],
+      "b": [
+        13.225,
+        7.45
+      ],
+      "espesor": 0.15,
+      "portante": false
+    }
+  ],
+  "puertas": [
+    {
+      "de": "exterior",
+      "a": "sala-comedor",
+      "ancho": 0.9
+    },
+    {
+      "de": "sala-comedor",
+      "a": "terraza",
+      "ancho": 1.2
+    },
+    {
+      "de": "sala-comedor",
+      "a": "estudio",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "pasillo",
+      "ancho": 0.9
+    },
+    {
+      "de": "pasillo",
+      "a": "dormitorio principal",
+      "ancho": 0.8
+    },
+    {
+      "de": "pasillo",
+      "a": "cocina",
+      "ancho": 0.8
+    },
+    {
+      "de": "cocina",
+      "a": "lavanderia",
+      "ancho": 0.8
+    },
+    {
+      "de": "pasillo",
+      "a": "baño visita",
+      "ancho": 0.7
+    },
+    {
+      "de": "pasillo",
+      "a": "vestidor",
+      "ancho": 0.8
+    },
+    {
+      "de": "vestidor",
+      "a": "baño principal",
+      "ancho": 0.7
+    },
+    {
+      "de": "pasillo",
+      "a": "dormitorio 2",
+      "ancho": 0.8
+    },
+    {
+      "de": "dormitorio 2",
+      "a": "baño 2",
+      "ancho": 0.7
+    },
+    {
+      "de": "pasillo",
+      "a": "dormitorio 3",
+      "ancho": 0.8
+    },
+    {
+      "de": "dormitorio 3",
+      "a": "baño 3",
+      "ancho": 0.7
+    }
+  ],
+  "ventanas": [
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 2.2,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "estudio",
+      "ancho": 1.6,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "dormitorio principal",
+      "ancho": 1.8,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "dormitorio 2",
+      "ancho": 1.6,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "dormitorio 3",
+      "ancho": 1.6,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    }
+  ],
+  "muro_humedo": {
+    "a": [
+      0.0,
+      7.7
+    ],
+    "b": [
+      14.6,
+      7.7
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="574" height="334" viewBox="0 0 574 334" font-family="Arial, sans-serif">
+<rect x="0" y="0" width="574" height="334" fill="#ffffff"/>
+<polygon points="45.0,45.0 171.0,45.0 171.0,181.0 45.0,181.0" fill="#e6f0fa" stroke="#999" stroke-width="1"/>
+<polygon points="177.0,45.0 419.0,45.0 419.0,181.0 177.0,181.0" fill="#fdf3e3" stroke="#999" stroke-width="1"/>
+<polygon points="45.0,187.0 105.0,187.0 105.0,289.0 45.0,289.0" fill="#eef2ee" stroke="#999" stroke-width="1"/>
+<polygon points="111.0,187.0 171.0,187.0 171.0,289.0 111.0,289.0" fill="#eef2ee" stroke="#999" stroke-width="1"/>
+<polygon points="177.0,187.0 241.0,187.0 241.0,289.0 177.0,289.0" fill="#eef2ee" stroke="#999" stroke-width="1"/>
+<polygon points="247.0,187.0 309.0,187.0 309.0,289.0 247.0,289.0" fill="#fdf3e3" stroke="#999" stroke-width="1"/>
+<polygon points="315.0,187.0 419.0,187.0 419.0,289.0 315.0,289.0" fill="#fdf3e3" stroke="#999" stroke-width="1"/>
+<polygon points="425.0,45.0 529.0,45.0 529.0,205.0 425.0,205.0" fill="#e6f0fa" stroke="#999" stroke-width="1"/>
+<polygon points="425.0,211.0 529.0,211.0 529.0,289.0 425.0,289.0" fill="#eef2ee" stroke="#999" stroke-width="1"/>
+<line x1="40.0" y1="40.0" x2="534.0" y2="40.0" stroke="#333" stroke-width="6" stroke-linecap="square"/>
+<line x1="40.0" y1="40.0" x2="40.0" y2="294.0" stroke="#333" stroke-width="6" stroke-linecap="square"/>
+<line x1="534.0" y1="40.0" x2="534.0" y2="294.0" stroke="#333" stroke-width="6" stroke-linecap="square"/>
+<line x1="40.0" y1="294.0" x2="534.0" y2="294.0" stroke="#333" stroke-width="6" stroke-linecap="square"/>
+<line x1="174.0" y1="40.0" x2="174.0" y2="294.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="422.0" y1="40.0" x2="422.0" y2="294.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="40.0" y1="184.0" x2="422.0" y2="184.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="108.0" y1="184.0" x2="108.0" y2="294.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="244.0" y1="184.0" x2="244.0" y2="294.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="312.0" y1="184.0" x2="312.0" y2="294.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="422.0" y1="208.0" x2="534.0" y2="208.0" stroke="#555" stroke-width="3.5" stroke-linecap="square"/>
+<line x1="45.0" y1="77.0" x2="45.0" y2="149.0" stroke="#2a6fdb" stroke-width="5"/>
+<line x1="246.0" y1="45.0" x2="350.0" y2="45.0" stroke="#2a6fdb" stroke-width="5"/>
+<line x1="331.0" y1="289.0" x2="403.0" y2="289.0" stroke="#2a6fdb" stroke-width="5"/>
+<line x1="529.0" y1="93.0" x2="529.0" y2="157.0" stroke="#2a6fdb" stroke-width="5"/>
+<line x1="449.0" y1="45.0" x2="505.0" y2="45.0" stroke="#2a6fdb" stroke-width="5"/>
+<line x1="280.0" y1="40.0" x2="316.0" y2="40.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 316.0 40.0 A 36.0 36.0 0 0 1 280.0 76.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="280.0" y1="40.0" x2="280.0" y2="76.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="174.0" y1="97.0" x2="174.0" y2="129.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 174.0 97.0 A 32.0 32.0 0 0 0 142.0 129.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="174.0" y1="129.0" x2="142.0" y2="129.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="59.0" y1="184.0" x2="91.0" y2="184.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 59.0 184.0 A 32.0 32.0 0 0 1 91.0 216.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="91.0" y1="184.0" x2="91.0" y2="216.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="108.0" y1="224.0" x2="108.0" y2="252.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 108.0 224.0 A 28.0 28.0 0 0 1 136.0 252.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="108.0" y1="252.0" x2="136.0" y2="252.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="193.0" y1="184.0" x2="225.0" y2="184.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 193.0 184.0 A 32.0 32.0 0 0 1 225.0 216.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="225.0" y1="184.0" x2="225.0" y2="216.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="248.0" y1="184.0" x2="308.0" y2="184.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 308.0 184.0 A 60.0 60.0 0 0 1 248.0 244.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="248.0" y1="184.0" x2="248.0" y2="244.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="351.0" y1="184.0" x2="383.0" y2="184.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 351.0 184.0 A 32.0 32.0 0 0 1 383.0 216.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="383.0" y1="184.0" x2="383.0" y2="216.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="422.0" y1="97.0" x2="422.0" y2="129.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 422.0 129.0 A 32.0 32.0 0 0 1 454.0 97.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="422.0" y1="97.0" x2="454.0" y2="97.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="463.0" y1="208.0" x2="491.0" y2="208.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 463.0 208.0 A 28.0 28.0 0 0 1 491.0 236.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="491.0" y1="208.0" x2="491.0" y2="236.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="422.0" y1="236.0" x2="422.0" y2="264.0" stroke="#ffffff" stroke-width="5"/>
+<path d="M 422.0 236.0 A 28.0 28.0 0 0 1 450.0 264.0" fill="none" stroke="#7a4a1e" stroke-width="1.5"/>
+<line x1="422.0" y1="264.0" x2="450.0" y2="264.0" stroke="#7a4a1e" stroke-width="1.5"/>
+<text x="108.0" y="109.0" font-size="11" text-anchor="middle" fill="#222">dormitorio principal</text>
+<text x="108.0" y="123.0" font-size="10" text-anchor="middle" fill="#555">10.71 m²</text>
+<text x="298.0" y="109.0" font-size="11" text-anchor="middle" fill="#222">sala-comedor</text>
+<text x="298.0" y="123.0" font-size="10" text-anchor="middle" fill="#555">20.57 m²</text>
+<text x="75.0" y="234.0" font-size="11" text-anchor="middle" fill="#222">vestidor</text>
+<text x="75.0" y="248.0" font-size="10" text-anchor="middle" fill="#555">3.83 m²</text>
+<text x="141.0" y="234.0" font-size="11" text-anchor="middle" fill="#222">baño principal</text>
+<text x="141.0" y="248.0" font-size="10" text-anchor="middle" fill="#555">3.82 m²</text>
+<text x="209.0" y="234.0" font-size="11" text-anchor="middle" fill="#222">cocina</text>
+<text x="209.0" y="248.0" font-size="10" text-anchor="middle" fill="#555">4.08 m²</text>
+<text x="278.0" y="234.0" font-size="11" text-anchor="middle" fill="#222">terraza</text>
+<text x="278.0" y="248.0" font-size="10" text-anchor="middle" fill="#555">3.95 m²</text>
+<text x="367.0" y="234.0" font-size="11" text-anchor="middle" fill="#222">estudio</text>
+<text x="367.0" y="248.0" font-size="10" text-anchor="middle" fill="#555">6.63 m²</text>
+<text x="477.0" y="121.0" font-size="11" text-anchor="middle" fill="#222">dormitorio 2</text>
+<text x="477.0" y="135.0" font-size="10" text-anchor="middle" fill="#555">10.40 m²</text>
+<text x="477.0" y="246.0" font-size="11" text-anchor="middle" fill="#222">baño 2</text>
+<text x="477.0" y="260.0" font-size="10" text-anchor="middle" fill="#555">5.07 m²</text>
+<text x="40" y="324" font-size="11" fill="#333">2D/2B esquina real NORTE+ESTE con home-office (Neufert: nicho de estudio con retroceso dinámico de silla), dormitorio 2 con ventana de esquina, terraza posterior junto a la sala, baño 2 sirve al dormitorio 2 y de visita, Surquillo-Jesús María/Lima Moderna-Top</text>
+</svg>

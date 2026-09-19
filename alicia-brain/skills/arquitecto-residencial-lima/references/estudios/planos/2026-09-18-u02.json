@@ -1,0 +1,496 @@
+{
+  "id": "u02-2026-09-18",
+  "nombre": "2D/2B esquina real NORTE+ESTE — sala-comedor con ventana de esquina, dormitorio 2 con frente propio, galería continua hasta el pozo con ventana propia, baño 2 de doble acceso (dormitorio 2 + galería/visita), dormitorio principal con baño en suite y terraza al pozo",
+  "area_techada": 80.205,
+  "frente_m": 9.2,
+  "fondo_m": 12.45,
+  "ambientes": [
+    {
+      "nombre": "dormitorio 2",
+      "poligono": [
+        [
+          0.25,
+          0.15
+        ],
+        [
+          2.65,
+          0.15
+        ],
+        [
+          2.65,
+          3.75
+        ],
+        [
+          0.25,
+          3.75
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "sala-comedor",
+      "poligono": [
+        [
+          2.8,
+          0.15
+        ],
+        [
+          8.95,
+          0.15
+        ],
+        [
+          8.95,
+          3.75
+        ],
+        [
+          2.8,
+          3.75
+        ]
+      ],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "baño 2",
+      "poligono": [
+        [
+          0.25,
+          3.9
+        ],
+        [
+          2.25,
+          3.9
+        ],
+        [
+          2.25,
+          6.3
+        ],
+        [
+          0.25,
+          6.3
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "hall",
+      "poligono": [
+        [
+          2.4,
+          3.9
+        ],
+        [
+          3.6,
+          3.9
+        ],
+        [
+          3.6,
+          10.05
+        ],
+        [
+          2.4,
+          10.05
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "cocina",
+      "poligono": [
+        [
+          3.75,
+          3.9
+        ],
+        [
+          6.35,
+          3.9
+        ],
+        [
+          6.35,
+          6.3
+        ],
+        [
+          3.75,
+          6.3
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "lavandería",
+      "poligono": [
+        [
+          6.5,
+          3.9
+        ],
+        [
+          8.95,
+          3.9
+        ],
+        [
+          8.95,
+          6.3
+        ],
+        [
+          6.5,
+          6.3
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "depósito",
+      "poligono": [
+        [
+          0.25,
+          6.45
+        ],
+        [
+          2.25,
+          6.45
+        ],
+        [
+          2.25,
+          10.05
+        ],
+        [
+          0.25,
+          10.05
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [
+        [
+          3.75,
+          6.45
+        ],
+        [
+          7.1,
+          6.45
+        ],
+        [
+          7.1,
+          10.05
+        ],
+        [
+          3.75,
+          10.05
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [
+        [
+          7.25,
+          6.45
+        ],
+        [
+          8.95,
+          6.45
+        ],
+        [
+          8.95,
+          8.2
+        ],
+        [
+          7.25,
+          8.2
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "terraza",
+      "poligono": [
+        [
+          7.25,
+          8.35
+        ],
+        [
+          8.95,
+          8.35
+        ],
+        [
+          8.95,
+          10.05
+        ],
+        [
+          7.25,
+          10.05
+        ]
+      ],
+      "zona": "social",
+      "luz": false
+    }
+  ],
+  "muros": [
+    {
+      "a": [
+        0.0,
+        0.0
+      ],
+      "b": [
+        9.2,
+        0.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        12.45
+      ],
+      "b": [
+        9.2,
+        12.45
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        0.0
+      ],
+      "b": [
+        0.0,
+        12.45
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        9.2,
+        0.0
+      ],
+      "b": [
+        9.2,
+        12.45
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        3.825
+      ],
+      "b": [
+        9.2,
+        3.825
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.725,
+        0.15
+      ],
+      "b": [
+        2.725,
+        3.75
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        2.325,
+        3.9
+      ],
+      "b": [
+        2.325,
+        10.05
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.675,
+        3.9
+      ],
+      "b": [
+        3.675,
+        10.05
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.425,
+        3.9
+      ],
+      "b": [
+        6.425,
+        6.3
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        6.375
+      ],
+      "b": [
+        9.2,
+        6.375
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        7.175,
+        6.45
+      ],
+      "b": [
+        7.175,
+        10.05
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        7.25,
+        8.275
+      ],
+      "b": [
+        8.95,
+        8.275
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        10.2
+      ],
+      "b": [
+        9.2,
+        10.2
+      ],
+      "espesor": 0.15,
+      "portante": false
+    }
+  ],
+  "puertas": [
+    {
+      "de": "exterior",
+      "a": "sala-comedor",
+      "ancho": 0.9
+    },
+    {
+      "de": "sala-comedor",
+      "a": "dormitorio 2",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "cocina",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "hall",
+      "ancho": 0.8
+    },
+    {
+      "de": "cocina",
+      "a": "lavandería",
+      "ancho": 0.8
+    },
+    {
+      "de": "dormitorio 2",
+      "a": "baño 2",
+      "ancho": 0.7
+    },
+    {
+      "de": "hall",
+      "a": "baño 2",
+      "ancho": 0.7
+    },
+    {
+      "de": "hall",
+      "a": "depósito",
+      "ancho": 0.8
+    },
+    {
+      "de": "hall",
+      "a": "dormitorio principal",
+      "ancho": 0.8
+    },
+    {
+      "de": "dormitorio principal",
+      "a": "baño 1",
+      "ancho": 0.7
+    },
+    {
+      "de": "dormitorio principal",
+      "a": "terraza",
+      "ancho": 0.8
+    }
+  ],
+  "ventanas": [
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 2.2,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 1.8,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "dormitorio 2",
+      "ancho": 1.4,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "hall",
+      "ancho": 1.1,
+      "alto": 1.1,
+      "alfeizar": 1.6
+    },
+    {
+      "ambiente": "dormitorio principal",
+      "ancho": 1.6,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    }
+  ],
+  "muro_humedo": {
+    "a": [
+      0.25,
+      6.375
+    ],
+    "b": [
+      8.95,
+      6.375
+    ]
+  }
+}

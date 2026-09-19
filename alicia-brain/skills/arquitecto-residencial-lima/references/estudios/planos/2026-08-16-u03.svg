@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 846" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="976" height="846" fill="#ffffff"/>
+<style>.wall{fill:#2b2b2b;} .wallP{fill:#1a1a1a;} .amb{fill:#f7f5f0;stroke:#333;stroke-width:1.2;} .txt{font-size:12px;fill:#111;} .txt2{font-size:10px;fill:#555;} .doorleaf{stroke:#8a5a2b;stroke-width:2;} .doorarc{fill:none;stroke:#8a5a2b;stroke-width:1;stroke-dasharray:3,2;} .win{stroke:#2f7bbf;stroke-width:4;} .dim{stroke:#999;stroke-width:0.7;} .dimtxt{font-size:9px;fill:#666;} .title{font-size:15px;font-weight:bold;fill:#111;} .zonaS{fill:#fdf1e0;} .zonaI{fill:#e9f2fb;} .zonaSv{fill:#eef0ee;}</style>
+<polygon points="85.0,85.0 241.0,85.0 241.0,325.0 85.0,325.0" class="zonaI" stroke="#333" stroke-width="1.2"/>
+<polygon points="250.0,85.0 538.0,85.0 538.0,325.0 250.0,325.0" class="zonaS" stroke="#333" stroke-width="1.2"/>
+<polygon points="547.0,85.0 631.0,85.0 631.0,325.0 547.0,325.0" class="zonaS" stroke="#333" stroke-width="1.2"/>
+<polygon points="85.0,334.0 265.0,334.0 265.0,406.0 85.0,406.0" class="zonaI" stroke="#333" stroke-width="1.2"/>
+<polygon points="85.0,415.0 265.0,415.0 265.0,496.0 85.0,496.0" class="zonaSv" stroke="#333" stroke-width="1.2"/>
+<polygon points="274.0,334.0 346.0,334.0 346.0,721.0 274.0,721.0" class="zonaI" stroke="#333" stroke-width="1.2"/>
+<polygon points="355.0,334.0 550.0,334.0 550.0,496.0 355.0,496.0" class="zonaSv" stroke="#333" stroke-width="1.2"/>
+<polygon points="559.0,334.0 631.0,334.0 631.0,496.0 559.0,496.0" class="zonaSv" stroke="#333" stroke-width="1.2"/>
+<polygon points="85.0,505.0 265.0,505.0 265.0,721.0 85.0,721.0" class="zonaI" stroke="#333" stroke-width="1.2"/>
+<polygon points="355.0,505.0 523.0,505.0 523.0,721.0 355.0,721.0" class="zonaI" stroke="#333" stroke-width="1.2"/>
+<polygon points="532.0,505.0 631.0,505.0 631.0,721.0 532.0,721.0" class="zonaSv" stroke="#333" stroke-width="1.2"/>
+<polygon points="70.0,77.5 646.0,77.5 646.0,62.5 70.0,62.5" class="wallP"/>
+<polygon points="62.5,70.0 62.5,736.0 77.5,736.0 77.5,70.0" class="wallP"/>
+<polygon points="638.5,70.0 638.5,736.0 653.5,736.0 653.5,70.0" class="wallP"/>
+<polygon points="70.0,743.5 646.0,743.5 646.0,728.5 70.0,728.5" class="wallP"/>
+<polygon points="70.0,334.0 646.0,334.0 646.0,325.0 70.0,325.0" class="wall"/>
+<polygon points="70.0,505.0 265.0,505.0 265.0,496.0 70.0,496.0" class="wall"/>
+<polygon points="355.0,505.0 646.0,505.0 646.0,496.0 355.0,496.0" class="wall"/>
+<polygon points="241.0,85.0 241.0,325.0 250.0,325.0 250.0,85.0" class="wall"/>
+<polygon points="538.0,85.0 538.0,325.0 547.0,325.0 547.0,85.0" class="wall"/>
+<polygon points="265.0,334.0 265.0,721.0 274.0,721.0 274.0,334.0" class="wall"/>
+<polygon points="346.0,334.0 346.0,721.0 355.0,721.0 355.0,334.0" class="wall"/>
+<polygon points="85.0,415.0 265.0,415.0 265.0,406.0 85.0,406.0" class="wall"/>
+<polygon points="550.0,334.0 550.0,496.0 559.0,496.0 559.0,334.0" class="wall"/>
+<polygon points="523.0,505.0 523.0,721.0 532.0,721.0 532.0,505.0" class="wall"/>
+<line x1="367.0" y1="85.0" x2="367.0" y2="139.0" class="doorleaf"/><path d="M 367.0 139.0 A 54.0 54.0 0 0 1 421.0 85.0" class="doorarc"/>
+<line x1="241.0" y1="181.0" x2="193.0" y2="181.0" class="doorleaf"/><path d="M 193.0 181.0 A 48.0 48.0 0 0 1 241.0 229.0" class="doorarc"/>
+<line x1="547.0" y1="181.0" x2="595.0" y2="181.0" class="doorleaf"/><path d="M 595.0 181.0 A 48.0 48.0 0 0 1 547.0 229.0" class="doorarc"/>
+<line x1="286.0" y1="334.0" x2="286.0" y2="382.0" class="doorleaf"/><path d="M 286.0 382.0 A 48.0 48.0 0 0 1 334.0 334.0" class="doorarc"/>
+<line x1="265.0" y1="346.0" x2="217.0" y2="346.0" class="doorleaf"/><path d="M 217.0 346.0 A 48.0 48.0 0 0 1 265.0 394.0" class="doorarc"/>
+<line x1="154.0" y1="415.0" x2="154.0" y2="457.0" class="doorleaf"/><path d="M 154.0 457.0 A 42.0 42.0 0 0 1 196.0 415.0" class="doorarc"/>
+<line x1="154.0" y1="505.0" x2="154.0" y2="547.0" class="doorleaf"/><path d="M 154.0 547.0 A 42.0 42.0 0 0 1 196.0 505.0" class="doorarc"/>
+<line x1="355.0" y1="391.0" x2="403.0" y2="391.0" class="doorleaf"/><path d="M 403.0 391.0 A 48.0 48.0 0 0 1 355.0 439.0" class="doorarc"/>
+<line x1="559.0" y1="391.0" x2="607.0" y2="391.0" class="doorleaf"/><path d="M 607.0 391.0 A 48.0 48.0 0 0 1 559.0 439.0" class="doorarc"/>
+<line x1="265.0" y1="589.0" x2="217.0" y2="589.0" class="doorleaf"/><path d="M 217.0 589.0 A 48.0 48.0 0 0 1 265.0 637.0" class="doorarc"/>
+<line x1="355.0" y1="589.0" x2="403.0" y2="589.0" class="doorleaf"/><path d="M 403.0 589.0 A 48.0 48.0 0 0 1 355.0 637.0" class="doorarc"/>
+<line x1="574.0" y1="505.0" x2="574.0" y2="547.0" class="doorleaf"/><path d="M 574.0 547.0 A 42.0 42.0 0 0 1 616.0 505.0" class="doorarc"/>
+<line x1="532.0" y1="592.0" x2="574.0" y2="592.0" class="doorleaf"/><path d="M 574.0 592.0 A 42.0 42.0 0 0 1 532.0 634.0" class="doorarc"/>
+<line x1="85.0" y1="259.0" x2="85.0" y2="151.0" class="win"/>
+<line x1="328.0" y1="85.0" x2="460.0" y2="85.0" class="win"/>
+<line x1="85.0" y1="667.0" x2="85.0" y2="559.0" class="win"/>
+<line x1="484.0" y1="721.0" x2="394.0" y2="721.0" class="win"/>
+<text x="163.0" y="201.0" text-anchor="middle" class="txt">dormitorio 3</text>
+<text x="163.0" y="215.0" text-anchor="middle" class="txt2">10.4 m²</text>
+<text x="394.0" y="201.0" text-anchor="middle" class="txt">sala-comedor</text>
+<text x="394.0" y="215.0" text-anchor="middle" class="txt2">19.2 m²</text>
+<text x="589.0" y="201.0" text-anchor="middle" class="txt">terraza</text>
+<text x="589.0" y="215.0" text-anchor="middle" class="txt2">5.6 m²</text>
+<text x="175.0" y="366.0" text-anchor="middle" class="txt">vestidor</text>
+<text x="175.0" y="380.0" text-anchor="middle" class="txt2">3.6 m²</text>
+<text x="175.0" y="451.5" text-anchor="middle" class="txt">baño 1</text>
+<text x="175.0" y="465.5" text-anchor="middle" class="txt2">4.0 m²</text>
+<text x="310.0" y="523.5" text-anchor="middle" class="txt">pasillo</text>
+<text x="310.0" y="537.5" text-anchor="middle" class="txt2">7.7 m²</text>
+<text x="452.5" y="411.0" text-anchor="middle" class="txt">cocina</text>
+<text x="452.5" y="425.0" text-anchor="middle" class="txt2">8.8 m²</text>
+<text x="595.0" y="411.0" text-anchor="middle" class="txt">lavandería</text>
+<text x="595.0" y="425.0" text-anchor="middle" class="txt2">3.2 m²</text>
+<text x="175.0" y="609.0" text-anchor="middle" class="txt">dormitorio principal</text>
+<text x="175.0" y="623.0" text-anchor="middle" class="txt2">10.8 m²</text>
+<text x="439.0" y="609.0" text-anchor="middle" class="txt">dormitorio 2</text>
+<text x="439.0" y="623.0" text-anchor="middle" class="txt2">10.1 m²</text>
+<text x="581.5" y="609.0" text-anchor="middle" class="txt">baño 2</text>
+<text x="581.5" y="623.0" text-anchor="middle" class="txt2">5.9 m²</text>
+<line x1="70.0" y1="758.0" x2="646.0" y2="758.0" class="dim"/>
+<text x="358.0" y="770.0" text-anchor="middle" class="dimtxt">frente 9.60 m</text>
+<line x1="670.0" y1="70.0" x2="670.0" y2="736.0" class="dim"/>
+<text x="676.0" y="403.0" class="dimtxt">fondo 11.10 m</text>
+<text x="70" y="24" class="title">2026-08-16-u03 — 106.56 m²</text>
+</svg>

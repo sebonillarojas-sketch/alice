@@ -1,0 +1,445 @@
+{
+  "id": "2026-09-03-u01",
+  "nombre": "1D/1B amplio, fachada única frente ancho, cross-vent en sala-comedor (ventana chica de calle=entrada + mampara grande a terraza=salida, proporción 1:~2) y ruta de aire por rejilla de transferencia dormitorio→vestidor→baño 1 (enfilade), San Miguel/Lima Moderna",
+  "area_techada": 48.7,
+  "frente_m": 8.5,
+  "fondo_m": 7.0,
+  "ambientes": [
+    {
+      "nombre": "dormitorio principal",
+      "poligono": [
+        [
+          0.25,
+          0.25
+        ],
+        [
+          3.225,
+          0.25
+        ],
+        [
+          3.225,
+          3.825
+        ],
+        [
+          0.25,
+          3.825
+        ]
+      ],
+      "zona": "intima",
+      "luz": true
+    },
+    {
+      "nombre": "vestidor",
+      "poligono": [
+        [
+          0.25,
+          3.975
+        ],
+        [
+          3.225,
+          3.975
+        ],
+        [
+          3.225,
+          5.325
+        ],
+        [
+          0.25,
+          5.325
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "baño 1",
+      "poligono": [
+        [
+          0.25,
+          5.475
+        ],
+        [
+          3.225,
+          5.475
+        ],
+        [
+          3.225,
+          6.75
+        ],
+        [
+          0.25,
+          6.75
+        ]
+      ],
+      "zona": "servicio",
+      "luz": false
+    },
+    {
+      "nombre": "sala-comedor",
+      "poligono": [
+        [
+          3.375,
+          0.25
+        ],
+        [
+          6.825,
+          0.25
+        ],
+        [
+          6.825,
+          4.925
+        ],
+        [
+          3.375,
+          4.925
+        ]
+      ],
+      "zona": "social",
+      "luz": true
+    },
+    {
+      "nombre": "terraza",
+      "poligono": [
+        [
+          6.975,
+          0.25
+        ],
+        [
+          8.25,
+          0.25
+        ],
+        [
+          8.25,
+          4.925
+        ],
+        [
+          6.975,
+          4.925
+        ]
+      ],
+      "zona": "social",
+      "luz": false
+    },
+    {
+      "nombre": "cocina",
+      "poligono": [
+        [
+          3.375,
+          5.075
+        ],
+        [
+          8.25,
+          5.075
+        ],
+        [
+          8.25,
+          6.75
+        ],
+        [
+          3.375,
+          6.75
+        ]
+      ],
+      "zona": "servicio",
+      "luz": true
+    }
+  ],
+  "muros": [
+    {
+      "a": [
+        0.0,
+        0.0
+      ],
+      "b": [
+        0.0,
+        3.9
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        3.9
+      ],
+      "b": [
+        0.0,
+        5.4
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        5.4
+      ],
+      "b": [
+        0.0,
+        7.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        3.3,
+        0.0
+      ],
+      "b": [
+        3.3,
+        3.9
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.3,
+        3.9
+      ],
+      "b": [
+        3.3,
+        5.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.3,
+        5.0
+      ],
+      "b": [
+        3.3,
+        5.4
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.3,
+        5.4
+      ],
+      "b": [
+        3.3,
+        7.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.9,
+        0.0
+      ],
+      "b": [
+        6.9,
+        5.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        8.5,
+        0.0
+      ],
+      "b": [
+        8.5,
+        5.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        8.5,
+        5.0
+      ],
+      "b": [
+        8.5,
+        7.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        0.0
+      ],
+      "b": [
+        3.3,
+        0.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        3.3,
+        0.0
+      ],
+      "b": [
+        6.9,
+        0.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        6.9,
+        0.0
+      ],
+      "b": [
+        8.5,
+        0.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        0.0,
+        3.9
+      ],
+      "b": [
+        3.3,
+        3.9
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        3.3,
+        5.0
+      ],
+      "b": [
+        6.9,
+        5.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        6.9,
+        5.0
+      ],
+      "b": [
+        8.5,
+        5.0
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        5.4
+      ],
+      "b": [
+        3.3,
+        5.4
+      ],
+      "espesor": 0.15,
+      "portante": false
+    },
+    {
+      "a": [
+        0.0,
+        7.0
+      ],
+      "b": [
+        3.3,
+        7.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    },
+    {
+      "a": [
+        3.3,
+        7.0
+      ],
+      "b": [
+        8.5,
+        7.0
+      ],
+      "espesor": 0.25,
+      "portante": true
+    }
+  ],
+  "puertas": [
+    {
+      "de": "exterior",
+      "a": "sala-comedor",
+      "ancho": 0.9
+    },
+    {
+      "de": "sala-comedor",
+      "a": "dormitorio principal",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "cocina",
+      "ancho": 0.8
+    },
+    {
+      "de": "sala-comedor",
+      "a": "terraza",
+      "ancho": 1.8
+    },
+    {
+      "de": "dormitorio principal",
+      "a": "vestidor",
+      "ancho": 0.8
+    },
+    {
+      "de": "vestidor",
+      "a": "baño 1",
+      "ancho": 0.7
+    }
+  ],
+  "ventanas": [
+    {
+      "ambiente": "dormitorio principal",
+      "ancho": 1.2,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 1.4,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    },
+    {
+      "ambiente": "sala-comedor",
+      "ancho": 1.8,
+      "alto": 2.1,
+      "alfeizar": 0.0
+    },
+    {
+      "ambiente": "cocina",
+      "ancho": 1.6,
+      "alto": 1.3,
+      "alfeizar": 1.0
+    }
+  ],
+  "muro_humedo": {
+    "a": [
+      3.3,
+      5.4
+    ],
+    "b": [
+      3.3,
+      7.0
+    ]
+  }
+}

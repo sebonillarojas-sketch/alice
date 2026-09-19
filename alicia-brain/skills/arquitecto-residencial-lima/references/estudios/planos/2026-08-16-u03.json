@@ -1,0 +1,58 @@
+{
+  "id": "2026-08-16-u03",
+  "nombre": "3D/2B fachada única profunda, Lima Top — social y dormitorio 3 al frente con terraza en la fachada, pasillo único (1.20 m, loop de la suite) reparte dormitorio principal, dormitorio 2 y baño de visita sin cruzar dormitorios, cocina y lavandería pegadas junto al muro húmedo central",
+  "area_techada": 106.56,
+  "frente_m": 9.60,
+  "fondo_m": 11.10,
+  "ambientes": [
+    { "nombre": "dormitorio 3", "poligono": [[0.25,0.25],[2.85,0.25],[2.85,4.25],[0.25,4.25]], "zona": "intima", "luz": true },
+    { "nombre": "sala-comedor", "poligono": [[3.00,0.25],[7.80,0.25],[7.80,4.25],[3.00,4.25]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[7.95,0.25],[9.35,0.25],[9.35,4.25],[7.95,4.25]], "zona": "social", "luz": false },
+    { "nombre": "vestidor", "poligono": [[0.25,4.40],[3.25,4.40],[3.25,5.60],[0.25,5.60]], "zona": "intima", "luz": false },
+    { "nombre": "baño 1", "poligono": [[0.25,5.75],[3.25,5.75],[3.25,7.10],[0.25,7.10]], "zona": "servicio", "luz": false },
+    { "nombre": "pasillo", "poligono": [[3.40,4.40],[4.60,4.40],[4.60,10.85],[3.40,10.85]], "zona": "intima", "luz": false },
+    { "nombre": "cocina", "poligono": [[4.75,4.40],[8.00,4.40],[8.00,7.10],[4.75,7.10]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[8.15,4.40],[9.35,4.40],[9.35,7.10],[8.15,7.10]], "zona": "servicio", "luz": false },
+    { "nombre": "dormitorio principal", "poligono": [[0.25,7.25],[3.25,7.25],[3.25,10.85],[0.25,10.85]], "zona": "intima", "luz": true },
+    { "nombre": "dormitorio 2", "poligono": [[4.75,7.25],[7.55,7.25],[7.55,10.85],[4.75,10.85]], "zona": "intima", "luz": true },
+    { "nombre": "baño 2", "poligono": [[7.70,7.25],[9.35,7.25],[9.35,10.85],[7.70,10.85]], "zona": "servicio", "luz": false }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [9.60,0], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,11.10], "espesor": 0.25, "portante": true},
+    {"a": [9.60,0], "b": [9.60,11.10], "espesor": 0.25, "portante": true},
+    {"a": [0,11.10], "b": [9.60,11.10], "espesor": 0.25, "portante": true},
+    {"a": [0,4.325], "b": [9.60,4.325], "espesor": 0.15, "portante": false},
+    {"a": [0,7.175], "b": [3.25,7.175], "espesor": 0.15, "portante": false},
+    {"a": [4.75,7.175], "b": [9.60,7.175], "espesor": 0.15, "portante": false},
+    {"a": [2.925,0.25], "b": [2.925,4.25], "espesor": 0.15, "portante": false},
+    {"a": [7.875,0.25], "b": [7.875,4.25], "espesor": 0.15, "portante": false},
+    {"a": [3.325,4.40], "b": [3.325,10.85], "espesor": 0.15, "portante": false},
+    {"a": [4.675,4.40], "b": [4.675,10.85], "espesor": 0.15, "portante": false},
+    {"a": [0.25,5.675], "b": [3.25,5.675], "espesor": 0.15, "portante": false},
+    {"a": [8.075,4.40], "b": [8.075,7.10], "espesor": 0.15, "portante": false},
+    {"a": [7.625,7.25], "b": [7.625,10.85], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio 3", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "pasillo", "ancho": 0.80},
+    {"de": "pasillo", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "baño 1", "ancho": 0.70},
+    {"de": "baño 1", "a": "dormitorio principal", "ancho": 0.70},
+    {"de": "pasillo", "a": "cocina", "ancho": 0.80},
+    {"de": "cocina", "a": "lavandería", "ancho": 0.80},
+    {"de": "pasillo", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "pasillo", "a": "dormitorio 2", "ancho": 0.80},
+    {"de": "lavandería", "a": "baño 2", "ancho": 0.70},
+    {"de": "dormitorio 2", "a": "baño 2", "ancho": 0.70}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio 3", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 2.20, "alto": 1.90, "alfeizar": 0.00},
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 2", "ancho": 1.50, "alto": 1.20, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0,7.175], "b": [9.60,7.175]}
+}

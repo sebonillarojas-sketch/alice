@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1326 1226" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1326" height="1226" fill="#ffffff"/>
+<text x="70" y="24" font-size="16" fill="#111" font-weight="700">2026-08-12-u02 (D8) — 63.00 m² — 2D/2B esquina — Surquillo / Jesus Maria, Lima Moderna</text>
+<text x="70" y="44" font-size="11.5" fill="#555" font-weight="400">BRIEF: lote esquina, fachadas NORTE y ESTE. Frente 9.20 x fondo 7.55 m.</text>
+<text x="70" y="64" font-size="11.5" fill="#555" font-weight="400">Tema (mercado por distrito): CODIP 2026 — 2D/3D cayo de 70.8 a 63.9 m²; esta unidad calza en esa mediana.</text>
+<polygon points="106.2,171.2 340.2,171.2 340.2,717.2 106.2,717.2" fill="#fdf3e0" stroke="none"/>
+<polygon points="359.8,171.2 866.8,171.2 866.8,717.2 359.8,717.2" fill="#fdf3e0" stroke="none"/>
+<polygon points="886.2,171.2 1269.8,171.2 1269.8,717.2 886.2,717.2" fill="#e6f0f7" stroke="none"/>
+<polygon points="106.2,736.8 418.2,736.8 418.2,1100.8 106.2,1100.8" fill="#e6f0f7" stroke="none"/>
+<polygon points="437.8,736.8 1269.8,736.8 1269.8,853.8 437.8,853.8" fill="#e6f0f7" stroke="none"/>
+<polygon points="437.8,873.2 717.2,873.2 717.2,1120.2 437.8,1120.2" fill="#eef2ea" stroke="none"/>
+<polygon points="736.8,873.2 892.8,873.2 892.8,1120.2 736.8,1120.2" fill="#eef2ea" stroke="none"/>
+<polygon points="912.2,873.2 1081.2,873.2 1081.2,1120.2 912.2,1120.2" fill="#eef2ea" stroke="none"/>
+<polygon points="1100.8,873.2 1269.8,873.2 1269.8,1120.2 1100.8,1120.2" fill="#eef2ea" stroke="none"/>
+<line x1="90.0" y1="155.0" x2="1286.0" y2="155.0" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="1286.0" y1="155.0" x2="1286.0" y2="1136.5" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="1286.0" y1="1136.5" x2="90.0" y2="1136.5" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="90.0" y1="1136.5" x2="90.0" y2="155.0" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="90.0" y1="727.0" x2="1286.0" y2="727.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="350.0" y1="155.0" x2="350.0" y2="727.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="876.5" y1="155.0" x2="876.5" y2="727.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="428.0" y1="727.0" x2="428.0" y2="1136.5" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="90.0" y1="863.5" x2="1286.0" y2="863.5" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="727.0" y1="863.5" x2="727.0" y2="1136.5" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="909.0" y1="863.5" x2="909.0" y2="1136.5" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="1091.0" y1="863.5" x2="1091.0" y2="1136.5" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="418.3" y1="155.0" x2="808.2" y2="155.0" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="1286.0" y1="301.2" x2="1286.0" y2="587.2" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="90.0" y1="788.8" x2="90.0" y2="1048.8" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="460.5" y1="1136.5" x2="694.5" y2="1136.5" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="90.0" y1="385.8" x2="90.0" y2="502.8" stroke="#ffffff" stroke-width="9"/>
+<path d="M 90.0 385.8 A 117.0 117.0 0 0 1 207.0 502.8" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="90.0" y1="385.8" x2="207.0" y2="385.8" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="350.0" y1="327.2" x2="350.0" y2="561.2" stroke="#ffffff" stroke-width="9"/>
+<path d="M 350.0 327.2 A 234.0 234.0 0 0 1 584.0 561.2" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="350.0" y1="327.2" x2="584.0" y2="327.2" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="171.2" y1="727.0" x2="275.2" y2="727.0" stroke="#ffffff" stroke-width="9"/>
+<path d="M 171.2 727.0 A 104.0 104.0 0 0 1 171.2 831.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="171.2" y1="727.0" x2="171.2" y2="831.0" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="593.7" y1="727.0" x2="710.7" y2="727.0" stroke="#ffffff" stroke-width="9"/>
+<path d="M 593.7 727.0 A 117.0 117.0 0 0 1 593.7 844.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="593.7" y1="727.0" x2="593.7" y2="844.0" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="1026.0" y1="727.0" x2="1130.0" y2="727.0" stroke="#ffffff" stroke-width="9"/>
+<path d="M 1026.0 727.0 A 104.0 104.0 0 0 1 1026.0 831.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="1026.0" y1="727.0" x2="1026.0" y2="831.0" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="951.2" y1="863.5" x2="1042.2" y2="863.5" stroke="#ffffff" stroke-width="9"/>
+<path d="M 951.2 863.5 A 91.0 91.0 0 0 1 951.2 954.5" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="951.2" y1="863.5" x2="951.2" y2="954.5" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="1139.8" y1="863.5" x2="1230.8" y2="863.5" stroke="#ffffff" stroke-width="9"/>
+<path d="M 1139.8 863.5 A 91.0 91.0 0 0 1 1139.8 954.5" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="1139.8" y1="863.5" x2="1139.8" y2="954.5" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="499.5" y1="863.5" x2="655.5" y2="863.5" stroke="#ffffff" stroke-width="9"/>
+<path d="M 499.5 863.5 A 156.0 156.0 0 0 1 499.5 1019.5" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="499.5" y1="863.5" x2="499.5" y2="1019.5" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="727.0" y1="938.2" x2="727.0" y2="1055.2" stroke="#ffffff" stroke-width="9"/>
+<path d="M 727.0 938.2 A 117.0 117.0 0 0 1 844.0 1055.2" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="727.0" y1="938.2" x2="844.0" y2="938.2" stroke="#8b5a2b" stroke-width="2.2"/>
+<text x="223.2" y="440.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">terraza</text>
+<text x="223.2" y="457.2" font-size="11" text-anchor="middle" fill="#555">7.56 m²</text>
+<text x="613.2" y="440.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">sala-comedor</text>
+<text x="613.2" y="457.2" font-size="11" text-anchor="middle" fill="#555">16.38 m²</text>
+<text x="1078.0" y="440.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">dormitorio principal</text>
+<text x="1078.0" y="457.2" font-size="11" text-anchor="middle" fill="#555">12.39 m²</text>
+<text x="262.2" y="914.8" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">dormitorio 2</text>
+<text x="262.2" y="931.8" font-size="11" text-anchor="middle" fill="#555">6.72 m²</text>
+<text x="853.8" y="791.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">hall</text>
+<text x="853.8" y="808.2" font-size="11" text-anchor="middle" fill="#555">5.76 m²</text>
+<text x="577.5" y="992.8" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">cocina</text>
+<text x="577.5" y="1009.8" font-size="11" text-anchor="middle" fill="#555">4.09 m²</text>
+<text x="814.7" y="992.8" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">lavandería</text>
+<text x="814.7" y="1009.8" font-size="11" text-anchor="middle" fill="#555">2.28 m²</text>
+<text x="996.8" y="992.8" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">baño 1</text>
+<text x="996.8" y="1009.8" font-size="11" text-anchor="middle" fill="#555">2.47 m²</text>
+<text x="1185.2" y="992.8" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">baño 2</text>
+<text x="1185.2" y="1009.8" font-size="11" text-anchor="middle" fill="#555">2.47 m²</text>
+<line x1="90.0" y1="1161.5" x2="1286.0" y2="1161.5" stroke="#888" stroke-width="1"/>
+<text x="688.0" y="1179.5" font-size="12" text-anchor="middle" fill="#555">frente 9.20 m</text>
+<line x1="1311.0" y1="155.0" x2="1311.0" y2="1136.5" stroke="#888" stroke-width="1"/>
+<text x="1327.0" y="645.8" font-size="12" fill="#555" text-anchor="middle" transform="rotate(90 1327.0 645.8)">fondo 7.55 m</text>
+<text x="70" y="1214" font-size="9.5" fill="#999">Muro portante 0.25 m (negro) · tabique 0.15 m (gris) · ventana (azul) · puerta con giro (arco gris, hoja marron)</text>
+</svg>

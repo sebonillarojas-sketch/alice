@@ -1,0 +1,47 @@
+{
+  "id": "2026-08-17-u02",
+  "nombre": "2D/2B esquina con ochavo normativo (RNE A.010 Art.8) — sala-comedor ocupa el vértice achaflanado con ventana de esquina sobre el propio ochavo, dormitorio principal y dormitorio 2 cada uno en su fachada real, cocina en contacto directo con la sala",
+  "area_techada": 81.30,
+  "frente_m": 10.20,
+  "fondo_m": 8.20,
+  "ambientes": [
+    { "nombre": "dormitorio principal", "poligono": [[0.25,0.25],[4.10,0.25],[4.10,4.60],[0.25,4.60]], "zona": "intima", "luz": true },
+    { "nombre": "terraza", "poligono": [[4.25,0.25],[5.85,0.25],[5.85,4.60],[4.25,4.60]], "zona": "social", "luz": false },
+    { "nombre": "sala-comedor", "poligono": [[6.00,0.25],[8.60,0.25],[9.95,1.60],[9.95,4.60],[6.00,4.60]], "zona": "social", "luz": true },
+    { "nombre": "baño 1", "poligono": [[0.25,4.75],[1.75,4.75],[1.75,7.95],[0.25,7.95]], "zona": "servicio", "luz": false },
+    { "nombre": "baño 2", "poligono": [[1.90,4.75],[3.50,4.75],[3.50,7.95],[1.90,7.95]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[3.65,4.75],[4.85,4.75],[4.85,7.95],[3.65,7.95]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[5.00,4.75],[7.40,4.75],[7.40,7.95],[5.00,7.95]], "zona": "servicio", "luz": false },
+    { "nombre": "dormitorio 2", "poligono": [[7.55,4.75],[9.95,4.75],[9.95,7.95],[7.55,7.95]], "zona": "intima", "luz": true }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [8.60,0], "espesor": 0.25, "portante": true},
+    {"a": [8.60,0], "b": [10.20,1.60], "espesor": 0.25, "portante": true},
+    {"a": [10.20,1.60], "b": [10.20,8.20], "espesor": 0.25, "portante": true},
+    {"a": [10.20,8.20], "b": [0,8.20], "espesor": 0.25, "portante": true},
+    {"a": [0,8.20], "b": [0,0], "espesor": 0.25, "portante": true},
+    {"a": [4.175,0.25], "b": [4.175,4.60], "espesor": 0.15, "portante": false},
+    {"a": [5.925,0.25], "b": [5.925,4.60], "espesor": 0.15, "portante": false},
+    {"a": [0.25,4.675], "b": [9.95,4.675], "espesor": 0.15, "portante": false},
+    {"a": [1.825,4.75], "b": [1.825,7.95], "espesor": 0.15, "portante": false},
+    {"a": [3.575,4.75], "b": [3.575,7.95], "espesor": 0.15, "portante": false},
+    {"a": [4.925,4.75], "b": [4.925,7.95], "espesor": 0.15, "portante": false},
+    {"a": [7.475,4.75], "b": [7.475,7.95], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "dormitorio 2", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "cocina", "ancho": 0.90},
+    {"de": "cocina", "a": "lavandería", "ancho": 0.80},
+    {"de": "lavandería", "a": "baño 2", "ancho": 0.70},
+    {"de": "dormitorio principal", "a": "baño 1", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio principal", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 1.80, "alto": 1.50, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 2", "ancho": 1.50, "alto": 1.20, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.25, 7.95], "b": [7.40, 7.95]}
+}

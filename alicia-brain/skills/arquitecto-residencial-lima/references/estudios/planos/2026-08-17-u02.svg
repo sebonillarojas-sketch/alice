@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 528 448" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="528" height="448" fill="#ffffff"/>
+<polygon points="70.0,70.0 224.0,70.0 224.0,244.0 70.0,244.0" fill="#dbe9f7" stroke="none"/>
+<text x="147.0" y="151.0" font-size="13" text-anchor="middle" fill="#333">dormitorio principal</text>
+<text x="147.0" y="167.0" font-size="11" text-anchor="middle" fill="#666">16.75 m²</text>
+<polygon points="230.0,70.0 294.0,70.0 294.0,244.0 230.0,244.0" fill="#fde9d0" stroke="none"/>
+<text x="262.0" y="151.0" font-size="13" text-anchor="middle" fill="#333">terraza</text>
+<text x="262.0" y="167.0" font-size="11" text-anchor="middle" fill="#666">6.96 m²</text>
+<polygon points="300.0,70.0 404.0,70.0 458.0,124.0 458.0,244.0 300.0,244.0" fill="#fde9d0" stroke="none"/>
+<text x="384.0" y="144.4" font-size="13" text-anchor="middle" fill="#333">sala-comedor</text>
+<text x="384.0" y="160.4" font-size="11" text-anchor="middle" fill="#666">16.27 m²</text>
+<polygon points="70.0,250.0 130.0,250.0 130.0,378.0 70.0,378.0" fill="#e3f0e0" stroke="none"/>
+<text x="100.0" y="308.0" font-size="13" text-anchor="middle" fill="#333">baño 1</text>
+<text x="100.0" y="324.0" font-size="11" text-anchor="middle" fill="#666">4.80 m²</text>
+<polygon points="136.0,250.0 200.0,250.0 200.0,378.0 136.0,378.0" fill="#e3f0e0" stroke="none"/>
+<text x="168.0" y="308.0" font-size="13" text-anchor="middle" fill="#333">baño 2</text>
+<text x="168.0" y="324.0" font-size="11" text-anchor="middle" fill="#666">5.12 m²</text>
+<polygon points="206.0,250.0 254.0,250.0 254.0,378.0 206.0,378.0" fill="#e3f0e0" stroke="none"/>
+<text x="230.0" y="308.0" font-size="13" text-anchor="middle" fill="#333">lavandería</text>
+<text x="230.0" y="324.0" font-size="11" text-anchor="middle" fill="#666">3.84 m²</text>
+<polygon points="260.0,250.0 356.0,250.0 356.0,378.0 260.0,378.0" fill="#e3f0e0" stroke="none"/>
+<text x="308.0" y="308.0" font-size="13" text-anchor="middle" fill="#333">cocina</text>
+<text x="308.0" y="324.0" font-size="11" text-anchor="middle" fill="#666">7.68 m²</text>
+<polygon points="362.0,250.0 458.0,250.0 458.0,378.0 362.0,378.0" fill="#dbe9f7" stroke="none"/>
+<text x="410.0" y="308.0" font-size="13" text-anchor="middle" fill="#333">dormitorio 2</text>
+<text x="410.0" y="324.0" font-size="11" text-anchor="middle" fill="#666">7.68 m²</text>
+<line x1="60.0" y1="60.0" x2="404.0" y2="60.0" stroke="#2b2b2b" stroke-width="5" stroke-linecap="square"/>
+<line x1="404.0" y1="60.0" x2="468.0" y2="124.0" stroke="#2b2b2b" stroke-width="5" stroke-linecap="square"/>
+<line x1="468.0" y1="124.0" x2="468.0" y2="388.0" stroke="#2b2b2b" stroke-width="5" stroke-linecap="square"/>
+<line x1="468.0" y1="388.0" x2="60.0" y2="388.0" stroke="#2b2b2b" stroke-width="5" stroke-linecap="square"/>
+<line x1="60.0" y1="388.0" x2="60.0" y2="60.0" stroke="#2b2b2b" stroke-width="5" stroke-linecap="square"/>
+<line x1="227.0" y1="70.0" x2="227.0" y2="244.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="297.0" y1="70.0" x2="297.0" y2="244.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="70.0" y1="247.0" x2="458.0" y2="247.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="133.0" y1="250.0" x2="133.0" y2="378.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="203.0" y1="250.0" x2="203.0" y2="378.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="257.0" y1="250.0" x2="257.0" y2="378.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="359.0" y1="250.0" x2="359.0" y2="378.0" stroke="#555" stroke-width="2.6" stroke-linecap="square"/>
+<line x1="103.0" y1="70.0" x2="191.0" y2="70.0" stroke="#3b82f6" stroke-width="6"/>
+<line x1="316.0" y1="70.0" x2="388.0" y2="70.0" stroke="#3b82f6" stroke-width="6"/>
+<line x1="458.0" y1="284.0" x2="458.0" y2="344.0" stroke="#3b82f6" stroke-width="6"/>
+<line x1="334.0" y1="70.0" x2="334.0" y2="106.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 370.0,70.0 A 36.0,36.0 0 0 1 334.0,106.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="294.0" y1="139.0" x2="258.0" y2="139.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 294.0,175.0 A 36.0,36.0 0 0 1 258.0,139.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="394.0" y1="250.0" x2="394.0" y2="282.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 426.0,250.0 A 32.0,32.0 0 0 1 394.0,282.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="290.0" y1="250.0" x2="290.0" y2="286.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 326.0,250.0 A 36.0,36.0 0 0 1 290.0,286.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="254.0" y1="298.0" x2="222.0" y2="298.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 254.0,330.0 A 32.0,32.0 0 0 1 222.0,298.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="200.0" y1="300.0" x2="172.0" y2="300.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 200.0,328.0 A 28.0,28.0 0 0 1 172.0,300.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="84.0" y1="250.0" x2="84.0" y2="282.0" stroke="#8b5a2b" stroke-width="2"/>
+<path d="M 116.0,250.0 A 32.0,32.0 0 0 1 84.0,282.0" fill="none" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="3,2"/>
+<line x1="60.0" y1="42.0" x2="468.0" y2="42.0" stroke="#999" stroke-width="1"/>
+<text x="264.0" y="38.0" font-size="12" text-anchor="middle" fill="#999">10.20 m</text>
+<line x1="42.0" y1="60.0" x2="42.0" y2="388.0" stroke="#999" stroke-width="1"/>
+<text x="30.0" y="224.0" font-size="12" text-anchor="middle" fill="#999" transform="rotate(-90 30.0 224.0)">8.20 m</text>
+<text x="60" y="434.0" font-size="13" fill="#222">2026-08-17-u02 — 2D/2B esquina con ochavo normativo (RNE A.010 Art.8) — sala-comedor ocupa el vértice achaflanado con ventana de esquina sobre el propio ochavo, dormitorio principal y dormitorio 2 cada uno en su fachada real, cocina en contacto directo con la sala</text>
+</svg>

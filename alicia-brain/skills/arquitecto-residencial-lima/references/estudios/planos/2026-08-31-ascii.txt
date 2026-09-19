@@ -1,0 +1,38 @@
+u01 -- 1D/1B amplio, fachada unica frente ancho, Pueblo Libre/Lima Moderna (8.35 x 6.50)
+--------------------------------------------------------------------------------------
+ DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS TTTTTTTTTTTTTTTT
+ D dormitorio principal (9.6 m2)     |  S sala-comedor (11.9 m2)                 | T terraza (4.3 m2)
+ VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV  HHHHHHHHHHHH CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+ V vestidor (3.5 m2)                 |  H hall (2.8) |  C cocina abierta+lavandero (10.9 m2)
+ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+ B bano 1 (4.2 m2)                   |
+ENFILADE recta: dormitorio principal -> vestidor -> bano 1 (mismo eje x, sin jog).
+Bano con 2do acceso de visita: sala -> hall -> bano 1 (sin cruzar dormitorio ni cocina).
+
+u02 -- 2D/2B esquina NORTE+ESTE, Surquillo/Jesus Maria, Lima Moderna-Top (11.40 x 6.95)
+----------------------------------------------------------------------------------------
+ DDDDDDDDDDDDDDDDDDDDDDDDDDD SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS TTTTTTTTTTTTTTTTTTTTTTTT
+ D dormitorio principal (11.2)  |  S sala-comedor (17.8)                | T terraza (10.1, en fachada 2a)
+ VVVVVVVVVVVVVVVVVVVVVVVVVVV CCCCCCCCCCCCCCCCCCC  BBBBBBBBBBBB  HHHHHHHHH DDDDDDDDDDDDDDDDDDDDDDDD
+ V vestidor(3.7) | C cocina(6.5) | B bano2(4.3) | H hall(2.9) | D dormitorio 2 (8.3, ventana esquina E)
+ BBBBBBBBBBBBBBBBBBBBBBBBBBB
+ B bano principal (5.0)
+ENFILADE recta: dormitorio principal -> vestidor -> bano principal (mismo eje y).
+Hub real (NO enfilade): hall -> bano 2 y hall -> dormitorio 2 (2 piezas de uso simultaneo/independiente).
+
+u03 -- 3D/2B fachada unica de frente amplio, La Molina/Surco, Lima Top (15.30 x 8.00)
+----------------------------------------------------------------------------------------
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+S sala-comedor (29.9)                                      | T terraza (20.7) -- ambas al frente
+CCCCCCCCCCCCCC HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+C cocina (8.8, enfilade con sala) | H hall (13.4, toca los 3 dormitorios + bano2 -- verificado por adyacencia real)
+CCCCCCCCCCCCCC DDDDDDDDDDDDDDDDD BBBBBBBB DDDDDDDDDDDDDDDD DDDDDDDDDDDDDDDDDDDDD VVVVVVVV BBBBBBBBB
+(cocina cont.) | D2(7.6) | B2(4.0) | D3(7.1) | DP(9.8) | V(3.5) | BP(4.2)
+ENFILADE horizontal: dormitorio principal -> vestidor -> bano principal (mismo eje y, sin puerta hall->vestidor/bano).
+Retiro posterior descubierto 15.30x2.20 (pozo, ancho >=6 m) da luz a cocina/D2/B2/D3/DP/BP.
+
+Tema del dia: cero-pasillo y matriz de cuartos, TERCERA VUELTA -- matriz de relaciones ponderada
+(esencial/deseable/indiferente/indeseable) como Paso 0 antes del bubble diagram, y ENFILADE
+(secuencia de puertas alineadas en un solo eje) como mecanismo físico para ciruclacion cero-pasillo
+en secuencias de un solo uso privado (suite), reservando el hall/hub para piezas que necesitan
+acceso independiente simultaneo (2+ dormitorios).

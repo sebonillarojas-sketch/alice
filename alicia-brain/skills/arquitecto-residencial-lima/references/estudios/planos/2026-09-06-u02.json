@@ -1,0 +1,52 @@
+{
+  "id": "2026-09-06-u02",
+  "nombre": "2D/2B esquina real NORTE+ESTE — inspirado en la calle aérea de Residencial San Felipe: el ingreso solo toca sala-comedor/hall, ningún dormitorio comparte pared con el acceso sin pasar antes por la zona social, Jesús María/Lima Moderna-Top",
+  "area_techada": 87.69,
+  "frente_m": 11.85,
+  "fondo_m": 7.40,
+  "ambientes": [
+    { "nombre": "dormitorio principal", "poligono": [[0.25,0.25],[3.15,0.25],[3.15,3.90],[0.25,3.90]], "zona": "intima", "luz": true },
+    { "nombre": "sala-comedor", "poligono": [[3.30,0.25],[8.10,0.25],[8.10,3.90],[3.30,3.90]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[8.25,0.25],[11.60,0.25],[11.60,3.90],[8.25,3.90]], "zona": "social", "luz": false },
+    { "nombre": "vestidor", "poligono": [[0.25,4.05],[1.35,4.05],[1.35,7.15],[0.25,7.15]], "zona": "servicio", "luz": false },
+    { "nombre": "baño principal", "poligono": [[1.50,4.05],[2.85,4.05],[2.85,7.15],[1.50,7.15]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[3.00,4.05],[4.50,4.05],[4.50,7.15],[3.00,7.15]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[4.65,4.05],[5.65,4.05],[5.65,7.15],[4.65,7.15]], "zona": "servicio", "luz": false },
+    { "nombre": "hall", "poligono": [[5.80,4.05],[6.80,4.05],[6.80,7.15],[5.80,7.15]], "zona": "social", "luz": false },
+    { "nombre": "baño 2", "poligono": [[6.95,4.05],[8.25,4.05],[8.25,7.15],[6.95,7.15]], "zona": "servicio", "luz": false },
+    { "nombre": "dormitorio 2", "poligono": [[8.40,4.05],[11.60,4.05],[11.60,7.15],[8.40,7.15]], "zona": "intima", "luz": true }
+  ],
+  "muros": [
+    {"a": [0,0], "b": [11.85,0], "espesor": 0.25, "portante": true},
+    {"a": [0,7.40], "b": [11.85,7.40], "espesor": 0.25, "portante": true},
+    {"a": [0,0], "b": [0,7.40], "espesor": 0.25, "portante": true},
+    {"a": [11.85,0], "b": [11.85,7.40], "espesor": 0.25, "portante": true},
+    {"a": [0.25,3.975], "b": [11.60,3.975], "espesor": 0.15, "portante": false},
+    {"a": [3.225,0.25], "b": [3.225,3.90], "espesor": 0.15, "portante": false},
+    {"a": [8.175,0.25], "b": [8.175,3.90], "espesor": 0.15, "portante": false},
+    {"a": [1.425,4.05], "b": [1.425,7.15], "espesor": 0.15, "portante": false},
+    {"a": [2.925,4.05], "b": [2.925,7.15], "espesor": 0.15, "portante": false},
+    {"a": [4.575,4.05], "b": [4.575,7.15], "espesor": 0.15, "portante": false},
+    {"a": [5.725,4.05], "b": [5.725,7.15], "espesor": 0.15, "portante": false},
+    {"a": [6.875,4.05], "b": [6.875,7.15], "espesor": 0.15, "portante": false},
+    {"a": [8.325,4.05], "b": [8.325,7.15], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 1.00},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 2.20},
+    {"de": "sala-comedor", "a": "cocina", "ancho": 1.20},
+    {"de": "cocina", "a": "lavandería", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "hall", "ancho": 0.80},
+    {"de": "hall", "a": "baño 2", "ancho": 0.70},
+    {"de": "baño 2", "a": "dormitorio 2", "ancho": 0.80},
+    {"de": "dormitorio principal", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "baño principal", "ancho": 0.70}
+  ],
+  "ventanas": [
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "sala-comedor", "ancho": 2.50, "alto": 1.40, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 2", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [0.25,3.975], "b": [11.60,3.975]}
+}

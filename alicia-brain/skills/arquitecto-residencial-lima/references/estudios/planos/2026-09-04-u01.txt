@@ -1,0 +1,36 @@
+                      
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ AAAAAABBBBBBBBBBBCCC 
+ DDDDDDDDEE FFFGGGGGG 
+ DDDDDDDDEE FFFGGGGGG 
+ DDDDDDDDEE FFFGGGGGG 
+ DDDDDDDDEE FFFGGGGGG 
+ DDDDDDDDEE FFFGGGGGG 
+ DDDDDDDDEE FFF       
+ DDDDDDDDEE FFFHHHHHH 
+ DDDDDDDDEE FFFHHHHHH 
+ DDDDDDDDEE FFFHHHHHH 
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+
+A = bodega
+B = sala-comedor
+C = terraza
+D = dormitorio principal
+E = hall
+F = baño 1
+G = cocina
+H = lavandería

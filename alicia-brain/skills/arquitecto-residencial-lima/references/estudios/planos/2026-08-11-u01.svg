@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 1448" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="1260" height="1448" fill="#ffffff"/>
+<text x="70" y="24" font-size="16" fill="#111" font-weight="700">2026-08-11-u01 (D7) — 72.80 m² — 1D/1B vivienda semilla ampliable — Los Olivos, Lima Norte</text>
+<text x="70" y="44" font-size="11.5" fill="#555">BRIEF TERRENO: lote medianero interior, fachada unica al frente ESTE. Frente 8.00 x fondo 9.10 m.</text>
+<text x="70" y="64" font-size="11.5" fill="#555">Tema del dia (crecimiento incremental): eje humedo cocina+bano+lavanderia fijo contra la banda posterior, listo para apilarse en un futuro 2do piso.</text>
+<text x="70" y="84" font-size="11.5" fill="#555">Estudio: ambiente comodin con doble acceso (vestidor + lavanderia/patio descubierto) - hoy deposito/flex, manana dormitorio 2 sin abrir vanos nuevos.</text>
+<polygon points="106.2,171.2 489.8,171.2 489.8,645.8 106.2,645.8" fill="#e6f0f7" stroke="none"/>
+<polygon points="509.2,171.2 694.5,171.2 694.5,645.8 509.2,645.8" fill="#fdf3e0" stroke="none"/>
+<polygon points="714.0,171.2 1113.8,171.2 1113.8,645.8 714.0,645.8" fill="#fdf3e0" stroke="none"/>
+<polygon points="106.2,665.2 489.8,665.2 489.8,1003.2 106.2,1003.2" fill="#e6f0f7" stroke="none"/>
+<polygon points="509.2,665.2 694.5,665.2 694.5,1003.2 509.2,1003.2" fill="#eef2ea" stroke="none"/>
+<polygon points="714.0,665.2 1113.8,665.2 1113.8,1003.2 714.0,1003.2" fill="#eef2ea" stroke="none"/>
+<polygon points="106.2,1022.8 489.8,1022.8 489.8,1321.8 106.2,1321.8" fill="#e6f0f7" stroke="none"/>
+<polygon points="509.2,1022.8 1113.8,1022.8 1113.8,1321.8 509.2,1321.8" fill="#eef2ea" stroke="none"/>
+<line x1="90.0" y1="155.0" x2="1130.0" y2="155.0" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="1130.0" y1="155.0" x2="1130.0" y2="1338.0" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="1130.0" y1="1338.0" x2="90.0" y2="1338.0" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="90.0" y1="1338.0" x2="90.0" y2="155.0" stroke="#1a1a1a" stroke-width="15" stroke-linecap="square"/>
+<line x1="90.0" y1="655.5" x2="1130.0" y2="655.5" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="90.0" y1="1013.0" x2="1130.0" y2="1013.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="499.5" y1="155.0" x2="499.5" y2="1013.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="704.2" y1="155.0" x2="704.2" y2="1013.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="499.5" y1="1013.0" x2="499.5" y2="1338.0" stroke="#555" stroke-width="9" stroke-linecap="square"/>
+<line x1="744.9" y1="171.2" x2="1082.9" y2="171.2" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="168.0" y1="171.2" x2="428.0" y2="171.2" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="489.8" y1="1094.2" x2="489.8" y2="1250.2" stroke="#2f6fb2" stroke-width="5"/>
+<line x1="543.4" y1="155.0" x2="660.4" y2="155.0" stroke="#ffffff" stroke-width="9"/>
+<path d="M 543.4 155.0 A 117.0 117.0 0 0 1 660.4 272.0" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="543.4" y1="155.0" x2="543.4" y2="272.0" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="694.5" y1="291.5" x2="694.5" y2="525.5" stroke="#ffffff" stroke-width="9"/>
+<path d="M 694.5 291.5 A 234.0 234.0 0 0 1 928.5 525.5" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="694.5" y1="291.5" x2="928.5" y2="291.5" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="489.8" y1="356.5" x2="489.8" y2="460.5" stroke="#ffffff" stroke-width="9"/>
+<path d="M 489.8 356.5 A 104.0 104.0 0 0 0 385.8 460.5" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="489.8" y1="356.5" x2="385.8" y2="356.5" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="556.4" y1="645.8" x2="647.4" y2="645.8" stroke="#ffffff" stroke-width="9"/>
+<path d="M 556.4 645.8 A 91.0 91.0 0 0 1 647.4 736.8" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="556.4" y1="645.8" x2="556.4" y2="736.8" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="246.0" y1="645.8" x2="350.0" y2="645.8" stroke="#ffffff" stroke-width="9"/>
+<path d="M 246.0 645.8 A 104.0 104.0 0 0 1 350.0 749.8" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="246.0" y1="645.8" x2="246.0" y2="749.8" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="489.8" y1="788.8" x2="489.8" y2="879.7" stroke="#ffffff" stroke-width="9"/>
+<path d="M 489.8 788.8 A 91.0 91.0 0 0 1 580.7 879.7" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="489.8" y1="788.8" x2="580.7" y2="788.8" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="246.0" y1="1003.2" x2="350.0" y2="1003.2" stroke="#ffffff" stroke-width="9"/>
+<path d="M 246.0 1003.2 A 104.0 104.0 0 0 1 350.0 1107.2" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="246.0" y1="1003.2" x2="246.0" y2="1107.2" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="835.9" y1="645.8" x2="991.9" y2="645.8" stroke="#ffffff" stroke-width="9"/>
+<path d="M 835.9 645.8 A 156.0 156.0 0 0 1 991.9 801.7" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="835.9" y1="645.8" x2="835.9" y2="801.7" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="861.9" y1="1003.2" x2="965.9" y2="1003.2" stroke="#ffffff" stroke-width="9"/>
+<path d="M 861.9 1003.2 A 104.0 104.0 0 0 1 965.9 1107.2" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="861.9" y1="1003.2" x2="861.9" y2="1107.2" stroke="#8b5a2b" stroke-width="2.2"/>
+<line x1="489.8" y1="1120.2" x2="489.8" y2="1224.2" stroke="#ffffff" stroke-width="9"/>
+<path d="M 489.8 1120.2 A 104.0 104.0 0 0 1 593.8 1224.2" fill="none" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="489.8" y1="1120.2" x2="593.8" y2="1120.2" stroke="#8b5a2b" stroke-width="2.2"/>
+<text x="298.0" y="404.5" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">dormitorio principal</text>
+<text x="298.0" y="421.5" font-size="11" text-anchor="middle" fill="#555">10.77 m²</text>
+<text x="601.9" y="404.5" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">terraza</text>
+<text x="601.9" y="421.5" font-size="11" text-anchor="middle" fill="#555">5.20 m²</text>
+<text x="913.9" y="404.5" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">sala-comedor</text>
+<text x="913.9" y="421.5" font-size="11" text-anchor="middle" fill="#555">11.22 m²</text>
+<text x="298.0" y="830.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">vestidor</text>
+<text x="298.0" y="847.2" font-size="11" text-anchor="middle" fill="#555">7.67 m²</text>
+<text x="601.9" y="830.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">baño 1</text>
+<text x="601.9" y="847.2" font-size="11" text-anchor="middle" fill="#555">3.71 m²</text>
+<text x="913.9" y="830.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">cocina</text>
+<text x="913.9" y="847.2" font-size="11" text-anchor="middle" fill="#555">8.00 m²</text>
+<text x="298.0" y="1168.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">estudio</text>
+<text x="298.0" y="1185.2" font-size="11" text-anchor="middle" fill="#555">6.78 m²</text>
+<text x="811.5" y="1168.2" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">lavandería</text>
+<text x="811.5" y="1185.2" font-size="11" text-anchor="middle" fill="#555">10.69 m²</text>
+<line x1="90.0" y1="1363.0" x2="1130.0" y2="1363.0" stroke="#888" stroke-width="1"/>
+<text x="610.0" y="1381.0" font-size="12" text-anchor="middle" fill="#555">frente 8.00 m</text>
+<line x1="1155.0" y1="155.0" x2="1155.0" y2="1338.0" stroke="#888" stroke-width="1"/>
+<text x="1171.0" y="746.5" font-size="12" fill="#555" text-anchor="middle" transform="rotate(90 1171.0 746.5)">fondo 9.10 m</text>
+<text x="70" y="1432" font-size="9.5" fill="#999">Muro portante 0.25 m (negro) · tabique 0.15 m (gris) · ventana (azul) · puerta con giro (arco gris, hoja marrón)</text>
+</svg>

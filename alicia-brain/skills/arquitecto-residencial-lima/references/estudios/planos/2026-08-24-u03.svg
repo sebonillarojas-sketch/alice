@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 916 912" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="916" height="912" fill="#ffffff"/>
+<path d="M 77.5,77.5 L 209.5,77.5 L 209.5,293.5 L 77.5,293.5 Z" fill="#fdf3e7" stroke="none"/>
+<text x="143.5" y="179.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">terraza</text>
+<text x="143.5" y="195.5" font-size="11" text-anchor="middle" fill="#555">7.9 m²</text>
+<path d="M 218.5,77.5 L 578.5,77.5 L 578.5,293.5 L 218.5,293.5 Z" fill="#fdf3e7" stroke="none"/>
+<text x="398.5" y="179.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">sala-comedor</text>
+<text x="398.5" y="195.5" font-size="11" text-anchor="middle" fill="#555">21.6 m²</text>
+<path d="M 77.5,302.5 L 287.5,302.5 L 287.5,434.5 L 77.5,434.5 Z" fill="#eef3ea" stroke="none"/>
+<text x="182.5" y="362.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">cocina</text>
+<text x="182.5" y="378.5" font-size="11" text-anchor="middle" fill="#555">7.7 m²</text>
+<path d="M 296.5,302.5 L 386.5,302.5 L 386.5,434.5 L 296.5,434.5 Z" fill="#eef3ea" stroke="none"/>
+<text x="341.5" y="362.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">lavandería</text>
+<text x="341.5" y="378.5" font-size="11" text-anchor="middle" fill="#555">3.3 m²</text>
+<path d="M 395.5,302.5 L 455.5,302.5 L 455.5,434.5 L 395.5,434.5 Z" fill="#fdf3e7" stroke="none"/>
+<text x="425.5" y="362.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">pasillo</text>
+<text x="425.5" y="378.5" font-size="11" text-anchor="middle" fill="#555">2.2 m²</text>
+<path d="M 464.5,302.5 L 578.5,302.5 L 578.5,434.5 L 464.5,434.5 Z" fill="#eef3ea" stroke="none"/>
+<text x="521.5" y="362.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">baño visita</text>
+<text x="521.5" y="378.5" font-size="11" text-anchor="middle" fill="#555">4.2 m²</text>
+<path d="M 77.5,443.5 L 257.5,443.5 L 257.5,581.5 L 77.5,581.5 Z" fill="#eaf1fb" stroke="none"/>
+<text x="167.5" y="506.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">dormitorio 3</text>
+<text x="167.5" y="522.5" font-size="11" text-anchor="middle" fill="#555">6.9 m²</text>
+<path d="M 266.5,443.5 L 458.5,443.5 L 458.5,581.5 L 266.5,581.5 Z" fill="#eaf1fb" stroke="none"/>
+<text x="362.5" y="506.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">hall</text>
+<text x="362.5" y="522.5" font-size="11" text-anchor="middle" fill="#555">7.4 m²</text>
+<path d="M 467.5,443.5 L 578.5,443.5 L 578.5,581.5 L 467.5,581.5 Z" fill="#eef3ea" stroke="none"/>
+<text x="523.0" y="506.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">baño 1</text>
+<text x="523.0" y="522.5" font-size="11" text-anchor="middle" fill="#555">4.3 m²</text>
+<path d="M 77.5,590.5 L 329.5,590.5 L 329.5,794.5 L 77.5,794.5 Z" fill="#eaf1fb" stroke="none"/>
+<text x="203.5" y="686.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">dormitorio principal</text>
+<text x="203.5" y="702.5" font-size="11" text-anchor="middle" fill="#555">14.3 m²</text>
+<path d="M 338.5,590.5 L 578.5,590.5 L 578.5,794.5 L 338.5,794.5 Z" fill="#eaf1fb" stroke="none"/>
+<text x="458.5" y="686.5" font-size="12.5" text-anchor="middle" fill="#222" font-weight="600">dormitorio 2</text>
+<text x="458.5" y="702.5" font-size="11" text-anchor="middle" fill="#555">13.6 m²</text>
+<line x1="70.0" y1="70.0" x2="586.0" y2="70.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="586.0" y1="70.0" x2="586.0" y2="802.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="586.0" y1="802.0" x2="70.0" y2="802.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="802.0" x2="70.0" y2="70.0" stroke="#1a1a1a" stroke-width="15.0" stroke-linecap="square"/>
+<line x1="70.0" y1="298.0" x2="586.0" y2="298.0" stroke="#1a1a1a" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="70.0" y1="439.0" x2="586.0" y2="439.0" stroke="#1a1a1a" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="70.0" y1="586.0" x2="586.0" y2="586.0" stroke="#1a1a1a" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="214.0" y1="70.0" x2="214.0" y2="298.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="292.0" y1="298.0" x2="292.0" y2="439.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="391.0" y1="298.0" x2="391.0" y2="439.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="460.0" y1="298.0" x2="460.0" y2="439.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="262.0" y1="439.0" x2="262.0" y2="586.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="463.0" y1="439.0" x2="463.0" y2="586.0" stroke="#444" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="334.0" y1="586.0" x2="334.0" y2="802.0" stroke="#1a1a1a" stroke-width="9.0" stroke-linecap="square"/>
+<line x1="302.5" y1="70.0" x2="494.5" y2="70.0" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="70.0" y1="458.5" x2="70.0" y2="566.5" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="125.5" y1="802.0" x2="281.5" y2="802.0" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="392.5" y1="802.0" x2="524.5" y2="802.0" stroke="#3aa0d1" stroke-width="6"/>
+<line x1="371.5" y1="70.0" x2="425.5" y2="70.0" stroke="#ffffff" stroke-width="7"/>
+<path d="M 371.5,70.0 L 425.5,70.0" stroke="#8a6d3b" stroke-width="2" fill="none"/>
+<line x1="209.5" y1="131.5" x2="209.5" y2="239.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 209.5,131.5 L 317.5,131.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 209.5,131.5 A 108.0,108.0 0 0 1 317.5,131.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="209.5" y1="131.5" x2="317.5" y2="131.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="146.5" y1="302.5" x2="218.5" y2="302.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 146.5,302.5 L 146.5,374.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 146.5,302.5 A 72.0,72.0 0 0 1 146.5,230.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="146.5" y1="302.5" x2="146.5" y2="230.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="296.5" y1="344.5" x2="296.5" y2="392.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 296.5,344.5 L 344.5,344.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 296.5,344.5 A 48.0,48.0 0 0 1 344.5,344.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="296.5" y1="344.5" x2="344.5" y2="344.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="500.5" y1="302.5" x2="542.5" y2="302.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 500.5,302.5 L 500.5,344.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 500.5,302.5 A 42.0,42.0 0 0 1 500.5,260.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="500.5" y1="302.5" x2="500.5" y2="260.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="398.5" y1="302.5" x2="452.5" y2="302.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 398.5,302.5 L 398.5,356.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 398.5,302.5 A 54.0,54.0 0 0 1 398.5,248.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="398.5" y1="302.5" x2="398.5" y2="248.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="335.5" y1="443.5" x2="389.5" y2="443.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 335.5,443.5 L 335.5,497.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 335.5,443.5 A 54.0,54.0 0 0 1 335.5,389.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="335.5" y1="443.5" x2="335.5" y2="389.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="257.5" y1="488.5" x2="257.5" y2="536.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 257.5,488.5 L 305.5,488.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 257.5,488.5 A 48.0,48.0 0 0 1 305.5,488.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="257.5" y1="488.5" x2="305.5" y2="488.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="467.5" y1="491.5" x2="467.5" y2="533.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 467.5,491.5 L 509.5,491.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 467.5,491.5 A 42.0,42.0 0 0 1 509.5,491.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="467.5" y1="491.5" x2="509.5" y2="491.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="179.5" y1="590.5" x2="227.5" y2="590.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 179.5,590.5 L 179.5,638.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 179.5,590.5 A 48.0,48.0 0 0 1 179.5,542.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="179.5" y1="590.5" x2="179.5" y2="542.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="434.5" y1="590.5" x2="482.5" y2="590.5" stroke="#ffffff" stroke-width="7"/>
+<path d="M 434.5,590.5 L 434.5,638.5" stroke="#8a6d3b" stroke-width="1.4" fill="none" opacity="0.7"/>
+<path d="M 434.5,590.5 A 48.0,48.0 0 0 1 434.5,542.5" stroke="#b08968" stroke-width="1.3" fill="none" opacity="0.55"/>
+<line x1="434.5" y1="590.5" x2="434.5" y2="542.5" stroke="#b08968" stroke-width="1.6" opacity="0.8"/>
+<line x1="70.0" y1="48.0" x2="586.0" y2="48.0" stroke="#888" stroke-width="1"/>
+<text x="328.0" y="42.0" font-size="12" text-anchor="middle" fill="#666">frente 8.60 m</text>
+<line x1="48.0" y1="70.0" x2="48.0" y2="802.0" stroke="#888" stroke-width="1"/>
+<text x="40.0" y="436.0" font-size="12" text-anchor="middle" fill="#666" transform="rotate(-90 40.0 436.0)">fondo 12.20 m</text>
+<text x="606.0" y="30" font-size="13" font-weight="700" fill="#111">2026-08-24-u03</text>
+<text x="606.0" y="50" font-size="10.5" fill="#333">3D/3B fachada única profunda Lima </text>
+<text x="606.0" y="64" font-size="10.5" fill="#333">Top — segmento de mercado no </text>
+<text x="606.0" y="78" font-size="10.5" fill="#333">tocado por el piso regulatorio VIS </text>
+<text x="606.0" y="92" font-size="10.5" fill="#333">del DS 005-2025 (frente 8.60 m, ya </text>
+<text x="606.0" y="106" font-size="10.5" fill="#333">3.1x el mínimo VIS de 5.50 m, y </text>
+<text x="606.0" y="120" font-size="10.5" fill="#333">área 98 m² muy por encima del piso </text>
+<text x="606.0" y="134" font-size="10.5" fill="#333">VIS de 40 m²): terraza y </text>
+<text x="606.0" y="148" font-size="10.5" fill="#333">sala-comedor ganan todo el frente, </text>
+<text x="606.0" y="162" font-size="10.5" fill="#333">baño de visita propio junto a la </text>
+<text x="606.0" y="176" font-size="10.5" fill="#333">sala, cocina y lavandería al fondo </text>
+<text x="606.0" y="190" font-size="10.5" fill="#333">del paquete social sobre el muro </text>
+<text x="606.0" y="204" font-size="10.5" fill="#333">húmedo, pasillo corto conecta a un </text>
+<text x="606.0" y="218" font-size="10.5" fill="#333">hall que reparte a los tres </text>
+<text x="606.0" y="232" font-size="10.5" fill="#333">dormitorios y al baño compartido </text>
+<text x="606.0" y="246" font-size="10.5" fill="#333">sin tocar ningún otro dormitorio, </text>
+<text x="606.0" y="260" font-size="10.5" fill="#333">La Molina/Lima Top </text>
+<text x="606.0" y="280" font-size="11" fill="#111">área techada: 98.0 m²</text>
+</svg>

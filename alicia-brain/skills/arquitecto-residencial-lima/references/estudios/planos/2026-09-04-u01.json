@@ -1,0 +1,48 @@
+{
+  "id": "2026-09-04-u01",
+  "nombre": "1D/1B con ambiente productivo (bodega) de puerta propia a la calle, dormitorio con buffer vía hall corto, San Juan de Lurigancho/Lima Norte",
+  "area_techada": 69.6,
+  "frente_m": 8.65,
+  "fondo_m": 10.55,
+  "ambientes": [
+    { "nombre": "bodega", "poligono": [[0.25,0.25],[2.55,0.25],[2.55,4.05],[0.25,4.05]], "zona": "social", "luz": true },
+    { "nombre": "sala-comedor", "poligono": [[2.70,0.25],[7.05,0.25],[7.05,4.05],[2.70,4.05]], "zona": "social", "luz": true },
+    { "nombre": "terraza", "poligono": [[7.20,0.25],[8.40,0.25],[8.40,4.05],[7.20,4.05]], "zona": "social", "luz": false },
+    { "nombre": "dormitorio principal", "poligono": [[0.25,4.20],[3.25,4.20],[3.25,7.80],[0.25,7.80]], "zona": "intima", "luz": true },
+    { "nombre": "hall", "poligono": [[3.40,4.20],[4.40,4.20],[4.40,7.80],[3.40,7.80]], "zona": "social", "luz": false },
+    { "nombre": "baño 1", "poligono": [[4.55,4.20],[5.75,4.20],[5.75,7.80],[4.55,7.80]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[5.90,4.20],[8.40,4.20],[8.40,6.30],[5.90,6.30]], "zona": "servicio", "luz": false },
+    { "nombre": "lavandería", "poligono": [[5.90,6.45],[8.40,6.45],[8.40,7.80],[5.90,7.80]], "zona": "servicio", "luz": false }
+  ],
+  "muros": [
+    { "a": [0,0], "b": [0,10.55], "espesor": 0.25, "portante": true },
+    { "a": [8.65,0], "b": [8.65,10.55], "espesor": 0.25, "portante": true },
+    { "a": [0,0], "b": [8.65,0], "espesor": 0.25, "portante": true },
+    { "a": [0,8.05], "b": [8.65,8.05], "espesor": 0.25, "portante": true },
+    { "a": [0,10.55], "b": [8.65,10.55], "espesor": 0.25, "portante": true },
+    { "a": [2.625,0], "b": [2.625,4.125], "espesor": 0.15, "portante": false },
+    { "a": [7.125,0], "b": [7.125,4.125], "espesor": 0.15, "portante": false },
+    { "a": [0,4.125], "b": [8.65,4.125], "espesor": 0.15, "portante": false },
+    { "a": [3.325,4.125], "b": [3.325,8.05], "espesor": 0.15, "portante": false },
+    { "a": [4.475,4.125], "b": [4.475,8.05], "espesor": 0.15, "portante": false },
+    { "a": [5.825,4.125], "b": [5.825,8.05], "espesor": 0.15, "portante": false },
+    { "a": [5.825,6.375], "b": [8.65,6.375], "espesor": 0.15, "portante": false }
+  ],
+  "puertas": [
+    { "de": "exterior", "a": "bodega", "ancho": 1.00 },
+    { "de": "exterior", "a": "sala-comedor", "ancho": 0.90 },
+    { "de": "sala-comedor", "a": "terraza", "ancho": 1.80 },
+    { "de": "sala-comedor", "a": "hall", "ancho": 0.90 },
+    { "de": "sala-comedor", "a": "cocina", "ancho": 1.10 },
+    { "de": "hall", "a": "dormitorio principal", "ancho": 0.80 },
+    { "de": "hall", "a": "baño 1", "ancho": 0.70 },
+    { "de": "cocina", "a": "lavandería", "ancho": 0.80 }
+  ],
+  "ventanas": [
+    { "ambiente": "bodega", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00 },
+    { "ambiente": "sala-comedor", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00 },
+    { "ambiente": "sala-comedor", "ancho": 1.80, "alto": 2.10, "alfeizar": 0.0 },
+    { "ambiente": "dormitorio principal", "ancho": 1.60, "alto": 1.30, "alfeizar": 1.00 }
+  ],
+  "muro_humedo": { "a": [5.825,4.20], "b": [5.825,7.80] }
+}

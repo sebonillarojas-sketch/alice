@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="588" height="547" viewBox="0 0 588 547" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="588" height="547" fill="#ffffff"/>
+<text x="60" y="28" font-size="16" font-weight="bold">u01 — 1D/1B amplio con dormitorio y sala-comedor ganando la fachada, terraza como elemento de fachada junto a la sala (m</text>
+<path d="M 67.5,67.5 L 241.5,67.5 L 241.5,286.5 L 67.5,286.5 Z" fill="#dbe9f7" stroke="none"/>
+<path d="M 250.5,67.5 L 433.5,67.5 L 433.5,286.5 L 250.5,286.5 Z" fill="#fde9d9" stroke="none"/>
+<path d="M 442.5,67.5 L 520.5,67.5 L 520.5,286.5 L 442.5,286.5 Z" fill="#fde9d9" stroke="none"/>
+<path d="M 67.5,295.5 L 187.5,295.5 L 187.5,439.5 L 67.5,439.5 Z" fill="#dbe9f7" stroke="none"/>
+<path d="M 196.5,295.5 L 316.5,295.5 L 316.5,439.5 L 196.5,439.5 Z" fill="#e6e6e6" stroke="none"/>
+<path d="M 325.5,295.5 L 433.5,295.5 L 433.5,439.5 L 325.5,439.5 Z" fill="#e6e6e6" stroke="none"/>
+<text x="154.5" y="170" font-size="12" text-anchor="middle" fill="#222">dormitorio principal</text>
+<text x="154.5" y="184" font-size="10.5" text-anchor="middle" fill="#555">10.6 m²</text>
+<text x="342" y="170" font-size="12" text-anchor="middle" fill="#222">sala-comedor</text>
+<text x="342" y="184" font-size="10.5" text-anchor="middle" fill="#555">11.1 m²</text>
+<text x="481.5" y="170" font-size="12" text-anchor="middle" fill="#222">terraza</text>
+<text x="481.5" y="184" font-size="10.5" text-anchor="middle" fill="#555">4.7 m²</text>
+<text x="127.5" y="360.5" font-size="12" text-anchor="middle" fill="#222">vestidor</text>
+<text x="127.5" y="374.5" font-size="10.5" text-anchor="middle" fill="#555">4.8 m²</text>
+<text x="256.5" y="360.5" font-size="12" text-anchor="middle" fill="#222">baño 1</text>
+<text x="256.5" y="374.5" font-size="10.5" text-anchor="middle" fill="#555">4.8 m²</text>
+<text x="379.5" y="360.5" font-size="12" text-anchor="middle" fill="#222">lavandería</text>
+<text x="379.5" y="374.5" font-size="10.5" text-anchor="middle" fill="#555">4.3 m²</text>
+<line x1="60" y1="60" x2="528" y2="60" stroke="#333333" stroke-width="15" stroke-linecap="square"/>
+<line x1="528" y1="60" x2="528" y2="447" stroke="#333333" stroke-width="15" stroke-linecap="square"/>
+<line x1="528" y1="447" x2="60" y2="447" stroke="#333333" stroke-width="15" stroke-linecap="square"/>
+<line x1="60" y1="447" x2="60" y2="60" stroke="#333333" stroke-width="15" stroke-linecap="square"/>
+<line x1="246" y1="67.5" x2="246" y2="286.5" stroke="#666666" stroke-width="9" stroke-linecap="square"/>
+<line x1="438" y1="67.5" x2="438" y2="439.5" stroke="#333333" stroke-width="9" stroke-linecap="square"/>
+<line x1="67.5" y1="291" x2="433.5" y2="291" stroke="#666666" stroke-width="9" stroke-linecap="square"/>
+<line x1="192" y1="295.5" x2="192" y2="439.5" stroke="#666666" stroke-width="9" stroke-linecap="square"/>
+<line x1="321" y1="295.5" x2="321" y2="439.5" stroke="#666666" stroke-width="9" stroke-linecap="square"/>
+<rect x="271.5" y="54" width="54" height="12" fill="#ffffff"/>
+<path d="M 271.5,60 A 54,54 0 0 1 325.5,114" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="271.5" y1="60" x2="325.5" y2="114" stroke="#999" stroke-width="1.4"/>
+<rect x="240" y="85.5" width="12" height="48" fill="#ffffff"/>
+<path d="M 246,85.5 A 48,48 0 0 1 198,133.5" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="246" y1="85.5" x2="198" y2="133.5" stroke="#999" stroke-width="1.4"/>
+<rect x="432" y="91.5" width="12" height="108" fill="#ffffff"/>
+<path d="M 438,91.5 A 108,108 0 0 0 546,199.5" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="438" y1="91.5" x2="546" y2="199.5" stroke="#999" stroke-width="1.4"/>
+<rect x="198" y="285" width="42" height="12" fill="#ffffff"/>
+<path d="M 198,291 A 42,42 0 0 1 240,333" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="198" y1="291" x2="240" y2="333" stroke="#999" stroke-width="1.4"/>
+<rect x="330" y="285" width="48" height="12" fill="#ffffff"/>
+<path d="M 330,291 A 48,48 0 0 1 378,339" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="330" y1="291" x2="378" y2="339" stroke="#999" stroke-width="1.4"/>
+<rect x="85.5" y="285" width="48" height="12" fill="#ffffff"/>
+<path d="M 85.5,291 A 48,48 0 0 1 133.5,339" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="85.5" y1="291" x2="133.5" y2="339" stroke="#999" stroke-width="1.4"/>
+<rect x="186" y="313.5" width="12" height="42" fill="#ffffff"/>
+<path d="M 192,313.5 A 42,42 0 0 0 234,355.5" fill="none" stroke="#999" stroke-width="1"/>
+<line x1="192" y1="313.5" x2="234" y2="355.5" stroke="#999" stroke-width="1.4"/>
+<line x1="105" y1="60" x2="201" y2="60" stroke="#2678c9" stroke-width="6"/>
+<line x1="339" y1="60" x2="435" y2="60" stroke="#2678c9" stroke-width="6"/>
+<text x="283.5" y="253.5" font-size="9.5" font-style="italic" text-anchor="middle" fill="#8a5a2b">cocina americana</text>
+<line x1="60" y1="469" x2="528" y2="469" stroke="#000" stroke-width="1"/>
+<text x="294" y="485" font-size="11" text-anchor="middle">7.80 m</text>
+<line x1="550" y1="60" x2="550" y2="447" stroke="#000" stroke-width="1"/>
+<text x="566" y="253.5" font-size="11" text-anchor="middle" transform="rotate(90 566 253.5)">6.45 m</text>
+</svg>

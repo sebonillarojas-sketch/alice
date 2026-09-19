@@ -1,0 +1,57 @@
+{
+  "id": "2026-08-14-u03",
+  "nombre": "3D/2B fachada unica profunda NORTE, dormitorio principal en suite al frente con vestidor-buffer, hall en L reparte bano2/dormitorio2/dormitorio3, pozo posterior 9.60x6.00 - La Molina/Surco, Lima Moderna/Top",
+  "area_techada": 110.0,
+  "frente_m": 9.60,
+  "fondo_m": 18.00,
+  "ambientes": [
+    { "nombre": "terraza", "poligono": [[0.25,0.25],[1.60,0.25],[1.60,3.95],[0.25,3.95]], "zona": "social", "luz": false },
+    { "nombre": "sala-comedor", "poligono": [[1.75,0.25],[6.20,0.25],[6.20,3.95],[1.75,3.95]], "zona": "social", "luz": true },
+    { "nombre": "dormitorio principal", "poligono": [[6.35,0.25],[9.35,0.25],[9.35,3.95],[6.35,3.95]], "zona": "intima", "luz": true },
+    { "nombre": "hall", "poligono": [[0.25,4.10],[2.85,4.10],[2.85,7.35],[9.35,7.35],[9.35,8.35],[0.25,8.35]], "zona": "social", "luz": false },
+    { "nombre": "bano 2", "poligono": [[3.00,4.10],[4.50,4.10],[4.50,7.20],[3.00,7.20]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[4.65,4.10],[6.20,4.10],[6.20,7.20],[4.65,7.20]], "zona": "servicio", "luz": false },
+    { "nombre": "vestidor", "poligono": [[6.35,4.10],[9.35,4.10],[9.35,5.25],[6.35,5.25]], "zona": "intima", "luz": false },
+    { "nombre": "bano principal", "poligono": [[6.35,5.40],[8.15,5.40],[8.15,7.20],[6.35,7.20]], "zona": "servicio", "luz": false },
+    { "nombre": "lavanderia", "poligono": [[8.30,5.40],[9.35,5.40],[9.35,7.20],[8.30,7.20]], "zona": "servicio", "luz": false },
+    { "nombre": "dormitorio 2", "poligono": [[0.25,8.50],[4.55,8.50],[4.55,11.50],[0.25,11.50]], "zona": "intima", "luz": true },
+    { "nombre": "dormitorio 3", "poligono": [[4.70,8.50],[9.35,8.50],[9.35,11.50],[4.70,11.50]], "zona": "intima", "luz": true }
+  ],
+  "muros": [
+    {"a": [0.0,0.0], "b": [9.60,0.0], "espesor": 0.25, "portante": true},
+    {"a": [0.0,0.0], "b": [0.0,18.00], "espesor": 0.25, "portante": true},
+    {"a": [9.60,0.0], "b": [9.60,18.00], "espesor": 0.25, "portante": true},
+    {"a": [0.0,11.75], "b": [9.60,11.75], "espesor": 0.25, "portante": true},
+    {"a": [1.675,0.25], "b": [1.675,3.95], "espesor": 0.15, "portante": false},
+    {"a": [6.275,0.25], "b": [6.275,3.95], "espesor": 0.15, "portante": true},
+    {"a": [0.25,4.025], "b": [9.35,4.025], "espesor": 0.15, "portante": true},
+    {"a": [2.85,4.10], "b": [2.85,7.35], "espesor": 0.15, "portante": true},
+    {"a": [4.575,4.10], "b": [4.575,7.20], "espesor": 0.15, "portante": false},
+    {"a": [6.275,4.10], "b": [6.275,7.20], "espesor": 0.15, "portante": true},
+    {"a": [6.35,5.325], "b": [9.35,5.325], "espesor": 0.15, "portante": false},
+    {"a": [8.225,5.40], "b": [8.225,7.20], "espesor": 0.15, "portante": false},
+    {"a": [0.25,7.275], "b": [9.35,7.275], "espesor": 0.15, "portante": true},
+    {"a": [0.25,8.425], "b": [9.35,8.425], "espesor": 0.15, "portante": true},
+    {"a": [4.625,8.50], "b": [4.625,11.50], "espesor": 0.15, "portante": false}
+  ],
+  "puertas": [
+    {"de": "exterior", "a": "sala-comedor", "ancho": 0.90},
+    {"de": "sala-comedor", "a": "terraza", "ancho": 1.20},
+    {"de": "sala-comedor", "a": "dormitorio principal", "ancho": 0.80},
+    {"de": "sala-comedor", "a": "cocina", "ancho": 1.20},
+    {"de": "sala-comedor", "a": "hall", "ancho": 1.00},
+    {"de": "hall", "a": "bano 2", "ancho": 0.70},
+    {"de": "dormitorio principal", "a": "vestidor", "ancho": 0.80},
+    {"de": "vestidor", "a": "bano principal", "ancho": 0.70},
+    {"de": "bano principal", "a": "lavanderia", "ancho": 0.80},
+    {"de": "hall", "a": "dormitorio 2", "ancho": 0.80},
+    {"de": "hall", "a": "dormitorio 3", "ancho": 0.80}
+  ],
+  "ventanas": [
+    {"ambiente": "sala-comedor", "ancho": 2.60, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio principal", "ancho": 1.80, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 2", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00},
+    {"ambiente": "dormitorio 3", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00}
+  ],
+  "muro_humedo": {"a": [3.00,7.20], "b": [9.35,7.20]}
+}

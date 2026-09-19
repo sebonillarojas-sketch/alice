@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="594" viewBox="0 0 512 594" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="512" height="594" fill="#ffffff"/>
+<text x="40" y="24" font-size="15" font-weight="bold" fill="#111">2026-09-06-u01 — 56.88 m² — 1D/1B amplio, fachada única frente ancho — enfilade inspirado en el shotgun house (porche→sala-comedor→dormit...</text>
+<polygon points="55.0,95.0 457.0,95.0 457.0,167.0 55.0,167.0" fill="#fff6e0" stroke="none"/>
+<polygon points="55.0,176.0 250.0,176.0 250.0,371.0 55.0,371.0" fill="#fff6e0" stroke="none"/>
+<polygon points="259.0,176.0 457.0,176.0 457.0,371.0 259.0,371.0" fill="#e6f0ff" stroke="none"/>
+<polygon points="55.0,380.0 250.0,380.0 250.0,464.0 55.0,464.0" fill="#eaf7ea" stroke="none"/>
+<polygon points="55.0,473.0 250.0,473.0 250.0,539.0 55.0,539.0" fill="#eaf7ea" stroke="none"/>
+<polygon points="259.0,380.0 457.0,380.0 457.0,446.0 259.0,446.0" fill="#eaf7ea" stroke="none"/>
+<polygon points="259.0,455.0 457.0,455.0 457.0,539.0 259.0,539.0" fill="#eaf7ea" stroke="none"/>
+<rect x="40.0" y="72.5" width="432.0" height="15.0" fill="#333"/>
+<rect x="40.0" y="546.5" width="432.0" height="15.0" fill="#333"/>
+<rect x="32.5" y="80.0" width="15.0" height="474.0" fill="#333"/>
+<rect x="464.5" y="80.0" width="15.0" height="474.0" fill="#333"/>
+<rect x="55.0" y="167.0" width="402.0" height="9.0" fill="#333"/>
+<rect x="55.0" y="371.0" width="402.0" height="9.0" fill="#333"/>
+<rect x="250.0" y="176.0" width="9.0" height="195.0" fill="#333"/>
+<rect x="250.0" y="380.0" width="9.0" height="159.0" fill="#333"/>
+<rect x="55.0" y="464.0" width="195.0" height="9.0" fill="#333"/>
+<rect x="259.0" y="446.0" width="198.0" height="9.0" fill="#333"/>
+<line x1="92.5" y1="176.0" x2="212.5" y2="176.0" stroke="#1565c0" stroke-width="5"/>
+<line x1="304.0" y1="176.0" x2="412.0" y2="176.0" stroke="#1565c0" stroke-width="5"/>
+<line x1="92.5" y1="167.0" x2="212.5" y2="167.0" stroke="#fff" stroke-width="4"/>
+<line x1="250.0" y1="249.5" x2="250.0" y2="297.5" stroke="#fff" stroke-width="4"/>
+<line x1="113.5" y1="371.0" x2="191.5" y2="371.0" stroke="#fff" stroke-width="4"/>
+<line x1="128.5" y1="464.0" x2="176.5" y2="464.0" stroke="#fff" stroke-width="4"/>
+<line x1="334.0" y1="371.0" x2="382.0" y2="371.0" stroke="#fff" stroke-width="4"/>
+<line x1="337.0" y1="446.0" x2="379.0" y2="446.0" stroke="#fff" stroke-width="4"/>
+<text x="256.0" y="128.0" font-size="11.5" text-anchor="middle" fill="#111">terraza</text>
+<text x="256.0" y="143.0" font-size="10.5" text-anchor="middle" fill="#555">8.04 m²</text>
+<text x="152.5" y="270.5" font-size="11.5" text-anchor="middle" fill="#111">sala-comedor</text>
+<text x="152.5" y="285.5" font-size="10.5" text-anchor="middle" fill="#555">10.56 m²</text>
+<text x="358.0" y="270.5" font-size="11.5" text-anchor="middle" fill="#111">dormitorio principal</text>
+<text x="358.0" y="285.5" font-size="10.5" text-anchor="middle" fill="#555">10.72 m²</text>
+<text x="152.5" y="419.0" font-size="11.5" text-anchor="middle" fill="#111">cocina</text>
+<text x="152.5" y="434.0" font-size="10.5" text-anchor="middle" fill="#555">4.55 m²</text>
+<text x="152.5" y="503.0" font-size="11.5" text-anchor="middle" fill="#111">lavandería</text>
+<text x="152.5" y="518.0" font-size="10.5" text-anchor="middle" fill="#555">3.58 m²</text>
+<text x="358.0" y="410.0" font-size="11.5" text-anchor="middle" fill="#111">vestidor</text>
+<text x="358.0" y="425.0" font-size="10.5" text-anchor="middle" fill="#555">3.63 m²</text>
+<text x="358.0" y="494.0" font-size="11.5" text-anchor="middle" fill="#111">baño 1</text>
+<text x="358.0" y="509.0" font-size="10.5" text-anchor="middle" fill="#555">4.62 m²</text>
+<text x="256.0" y="70.0" font-size="11" text-anchor="middle" fill="#777">7.20 m</text>
+<text x="30.0" y="317.0" font-size="11" text-anchor="end" fill="#777" transform="rotate(-90 30.0 317.0)">7.90 m</text>
+</svg>

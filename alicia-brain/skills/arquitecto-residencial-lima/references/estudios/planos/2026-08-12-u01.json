@@ -1,0 +1,42 @@
+{
+  "id": "D8-1D",
+  "nombre": "1D/1B compacto Lima Norte — dormitorio principal y sala-comedor comparten el frente con terraza-porche mordiendo el vértice, cocina americana y lavandería al fondo sobre un único muro húmedo, baño en suite con segundo acceso público — Los Olivos, Lima Norte",
+  "area_techada": 47.50,
+  "frente_m": 7.20,
+  "fondo_m": 7.25,
+  "altura_libre": 2.40,
+  "ambientes": [
+    { "nombre": "dormitorio principal", "poligono": [[0.125,0.125],[2.925,0.125],[2.925,3.825],[0.125,3.825]], "zona": "intima", "luz": true },
+    { "nombre": "terraza", "poligono": [[3.075,0.125],[4.075,0.125],[4.075,3.825],[3.075,3.825]], "zona": "social", "luz": false },
+    { "nombre": "sala-comedor", "poligono": [[4.225,0.125],[7.075,0.125],[7.075,3.825],[4.225,3.825]], "zona": "social", "luz": true },
+    { "nombre": "baño 1", "poligono": [[0.125,3.975],[2.925,3.975],[2.925,5.525],[0.125,5.525]], "zona": "servicio", "luz": false },
+    { "nombre": "vestidor", "poligono": [[0.125,5.675],[2.925,5.675],[2.925,7.125],[0.125,7.125]], "zona": "intima", "luz": false },
+    { "nombre": "lavandería", "poligono": [[3.075,3.975],[4.075,3.975],[4.075,7.125],[3.075,7.125]], "zona": "servicio", "luz": false },
+    { "nombre": "cocina", "poligono": [[4.225,3.975],[7.075,3.975],[7.075,7.125],[4.225,7.125]], "zona": "servicio", "luz": false }
+  ],
+  "muros": [
+    { "a": [0.0,0.0], "b": [7.20,0.0], "espesor": 0.25, "portante": true },
+    { "a": [7.20,0.0], "b": [7.20,7.25], "espesor": 0.25, "portante": true },
+    { "a": [7.20,7.25], "b": [0.0,7.25], "espesor": 0.25, "portante": true },
+    { "a": [0.0,7.25], "b": [0.0,0.0], "espesor": 0.25, "portante": true },
+    { "a": [0.0,3.90], "b": [7.20,3.90], "espesor": 0.15, "portante": true },
+    { "a": [3.00,0.0], "b": [3.00,7.25], "espesor": 0.15, "portante": false },
+    { "a": [4.15,0.0], "b": [4.15,7.25], "espesor": 0.15, "portante": false },
+    { "a": [0.0,5.60], "b": [3.00,5.60], "espesor": 0.15, "portante": false }
+  ],
+  "puertas": [
+    { "de": "exterior", "a": "terraza", "ancho": 0.90 },
+    { "de": "terraza", "a": "sala-comedor", "ancho": 1.80 },
+    { "de": "terraza", "a": "dormitorio principal", "ancho": 0.80 },
+    { "de": "sala-comedor", "a": "cocina", "ancho": 2.20 },
+    { "de": "cocina", "a": "lavandería", "ancho": 0.80 },
+    { "de": "lavandería", "a": "baño 1", "ancho": 0.70 },
+    { "de": "dormitorio principal", "a": "baño 1", "ancho": 0.70 },
+    { "de": "baño 1", "a": "vestidor", "ancho": 0.80 }
+  ],
+  "ventanas": [
+    { "ambiente": "dormitorio principal", "ancho": 2.20, "alto": 1.30, "alfeizar": 1.00 },
+    { "ambiente": "sala-comedor", "ancho": 2.60, "alto": 1.40, "alfeizar": 1.00 }
+  ],
+  "muro_humedo": { "a": [0.0,3.90], "b": [7.20,3.90] }
+}
